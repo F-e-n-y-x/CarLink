@@ -436,4 +436,15 @@
     <string name="navi_mode_small">小屏导航</string>
     <string name="navi_mode_full">全屏导航</string>
     <string name="navi_mode_unknown">未知模式</string>
+    <string name="car_battery_for_the_iphone">向 iPhone 提供车辆电量 · 需要 ADB</string>
+    <string name="car_battery_for_the_iphone_description">DiPlay 将车辆的电量和续航告诉 iPhone，Apple 地图即可在电量低时提醒并推荐沿途充电站。只有在 DiPlay 能读取电池信息时，才会向 iPhone 声明这是电动车。会重新连接 CarPlay。需要在车机上开启网络 ADB。</string>
+    <string name="charging_connectors">充电接口</string>
+    <string name="connectors_ccs2_type2">CCS2 和 Type 2 · 欧洲</string>
+    <string name="connectors_gb_t">GB/T · 中国</string>
+    <string name="connectors_ccs1_j1772">CCS1 和 J1772 · 北美</string>
+    <string name="low_charge_warning">低电量提醒</string>
+    <string name="percent_value">%1$d%%</string>
+    <string name="percent_default">%1$d%% · 默认</string>
+    <string name="adb_battery_reading">电池：%1$d%%，%2$d 公里。</string>
+    <string name="adb_battery_unreadable">无法读取这辆车的电池信息，因此不会向 iPhone 声明这是电动车。</string>
 </resources>

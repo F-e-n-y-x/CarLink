@@ -425,4 +425,15 @@
     <string name="navi_mode_small">عرض الملاحة المصغّر</string>
     <string name="navi_mode_full">عرض الملاحة الكامل</string>
     <string name="navi_mode_unknown">وضع غير معروف</string>
+    <string name="car_battery_for_the_iphone">بطارية السيارة لـ iPhone · يتطلب ADB</string>
+    <string name="car_battery_for_the_iphone_description">يُخبر DiPlay جهاز iPhone بشحن السيارة ومداها، فتنبّه «خرائط Apple» عند انخفاض الشحن وتقترح محطات شحن على الطريق. لا يُبلَّغ iPhone بأن السيارة كهربائية إلا عندما يستطيع DiPlay قراءة البطارية. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="charging_connectors">منافذ الشحن</string>
+    <string name="connectors_ccs2_type2">CCS2 وType 2 · أوروبا</string>
+    <string name="connectors_gb_t">GB/T · الصين</string>
+    <string name="connectors_ccs1_j1772">CCS1 وJ1772 · أمريكا الشمالية</string>
+    <string name="low_charge_warning">تنبيه انخفاض الشحن</string>
+    <string name="percent_value">%1$d٪</string>
+    <string name="percent_default">%1$d٪ · الافتراضي</string>
+    <string name="adb_battery_reading">البطارية: %1$d٪، %2$d كم.</string>
+    <string name="adb_battery_unreadable">تعذّرت قراءة البطارية في هذه السيارة، لذا لا يُبلَّغ iPhone بأنها سيارة كهربائية.</string>
 </resources>

@@ -57,3 +57,20 @@ Measured on the car: after `stopUI` the cluster stream carried no frames at all 
 Ordinary apps cannot read the mode: BYD's `INSTRUMENT_NAVI_TYPE` needs a BYD signature. The adb shell reads it through the `autoservice` binder (instrument device 1007, feature `0x40C03032`): `service call autoservice 5 i32 1007 i32 1086337074` → `Parcel(00000000 0000000N)`, N = 1 Off, 2 Turn on by navi, 3 Small screen navi, 4 Full screen navi. (The shell can also set it through `INSTRUMENT_NAVI_TYPE_SET`, `0x4C10A018`, with `service call autoservice 6 …`; DiPlay does not change the mode.)
 
 DiPlay runs the read through the head unit's own adbd on `127.0.0.1:5555` ("ADB over network" in developer options) with its own RSA key. The car asks once to allow that key; DiPlay offers the key only from the settings button "Check ADB access", never in the background, so the dialog cannot appear while driving. The TLS pairing flavour of wireless debugging is not supported.
+
+## Car battery for the iPhone (optional, needs ADB)
+
+CarPlay's vehicle status lets the car tell the iPhone its charge and range; Apple Maps then warns about a low charge and offers chargers on the way. With "Car battery for the iPhone · needs ADB" turned on, DiPlay declares an electric vehicle in its iAP2 identification (VehicleInformation with engine type electric and the chosen charging connectors, VehicleStatus with range, range warning, charge and maximum range) and answers the iPhone's StartVehicleStatusUpdates (`0xA100`) with VehicleStatusUpdate (`0xA101`) every 30 s.
+
+DiPlay declares the electric vehicle only when it already has a battery reading as the iPhone identifies the accessory. With ADB off or not approved, or on a car without these properties, the identification stays as without the switch, and the log says `iap2 no battery reading: not declaring an electric vehicle`. The battery is read when DiPlay opens and when CarPlay starts, without blocking the settings page or the iAP2 loop; "Check ADB access" shows whether the battery can be read.
+
+"Charging connectors" picks what the iPhone is told the car can plug into: CCS2 and Type 2 (Europe, the default), GB/T DC and AC (China), or CCS1 and J1772 (North America). Pick the one that matches the car's charging inlet.
+
+The values come from the adb shell (apps need a BYD signature for them), read every 30 s while the iPhone asks:
+
+- charge: statistic device 1014, `0x4A505038` (`STATISTIC_ELEC_PERCENTAGE`), float percent — `service call autoservice 7 i32 1014 i32 1246777400`;
+- range: 1014, `0x4A50203E` (`STATISTIC_ELEC_DRIVING_RANGE` on this platform), km — `service call autoservice 5 i32 1014 i32 1246765118`;
+- energy left: power device 1005, `882901008` (`POWER_BATTERY_REMAIN_ELECTRICITY`), float kWh;
+- charging: charging device 1009, `876609560` (BMS state, 1 = charging).
+
+Full charge and full range are scaled up from the current values. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.

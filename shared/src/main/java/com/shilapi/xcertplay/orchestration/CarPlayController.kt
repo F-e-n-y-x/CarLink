@@ -143,6 +143,7 @@ class CarPlayController(
     private val savePairRecord: (LockdownPairRecord) -> Unit = {},
     private val clearPairRecord: () -> Unit = {},
     private val locationProvider: Iap2LocationProvider? = null,
+    private val vehicleStatusProvider: com.shilapi.xcertplay.transport.VehicleStatusProvider? = null,
 ) : Closeable {
     init {
         require(!config.locationReportingEnabled || locationProvider != null) {
@@ -972,6 +973,7 @@ class CarPlayController(
                 endpoint = endpoint,
                 timeoutMillis = controlLoopTimeoutMillis(),
                 locationProvider = locationProvider,
+                vehicleStatusProvider = vehicleStatusProvider,
                 onIncoming = ::onRouteFrame,
                 onProgress = ::debugLog,
             )
@@ -1058,6 +1060,7 @@ class CarPlayController(
                         endpoint = endpoint,
                         timeoutMillis = Iap2WirelessControlClient.NO_TIMEOUT_MILLIS,
                         locationProvider = locationProvider,
+                        vehicleStatusProvider = vehicleStatusProvider,
                         onReady = {
                             onWirelessTunnelReady(generation)
                         },
@@ -1512,6 +1515,7 @@ class CarPlayController(
                 availableCurrentMilliAmps = config.availableCurrentMilliAmps,
                 timeoutMillis = controlLoopTimeoutMillis(),
                 locationProvider = locationProvider,
+                vehicleStatusProvider = vehicleStatusProvider,
                 onIncoming = ::onRouteFrame,
                 onProgress = { message -> debugLog("wired $message") },
             )

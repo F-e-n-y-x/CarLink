@@ -436,4 +436,15 @@
     <string name="navi_mode_small">Small screen navi</string>
     <string name="navi_mode_full">Full screen navi</string>
     <string name="navi_mode_unknown">unknown mode</string>
+    <string name="car_battery_for_the_iphone">Car battery for the iPhone · needs ADB</string>
+    <string name="car_battery_for_the_iphone_description">DiPlay tells the iPhone the car\'s charge and range, so Apple Maps can warn about a low charge and suggest chargers on the way. The iPhone is told about an electric car only while DiPlay can read the battery. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
+    <string name="charging_connectors">Charging connectors</string>
+    <string name="connectors_ccs2_type2">CCS2 and Type 2 · Europe</string>
+    <string name="connectors_gb_t">GB/T · China</string>
+    <string name="connectors_ccs1_j1772">CCS1 and J1772 · North America</string>
+    <string name="low_charge_warning">Low charge warning</string>
+    <string name="percent_value">%1$d %%</string>
+    <string name="percent_default">%1$d %% · default</string>
+    <string name="adb_battery_reading">Battery: %1$d %%, %2$d km.</string>
+    <string name="adb_battery_unreadable">The battery cannot be read on this car, so the iPhone is not told about an electric car.</string>
 </resources>

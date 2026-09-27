@@ -1,10 +1,7 @@
 package com.shilapi.xcertplay.hud
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
-import com.shilapi.xcertplay.adb.AdbKeys
-import com.shilapi.xcertplay.adb.LocalAdb
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,16 +17,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal object BydClusterMapPause {
     private const val TAG = "DiPlay-BYD-ClusterMap"
     private const val READ_MILLIS = 1_000L
-    private const val ADB_RETRY_MILLIS = 30_000L
 
     private val tickerStarted = AtomicBoolean(false)
+    private val shell = BydAdbShell(TAG)
     @Volatile private var context: Context? = null
 
-    // Only the ticker thread touches these, so nothing blocking ever runs under a lock that
+    // Only the ticker thread touches this, so nothing blocking ever runs under a lock that
     // initialize() or the UI needs.
-    private var adb: LocalAdb? = null
-    private var unavailableLogged = false
-    private var adbRetryMillis = 0L
     private var lastMode: BydClusterNaviMode? = null
 
     /** Whether DiPlay's map window is on the cluster. */
@@ -40,7 +34,7 @@ internal object BydClusterMapPause {
 
     /** Reads the mode over adb. Blocking, and only called on the ticker thread; tests replace it. */
     @Volatile internal var readMode: (Context) -> BydClusterNaviMode? = { app ->
-        shell(app)?.let { BydClusterNaviMode.parseRead(it.shell(BydClusterNaviMode.READ_COMMAND)) }
+        BydClusterNaviMode.parseRead(shell.run(app, BydClusterNaviMode.READ_COMMAND))
     }
 
     /** Never waits for the ticker: an adb read in flight does not hold up opening or reconnecting. */
@@ -58,7 +52,8 @@ internal object BydClusterMapPause {
         val control = streamControl
         if (control == null || !clusterMapShown || !BydOutputSettings.clusterStreamPause(app)) {
             control?.invoke(true)
-            close()
+            shell.close()
+            lastMode = null
             return
         }
         val mode = readMode(app)
@@ -68,52 +63,5 @@ internal object BydClusterMapPause {
         }
         // An unknown mode keeps the map streaming, as without ADB.
         control(mode?.showsMap != false)
-    }
-
-    // Never asks for approval here: the car's dialog must not appear while driving. A refused or
-    // missing adbd is retried only every 30 s.
-    private fun shell(app: Context): LocalAdb? {
-        val now = SystemClock.elapsedRealtime()
-        if (now < adbRetryMillis) return null
-        val client = adb ?: LocalAdb(AdbKeys.load(app)).also { adb = it }
-        val access = client.connect(mayAsk = false)
-        if (access == LocalAdb.Access.READY) {
-            unavailableLogged = false
-            return client
-        }
-        adbRetryMillis = now + ADB_RETRY_MILLIS
-        if (!unavailableLogged) {
-            unavailableLogged = true
-            Log.w(TAG, "ADB access $access: the cluster map keeps streaming")
-        }
-        return null
-    }
-
-    private fun close() {
-        adb?.close()
-        adb = null
-        lastMode = null
-    }
-}
-
-/** What the settings page shows about the ADB link that the cluster map pause needs. */
-object BydClusterModeAccess {
-    enum class State { READY, NOT_APPROVED, ADB_OFF, PAIRING_ONLY }
-
-    class Status(val state: State, val mode: BydClusterNaviMode?, val showsMap: Boolean)
-
-    /** Blocking: run off the main thread. [mayAsk] lets the car show its approval dialog for DiPlay's key. */
-    fun check(context: Context, mayAsk: Boolean): Status {
-        LocalAdb(AdbKeys.load(context)).use { adb ->
-            val state = when (adb.connect(mayAsk)) {
-                LocalAdb.Access.READY -> State.READY
-                LocalAdb.Access.NOT_APPROVED -> State.NOT_APPROVED
-                LocalAdb.Access.UNREACHABLE -> State.ADB_OFF
-                LocalAdb.Access.UNSUPPORTED -> State.PAIRING_ONLY
-            }
-            if (state != State.READY) return Status(state, null, true)
-            val mode = BydClusterNaviMode.parseRead(adb.shell(BydClusterNaviMode.READ_COMMAND))
-            return Status(state, mode, mode?.showsMap != false)
-        }
     }
 }
