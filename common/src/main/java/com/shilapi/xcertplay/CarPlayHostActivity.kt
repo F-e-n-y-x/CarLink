@@ -2781,6 +2781,7 @@ class CarPlayHostActivity : ComponentActivity() {
             onAudioDiagnostic = { message ->
                 diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
             },
+            onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
         )
     }
 
@@ -2976,6 +2977,7 @@ class CarPlayHostActivity : ComponentActivity() {
             locationProvider = locationProvider,
         )
         controller = next
+        CarPlayMediaKeys.attach(this, next)
         CarPlayBackgroundSession.store(next, renderer, size.width, size.height, this) { completion ->
             runOnUiThread {
                 shutdown(terminateProcess = false, reason = "DiPlay disconnect", completion = completion)
@@ -3119,6 +3121,7 @@ class CarPlayHostActivity : ComponentActivity() {
         handshakeResetInProgress = true
         val oldController = controller
         val oldSink = sink
+        CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController, keepOwner = true)
         controller = null
         sink = null
@@ -3192,6 +3195,7 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
         val oldSink = sink
+        CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController)
         controller = null
         sink = null
