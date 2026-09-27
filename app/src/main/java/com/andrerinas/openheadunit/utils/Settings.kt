@@ -1444,7 +1444,7 @@ class Settings(private val context: Context) {
         set(value) = prefs.edit().putString("bluetooth-manager-service-name", value).apply()
 
     // Which network the Native AA mode (wifiConnectionMode 3) puts the phone on.
-    // 0 = WiFi Direct P2P group, 1 = this head unit's own hotspot (experimental).
+    // 0 = WiFi Direct, 1 = car hotspot, 2 = app-owned local-only hotspot (experimental).
     //
     // Deliberately not folded into helperConnectionStrategy: that setting belongs to mode 2 and
     // means something different in every one of its five values. A wireless mode that reuses

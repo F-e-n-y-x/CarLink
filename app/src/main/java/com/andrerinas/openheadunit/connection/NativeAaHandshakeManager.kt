@@ -1375,7 +1375,7 @@ class NativeAaHandshakeManager(
             .setKey(key)
             .setSecurityMode(Wireless.SecurityMode.WPA2_PERSONAL)
             .setAccessPointType(
-                if (transport == NativeTransport.HOTSPOT) Wireless.AccessPointType.DYNAMIC
+                if (transport != NativeTransport.WIFI_DIRECT) Wireless.AccessPointType.DYNAMIC
                 else Wireless.AccessPointType.STATIC
             )
             .setBssid(bssid.orEmpty())

@@ -54,5 +54,5 @@ object LinkLossTeardownPolicy {
 
     /** The two routes where the phone sits on an access point this device is hosting. */
     private fun ridesOwnAccessPoint(mode: Int, strategy: Int, transport: NativeTransport): Boolean =
-        (mode == 3 && transport == NativeTransport.HOTSPOT) || (mode == 2 && strategy == 4)
+        (mode == 3 && transport != NativeTransport.WIFI_DIRECT) || (mode == 2 && strategy == 4)
 }

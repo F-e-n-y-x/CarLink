@@ -6,12 +6,19 @@ enum class NativeTransport {
     WIFI_DIRECT,
 
     /** This head unit's own WPA2 access point, as the OEM ZLink app uses. Experimental. */
-    HOTSPOT;
+    HOTSPOT,
+
+    /** App-owned public-API hotspot, with no upstream internet or external helper. */
+    LOCAL_HOTSPOT;
 
     companion object {
         /** [Settings.nativeApTransport][com.andrerinas.openheadunit.utils.Settings.nativeApTransport]
          *  as a transport, defaulting to [WIFI_DIRECT] for any value we do not recognise. */
-        fun fromSetting(value: Int): NativeTransport = if (value == 1) HOTSPOT else WIFI_DIRECT
+        fun fromSetting(value: Int): NativeTransport = when (value) {
+            1 -> HOTSPOT
+            2 -> LOCAL_HOTSPOT
+            else -> WIFI_DIRECT
+        }
     }
 }
 
@@ -73,6 +80,7 @@ object NativeCredentialsPolicy {
     /** What to do when [isUsableBssid] said no. */
     fun onUnusableBssid(transport: NativeTransport): UnusableBssidAction = when (transport) {
         NativeTransport.WIFI_DIRECT -> UnusableBssidAction.ABORT
+        NativeTransport.LOCAL_HOTSPOT -> UnusableBssidAction.ABORT
         NativeTransport.HOTSPOT -> UnusableBssidAction.SEND_WITH_EMPTY_BSSID
     }
 
