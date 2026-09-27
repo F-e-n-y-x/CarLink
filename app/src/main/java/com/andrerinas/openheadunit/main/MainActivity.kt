@@ -119,6 +119,7 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         requestedOrientation = Settings(this).screenOrientation.androidOrientation
         super.onCreate(savedInstanceState)
+        com.andrerinas.openheadunit.hud.BydNavigationOutputs.onAppOpened(applicationContext)
 
         logLaunchSource()
         clearBootLoopGuardIfOpenedByHand()

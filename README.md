@@ -18,6 +18,8 @@ this is not Apple CarPlay.
 ## Features
 
 - Native wireless Android Auto, with USB data-cable support.
+- BYD windshield navigation arrows, distance and street names on verified firmware, without ADB.
+- Improved recovery when the Wi-Fi Direct interface appears late; explicit Static BSSID remains supported.
 - Automatic Wi-Fi Direct address recovery on supported DiLink firmware, without ADB setup.
 - Car-friendly home screen, simplified settings and redesigned option dialogs.
 - Music-through-car-Bluetooth mode to avoid competing media audio focus.
@@ -31,6 +33,8 @@ Tested on **BYD DiLink 5.1 with Android 13**, using wireless and physical USB co
 Other models and firmware versions are not yet verified. A compatible Android phone
 with functioning Android Auto is required. The download site's languages do not imply
 that every in-app label has been translated.
+
+See [BYD HUD compatibility and cleanup limits](docs/BYD_NAVIGATION.md).
 
 See the [installation guide](docs/INSTALL.md), including permissions, Static BSSID and
 upgrading from private previews. APK installation must be allowed by your head unit.

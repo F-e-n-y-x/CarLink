@@ -7,6 +7,9 @@
         rikka.shizuku.provider, rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser" />
 
     <queries>
+        <package android:name="com.byd.clusterdebug" />
+        <package android:name="com.byd.amapservice" />
+        <package android:name="com.ts.car.someip.service" />
         <package android:name="com.google.android.projection.gearhead" />
     </queries>
 

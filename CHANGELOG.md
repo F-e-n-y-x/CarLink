@@ -1,3 +1,11 @@
+# DiAuto 0.3.3 — BYD HUD navigation
+
+- Standalone windshield arrows, next-turn distance and street names on verified DiLink5.1 firmware, without ADB, root or a computer helper.
+- Add opt-in BYD navigation settings and background vendor output with route-end, disconnect and stale-guidance cleanup. Force-stop cleanup occurs on the next launch.
+- Recover the current Wi-Fi Direct interface/BSSID when it appears late; allow a bounded grace period before using a plausible cached fallback. Preserve Static BSSID overrides.
+- Add a best-effort Bluetooth auto-start notification fallback and useful recovery diagnostics.
+- Thanks to @STUkh for PR #2 and the Wi-Fi recovery/auto-start improvements.
+
 # DiAuto 0.3.1 — first public release
 
 - Native wireless Android Auto on tested BYD DiLink 5.1, plus wired USB.

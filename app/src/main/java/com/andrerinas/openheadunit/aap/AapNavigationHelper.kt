@@ -81,7 +81,10 @@ class AapNavigationHelper(
             totalTimeSeconds = prepared.totalTimeSeconds,
             estimatedArrival = prepared.estimatedArrival
         )
-        context.applicationContext.sendBroadcast(intent, NavigationUpdateIntent.BROADCAST_PERMISSION)
+        context.applicationContext.sendBroadcast(intent,
+            if (com.andrerinas.openheadunit.BuildConfig.DEBUG)
+                com.andrerinas.openheadunit.BuildConfig.APPLICATION_ID + ".permission.NAVIGATION_UPDATE"
+            else NavigationUpdateIntent.BROADCAST_PERMISSION)
     }
 
     fun showNotificationForSnapshot(snapshot: NavigationSnapshot, distanceMeters: Int?) {
