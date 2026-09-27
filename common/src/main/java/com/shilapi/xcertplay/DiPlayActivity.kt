@@ -232,17 +232,36 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap()
                 }
-                val lifts = CarPlayClusterDisplay.liftPresets
-                choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
-                    lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
-                    AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
+                val sizes = CarPlayClusterDisplay.scalePresets
+                choice(card, "Cluster map size", listOf("Standard · sharpest", "Larger · default", "Largest"),
+                    sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
+                    AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                 }
-                val shifts = CarPlayClusterDisplay.shiftPresets
-                choice(card, "Car position across cluster map",
-                    listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
-                    shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
-                    AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
+                val preview = ClusterMarkerPreview(this).apply {
+                    setMarker(AirPlayPersistence.loadClusterMarkerHorizontalStep(this@DiPlayActivity),
+                        AirPlayPersistence.loadClusterMarkerVerticalStep(this@DiPlayActivity))
                 }
+                card.addView(label("Car marker on the cluster. Grey areas are covered by the car's own readouts.", 14, MUTED)
+                    .apply { setPadding(0, dp(16), 0, dp(8)) })
+                card.addView(preview, LinearLayout.LayoutParams(-1, dp(120)).apply { bottomMargin = dp(8) })
+                val across = CarPlayClusterDisplay.horizontalSteps.toList()
+                choice(card, "Car marker · horizontal", across.map { markerStepLabel(it, "Left", "Right") },
+                    across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
+                    AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
+                    preview.setMarker(across[it], AirPlayPersistence.loadClusterMarkerVerticalStep(this))
+                }
+                val upDown = CarPlayClusterDisplay.verticalSteps.toList()
+                choice(card, "Car marker · vertical", upDown.map { markerStepLabel(it, "Up", "Down") },
+                    upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
+                    AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
+                    preview.setMarker(AirPlayPersistence.loadClusterMarkerHorizontalStep(this), upDown[it])
+                }
+                card.addView(button("Reset car marker to centre", false) {
+                    AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
+                    AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
+                    render()
+                    reconnectForClusterMap()
+                }, matchButton(10, 56))
             }
         }
         section(content, "Permissions and connection help") { card ->
@@ -376,6 +395,13 @@ class DiPlayActivity : ComponentActivity() {
                 if (error != null) toast(error) else done(ssid, password)
             }
         }
+    }
+
+    // "Left 20 %", "Centre · default", "Down 10 %": a signed step reads as a direction and a distance.
+    private fun markerStepLabel(step: Int, negative: String, positive: String): String = when {
+        step == 0 -> "Centre · default"
+        step < 0 -> "$negative ${-step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
+        else -> "$positive ${step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
     }
 
     // The cluster screen is described at connection time, so a running session reconnects over
