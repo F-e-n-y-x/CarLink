@@ -27,7 +27,11 @@ internal object DiLink51ClusterLayout {
     }
     const val STREAM_WIDTH = 1920
     const val STREAM_HEIGHT = 720
-    fun streamConfig(): AirPlayDisplayConfig = CarPlayClusterDisplay.config(STREAM_WIDTH, STREAM_HEIGHT, 0, 0)
+    // DiLink 5.1 retains its measured native-size stream and bottom-centered crop.
+    // DiLink 5's marker safe area and scale controls must not alter this profile.
+    fun streamConfig(): AirPlayDisplayConfig = CarPlayClusterDisplay.config(
+        STREAM_WIDTH, STREAM_HEIGHT, scalePercent = 100,
+    ).copy(safeArea = null)
 
     fun supported(fingerprint: String = Build.FINGERPRINT): Boolean = fingerprint == FINGERPRINT
     fun theme(context: Context): Theme = Theme.entries.firstOrNull {

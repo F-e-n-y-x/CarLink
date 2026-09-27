@@ -687,9 +687,12 @@ class CarPlayHostActivity : ComponentActivity() {
         return CarPlayClusterDisplay.config(
             size.x,
             size.y,
-            AirPlayPersistence.loadClusterMapLiftPercent(this),
-            AirPlayPersistence.loadClusterMapShiftPercent(this),
-        ).also { appendLog("Cluster map: requesting ${size.x}x${size.y} cluster screen safeArea=${it.safeArea}") }
+            AirPlayPersistence.loadClusterMapScalePercent(this),
+            AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+            AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+        ).also {
+            appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea}")
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

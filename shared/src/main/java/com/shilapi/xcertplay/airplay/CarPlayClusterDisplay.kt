@@ -5,37 +5,86 @@ package com.shilapi.xcertplay.airplay
  *
  * The iPhone lists the cluster content it offers in its /info request (`altScreenURLs`); without
  * an initial URL it streams a black frame. The cluster has no input. Apple Maps keeps the car
- * position inside the safe area while the map still fills the panel, so bottom and right insets
- * move the car up and to the left, away from the cluster's own readouts.
+ * position inside the safe area while the map still fills the panel, so the safe area is set to
+ * the part of the panel the cluster leaves uncovered.
  */
 object CarPlayClusterDisplay {
     const val MAP_URL = "maps:/car/instrumentcluster/map"
 
-    /** Bottom inset in percent of the height. The default suits the BYD cluster. */
-    const val DEFAULT_LIFT_PERCENT = 25
-    val liftPresets = listOf(0, DEFAULT_LIFT_PERCENT, 45)
+    /**
+     * Where the car marker goes, as percent of the panel (left, top, right, bottom). Measured on a
+     * DiLink 5.0 cluster with a calibration grid. In "Full screen navi" BYD draws a status row,
+     * turn/ADAS icons, the ADAS lane view (from x 68 %), speed and power readouts and a bottom band
+     * over the map; "Small screen navi" crops the panel to a centre window of about x 31–68 %,
+     * y 16–89 %. This centre area is clear in both modes, so no per-mode setting is needed.
+     */
+    val SAFE_AREA_PERCENT = AirPlayInsets(top = 16, bottom = 25, left = 35, right = 36)
 
-    /** Right inset in percent of the width; the car moves left by half of it (22 % ≈ 1/9). */
-    const val DEFAULT_SHIFT_PERCENT = 22
-    val shiftPresets = listOf(0, 17, 20, DEFAULT_SHIFT_PERCENT, 25, 33, 67)
+    /** The driver can move the marker from that centre, in steps of 10 % of the panel. */
+    const val MARKER_STEP_PERCENT = 10
+    val horizontalSteps = -4..4 // negative = left
+    val verticalSteps = -3..3 // negative = up
 
-    private const val WIDTH_PHYSICAL_MM = 292 // a 12.3-inch 8:3 cluster panel
+    /** Where the car marker lands, in percent of the panel (x from the left, y from the top). */
+    fun markerPercent(horizontalStep: Int, verticalStep: Int): Pair<Double, Double> {
+        val area = SAFE_AREA_PERCENT
+        val x = (area.left + 100 - area.right) / 2.0 + horizontalStep.coerceIn(horizontalSteps) * MARKER_STEP_PERCENT
+        val y = (area.top + 100 - area.bottom) / 2.0 + verticalStep.coerceIn(verticalSteps) * MARKER_STEP_PERCENT
+        return x.coerceIn(MARKER_MARGIN, 100 - MARKER_MARGIN) to y.coerceIn(MARKER_MARGIN, 100 - MARKER_MARGIN)
+    }
+
+    private const val MARKER_MARGIN = 5.0
+
+    /**
+     * Stream size in percent of the panel. The cluster scales the stream up, so a smaller stream
+     * gives a larger map: 83 % is clearly larger and still sharp; 50 % was visibly blurry.
+     */
+    const val STREAM_SCALE_PERCENT = 83
+    val scalePresets = listOf(100, STREAM_SCALE_PERCENT, 67)
+
+    private const val WIDTH_PHYSICAL_MM = 292 // a 12.3-inch 8:3 cluster panel; Apple Maps ignores it here
     private const val FPS = 30
 
-    fun config(widthPixels: Int, heightPixels: Int, liftPercent: Int, shiftPercent: Int): AirPlayDisplayConfig {
-        val lift = heightPixels * liftPercent.coerceIn(0, 90) / 100
-        val shift = widthPixels * shiftPercent.coerceIn(0, 90) / 100
+    fun config(
+        widthPixels: Int,
+        heightPixels: Int,
+        scalePercent: Int = STREAM_SCALE_PERCENT,
+        horizontalStep: Int = 0,
+        verticalStep: Int = 0,
+    ): AirPlayDisplayConfig {
+        // Height rounds to a multiple of 8 and width follows it, so the panel's aspect is kept
+        // (83 % of 1920x720 gives exactly 1600x600). The cluster scales the stream to the panel.
+        val scale = scalePercent.coerceIn(25, 100)
+        val height = roundTo8(heightPixels * scale / 100.0)
+        val width = roundTo8(height * widthPixels.toDouble() / heightPixels)
         return AirPlayDisplayConfig(
-            widthPixels = widthPixels,
-            heightPixels = heightPixels,
+            widthPixels = width,
+            heightPixels = height,
             widthPhysicalMm = WIDTH_PHYSICAL_MM,
-            heightPhysicalMm = Math.round(WIDTH_PHYSICAL_MM * heightPixels.toDouble() / widthPixels).toInt(),
+            heightPhysicalMm = Math.round(WIDTH_PHYSICAL_MM * height.toDouble() / width).toInt(),
             fps = FPS,
             primaryInputDevice = 0,
             features = 0,
             initialUrl = MAP_URL,
-            safeArea = if (lift > 0 || shift > 0) AirPlayInsets(bottom = lift, right = shift) else null,
+            safeArea = safeArea(width, height, horizontalStep, verticalStep),
             safeAreaDrawOutside = true,
         )
     }
+
+    // The safe area keeps its measured size around the marker and shrinks only where the marker
+    // comes close to a panel edge, so the marker always sits at its centre.
+    private fun safeArea(width: Int, height: Int, horizontalStep: Int, verticalStep: Int): AirPlayInsets {
+        val area = SAFE_AREA_PERCENT
+        val (x, y) = markerPercent(horizontalStep, verticalStep)
+        val halfWidth = minOf((100 - area.left - area.right) / 2.0, x, 100 - x)
+        val halfHeight = minOf((100 - area.top - area.bottom) / 2.0, y, 100 - y)
+        return AirPlayInsets(
+            top = (height * (y - halfHeight) / 100).toInt(),
+            bottom = (height * (100 - y - halfHeight) / 100).toInt(),
+            left = (width * (x - halfWidth) / 100).toInt(),
+            right = (width * (100 - x - halfWidth) / 100).toInt(),
+        )
+    }
+
+    private fun roundTo8(value: Double): Int = (Math.round(value / 8) * 8).toInt().coerceAtLeast(8)
 }

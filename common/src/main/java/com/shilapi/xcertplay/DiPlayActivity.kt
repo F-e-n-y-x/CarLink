@@ -234,7 +234,7 @@ class DiPlayActivity : ComponentActivity() {
                     "Shows the iPhone's cluster map on the instrument cluster. Choose Small or Full screen navi in the cluster's steering-wheel menu.",
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
-                    reconnectForClusterMap(force = true)
+                    reconnectForClusterMap()
                 }
                 if (DiLink51ClusterLayout.supported()) {
                     val automatic = DiLink51ClusterLayout.automatic(this)
@@ -270,19 +270,27 @@ class DiPlayActivity : ComponentActivity() {
                         reconnectForClusterMap()
                     }
                 } else {
-                    val lifts = CarPlayClusterDisplay.liftPresets
-                    choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
-                        lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
-                        reconnectForClusterMap()
+                    val sizes = CarPlayClusterDisplay.scalePresets
+                    choice(card, "Cluster map size", listOf("Standard · sharpest", "Larger · default", "Largest"),
+                        sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
+                        AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
-                    val shifts = CarPlayClusterDisplay.shiftPresets
-                    choice(card, "Car position across cluster map",
-                        listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
-                        shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
-                        reconnectForClusterMap()
+                    val across = CarPlayClusterDisplay.horizontalSteps.toList()
+                    choice(card, "Car marker · horizontal", across.map { markerStepLabel(it, "Left", "Right") },
+                        across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
+                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
                     }
+                    val upDown = CarPlayClusterDisplay.verticalSteps.toList()
+                    choice(card, "Car marker · vertical", upDown.map { markerStepLabel(it, "Up", "Down") },
+                        upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
+                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
+                    }
+                    card.addView(button("Reset car marker to centre", false) {
+                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
+                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
+                        render()
+                        reconnectForClusterMap()
+                    }, matchButton(10, 56))
                 }
             }
         }
@@ -437,9 +445,17 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
 
-    // The cluster screen is described at connection time, so a running session reconnects to apply.
-    private fun reconnectForClusterMap(force: Boolean = false) {
-        if ((force || AirPlayPersistence.loadClusterMapEnabled(this)) && CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+    // "Left 20 %", "Centre · default", "Down 10 %": a signed step reads as a direction and a distance.
+    private fun markerStepLabel(step: Int, negative: String, positive: String): String = when {
+        step == 0 -> "Centre · default"
+        step < 0 -> "$negative ${-step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
+        else -> "$positive ${step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
+    }
+
+    // The cluster screen is described at connection time, so a running session reconnects over
+    // its current link. The position choices need no call: "Apply and reconnect" already does it.
+    private fun reconnectForClusterMap() {
+        if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
     private fun applyWirelessLink(mode: WirelessHotspotMode) {

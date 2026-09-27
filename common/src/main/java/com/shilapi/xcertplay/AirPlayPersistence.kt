@@ -53,8 +53,9 @@ object AirPlayPersistence {
     private const val KEY_FPS = "display_fps"
     private const val KEY_MEDIA_BUFFER_MS = "media_buffer_ms"
     private const val KEY_CLUSTER_MAP = "cluster_map_enabled"
-    private const val KEY_CLUSTER_MAP_LIFT = "cluster_map_lift_percent"
-    private const val KEY_CLUSTER_MAP_SHIFT = "cluster_map_shift_left_percent"
+    private const val KEY_CLUSTER_MAP_SCALE = "cluster_map_scale_percent"
+    private const val KEY_CLUSTER_MARKER_X = "cluster_marker_horizontal_step"
+    private const val KEY_CLUSTER_MARKER_Y = "cluster_marker_vertical_step"
     private const val KEY_WIDTH_PHYSICAL_MM = "display_width_physical_mm"
     private const val KEY_PHYSICAL_SIZE_BASIS = "display_physical_size_basis"
     private const val KEY_MAX_DETECTED_WIDTH = "display_max_detected_width"
@@ -410,24 +411,32 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CLUSTER_MAP, enabled).apply()
     }
 
-    fun loadClusterMapLiftPercent(context: Context): Int = CarPlayClusterDisplay.DEFAULT_LIFT_PERCENT.let { default ->
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CLUSTER_MAP_LIFT, default)
-            .takeIf { it in CarPlayClusterDisplay.liftPresets } ?: default
+    fun loadClusterMapScalePercent(context: Context): Int = CarPlayClusterDisplay.STREAM_SCALE_PERCENT.let { default ->
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CLUSTER_MAP_SCALE, default)
+            .takeIf { it in CarPlayClusterDisplay.scalePresets } ?: default
     }
 
-    fun saveClusterMapLiftPercent(context: Context, percent: Int) {
-        if (percent !in CarPlayClusterDisplay.liftPresets) return
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_CLUSTER_MAP_LIFT, percent).apply()
+    fun saveClusterMapScalePercent(context: Context, percent: Int) {
+        if (percent !in CarPlayClusterDisplay.scalePresets) return
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_CLUSTER_MAP_SCALE, percent).apply()
     }
 
-    fun loadClusterMapShiftPercent(context: Context): Int = CarPlayClusterDisplay.DEFAULT_SHIFT_PERCENT.let { default ->
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CLUSTER_MAP_SHIFT, default)
-            .takeIf { it in CarPlayClusterDisplay.shiftPresets } ?: default
+    fun loadClusterMarkerHorizontalStep(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CLUSTER_MARKER_X, 0)
+            .coerceIn(CarPlayClusterDisplay.horizontalSteps)
+
+    fun saveClusterMarkerHorizontalStep(context: Context, step: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_MARKER_X, step.coerceIn(CarPlayClusterDisplay.horizontalSteps)).apply()
     }
 
-    fun saveClusterMapShiftPercent(context: Context, percent: Int) {
-        if (percent !in CarPlayClusterDisplay.shiftPresets) return
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_CLUSTER_MAP_SHIFT, percent).apply()
+    fun loadClusterMarkerVerticalStep(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CLUSTER_MARKER_Y, 0)
+            .coerceIn(CarPlayClusterDisplay.verticalSteps)
+
+    fun saveClusterMarkerVerticalStep(context: Context, step: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_MARKER_Y, step.coerceIn(CarPlayClusterDisplay.verticalSteps)).apply()
     }
 
     fun loadRightHandDrive(context: Context): Boolean =
