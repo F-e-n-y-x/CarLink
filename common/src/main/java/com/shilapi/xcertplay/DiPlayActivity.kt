@@ -29,6 +29,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -63,6 +64,7 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, true)
         window.statusBarColor = BG; window.navigationBarColor = BG
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -92,6 +94,8 @@ class DiPlayActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
     override fun onResume() {
         super.onResume(); handler.removeCallbacks(tick); handler.post(tick)
+        // Back from the car settings: refresh the car hotspot reminder on the home page.
+        if (!initialLaunch && page == "home") render()
         if (initialLaunch) {
             initialLaunch = false
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
@@ -142,6 +146,10 @@ class DiPlayActivity : ComponentActivity() {
         }
         card.addView(connectButton, matchButton())
         card.addView(label("Pair your iPhone with the car’s Bluetooth, then connect.\nKeep Bluetooth and Wi-Fi on.", 15, MUTED).apply { setPadding(0, dp(14), 0, 0) })
+        if (carHotspotOff()) {
+            card.addView(label("The car hotspot “${AirPlayPersistence.loadManualHotspotSsid(this)}” is off. Turn it on in the car settings before connecting.", 15, WARNING).apply { setPadding(0, dp(14), 0, 0) })
+            card.addView(button("Open car hotspot settings", false) { openCarWifiSettings() }, matchButton(10, 56))
+        }
         card.addView(button("Choose iPhone", false) { choosePhone() }, matchButton(16, 56))
         disconnectButton = button("Disconnect", false) {
             disconnectButton?.isEnabled = false
@@ -190,21 +198,32 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun settings(content: LinearLayout) {
         content.addView(label("Your drive, your way.", 34, TEXT, true))
-        content.addView(label("Apply reconnects CarPlay for icon size, resolution and frame rate. Other changes apply to your next connection.", 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
+        content.addView(label("Apply reconnects CarPlay for size, resolution, music buffer and frame rate. Other changes apply to your next connection.", 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
         section(content, "Automatic connection") { card ->
             toggle(card, "Connect when DiPlay opens", "Use your last connection type and selected iPhone.", DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
             toggle(card, "Open after the car starts", "Availability depends on your head unit’s startup settings.", AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
             card.addView(button("Choose iPhone · ${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
+        section(content, "Wireless connection") { card -> wirelessLinkControls(card) }
         section(content, "Display and performance") { card ->
-            iconSizeControl(card)
+            carPlaySizeControl(card)
             choice(card, "Resolution", listOf("Native", "80% · lighter load", "60% · lightest load"), listOf(10, 8, 6).indexOf(AirPlayPersistence.loadDisplayScaleTenths(this)).coerceAtLeast(0)) { AirPlayPersistence.saveDisplayScaleTenths(this, listOf(10, 8, 6)[it]) }
+            val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
+            choice(card, "Music buffer", listOf("300 ms · default", "500 ms", "1000 ms · most stable"),
+                bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
+                AirPlayPersistence.saveMediaBufferMillis(this, bufferPresets[it])
+            }
             choice(card, "Frame rate", listOf("30 fps · lighter load", "60 fps · smoother motion"), if (AirPlayPersistence.loadFps(this) == 60) 1 else 0) { AirPlayPersistence.saveFps(this, if (it == 1) 60 else 30) }
             toggle(card, "Efficient video", "Use HEVC. Leave off for the widest head-unit compatibility.", AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it) }
             toggle(card, "Right-hand drive", "Place CarPlay’s controls closer to the driver.", AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
             toggle(card, "Full screen", "Hide the car’s system bars while CarPlay is open.", AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
             }
+        }
+        if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, "BYD navigation") { card ->
+            toggle(card, "Navigation on HUD and instrument cluster",
+                "Show phone navigation arrows, distance and street names on supported BYD displays. Vehicle compatibility varies.",
+                com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
         }
         section(content, "Permissions and connection help") { card ->
             card.addView(label("Nearby devices connects your iPhone. Microphone enables Siri and calls. Older Android versions also require Location for wireless setup. USB mode may ask for a local VPN connection.", 16, MUTED))
@@ -235,34 +254,145 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
 
-    private fun iconSizeControl(parent: LinearLayout) {
-        val presets = com.shilapi.xcertplay.airplay.CarPlayUiScale.presets
-        fun label(percent: Int) = com.shilapi.xcertplay.airplay.CarPlayUiScale.label(percent)
-        val control = button("Icon and text size · ${label(AirPlayPersistence.loadUiScalePercent(this))}", false) {}
+    // The car hotspot link needs the hotspot on; DiPlay only checks it (turning it on needs ADB-only permission).
+    private fun carHotspotOff(): Boolean =
+        AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL &&
+            com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(this) == false
+
+    private fun carHotspotOffDialog() {
+        AlertDialog.Builder(this).setTitle("Car hotspot is off")
+            .setMessage("DiPlay connects through the car hotspot “${AirPlayPersistence.loadManualHotspotSsid(this)}”. Turn it on in the car settings, then connect.")
+            .setPositiveButton("Open car settings") { _, _ -> openCarWifiSettings() }
+            .setNeutralButton("Connect") { _, _ -> connect(true) }
+            .setNegativeButton("Cancel", null).show()
+    }
+
+    // BYD maps the AOSP tether action to its own hotspot screen; other firmware falls back to Wi-Fi settings.
+    // BYD shows that screen as a dialog and closes it unless its own settings or the car home screen is on top,
+    // so the home screen goes first.
+    private fun openCarWifiSettings() {
+        val hotspot = Intent("com.android.settings.WIFI_TETHER_SETTINGS")
+        val target = packageManager.resolveActivity(hotspot, 0)?.activityInfo?.packageName
+        if (target == null) {
+            openSystem(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+            return
+        }
+        if (target == "com.byd.carsettings") {
+            runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)) }
+        }
+        if (runCatching { startActivity(hotspot) }.isSuccess) return
+        openSystem(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+    }
+
+    // Wi-Fi Direct is the default link. The car's own hotspot is an alternative when Wi-Fi Direct is unstable.
+    // The runtime config rejects manual mode without valid credentials, so it is only saved together with them.
+    private fun wirelessLinkControls(parent: LinearLayout) {
+        val carHotspot = AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL
+        val options = arrayOf("Wi-Fi Direct · default", "Car hotspot")
+        val control = button("Wireless link · ${options[if (carHotspot) 1 else 0]}", false) {}
         control.setOnClickListener {
-            val current = AirPlayPersistence.loadUiScalePercent(this)
-            var selection = presets.indexOf(current)
-            AlertDialog.Builder(this).setTitle("CarPlay icon and text size")
-                .setSingleChoiceItems(arrayOf("Smaller · 75%", "Small · 85%", "Default", "Large · 115%"), selection) { _, index -> selection = index }
+            var selection = if (carHotspot) 1 else 0
+            AlertDialog.Builder(this).setTitle("Wireless link")
+                .setSingleChoiceItems(options, selection) { _, index -> selection = index }
                 .setPositiveButton(if (CarPlayBackgroundSession.hasSession()) "Apply and reconnect" else "Save") { _, _ ->
-                    val selected = presets[selection]
-                    DisplayDiagnosticSnapshot.selection(this, current, selected,
-                        selected != current && CarPlayBackgroundSession.hasSession())
-                    AirPlayPersistence.saveUiScalePercent(this, selected)
-                    control.text = "Icon and text size · ${label(selected)}"
-                    if (selected != current && CarPlayBackgroundSession.hasSession()) {
-                        connect(AirPlayPersistence.loadWirelessEnabled(this))
+                    when {
+                        (selection == 1) == carHotspot -> Unit
+                        selection == 0 -> applyWirelessLink(WirelessHotspotMode.WIFI_P2P)
+                        hotspotError(storedSsid(), storedPassword()) == null -> applyWirelessLink(WirelessHotspotMode.MANUAL)
+                        else -> askHotspotCredentials { ssid, password ->
+                            saveHotspotCredentials(ssid, password)
+                            applyWirelessLink(WirelessHotspotMode.MANUAL)
+                        }
                     }
                 }.setNegativeButton("Cancel", null).show()
         }
-        parent.addView(control, matchButton(0, 60))
-        parent.addView(label("Smaller sizes use more processing power. Choose Default if playback slows. Applying a size reconnects CarPlay.", 14, MUTED).apply {
+        parent.addView(control, matchButton(0, 60)); parent.addView(space(12))
+        if (!carHotspot) {
+            parent.addView(label("DiPlay creates its own Wi-Fi Direct network for the iPhone.", 14, MUTED).apply {
+                setPadding(0, 0, 0, dp(18))
+            })
+            return
+        }
+        val ssid = storedSsid()
+        val password = storedPassword()
+        parent.addView(button("Hotspot name · $ssid", false) {
+            textInput("Car hotspot name", ssid, secret = false) { value ->
+                hotspotError(value, password)?.let { toast(it); return@textInput }
+                saveHotspotCredentials(value, password)
+                render()
+            }
+        }, matchButton(0, 60))
+        parent.addView(space(12))
+        parent.addView(button("Hotspot password · ${if (password.isEmpty()) "none" else "•".repeat(8)}", false) {
+            textInput("Car hotspot password", password, secret = true) { value ->
+                hotspotError(ssid, value)?.let { toast(it); return@textInput }
+                saveHotspotCredentials(ssid, value)
+                render()
+            }
+        }, matchButton(0, 60))
+        parent.addView(label("Turn on the hotspot in the car settings first and enter the same name and password here. The iPhone joins this network for CarPlay. Changes apply to your next connection.", 14, MUTED).apply {
             setPadding(0, dp(8), 0, dp(18))
+        })
+    }
+
+    private fun storedSsid() = AirPlayPersistence.loadManualHotspotSsid(this)
+    private fun storedPassword() = AirPlayPersistence.loadManualHotspotPassphrase(this)
+    private fun hotspotError(ssid: String, password: String) =
+        com.shilapi.xcertplay.orchestration.ManualHotspotValidation.validate(ssid, password)
+
+    private fun saveHotspotCredentials(ssid: String, password: String) {
+        AirPlayPersistence.saveManualHotspotSsid(this, ssid)
+        AirPlayPersistence.saveManualHotspotPassphrase(this, password)
+        AirPlayPersistence.saveManualHotspotSecurity(this,
+            com.shilapi.xcertplay.orchestration.ManualHotspotValidation.securityFor(password))
+        AirPlayPersistence.saveManualHotspotBand(this, com.shilapi.xcertplay.orchestration.ManualHotspotBand.AUTO)
+        AirPlayPersistence.saveManualHotspotChannel(this, 0)
+    }
+
+    private fun askHotspotCredentials(done: (String, String) -> Unit) {
+        textInput("Car hotspot name", storedSsid(), secret = false) { ssid ->
+            textInput("Car hotspot password", storedPassword(), secret = true) { password ->
+                val error = hotspotError(ssid, password)
+                if (error != null) toast(error) else done(ssid, password)
+            }
+        }
+    }
+
+    private fun applyWirelessLink(mode: WirelessHotspotMode) {
+        AirPlayPersistence.saveWirelessHotspotMode(this, mode)
+        render()
+        if (CarPlayBackgroundSession.hasSession()) connect(true)
+    }
+
+    private fun textInput(title: String, current: String, secret: Boolean, save: (String) -> Unit) {
+        val input = EditText(this).apply {
+            setText(current)
+            setSingleLine()
+            inputType = if (secret) {
+                android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            } else {
+                android.text.InputType.TYPE_CLASS_TEXT
+            }
+        }
+        AlertDialog.Builder(this).setTitle(title).setView(input)
+            .setPositiveButton("Save") { _, _ -> save(input.text.toString().let { if (secret) it else it.trim() }) }
+            .setNegativeButton("Cancel", null).show()
+    }
+
+    private fun carPlaySizeControl(parent: LinearLayout) {
+        val sizes = com.shilapi.xcertplay.airplay.CarPlaySize.entries
+        val current = com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(this))
+        choice(parent, "CarPlay size", sizes.map { it.label }, sizes.indexOf(current)) {
+            AirPlayPersistence.saveWidthPhysicalMm(this, sizes[it].widthMillimeters)
+        }
+        parent.addView(label("Changes the size of CarPlay icons and text. Applying a size reconnects CarPlay.", 14, MUTED).apply {
+            setPadding(0, 0, 0, dp(18))
         })
     }
 
     private fun connect(wireless: Boolean) {
         if (setupError != null) { toast(setupError!!); return }
+        if (wireless && carHotspotOff()) { carHotspotOffDialog(); return }
         if (wireless && DiPlayPreferences.phoneAddress(this) == null) {
             pendingWireless = true; choosePhone(); return
         }
@@ -413,7 +543,7 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("Connection: ${if (AirPlayPersistence.loadWirelessEnabled(appContext)) "wireless" else "USB"}")
                     appendLine("Authentication: local experimental beta identity; no remote fallback")
                     appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
-                    appendLine("Icon and text size: ${com.shilapi.xcertplay.airplay.CarPlayUiScale.label(AirPlayPersistence.loadUiScalePercent(appContext))}")
+                    appendLine("CarPlay size: ${com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(appContext)).label}")
                     appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScaleTenths(appContext) * 10}%")
                     appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
                     appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")

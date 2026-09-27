@@ -50,6 +50,7 @@ object AirPlayPersistence {
     private const val KEY_MODEL = "model"
     private const val KEY_OEM_LABEL = "oem_label"
     private const val KEY_FPS = "display_fps"
+    private const val KEY_MEDIA_BUFFER_MS = "media_buffer_ms"
     private const val KEY_WIDTH_PHYSICAL_MM = "display_width_physical_mm"
     private const val KEY_PHYSICAL_SIZE_BASIS = "display_physical_size_basis"
     private const val KEY_MAX_DETECTED_WIDTH = "display_max_detected_width"
@@ -69,7 +70,7 @@ object AirPlayPersistence {
 
     const val DEFAULT_MANUFACTURER = "DiPlay"
     const val DEFAULT_MODEL = "DiPlay"
-    const val DEFAULT_OEM_LABEL = ""
+    const val DEFAULT_OEM_LABEL = "BYD"
     const val DEFAULT_MFI_I2C_PATH = "/dev/i2c-1"
 
     fun loadDisplayScaleTenths(context: Context): Int {
@@ -321,7 +322,8 @@ object AirPlayPersistence {
     fun loadOemLabel(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_OEM_LABEL, DEFAULT_OEM_LABEL)
-            .orEmpty()
+            // iOS hides the car icon without a label.
+            .orEmpty().ifBlank { DEFAULT_OEM_LABEL }
 
     fun saveOemLabel(context: Context, oemLabel: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -334,6 +336,16 @@ object AirPlayPersistence {
             .getInt(KEY_FPS, 30),
     )
 
+    fun loadMediaBufferMillis(context: Context): Int = com.shilapi.xcertplay.media.MediaAudioBuffer.sanitize(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_MEDIA_BUFFER_MS, com.shilapi.xcertplay.media.MediaAudioBuffer.DEFAULT_MILLIS),
+    )
+
+    fun saveMediaBufferMillis(context: Context, millis: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_MEDIA_BUFFER_MS, com.shilapi.xcertplay.media.MediaAudioBuffer.sanitize(millis)).apply()
+    }
+
     fun saveFps(context: Context, fps: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_FPS, AirPlayDisplaySettings.sanitizeFps(fps))
@@ -344,7 +356,7 @@ object AirPlayPersistence {
         AirPlayDisplaySettings.sanitizeWidthPhysicalMm(
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(
                 KEY_WIDTH_PHYSICAL_MM,
-                AirPlayDisplaySettings.DEFAULT_WIDTH_PHYSICAL_MM,
+                com.shilapi.xcertplay.airplay.CarPlaySize.DEFAULT.widthMillimeters,
             ),
         )
 

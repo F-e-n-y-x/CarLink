@@ -5,6 +5,21 @@ import org.junit.Test
 import java.nio.file.Files
 
 class DiagnosticRedactorTest {
+    @Test fun savedDriveReportKeepsMediaPerformanceCounters() {
+        val folder = Files.createTempDirectory("diplay-media-report").toFile()
+        try {
+            val audio = "audio stats audioType=media codec=AAC_LC rx=215 dropped=0 underruns=+3 queue=2 playing=true maxGapMs=420 sinceRxMs=10 maxWriteMs=22 decoderDroppedTotal=0 outputBuffersTotal=212 ended=true"
+            val video = "Video: video stats rx=29.8fps shown=29.8fps maxGap=150ms kbps=4000 recoveries=0 touch2frame avg=85ms max=110ms n=3 touchSendMax=1ms"
+            SessionLogFile(folder.resolve("diplay.log")).use {
+                it.reset("started")
+                it.append(audio)
+                it.append(video)
+            }
+            val report = folder.resolve("diplay.log").readText()
+            assertTrue(report.contains(audio))
+            assertTrue(report.contains(video))
+        } finally { folder.deleteRecursively() }
+    }
     @Test fun payloadAndCredentialLinesNeverReachReports() {
         for (line in listOf("TRACE IAP2 tx key", "hotspot passphrase=secret", "token=secret", "certificate bytes=607", "rx body={phone: 'Jane'}", "ok\nsecret", "wifi ssid=Home", "wireless name=Jane Smith’s iPhone")) {
             assertNull(line, DiagnosticRedactor.redact(line))

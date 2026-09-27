@@ -2,15 +2,17 @@
 
 **CarPlay for compatible Android head units.** Wired and wireless, with the familiar DiAuto interface. Independent app: `com.shihab.diplay`.
 
-[Download & website](https://shihabal3amri.github.io/DiPlay/) · [Release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.1.0) · [Report a problem](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
+[Download & website](https://shihabal3amri.github.io/DiPlay/) · [Release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.0) · [Report a problem](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
 
 ![DiPlay home](site/assets/home.png)
 
-## 0.1.0 — public preview
+## 0.2.0 — public preview
 
-Install on the **car**, not the iPhone. No jailbreak, dongle, Mac, account or authentication server is required for use. ADB is not needed during everyday use; your head unit must permit APK installation. Wireless requires Android 10+ and working Wi-Fi Direct; the APK supports Android 9+ for wired use.
+Install on the **car**, not the iPhone. No jailbreak, dongle, Mac, account or authentication server is required for use. ADB is not needed during everyday use; your head unit must permit APK installation. Wireless supports Wi-Fi Direct or the car’s existing hotspot; Wi-Fi Direct requires Android 10+; the APK supports Android 9+ for wired use.
 
 - Wired USB and wireless CarPlay with local authentication.
+- BYD HUD navigation with arrows, distance and street names on verified firmware.
+- Car hotspot support, improved audio buffering and saved receive diagnostics.
 - Automatic address discovery, fixed-channel Wi-Fi fallbacks and successful-configuration memory.
 - Icon/text size, resolution and frame rate; applying a display change reconnects CarPlay.
 - Local diagnostic export. Reports are sent only if you choose to share them.
@@ -18,7 +20,7 @@ Install on the **car**, not the iPhone. No jailbreak, dongle, Mac, account or au
 
 This is **not an Apple-certified product**. The APK bundles an experimental accessory identity recovered from public Carlinkit firmware, not a newly provisioned MFi identity for DiPlay. A bundled private key is extractable. Acceptance after future iOS updates, reliability across head units and suitability of that identity for general distribution are unresolved. This release invites community testing; it is not a guarantee of universal compatibility.
 
-Prior private builds have completed physical wired/wireless picture, touch and audio tests. Some testers still report stuttering or icon-size changes that do not take effect. The 0.1.0 changes passed automated and emulator checks; a new physical-car session was not available at publication. Start with H.264 / 30 fps and Default icon size. See the compatibility notes before testing.
+The release changes were tested on the development DiLink5.1 car: live windshield guidance and street names work, Car hotspot now starts CarPlay, and Wi-Fi Direct performance is substantially improved. Occasional audio cutouts remain and are deferred to a later update. Broader head-unit and iOS compatibility is not guaranteed. The HUD firmware scope and cleanup limits are documented in [BYD navigation](docs/BYD_NAVIGATION.md).
 
 ## Documentation
 

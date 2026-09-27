@@ -1,3 +1,14 @@
+# 0.2.0 — BYD navigation and connection improvements
+
+- Standalone windshield HUD arrows, distance and street names on the verified DiLink5.1 firmware; no ADB, root or computer helper.
+- Retain contributor cluster/SOME-IP navigation, route parsing, BYD CarPlay icon and display-size presets.
+- Fix Car hotspot startup by using scoped IPv6 when available and binding discovery/probing to the AP interface. Physically confirmed on the development car.
+- Drain asynchronously decoded audio during packet gaps and rebuild the music buffer after starvation. Wi-Fi Direct is much better in the user retest; occasional audio cutouts remain for a later version.
+- Preserve bounded music-buffer choices, USB read improvements and decoder recovery; fix USB request/close races and keep vendor output outside phone callbacks.
+- Save audio/video/receive timing and discovery diagnostics without road names or protocol payloads.
+- HUD cleanup on normal end/disconnect/off/stale input; interrupted sessions recover on the next app launch. Force-stop may leave guidance visible until reopening.
+- Thanks to @romanchukg-cloud and @georgiyrr for PR #3 and vehicle testing.
+
 # 0.1.0 release restored — 2026-09-25
 
 - Rebuilt and signed the APK locally with explicitly supplied runtime authentication assets.

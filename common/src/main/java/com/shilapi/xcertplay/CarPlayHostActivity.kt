@@ -421,7 +421,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun loadPersistedSettings() {
         displayScaleTenths = AirPlayPersistence.loadDisplayScaleTenths(this)
-        uiScalePercent = AirPlayPersistence.loadUiScalePercent(this)
+        // Size is now chosen only through CarPlaySize; ignore the canvas scale older builds stored.
+        uiScalePercent = CarPlayUiScale.DEFAULT
         hevcEnabled = AirPlayPersistence.loadHevcEnabled(this)
         hevcSoftwareDecoderEnabled =
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
@@ -2640,7 +2641,8 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun defaultAirPlayIconBytes(): ByteArray =
-        resources.openRawResource(R.drawable.ic_carplay).use { it.readBytes() }
+        // Shown in CarPlay's app list as the "back to the car" button.
+        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
@@ -2763,16 +2765,24 @@ class CarPlayHostActivity : ComponentActivity() {
         videoWidth: Int,
         videoHeight: Int,
         controllerGeneration: Int,
-    ): AndroidMediaSink = AndroidMediaSink(
-        surface = null,
-        videoWidth = videoWidth,
-        videoHeight = videoHeight,
-        preferSoftwareHevcDecoder = hevcSoftwareDecoderEnabled,
-        advancedAudioChannelMapping = advancedAudioChannelMapping,
-        onScreenStreamActiveChanged = { type, active ->
-            onScreenStreamStateChanged(controllerGeneration, type, active)
-        },
-    )
+    ): AndroidMediaSink {
+        // Capture this session's log: late decoder shutdown must not write into a new session.
+        val diagnosticLog = sessionLog
+        return AndroidMediaSink(
+            surface = null,
+            videoWidth = videoWidth,
+            videoHeight = videoHeight,
+            preferSoftwareHevcDecoder = hevcSoftwareDecoderEnabled,
+            advancedAudioChannelMapping = advancedAudioChannelMapping,
+            onScreenStreamActiveChanged = { type, active ->
+                onScreenStreamStateChanged(controllerGeneration, type, active)
+            },
+            mediaBufferMillis = AirPlayPersistence.loadMediaBufferMillis(this),
+            onAudioDiagnostic = { message ->
+                diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
+            },
+        )
+    }
 
     private fun createMediaEngine(sink: AndroidMediaSink): CarPlayMediaEngine =
         CarPlayMediaEngine(

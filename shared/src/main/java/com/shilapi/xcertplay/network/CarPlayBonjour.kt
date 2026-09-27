@@ -37,6 +37,9 @@ data class CarPlayBonjourEndpoint(
 )
 
 sealed interface CarPlayBonjourEvent {
+    data class Discovery(val stage: Stage, val ipv4Count: Int = 0, val ipv6Count: Int = 0) : CarPlayBonjourEvent {
+        enum class Stage { ADDED, NO_MATCHING_ADDRESS, INVALID_PORT }
+    }
     data class Resolved(val endpoint: CarPlayBonjourEndpoint) : CarPlayBonjourEvent
 
     data class Probed(
@@ -45,6 +48,17 @@ sealed interface CarPlayBonjourEvent {
         val statusLine: String?,
         val error: IOException?,
     ) : CarPlayBonjourEvent
+}
+
+/** Saved reports need discovery outcomes without phone names, addresses, or pairing identifiers. */
+fun CarPlayBonjourEvent.diagnosticSummary(): String = when (this) {
+    is CarPlayBonjourEvent.Discovery -> "control discovery stage=$stage ipv4=$ipv4Count ipv6=$ipv6Count"
+    is CarPlayBonjourEvent.Resolved ->
+        "control resolved family=${if (':' in endpoint.host) "IPv6" else "IPv4"} port=${endpoint.port}"
+    is CarPlayBonjourEvent.Probed -> {
+        val status = statusLine?.let { Regex("^HTTP/\\d(?:\\.\\d)? (\\d{3})(?: |$)").find(it)?.groupValues?.get(1) }
+        "control probe attempts=$attempts status=${status ?: "none"} error=${error?.javaClass?.simpleName ?: "none"}"
+    }
 }
 
 /** Pure protocol values shared by the Android runtime and JVM tests. */
@@ -116,6 +130,7 @@ class CarPlayBonjour(
         .getSystemService(Context.NSD_SERVICE) as NsdManager
     private val services = LinkedBlockingQueue<NsdServiceInfo>()
     private val interfaceServices = LinkedBlockingQueue<Pair<CarPlayBonjourEndpoint, InetAddress>>()
+    private val discoveryEvents = LinkedBlockingQueue<CarPlayBonjourEvent.Discovery>(32)
     private val seenServices = ConcurrentHashMap.newKeySet<String>()
     private val lifecycleLock = Any()
     private val localAdvertisedAddress = advertisedHostAddress()
@@ -136,7 +151,10 @@ class CarPlayBonjour(
 
     private val interfaceListener = object : ServiceListener {
         override fun serviceAdded(event: ServiceEvent) {
-            if (!closed) event.dns.requestServiceInfo(event.type, event.name, true)
+            if (!closed) {
+                discoveryEvents.offer(CarPlayBonjourEvent.Discovery(CarPlayBonjourEvent.Discovery.Stage.ADDED))
+                event.dns.requestServiceInfo(event.type, event.name, true)
+            }
         }
 
         override fun serviceRemoved(event: ServiceEvent) {
@@ -149,8 +167,16 @@ class CarPlayBonjour(
             // Keep the HTTP probe in the same address family as its bound source.
             val address = info.inetAddresses.firstOrNull {
                 (it is Inet4Address) == (localAdvertisedAddress is Inet4Address)
-            }?.let(::applyLocalScope) ?: return
-            if (info.port !in 1..65535 || !seenServices.add(event.name)) return
+            }?.let(::applyLocalScope)
+            if (address == null || info.port !in 1..65535) {
+                discoveryEvents.offer(CarPlayBonjourEvent.Discovery(
+                    if (address == null) CarPlayBonjourEvent.Discovery.Stage.NO_MATCHING_ADDRESS
+                    else CarPlayBonjourEvent.Discovery.Stage.INVALID_PORT,
+                    info.inetAddresses.count { it is Inet4Address }, info.inetAddresses.count { it is Inet6Address },
+                ))
+                return
+            }
+            if (!seenServices.add(event.name)) return
             val endpoint = CarPlayBonjourEndpoint(
                 event.name, address.hostAddress ?: return, info.port,
                 info.getPropertyString("id"),
@@ -273,6 +299,7 @@ class CarPlayBonjour(
             activeSocket = null
             services.clear()
             interfaceServices.clear()
+            discoveryEvents.clear()
             dnsToClose = interfaceMdns
             interfaceMdns = null
             workerToJoin = worker
@@ -322,6 +349,7 @@ class CarPlayBonjour(
         while (!closed) {
             if (useInterfaceMdns) {
                 try {
+                    while (true) emit(discoveryEvents.poll() ?: break)
                     val (endpoint, address) = interfaceServices.poll(
                         WORKER_POLL_MILLIS, TimeUnit.MILLISECONDS,
                     ) ?: continue

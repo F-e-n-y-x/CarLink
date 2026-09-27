@@ -4,9 +4,12 @@ import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbConstants
+import android.hardware.usb.UsbRequest
 import android.util.Log
 import java.io.Closeable
+import java.nio.ByteBuffer
 import java.util.ArrayDeque
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -38,6 +41,13 @@ class NcmUsbBridge internal constructor(
     private var buffered = ByteArray(0)
     private var bufferedSize = 0
     private val readBuffer = ByteArray(READ_CHUNK_BYTES)
+    // Bulk IN uses one persistent async request: bulkTransfer() pins its byte[] in a JNI critical
+    // section for the whole wait, which blocks ART's GC thread flip and, with it, every other USB
+    // transfer (seen as ~0.8 s stalls of video and audio). A timed-out request stays queued, so no
+    // data is lost between calls. This is the only requestWait() user on this connection.
+    private val directReadBuffer = ByteBuffer.allocateDirect(READ_CHUNK_BYTES)
+    private var readRequest: UsbRequest? = null
+    private var readQueued = false
     private val statusRunning = AtomicBoolean(statusEndpoint != null)
     private val statusThread = statusEndpoint?.let { endpoint ->
         Thread({ drainStatus(endpoint) }, "ncm-status-in").apply {
@@ -102,13 +112,17 @@ class NcmUsbBridge internal constructor(
 
     override fun close() {
         statusRunning.set(false)
-        synchronized(stateLock) {
+        val requestToClose = synchronized(stateLock) {
             if (closed) return
             closed = true
+            readRequest
         }
+        // Wakes a reader blocked in requestWait(); it then observes the closed state.
+        runCatching { requestToClose?.cancel() }
         statusThread?.let { thread ->
+            thread.interrupt()
             try {
-                thread.join(STATUS_READ_TIMEOUT_MILLIS + 250L)
+                thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -121,18 +135,28 @@ class NcmUsbBridge internal constructor(
             }
         }
         connection.close()
+        runCatching { requestToClose?.close() }
     }
 
     private fun drainStatus(endpoint: UsbEndpoint) {
         val buffer = ByteArray(endpoint.maxPacketSize.coerceAtLeast(64))
         var loggedFirst = false
         while (statusRunning.get()) {
+            // Short synchronous polls keep this thread out of JNI critical sections most of the time;
+            // notifications are rare, small interrupt packets that are only logged.
             val transferred = try {
-                connection.bulkTransfer(endpoint, buffer, buffer.size, STATUS_READ_TIMEOUT_MILLIS)
+                connection.bulkTransfer(endpoint, buffer, buffer.size, STATUS_POLL_TIMEOUT_MILLIS)
             } catch (_: RuntimeException) {
                 return
             }
-            if (transferred <= 0) continue
+            if (transferred <= 0) {
+                try {
+                    Thread.sleep(STATUS_POLL_INTERVAL_MILLIS)
+                } catch (_: InterruptedException) {
+                    return
+                }
+                continue
+            }
             if (!loggedFirst) {
                 loggedFirst = true
                 Log.i(
@@ -195,15 +219,47 @@ class NcmUsbBridge internal constructor(
 
     private fun readChunk(timeoutMillis: Long): Int? {
         checkOpen()
-        val transferred = try {
-            connection.bulkTransfer(inEndpoint, readBuffer, readBuffer.size, timeoutMillis.toInt())
+        val request = try {
+            // Publish and queue atomically with close(), so detach cannot miss a new request.
+            synchronized(stateLock) {
+                checkOpenLocked()
+                val current = readRequest ?: UsbRequest().also {
+                    if (!it.initialize(connection, inEndpoint)) {
+                        it.close()
+                        throw failSession("Android could not initialize the NCM read request")
+                    }
+                    readRequest = it
+                }
+                if (!readQueued) {
+                    directReadBuffer.clear()
+                    if (!current.queue(directReadBuffer)) throw failSession("Android could not queue the NCM read request")
+                    readQueued = true
+                }
+                current
+            }
         } catch (error: RuntimeException) {
             throw failSession("NCM read failed", error)
         }
-        // Android reports both an ordinary bulk-IN timeout and a NAK as a negative result. Keep
-        // polling: USBMUX owns authoritative detach/failure detection for the same phone.
-        if (transferred <= 0) return null
-        return transferred
+        try {
+            val completed = try {
+                connection.requestWait(timeoutMillis.coerceAtLeast(1))
+            } catch (_: TimeoutException) {
+                // Nothing arrived yet; the request stays queued for the next call. USBMUX owns
+                // authoritative detach/failure detection for the same phone.
+                return null
+            } ?: throw failSession("Android returned no NCM read request")
+            if (completed !== request) throw failSession("Android completed an unexpected NCM request")
+            readQueued = false
+            val transferred = directReadBuffer.position()
+            if (transferred <= 0) return null
+            directReadBuffer.flip()
+            directReadBuffer.get(readBuffer, 0, transferred)
+            return transferred
+        } catch (error: IphoneUsbException) {
+            throw error
+        } catch (error: RuntimeException) {
+            throw failSession("NCM read failed", error)
+        }
     }
 
     private fun failSession(message: String, cause: Throwable? = null): IphoneUsbException.DeviceUnavailable {
@@ -235,7 +291,8 @@ class NcmUsbBridge internal constructor(
     companion object {
         private const val READ_CHUNK_BYTES = 32 * 1024
         private const val USB_PACKET_SIZE = 512
-        private const val STATUS_READ_TIMEOUT_MILLIS = 1_000
+        private const val STATUS_POLL_TIMEOUT_MILLIS = 20
+        private const val STATUS_POLL_INTERVAL_MILLIS = 500L
         private const val MAX_QUEUED_FRAMES = 256
         private const val MAX_QUEUED_BYTES = 1 shl 20
         private const val NANOS_PER_MILLISECOND = 1_000_000L

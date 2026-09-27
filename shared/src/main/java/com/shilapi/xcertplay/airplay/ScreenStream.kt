@@ -19,7 +19,7 @@ enum class VideoCodec { H264, H265 }
  * (avcC/hvcC) or a ChaCha20-Poly1305 sealed VideoFrame. The key is the DataStream output key
  * and the per-frame nonce is an 8-byte little-endian counter.
  */
-class ScreenStream(private val key: ByteArray) : Closeable {
+class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String) -> Unit = {}) : Closeable {
     interface Listener {
         fun onCodec(codec: VideoCodec) {}
         fun onConfig(codecData: ByteArray) {}
@@ -64,18 +64,23 @@ class ScreenStream(private val key: ByteArray) : Closeable {
 
     private fun run(sock: Socket) {
         var failure: Throwable? = null
+        val stats = StreamReceiveStats("video", onDiagnostic)
         try {
             val input = sock.getInputStream()
             while (!closed.get()) {
+                stats.reading()
                 val header = readFully(input, HEADER_LEN) ?: break
                 val bodySize = readU32Le(header, 0)
                 if (bodySize > MAX_BODY) break
                 val body = readFully(input, bodySize) ?: break
+                stats.received(HEADER_LEN + bodySize)
                 onMessage(header, body)
+                stats.processed()
             }
         } catch (error: Exception) {
             failure = error
         } finally {
+            stats.flush(ended = true)
             if (socket === sock) socket = null
             safeClose(sock)
             if (!closed.get()) listener.onClosed(failure)

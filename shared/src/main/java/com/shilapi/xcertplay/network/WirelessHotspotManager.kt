@@ -65,7 +65,7 @@ internal fun wifiChannelToFrequencyMhz(channel: Int, band: Int? = null): Int? = 
     band == 1 && channel in 1..13 -> 2407 + channel * 5
     band == 1 && channel == 14 -> 2484
     band == 2 && channel in 32..177 -> 5000 + channel * 5
-    band == 3 && channel in 1..233 -> 5950 + channel * 5
+    band == 4 && channel in 1..233 -> 5950 + channel * 5
     else -> null
 }
 
@@ -73,7 +73,16 @@ internal fun wifiChannelToFrequencyMhz(channel: Int, band: Int? = null): Int? = 
 internal fun wifiBandLabel(band: Int?): String? = when (band) {
     1 -> "2.4 GHz"
     2 -> "5 GHz"
-    3 -> "6 GHz"
+    3 -> "2.4 / 5 GHz (auto)"
+    4 -> "6 GHz"
+    else -> null
+}
+
+/** WifiConfiguration uses 0/1/-1; SoftApConfiguration uses a 1/2/4 bit mask. */
+internal fun legacyHotspotBandToSoftApBand(band: Int?): Int? = when (band) {
+    0 -> 1
+    1 -> 2
+    -1 -> 3
     else -> null
 }
 

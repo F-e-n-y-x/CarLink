@@ -4,9 +4,20 @@ import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayDisplayConfig
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class CarPlayBonjourTest {
+    @Test fun discoveryDiagnosticsKeepOutcomeWithoutPhoneIdentifiers() {
+        val endpoint = CarPlayBonjourEndpoint("Private phone", "192.168.43.25", 7000, "AA:BB:CC:DD:EE:FF")
+        assertEquals("control resolved family=IPv4 port=7000", CarPlayBonjourEvent.Resolved(endpoint).diagnosticSummary())
+        assertEquals("control probe attempts=2 status=200 error=none",
+            CarPlayBonjourEvent.Probed(endpoint, 2, "HTTP/1.1 200 Private phone", null).diagnosticSummary())
+        val failed = CarPlayBonjourEvent.Probed(endpoint, 3, null, java.io.IOException("Private phone 192.168.43.25"))
+            .diagnosticSummary()
+        assertEquals("control probe attempts=3 status=none error=IOException", failed)
+        assertFalse(failed.contains("Private phone"))
+    }
     private val config = AirPlayConfig(
         deviceName = "xcertplay",
         deviceId = "02:00:00:00:00:02",

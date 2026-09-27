@@ -284,7 +284,11 @@ object Iap2ControlMessages {
                 listOf(0, 1, 7).forEach(::void)
             }
         },
-        Iap2Messages.build(Iap2Endpoints.START_ROUTE_GUIDANCE_UPDATES) {},
+        Iap2Messages.build(Iap2Endpoints.START_ROUTE_GUIDANCE_UPDATES) {
+            u16(0, 42)
+            void(1)
+            void(2)
+        },
         Iap2Messages.build(Iap2Endpoints.START_POWER_UPDATES) {
             void(4)
             void(5)

@@ -27,9 +27,19 @@ class WirelessHotspotManagerTest {
     fun convertsKnownChannelAndBandToFrequency() {
         assertEquals(2412, wifiChannelToFrequencyMhz(1, band = 1))
         assertEquals(5180, wifiChannelToFrequencyMhz(36, band = 2))
-        assertEquals(5955, wifiChannelToFrequencyMhz(1, band = 3))
+        assertEquals(5955, wifiChannelToFrequencyMhz(1, band = 4))
+        assertNull(wifiChannelToFrequencyMhz(1, band = 3)) // Multi-band auto is not 6 GHz.
         assertNull(wifiChannelToFrequencyMhz(0, band = 2))
         assertNull(wifiChannelToFrequencyMhz(36, band = null))
+    }
+
+    @Test fun legacyHotspotBandUsesItsOwnConstants() {
+        assertEquals(2412, wifiChannelToFrequencyMhz(1, legacyHotspotBandToSoftApBand(0)))
+        assertEquals(5745, wifiChannelToFrequencyMhz(149, legacyHotspotBandToSoftApBand(1)))
+        assertNull(wifiChannelToFrequencyMhz(1, legacyHotspotBandToSoftApBand(-1)))
+        assertEquals("2.4 / 5 GHz (auto)", wifiBandLabel(3))
+        assertEquals("6 GHz", wifiBandLabel(4))
+        assertNull(legacyHotspotBandToSoftApBand(null))
     }
 
     @Test

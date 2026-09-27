@@ -18,7 +18,6 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
-import java.net.UnknownHostException
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 
@@ -37,6 +36,7 @@ class ManualHotspotManager(
     band: ManualHotspotBand,
     channel: Int,
     security: ManualHotspotSecurity,
+    private val onDiagnostic: (String) -> Unit = {},
 ) : WirelessHotspotManager {
     private val appContext = context.applicationContext
     private val connectivityManager =
@@ -104,6 +104,10 @@ class ManualHotspotManager(
                     else -> null
                 }
                 val security = apConfiguration?.security ?: expectedSecurity
+                onDiagnostic("Manual hotspot configReadable=${apConfiguration != null} " +
+                    "security=$security channelKnown=${channel > 0} " +
+                    "hardwareAddressKnown=${localInterface.hardwareAddress != null} iface=${localInterface.name} " +
+                    "family=${if (localInterface.hostAddress is Inet6Address) "IPv6" else "IPv4"}")
                 if (security != Iap2WirelessSecurity.NONE && passphrase.isEmpty()) {
                     throw IOException("Manual hotspot is secured but no passphrase was provided")
                 }
@@ -174,7 +178,9 @@ class ManualHotspotManager(
                     "configured band ${wifiBandLabel(if (expectedBand == ManualHotspotBand.GHZ_2_4) 1 else 2)}",
             )
         }
-        if (configuration.security != expectedSecurity) {
+        // WPA2 vs WPA3 variants are fine: the live security is what the iPhone is told (see start()).
+        // Only an open/secured mismatch means the saved password cannot be right.
+        if ((configuration.security == Iap2WirelessSecurity.NONE) != (expectedSecurity == Iap2WirelessSecurity.NONE)) {
             throw IOException(
                 "Manual hotspot security ${configuration.security} does not match configured " +
                     "security $expectedSecurity",
@@ -246,30 +252,8 @@ class ManualHotspotManager(
         return score
     }
 
-    private fun NetworkInterface.hotspotAddress(): InetAddress? {
-        var ipv6: Inet6Address? = null
-        for (address in Collections.list(inetAddresses)) {
-            if (address is Inet4Address && !address.isLoopbackAddress &&
-                !address.isLinkLocalAddress
-            ) {
-                return address
-            }
-            if (address is Inet6Address && address.isLinkLocalAddress) {
-                if (ipv6 == null) {
-                    ipv6 = if (address.scopeId == index) {
-                        address
-                    } else {
-                        try {
-                            Inet6Address.getByAddress(null, address.address, this)
-                        } catch (_: UnknownHostException) {
-                            null
-                        }
-                    }
-                }
-            }
-        }
-        return ipv6
-    }
+    private fun NetworkInterface.hotspotAddress(): InetAddress? =
+        wirelessHostAddress(Collections.list(inetAddresses), index)
 
     private fun frequencyFromConnectionInfo(): Int? {
         val connectionInfo = try {
@@ -351,7 +335,7 @@ class ManualHotspotManager(
                 0
             }
             val band = try {
-                WifiConfiguration::class.java.getField("apBand").getInt(configuration)
+                legacyHotspotBandToSoftApBand(WifiConfiguration::class.java.getField("apBand").getInt(configuration))
             } catch (_: ReflectiveOperationException) {
                 null
             }

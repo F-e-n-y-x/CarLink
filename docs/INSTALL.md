@@ -1,6 +1,6 @@
 # Install and connect
 
-1. Park the car. Download `DiPlay-0.1.0.apk` from the official GitHub release linked on the website.
+1. Park the car. Download `DiPlay-0.2.0.apk` from the official GitHub release linked on the website.
 2. Install on the Android head unit using its supported APK installation method. Do not install on the iPhone. Update over an existing DiPlay beta to retain settings and pairing records; the signing key is unchanged.
 3. Open DiPlay. Grant the permissions requested for the features you use: Bluetooth/Nearby devices, Wi-Fi/Location on older Android, and microphone for Siri/calls. Allow notifications for connection controls.
 4. Close other phone-projection apps before connecting.
@@ -30,7 +30,11 @@ Use **Settings → Save diagnostic report** after reproducing a problem. Android
 APK installation restrictions are controlled by your car's firmware. ADB is optional if your car supports it, not an app runtime requirement:
 
 ```sh
-adb install -r DiPlay-0.1.0.apk
+adb install -r DiPlay-0.2.0.apk
 ```
 
 Only use a trusted computer. A different signing certificate cannot update this build; do not uninstall until you have saved any reports you need.
+
+## BYD navigation
+
+See [BYD navigation displays](BYD_NAVIGATION.md) for the firmware scope, map metadata requirements, settings and cleanup behavior. No runtime ADB starter is required.

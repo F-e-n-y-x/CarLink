@@ -133,6 +133,18 @@ object Iap2Endpoints {
                     field(5, "isEnabled", Iap2WireType.VOID),
                 ),
             ),
+            field(
+                30,
+                "RouteGuidanceDisplayComponent",
+                Iap2WireType.GROUP,
+                children = listOf(
+                    field(0, "Identifier", Iap2WireType.U16, required = true),
+                    field(1, "Name", Iap2WireType.STRING, required = true),
+                    field(2, "MaxCurrentRoadNameLength", Iap2WireType.U16),
+                    field(4, "MaxAfterManeuverRoadNameLength", Iap2WireType.U16),
+                    field(6, "MaxGuidanceManeuverStorageCapacity", Iap2WireType.U16),
+                ),
+            ),
         ),
     )
     val IDENTIFICATION_ACCEPTED = endpoint(
