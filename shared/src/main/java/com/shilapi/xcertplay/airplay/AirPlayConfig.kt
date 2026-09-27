@@ -20,6 +20,8 @@ data class AirPlayDisplayConfig(
     val safeArea: AirPlayInsets? = null,
     val safeAreaDrawOutside: Boolean? = null,
     val initialUrl: String? = null,
+    /** Display feature bits; null keeps the main-screen default (high-fidelity touch and knobs). */
+    val features: Int? = null,
 )
 
 /** One OEM homescreen icon. */

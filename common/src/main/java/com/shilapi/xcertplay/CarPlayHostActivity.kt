@@ -55,6 +55,7 @@ import com.shilapi.xcertplay.airplay.CarPlayUiScale
 import com.shilapi.xcertplay.airplay.AirPlayDisplayConfig
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.AirPlayIcon
+import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.AirPlaySafeArea
 import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.AirPlaySessionListener
@@ -259,6 +260,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var controller: CarPlayController? = null
     private var currentSurface: Surface? = null
     private var currentSurfaceTexture: SurfaceTexture? = null
+    private var clusterPresentation: ClusterMapPresentation? = null
+    private var clusterSurface: Surface? = null
     private var activeDisplaySize: DisplaySize? = null
     private var pendingDisplaySize: DisplaySize? = null
     private var displayScaleTenths = CarPlayDisplayScale.DEFAULT_TENTHS
@@ -554,8 +557,62 @@ class CarPlayHostActivity : ComponentActivity() {
             requestLocationPermission()
         }
         wirelessPermissionsReady = !wirelessEnabled || hasRequiredWirelessPermissions()
+        ensureClusterPresentation()
         maybeStartCarPlay()
         applyFullscreenMode()
+    }
+
+    // Experimental: the CarPlay instrument-cluster stream on the BYD cluster projection display.
+    private fun ensureClusterPresentation() {
+        if (!AirPlayPersistence.loadClusterMapEnabled(this)) {
+            dismissClusterPresentation()
+            return
+        }
+        if (clusterPresentation != null) return
+        val display = ClusterMapPresentation.findDisplay(this) ?: run {
+            appendLog("Cluster map: no cluster projection display among ${ClusterMapPresentation.describeDisplays(this)}")
+            return
+        }
+        val presentation = ClusterMapPresentation(this, display) { surface -> runOnUiThread { onClusterSurface(surface) } }
+        // The system dismisses a presentation when its display goes away; allow a new one on resume.
+        presentation.setOnDismissListener { if (clusterPresentation === presentation) clusterPresentation = null }
+        try {
+            presentation.show()
+            clusterPresentation = presentation
+            presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
+            appendLog("Cluster map: presentation shown display=${display.displayId}")
+        } catch (error: RuntimeException) {
+            Log.w(ClusterMapPresentation.TAG, "cluster presentation failed", error)
+            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+        }
+    }
+
+    private fun dismissClusterPresentation() {
+        clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
+        clusterSurface = null
+        runCatching { clusterPresentation?.dismiss() }
+        clusterPresentation = null
+    }
+
+    private fun onClusterSurface(surface: Surface?) {
+        clusterSurface?.let { old -> if (old !== surface) sink?.clearSurface(SCREEN_TYPE_ALT, old) }
+        clusterSurface = surface
+        // Never fall back to the main surface: two decoders must not draw into one Surface.
+        if (surface != null) sink?.setSurface(SCREEN_TYPE_ALT, surface)
+    }
+
+    private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
+        if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
+        val display = ClusterMapPresentation.findDisplay(this) ?: return null
+        val size = ClusterMapPresentation.sizeOf(display)
+        if (size.x <= 0 || size.y <= 0) return null
+        return CarPlayClusterDisplay.config(
+            size.x,
+            size.y,
+            AirPlayPersistence.loadClusterMapLiftPercent(this),
+            AirPlayPersistence.loadClusterMapShiftPercent(this),
+        ).also { appendLog("Cluster map: requesting ${size.x}x${size.y} cluster screen safeArea=${it.safeArea}") }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -585,6 +642,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
         mainHandler.removeCallbacks(expireOldLogLines)
         currentSurface?.let { surface ->
@@ -2605,6 +2663,7 @@ class CarPlayHostActivity : ComponentActivity() {
             btMac = DiPlayBluetooth.localAddress(this) ?: DiPlayBootstrap.deviceId(airPlayIdentity),
             sourceVersion = "950.7.1",
             main = display,
+            cluster = clusterDisplayConfig(),
             rightHandDrive = rightHandDrive,
             hevc = hevcEnabled,
             microphone = microphoneAvailable,
@@ -2957,6 +3016,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
         sink = renderer
         currentSurface?.let(::attachSurface)
+        clusterSurface?.let { renderer.setSurface(SCREEN_TYPE_ALT, it) }
         val media = createMediaEngine(renderer)
         val pairings = AirPlayPersistence.loadPairings(this) { id, key ->
             AirPlayPersistence.savePairing(this, id, key)
@@ -3214,7 +3274,11 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun attachSurface(surface: Surface) {
         sink?.setSurface(SCREEN_TYPE_MAIN, surface)
-        sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        if (AirPlayPersistence.loadClusterMapEnabled(this)) {
+            clusterSurface?.let { sink?.setSurface(SCREEN_TYPE_ALT, it) }
+        } else {
+            sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        }
     }
 
     private fun onHostTouch(view: View, event: MotionEvent): Boolean {
@@ -3297,6 +3361,11 @@ class CarPlayHostActivity : ComponentActivity() {
                 activeScreenStreamTypes.add(type)
             } else {
                 activeScreenStreamTypes.remove(type)
+            }
+            if (type == SCREEN_TYPE_ALT) {
+                Log.i(ClusterMapPresentation.TAG, "cluster stream active=$active")
+                appendLog("Cluster map: stream active=$active")
+                clusterPresentation?.setStreamActive(active)
             }
             updateDebugOverlays()
         }

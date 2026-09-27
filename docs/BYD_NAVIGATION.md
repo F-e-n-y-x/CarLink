@@ -11,3 +11,18 @@ The app sends navigation-only broadcasts to the stock ClusterDebug receiver as i
 Normal route end, disconnect, disabling navigation output and stale guidance trigger cleanup. Force-stop/process kill may leave the last instruction visible until the app opens again; a recovery journal handles that next launch. There is no guaranteed process-independent expiry. Run only one projection app at a time.
 
 Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in DiPlay it is enabled by default when available. Debug-only receivers/demos require Android's DUMP permission and are absent from release manifests. Development starter and vendor-access experiments are not part of the production navigation path.
+
+## CarPlay map on the instrument cluster (experimental)
+
+DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No ADB, root or helper is needed.
+
+Validated on DiLink5.0 / Android12, firmware `BYD-AUTO/DiLink5.0/DiLink5.0:12/SKQ1.230128.001/eng.build.20251111.182747:user/release-keys`, with Apple Maps on iOS 27:
+
+- Turn on "CarPlay map on instrument cluster" under BYD navigation. The switch appears only when a cluster projection display is visible to the app.
+- In the cluster's own steering-wheel menu, choose "Full screen navi" or "Small screen navi". "Turn on by navi" shows the map only during stock BYD navigation, so it keeps showing the arrow output instead.
+- The cluster's speed readout stays visible. "Small screen navi" crops the same picture on the cluster side; Android does not report that crop.
+- "Car position on cluster map" and "Car position across cluster map" set CarPlay's safe area, which moves the car marker. The defaults, Higher and 1/9 to the left, fit the tested cluster.
+
+How it works: the iPhone lists the cluster content it offers in its `/info` request (`altScreenURLs`). DiPlay declares a second display of the cluster's size with no input devices and `initialURL=maps:/car/instrumentcluster/map`; without an initial URL the iPhone streams only a black frame. BYD exposes the cluster projection area as public presentation displays owned by `com.byd.containerservice`. The stock map's display (`fission_bg_XDJAScreenProjection`) is hidden from third-party apps, but its `shared_…_0` sibling is composited on top of it, so DiPlay shows a `Presentation` there.
+
+Limits: the cluster window belongs to the CarPlay screen, so it stops while that screen is closed and the session runs in the background. Other map apps and other firmware are untested.

@@ -28,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.io.File
@@ -224,6 +225,27 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, "Navigation on HUD and instrument cluster",
                 "Show phone navigation arrows, distance and street names on supported BYD displays. Vehicle compatibility varies.",
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
+            if (ClusterMapPresentation.findDisplay(this) != null) {
+                toggle(card, "CarPlay map on instrument cluster · experimental",
+                    "Shows the iPhone's cluster map on the instrument cluster. Choose Small or Full screen navi in the cluster's steering-wheel menu.",
+                    AirPlayPersistence.loadClusterMapEnabled(this)) {
+                    AirPlayPersistence.saveClusterMapEnabled(this, it)
+                    reconnectForClusterMap(force = true)
+                }
+                val lifts = CarPlayClusterDisplay.liftPresets
+                choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
+                    lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
+                    AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
+                    reconnectForClusterMap()
+                }
+                val shifts = CarPlayClusterDisplay.shiftPresets
+                choice(card, "Car position across cluster map",
+                    listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
+                    shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
+                    AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
+                    reconnectForClusterMap()
+                }
+            }
         }
         section(content, "Permissions and connection help") { card ->
             card.addView(label("Nearby devices connects your iPhone. Microphone enables Siri and calls. Older Android versions also require Location for wireless setup. USB mode may ask for a local VPN connection.", 16, MUTED))
@@ -356,6 +378,11 @@ class DiPlayActivity : ComponentActivity() {
                 if (error != null) toast(error) else done(ssid, password)
             }
         }
+    }
+
+    // The cluster screen is described at connection time, so a running session reconnects to apply.
+    private fun reconnectForClusterMap(force: Boolean = false) {
+        if ((force || AirPlayPersistence.loadClusterMapEnabled(this)) && CarPlayBackgroundSession.hasSession()) connect(true)
     }
 
     private fun applyWirelessLink(mode: WirelessHotspotMode) {

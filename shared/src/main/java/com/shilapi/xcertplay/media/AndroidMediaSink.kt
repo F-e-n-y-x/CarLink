@@ -158,6 +158,7 @@ class AndroidMediaSink(
     private fun videoDecoder(type: Int): VideoDecoder =
         videoDecoders.computeIfAbsent(type) {
             VideoDecoder(
+                type,
                 surfaces[type] ?: defaultSurface,
                 videoWidth,
                 videoHeight,
@@ -178,6 +179,7 @@ class AndroidMediaSink(
 
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
 private class VideoDecoder(
+    streamType: Int,
     surface: Surface?,
     private val width: Int,
     private val height: Int,
@@ -195,7 +197,8 @@ private class VideoDecoder(
     private var duplicateConfigLogged = false
     private val referenceChain = VideoReferenceChain()
     private var lastKeyFrameRequestNs = 0L
-    private val stats = VideoStats()
+    // The main screen keeps the historical log format; other screens are labelled.
+    private val stats = VideoStats(if (streamType == 110) "" else " stream=$streamType")
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {
