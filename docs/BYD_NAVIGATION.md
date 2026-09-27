@@ -14,7 +14,7 @@ Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in D
 
 ## CarPlay map on the instrument cluster (experimental)
 
-DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No ADB, root or helper is needed.
+DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No root or persistent helper is needed. The optional DiLink 5.1 automatic mode described below needs a one-time permission setup.
 
 Validated on DiLink5.0 / Android12, firmware `BYD-AUTO/DiLink5.0/DiLink5.0:12/SKQ1.230128.001/eng.build.20251111.182747:user/release-keys`, with Apple Maps on iOS 27:
 
@@ -26,3 +26,22 @@ Validated on DiLink5.0 / Android12, firmware `BYD-AUTO/DiLink5.0/DiLink5.0:12/SK
 How it works: the iPhone lists the cluster content it offers in its `/info` request (`altScreenURLs`). DiPlay declares a second display of the cluster's size with no input devices and `initialURL=maps:/car/instrumentcluster/map`; without an initial URL the iPhone streams only a black frame. BYD exposes the cluster projection area as public presentation displays owned by `com.byd.containerservice`. The stock map's display (`fission_bg_XDJAScreenProjection`) is hidden from third-party apps, but its `shared_…_0` sibling is composited on top of it, so DiPlay shows a `Presentation` there.
 
 Limits: the cluster window belongs to the CarPlay screen, so it stops while that screen is closed and the session runs in the background. Other map apps and other firmware are untested.
+
+### DiLink 5.1 theme profile
+
+The exact Android 13 firmware `BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys` has a separate profile for its measured 1920×720 cluster. Other firmware retains the original PR display selection, renderer and settings.
+
+- Map uses shared display `_0`, with a 1920×480 viewport at y=144 and contrast bands behind the instrument readouts.
+- Scenario and Simple use shared display `_1`, with a 600×720 side viewport at x=1320. Everything outside the side map is transparent. No white mini-map shading is added.
+- The iPhone sends one continuous 1920×720 map. DiPlay crops it at native scale into each viewport, centered horizontally and aligned to the bottom to retain the vehicle marker. Theme changes do not restart CarPlay. The side crop shows less surrounding map area than a separately negotiated portrait stream.
+- The two rendering surfaces remain alive when cards close. Window opacity controls visibility, and direct decoder surface handoffs preserve its video reference frames.
+
+Enable **Follow instrument theme and map card** to follow the stock cluster activities. Android Usage Access is required because BYD's theme API is signature-protected. This firmware has no working Usage Access settings page, so the owner must approve one-time ADB setup. For the HUD Test package:
+
+```sh
+adb shell appops set com.shihab.diplay.hudtest GET_USAGE_STATS allow
+```
+
+The settings page can copy the command for the installed package. To revoke it, substitute `default` for `allow`. Without access or a recognized active theme, automatic mode hides the overlay. Manual mode remains available but cannot follow card visibility. If no current theme can be inferred after startup, select a different theme once to produce a fresh event.
+
+Only the four stock full-map, mini-map, Scenario and Simple activity events are processed locally. Closing the mini-map card hides the side overlay; Map theme selects the full layer. Merely moving focus to a head-unit app does not hide a still-visible cluster activity. See [Android's UsageStatsManager documentation](https://developer.android.com/reference/android/app/usage/UsageStatsManager) for the permission model.

@@ -96,7 +96,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume(); handler.removeCallbacks(tick); handler.post(tick)
         // Back from the car settings: refresh the car hotspot reminder on the home page.
-        if (!initialLaunch && page == "home") render()
+        if (!initialLaunch && (page == "home" || page == "settings")) render()
         if (initialLaunch) {
             initialLaunch = false
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
@@ -146,7 +146,11 @@ class DiPlayActivity : ComponentActivity() {
             else connect(true)
         }
         card.addView(connectButton, matchButton())
-        card.addView(label("Pair your iPhone with the car’s Bluetooth, then connect.\nKeep Bluetooth and Wi-Fi on.", 15, MUTED).apply { setPadding(0, dp(14), 0, 0) })
+        val localHotspot = AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+        val connectionHint = if (localHotspot)
+            "Pair your iPhone with the car’s Bluetooth. Keep Bluetooth and your iPhone’s Wi-Fi on. The car’s Wi-Fi switch can stay off in Local hotspot mode."
+        else "Pair your iPhone with the car’s Bluetooth, then connect.\nKeep Bluetooth and Wi-Fi on."
+        card.addView(label(connectionHint, 15, MUTED).apply { setPadding(0, dp(14), 0, 0) })
         if (carHotspotOff()) {
             card.addView(label("The car hotspot “${AirPlayPersistence.loadManualHotspotSsid(this)}” is off. Turn it on in the car settings before connecting.", 15, WARNING).apply { setPadding(0, dp(14), 0, 0) })
             card.addView(button("Open car hotspot settings", false) { openCarWifiSettings() }, matchButton(10, 56))
@@ -232,18 +236,53 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap(force = true)
                 }
-                val lifts = CarPlayClusterDisplay.liftPresets
-                choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
-                    lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
-                    AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
-                    reconnectForClusterMap()
-                }
-                val shifts = CarPlayClusterDisplay.shiftPresets
-                choice(card, "Car position across cluster map",
-                    listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
-                    shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
-                    AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
-                    reconnectForClusterMap()
+                if (DiLink51ClusterLayout.supported()) {
+                    val automatic = DiLink51ClusterLayout.automatic(this)
+                    toggle(card, "Follow instrument theme and map card",
+                        "Show the side map only when its card is open, and switch to the full map in Map theme. Theme and card changes keep CarPlay connected.", automatic) {
+                        DiLink51ClusterLayout.saveAutomatic(this, it)
+                        render()
+                        reconnectForClusterMap()
+                    }
+                    if (automatic) {
+                        val allowed = DiLink51ClusterMonitor.hasAccess(this)
+                        card.addView(label(if (allowed) "Usage Access enabled. DiPlay reads only BYD cluster activity events locally."
+                            else "Usage Access requires one-time ADB setup on this firmware. The map stays hidden until access is enabled and a theme is detected. DiPlay uses only BYD cluster events locally.", 14, MUTED))
+                        if (!allowed) card.addView(Button(this).apply {
+                            text = "Copy Usage Access setup command"
+                            setOnClickListener {
+                                getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
+                                    android.content.ClipData.newPlainText("DiPlay Usage Access", "adb shell appops set $packageName GET_USAGE_STATS allow"))
+                                Toast.makeText(this@DiPlayActivity, "Setup command copied. Run it from your connected computer.", Toast.LENGTH_LONG).show()
+                            }
+                        })
+                    } else {
+                        val themes = DiLink51ClusterLayout.Theme.entries
+                        choice(card, "Instrument theme", themes.map { it.label }, themes.indexOf(DiLink51ClusterLayout.theme(this))) {
+                            DiLink51ClusterLayout.saveTheme(this, themes[it])
+                            reconnectForClusterMap()
+                        }
+                        card.addView(label("Manual mode: match the cluster theme here. The map cannot follow card visibility without Usage Access.", 14, MUTED))
+                    }
+                    val contrasts = DiLink51ClusterLayout.Contrast.entries
+                    choice(card, "Instrument contrast", contrasts.map { it.label }, contrasts.indexOf(DiLink51ClusterLayout.contrast(this))) {
+                        DiLink51ClusterLayout.saveContrast(this, contrasts[it])
+                        reconnectForClusterMap()
+                    }
+                } else {
+                    val lifts = CarPlayClusterDisplay.liftPresets
+                    choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
+                        lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
+                        AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
+                        reconnectForClusterMap()
+                    }
+                    val shifts = CarPlayClusterDisplay.shiftPresets
+                    choice(card, "Car position across cluster map",
+                        listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
+                        shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
+                        AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
+                        reconnectForClusterMap()
+                    }
                 }
             }
         }
@@ -306,20 +345,31 @@ class DiPlayActivity : ComponentActivity() {
         openSystem(Intent(Settings.ACTION_WIRELESS_SETTINGS))
     }
 
-    // Wi-Fi Direct is the default link. The car's own hotspot is an alternative when Wi-Fi Direct is unstable.
+    private fun openCarClientWifiSettings() {
+        val wifi = Intent(Settings.ACTION_WIFI_SETTINGS)
+        if (packageManager.resolveActivity(wifi, 0)?.activityInfo?.packageName == "com.byd.carsettings") {
+            runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)) }
+        }
+        openSystem(wifi)
+    }
+
+    // Existing installs keep their transport. Local-only AP is opt-in until validated per firmware.
     // The runtime config rejects manual mode without valid credentials, so it is only saved together with them.
     private fun wirelessLinkControls(parent: LinearLayout) {
-        val carHotspot = AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL
-        val options = arrayOf("Wi-Fi Direct · default", "Car hotspot")
-        val control = button("Wireless link · ${options[if (carHotspot) 1 else 0]}", false) {}
+        val mode = AirPlayPersistence.loadWirelessHotspotMode(this)
+        val modes = listOf(WirelessHotspotMode.WIFI_P2P, WirelessHotspotMode.LOCAL_ONLY_HOTSPOT, WirelessHotspotMode.MANUAL)
+        val carHotspot = mode == WirelessHotspotMode.MANUAL
+        val options = arrayOf("Wi-Fi Direct", "Local hotspot · experimental", "Car hotspot")
+        val selected = modes.indexOf(mode)
+        val control = button("Wireless link · ${options[selected]}", false) {}
         control.setOnClickListener {
-            var selection = if (carHotspot) 1 else 0
+            var selection = selected
             AlertDialog.Builder(this).setTitle("Wireless link")
                 .setSingleChoiceItems(options, selection) { _, index -> selection = index }
                 .setPositiveButton(if (CarPlayBackgroundSession.hasSession()) "Apply and reconnect" else "Save") { _, _ ->
                     when {
-                        (selection == 1) == carHotspot -> Unit
-                        selection == 0 -> applyWirelessLink(WirelessHotspotMode.WIFI_P2P)
+                        selection == selected -> Unit
+                        modes[selection] != WirelessHotspotMode.MANUAL -> applyWirelessLink(modes[selection])
                         hotspotError(storedSsid(), storedPassword()) == null -> applyWirelessLink(WirelessHotspotMode.MANUAL)
                         else -> askHotspotCredentials { ssid, password ->
                             saveHotspotCredentials(ssid, password)
@@ -330,9 +380,16 @@ class DiPlayActivity : ComponentActivity() {
         }
         parent.addView(control, matchButton(0, 60)); parent.addView(space(12))
         if (!carHotspot) {
-            parent.addView(label("DiPlay creates its own Wi-Fi Direct network for the iPhone.", 14, MUTED).apply {
+            val description = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT)
+                "DiPlay creates a separate hotspot for CarPlay; no car internet plan is needed. This mode requests 5 GHz on supported firmware. If maps or music stutter on DiLink 5.1, turn off the car’s Wi-Fi switch in car settings. Keep Bluetooth and your iPhone’s Wi-Fi on. The local hotspot can stay active with the car’s Wi-Fi switch off."
+            else "DiPlay creates its own Wi-Fi Direct network for the iPhone."
+            parent.addView(label(description, 14, MUTED).apply {
                 setPadding(0, 0, 0, dp(18))
             })
+            if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
+                parent.addView(button("Open car Wi-Fi settings", false) { openCarClientWifiSettings() }, matchButton(0, 56))
+                parent.addView(space(12))
+            }
             return
         }
         val ssid = storedSsid()
@@ -352,7 +409,7 @@ class DiPlayActivity : ComponentActivity() {
                 render()
             }
         }, matchButton(0, 60))
-        parent.addView(label("Turn on the hotspot in the car settings first and enter the same name and password here. The iPhone joins this network for CarPlay. Changes apply to your next connection.", 14, MUTED).apply {
+        parent.addView(label("Turn on the hotspot in the car settings first and enter the same name and password here. The iPhone joins this network for CarPlay; the car does not need an internet plan. Changes apply to your next connection.", 14, MUTED).apply {
             setPadding(0, dp(8), 0, dp(18))
         })
     }
@@ -382,7 +439,7 @@ class DiPlayActivity : ComponentActivity() {
 
     // The cluster screen is described at connection time, so a running session reconnects to apply.
     private fun reconnectForClusterMap(force: Boolean = false) {
-        if ((force || AirPlayPersistence.loadClusterMapEnabled(this)) && CarPlayBackgroundSession.hasSession()) connect(true)
+        if ((force || AirPlayPersistence.loadClusterMapEnabled(this)) && CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
     private fun applyWirelessLink(mode: WirelessHotspotMode) {
@@ -473,6 +530,13 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun wirelessHelp() {
+        if (AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) {
+            AlertDialog.Builder(this).setTitle("Local hotspot connection help")
+                .setMessage("Keep Bluetooth and your iPhone’s Wi-Fi on. DiPlay creates its own local hotspot, so the car does not need an internet plan.\n\nOn DiLink 5.1, try turning off the car’s Wi-Fi switch to reduce stutters. Simply disconnecting a saved network still allows the car to search for Wi-Fi. Return to DiPlay and connect after changing the setting.")
+                .setPositiveButton("Open car Wi-Fi settings") { _, _ -> openCarClientWifiSettings() }
+                .setNegativeButton("Got it", null).show()
+            return
+        }
         AlertDialog.Builder(this).setTitle("Wireless connection help")
             .setMessage("Pair your iPhone with the car’s Bluetooth, keep Wi-Fi on, and allow CarPlay on the iPhone. Close any other phone-projection app.\n\nIf a previous projection app left its connection running, reset CarPlay Wi-Fi below and connect again. Your car’s normal internet Wi-Fi stays on.")
             .setPositiveButton("Got it", null)

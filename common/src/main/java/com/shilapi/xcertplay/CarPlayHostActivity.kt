@@ -262,6 +262,10 @@ class CarPlayHostActivity : ComponentActivity() {
     private var currentSurfaceTexture: SurfaceTexture? = null
     private var clusterPresentation: ClusterMapPresentation? = null
     private var clusterSurface: Surface? = null
+    private var clusterMonitor: DiLink51ClusterMonitor? = null
+    private var detectedCluster = ClusterActivityState.Snapshot(null, false)
+    // Keep one surface per layer alive, including while its map card is hidden.
+    private val clusterLayers = mutableMapOf<Boolean, ClusterMapPresentation>()
     private var activeDisplaySize: DisplaySize? = null
     private var pendingDisplaySize: DisplaySize? = null
     private var displayScaleTenths = CarPlayDisplayScale.DEFAULT_TENTHS
@@ -557,23 +561,45 @@ class CarPlayHostActivity : ComponentActivity() {
             requestLocationPermission()
         }
         wirelessPermissionsReady = !wirelessEnabled || hasRequiredWirelessPermissions()
+        if (DiLink51ClusterLayout.automatic(this) && clusterMonitor == null) {
+            clusterMonitor = DiLink51ClusterMonitor(this, ::onClusterActivityState).also { it.start() }
+        } else if (!DiLink51ClusterLayout.automatic(this)) {
+            clusterMonitor?.stop()
+            clusterMonitor = null
+        }
         ensureClusterPresentation()
         maybeStartCarPlay()
         applyFullscreenMode()
     }
 
     // Experimental: the CarPlay instrument-cluster stream on the BYD cluster projection display.
+    private fun effectiveClusterTheme(): DiLink51ClusterLayout.Theme =
+        if (DiLink51ClusterLayout.automatic(this)) detectedCluster.theme ?: DiLink51ClusterLayout.theme(this)
+        else DiLink51ClusterLayout.theme(this)
+
+    private fun onClusterActivityState(state: ClusterActivityState.Snapshot) {
+        if (state != detectedCluster) appendLog("Cluster map: detected theme=${state.theme} mapVisible=${state.mapVisible}")
+        detectedCluster = state
+        if (!AirPlayPersistence.loadClusterMapEnabled(this)) { dismissClusterPresentation(); return }
+        ensureClusterPresentation()
+    }
+
     private fun ensureClusterPresentation() {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) {
             dismissClusterPresentation()
             return
         }
+        val theme = effectiveClusterTheme()
+        if (DiLink51ClusterLayout.supported()) {
+            ensureDiLink51ClusterPresentation(theme)
+            return
+        }
         if (clusterPresentation != null) return
-        val display = ClusterMapPresentation.findDisplay(this) ?: run {
+        val display = ClusterMapPresentation.findDisplay(this, theme) ?: run {
             appendLog("Cluster map: no cluster projection display among ${ClusterMapPresentation.describeDisplays(this)}")
             return
         }
-        val presentation = ClusterMapPresentation(this, display) { surface -> runOnUiThread { onClusterSurface(surface) } }
+        val presentation = ClusterMapPresentation(this, display, theme) { surface -> runOnUiThread { onClusterSurface(surface) } }
         // The system dismisses a presentation when its display goes away; allow a new one on resume.
         presentation.setOnDismissListener { if (clusterPresentation === presentation) clusterPresentation = null }
         try {
@@ -588,15 +614,59 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    private fun ensureDiLink51ClusterPresentation(theme: DiLink51ClusterLayout.Theme) {
+        val fullMap = theme == DiLink51ClusterLayout.Theme.MAP
+        val visible = !DiLink51ClusterLayout.automatic(this) || detectedCluster.mapVisible
+        clusterLayers.filterKeys { it != fullMap }.values.forEach { it.setMapVisible(false) }
+        var target = clusterLayers[fullMap]
+        if (target == null) {
+            val display = ClusterMapPresentation.findDisplay(this, theme) ?: return
+            lateinit var presentation: ClusterMapPresentation
+            presentation = ClusterMapPresentation(this, display, theme) { surface ->
+                runOnUiThread {
+                    if (clusterPresentation === presentation) onClusterSurface(surface)
+                }
+            }
+            presentation.setOnDismissListener {
+                if (clusterLayers[fullMap] === presentation) clusterLayers.remove(fullMap)
+                if (clusterPresentation === presentation) clusterPresentation = null
+            }
+            try {
+                presentation.setMapVisible(false)
+                clusterPresentation = presentation
+                clusterLayers[fullMap] = presentation
+                presentation.show()
+                appendLog("Cluster map: retained layer display=${display.displayId} fullMap=$fullMap")
+                target = presentation
+            } catch (error: RuntimeException) {
+                clusterLayers.remove(fullMap)
+                clusterPresentation = null
+                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+                return
+            }
+        }
+        clusterPresentation = target
+        target.outputSurface?.let(::onClusterSurface)
+        target.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+        target.setMapVisible(visible)
+    }
+
     private fun dismissClusterPresentation() {
+        val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
+        clusterLayers.clear()
+        clusterPresentation = null
         clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
         clusterSurface = null
-        runCatching { clusterPresentation?.dismiss() }
-        clusterPresentation = null
+        presentations.forEach { runCatching { it.dismiss() } }
     }
 
     private fun onClusterSurface(surface: Surface?) {
-        clusterSurface?.let { old -> if (old !== surface) sink?.clearSurface(SCREEN_TYPE_ALT, old) }
+        if (clusterSurface === surface) return
+        // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
+        // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
+        if (!DiLink51ClusterLayout.supported() || surface == null) {
+            clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
+        }
         clusterSurface = surface
         // Never fall back to the main surface: two decoders must not draw into one Surface.
         if (surface != null) sink?.setSurface(SCREEN_TYPE_ALT, surface)
@@ -604,9 +674,16 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
-        val display = ClusterMapPresentation.findDisplay(this) ?: return null
+        val theme = effectiveClusterTheme()
+        val display = ClusterMapPresentation.findDisplay(this, theme) ?: return null
         val size = ClusterMapPresentation.sizeOf(display)
         if (size.x <= 0 || size.y <= 0) return null
+        if (DiLink51ClusterLayout.supported()) {
+            val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
+            return DiLink51ClusterLayout.streamConfig().also {
+                appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+            }
+        }
         return CarPlayClusterDisplay.config(
             size.x,
             size.y,
@@ -642,6 +719,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        clusterMonitor?.stop()
         dismissClusterPresentation()
         mainHandler.removeCallbacks(applyDisplaySize)
         mainHandler.removeCallbacks(expireOldLogLines)
