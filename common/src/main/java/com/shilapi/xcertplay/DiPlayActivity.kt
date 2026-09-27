@@ -230,20 +230,18 @@ class DiPlayActivity : ComponentActivity() {
                     "Shows the iPhone's cluster map on the instrument cluster. Choose Small or Full screen navi in the cluster's steering-wheel menu.",
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
-                    reconnectForClusterMap(force = true)
+                    reconnectForClusterMap()
                 }
                 val lifts = CarPlayClusterDisplay.liftPresets
                 choice(card, "Car position on cluster map", listOf("Bottom", "Higher · default", "Much higher"),
                     lifts.indexOf(AirPlayPersistence.loadClusterMapLiftPercent(this)).coerceAtLeast(0)) {
                     AirPlayPersistence.saveClusterMapLiftPercent(this, lifts[it])
-                    reconnectForClusterMap()
                 }
                 val shifts = CarPlayClusterDisplay.shiftPresets
                 choice(card, "Car position across cluster map",
                     listOf("Center", "Left · by 1/12", "Left · by 1/10", "Left · by 1/9 · default", "Left · by 1/8", "Left · by 1/6", "Far left · by 1/3"),
                     shifts.indexOf(AirPlayPersistence.loadClusterMapShiftPercent(this)).coerceAtLeast(0)) {
                     AirPlayPersistence.saveClusterMapShiftPercent(this, shifts[it])
-                    reconnectForClusterMap()
                 }
             }
         }
@@ -380,9 +378,10 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
 
-    // The cluster screen is described at connection time, so a running session reconnects to apply.
-    private fun reconnectForClusterMap(force: Boolean = false) {
-        if ((force || AirPlayPersistence.loadClusterMapEnabled(this)) && CarPlayBackgroundSession.hasSession()) connect(true)
+    // The cluster screen is described at connection time, so a running session reconnects over
+    // its current link. The position choices need no call: "Apply and reconnect" already does it.
+    private fun reconnectForClusterMap() {
+        if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
     private fun applyWirelessLink(mode: WirelessHotspotMode) {
