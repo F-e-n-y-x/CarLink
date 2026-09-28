@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay.media
 
+import android.media.AudioManager
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -34,19 +35,28 @@ class AudioChannelMappingTest {
                 payloadType = 100,
                 channel = AudioChannel.NAVIGATION,
                 contentType = AudioContentType.SPEECH,
+                streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
             )
         }
     }
 
     @Test
     fun automotiveMappingUsesTheBusSpecificCarPlayTypes() {
-        listOf("media", "default", "compatibility").forEach { audioType ->
+        assertMapped(
+            mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
+            audioType = "media",
+            payloadType = 100,
+            channel = AudioChannel.MEDIA,
+            contentType = AudioContentType.MUSIC,
+        )
+        listOf("default", "compatibility").forEach { audioType ->
             assertMapped(
                 mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
                 audioType = audioType,
                 payloadType = 100,
-                channel = AudioChannel.MEDIA,
-                contentType = AudioContentType.MUSIC,
+                channel = AudioChannel.NAVIGATION,
+                contentType = AudioContentType.SPEECH,
+                streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
             )
         }
         assertMapped(
@@ -69,6 +79,7 @@ class AudioChannelMappingTest {
             payloadType = 100,
             channel = AudioChannel.NAVIGATION,
             contentType = AudioContentType.SPEECH,
+            streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
         )
     }
 
@@ -87,6 +98,24 @@ class AudioChannelMappingTest {
             payloadType = 100,
             channel = AudioChannel.NAVIGATION,
             contentType = AudioContentType.SPEECH,
+            streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
+        )
+    }
+
+    @Test
+    fun navigationStreamTypeIsOnlyAppliedToGuidanceChannels() {
+        val custom = 7
+        assertEquals(
+            AudioChannelSelection(AudioChannel.NAVIGATION, AudioContentType.SPEECH, custom),
+            AudioChannelMapper.map("alert", 100, AudioChannelMappingMode.MOBILE_COMPATIBLE, custom),
+        )
+        assertEquals(
+            AudioChannelSelection(AudioChannel.NAVIGATION, AudioContentType.SPEECH, custom),
+            AudioChannelMapper.map("default", 100, AudioChannelMappingMode.AUTOMOTIVE_BUS, custom),
+        )
+        assertEquals(
+            AudioChannelSelection(AudioChannel.MEDIA, AudioContentType.MUSIC, AudioManager.STREAM_MUSIC),
+            AudioChannelMapper.map("media", 100, AudioChannelMappingMode.AUTOMOTIVE_BUS, custom),
         )
     }
 
@@ -96,9 +125,10 @@ class AudioChannelMappingTest {
         payloadType: Int,
         channel: AudioChannel,
         contentType: AudioContentType,
+        streamType: Int = AudioManager.STREAM_MUSIC,
     ) {
         assertEquals(
-            AudioChannelSelection(channel, contentType),
+            AudioChannelSelection(channel, contentType, streamType),
             AudioChannelMapper.map(audioType, payloadType, mode),
         )
     }

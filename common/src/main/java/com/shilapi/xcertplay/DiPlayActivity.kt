@@ -12,12 +12,15 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +53,9 @@ class DiPlayActivity : ComponentActivity() {
     private var initialLaunch = true
     private var notificationTransport = true
     private var exportInProgress = false
+    private var navigationStreamType = 14
+    private var testToneTrack: AudioTrack? = null
+    private var toneStop: Runnable? = null
     private var exportButton: Button? = null
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         connect(notificationTransport)
@@ -242,6 +248,42 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, "Full screen", "Hide the car’s system bars while CarPlay is open.", AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
             }
+        }
+        section(content, "Audio routing") { card ->
+            val channelTitle = label("Navigation stream type", 18, TEXT, true)
+            val channelHint = label("Tap a number to test. 14 = driver speaker on BYD.", 14, MUTED)
+            val grid = channelSelector()
+            val saveButton = button("Save", true) {
+                AirPlayPersistence.saveNavigationStreamType(this, navigationStreamType)
+                toast("Saved: $navigationStreamType")
+            }
+            fun applyChannelEnabled(enabled: Boolean) {
+                val alpha = if (enabled) 1f else 0.4f
+                listOf(channelTitle, channelHint, saveButton).forEach {
+                    it.isEnabled = enabled
+                    it.alpha = alpha
+                }
+                for (i in 0 until grid.childCount) {
+                    grid.getChildAt(i).let { child ->
+                        child.isEnabled = enabled
+                        child.alpha = alpha
+                    }
+                }
+            }
+            val aaosSupported = resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
+            if (aaosSupported) {
+                toggle(card, "Advanced audio channel mapping",
+                    "Use usage / content-type routing instead of stream type",
+                    AirPlayPersistence.loadAdvancedAudioChannelMapping(this)) {
+                    AirPlayPersistence.saveAdvancedAudioChannelMapping(this, it)
+                    applyChannelEnabled(!it)
+                }
+            }
+            card.addView(channelTitle)
+            card.addView(channelHint)
+            card.addView(grid)
+            card.addView(saveButton, matchButton(12, 56))
+            if (aaosSupported) applyChannelEnabled(!AirPlayPersistence.loadAdvancedAudioChannelMapping(this))
         }
         if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, "BYD navigation", R.drawable.ic_dp_navigation) { card ->
             toggle(card, "Navigation on HUD and instrument cluster",
@@ -799,6 +841,90 @@ class DiPlayActivity : ComponentActivity() {
     }
     private fun openSystem(intent: Intent) { runCatching { startActivity(intent) }.onFailure { toast("Open this setting from your car’s Settings app.") } }
     private fun toast(message: String) { Toast.makeText(this, message, Toast.LENGTH_LONG).show() }
+
+    private fun playTestTone(streamType: Int) {
+        toneStop?.let { handler.removeCallbacks(it) }
+        toneStop = null
+        testToneTrack?.let { runCatching { it.stop(); it.release() } }
+        testToneTrack = null
+        val pcm = assets.open("navigation_test.pcm").use { it.readBytes() }
+        val track = AudioTrack(
+            streamType,
+            44100,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            pcm.size,
+            AudioTrack.MODE_STREAM
+        )
+        if (track.state != AudioTrack.STATE_INITIALIZED) {
+            Log.w("DiPlay", "playTestTone streamType=$streamType state=${track.state}")
+            track.release()
+            toast("Stream type $streamType is unavailable here (state=${track.state})")
+            return
+        }
+        track.write(pcm, 0, pcm.size)
+        track.play()
+        Log.i("DiPlay", "playTestTone streamType=$streamType state=${track.state} playState=${track.playState}")
+        testToneTrack = track
+        val stop = Runnable {
+            track.stop()
+            track.release()
+            if (testToneTrack === track) testToneTrack = null
+            toneStop = null
+        }
+        toneStop = stop
+        handler.postDelayed(stop, 4500)
+    }
+
+    private val channelButtons = mutableListOf<Button>()
+
+    private fun paintChannel(index: Int, selected: Boolean) {
+        val target = channelButtons.getOrNull(index) ?: return
+        target.isSelected = selected
+        target.setTextColor(if (selected) BG else TEXT)
+        target.background = android.graphics.drawable.RippleDrawable(
+            ColorStateList.valueOf(0x336F9FD9),
+            rounded(if (selected) ACCENT else SURFACE, if (selected) ACCENT else BORDER),
+            null
+        )
+    }
+
+    private fun channelSelector(): ViewGroup {
+        channelButtons.clear()
+        val grid = GridLayout(this).apply {
+            columnCount = 7
+            rowCount = 3
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        for (i in 0..20) {
+            val btn = Button(this).apply {
+                text = i.toString()
+                isAllCaps = false
+                textSize = 16f
+                minHeight = dp(48)
+                stateListAnimator = null
+                setOnClickListener {
+                    val previous = navigationStreamType
+                    navigationStreamType = i
+                    if (previous != i) {
+                        paintChannel(previous, false)
+                        paintChannel(i, true)
+                    }
+                    playTestTone(i)
+                }
+            }
+            val params = GridLayout.LayoutParams().apply {
+                width = 0
+                height = dp(48)
+                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+                setMargins(dp(4), dp(4), dp(4), dp(4))
+            }
+            grid.addView(btn, params)
+            channelButtons.add(btn)
+            paintChannel(i, i == navigationStreamType)
+        }
+        return grid
+    }
     private fun version() = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.1.0-beta.1"
     private fun section(parent: LinearLayout, title: String, icon: Int? = null, build: (LinearLayout) -> Unit) {
         val card = card()
