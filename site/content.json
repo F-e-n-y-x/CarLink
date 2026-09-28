@@ -20,22 +20,21 @@
     "steps": [
       "Download the APK and install it on the head unit using its permitted APK installation method, or use the ADB guide below. Do this while parked.",
       "Open DiAuto and complete setup. Grant the Bluetooth, Wi-Fi/location, microphone and other permissions requested for the features you use.",
-      "Pair your Android phone in the car’s Bluetooth settings. Keep Bluetooth and Wi-Fi enabled, then choose Connect phone in DiAuto.",
+      "Turn on the car’s built-in hotspot (5 GHz if available). In Settings → Connection setup, select Built-in car hotspot and save its exact name and password. Keep phone Wi-Fi and Bluetooth on, pair with the car, then tap Connect phone and accept the phone prompts.",
       "Prefer a cable? Connect your phone with a USB data cable and choose Connect with USB."
     ],
     "adb": "Installation & pairing help",
     "bssid": "DiAuto 0.3.2 automatically recovers the Wi-Fi Direct address on supported DiLink firmware. Leave Static BSSID on Auto; no ADB setup is needed for this recovery. Some firmware and phone combinations may still have connection issues.",
     "whats": "What’s new",
     "features": [
-      "Native wireless Android Auto, plus wired USB support.",
-      "Car-friendly home, settings, switches and dialogs.",
-      "Music-through-car-Bluetooth mode to avoid competing media audio focus.",
-      "Smarter Wi-Fi channel selection and bounded frame pacing to reduce scrolling stalls."
+      "Guided built-in car hotspot setup; Local hotspot removed. Wi-Fi Direct and USB remain available.",
+      "Improved hotspot address recovery and keyboard dismissal.",
+      "Easy diagnostic export and distinct settings icons."
     ],
     "compat": "Compatibility",
     "compatText": "Tested on BYD DiLink 5.1 running Android 13, with wireless and physical USB connections. Other head units and firmware versions are not yet verified. Features and performance depend on your phone and car; constant 60 FPS is not promised.",
     "update": "Updates & signing",
-    "updateText": "This is the first public release with a dedicated signing key. Future public builds will use the same key. Private preview and upstream builds may have a different signature: export your settings before uninstalling a conflicting build. Uninstalling removes its local data.",
+    "updateText": "Install over the previous public release to retain settings; the public signing key is unchanged. Test builds use a separate app package.",
     "follow": "Get release updates",
     "followText": "Follow the Telegram channel for new versions and project news.",
     "telegram": "Follow on Telegram",
@@ -66,22 +65,21 @@
     "steps": [
       "نزّل ملف APK وثبّته على شاشة السيارة بالطريقة التي يسمح بها نظامها، أو اتّبع دليل ADB أدناه. نفّذ الإعداد والسيارة متوقفة.",
       "افتح DiAuto وأكمل الإعداد. امنح أذونات البلوتوث والواي فاي/الموقع والميكروفون وغيرها بحسب الميزات المستخدمة.",
-      "اقرن هاتف أندرويد من إعدادات بلوتوث السيارة. أبقِ البلوتوث والواي فاي مفعّلين، ثم اختر Connect phone في DiAuto.",
+      "شغّل نقطة اتصال السيارة المدمجة واختر 5 غيغاهرتز إن توفر. من الإعدادات ← إعداد الاتصال، اختر نقطة اتصال السيارة وأدخل الاسم وكلمة المرور بدقة. أبقِ Wi-Fi وBluetooth مفعّلين على الهاتف، واقرنه بالسيارة، ثم اضغط توصيل الهاتف ووافق على الطلبات.",
       "تفضّل السلك؟ وصّل هاتفك بكابل USB يدعم نقل البيانات واختر Connect with USB."
     ],
     "adb": "دليل التثبيت والمساعدة في الاقتران",
     "bssid": "يستخرج DiAuto 0.3.2 عنوان Wi-Fi Direct تلقائيًا على إصدارات DiLink المدعومة. اترك Static BSSID على Auto؛ لا تتطلب هذه الميزة إعداد ADB. قد تستمر مشكلات الاتصال مع بعض إصدارات النظام والهواتف.",
     "whats": "الجديد في هذا الإصدار",
     "features": [
-      "أندرويد أوتو لاسلكي مع دعم الاتصال السلكي عبر USB.",
-      "واجهة رئيسية وإعدادات ومفاتيح ونوافذ مناسبة للسيارة.",
-      "وضع تشغيل الموسيقى عبر بلوتوث السيارة لتجنّب تعارض التحكم بالصوت.",
-      "اختيار أذكى لقناة الواي فاي وتنظيم عرض الإطارات لتقليل تقطّع التمرير."
+      "إعداد واضح لنقطة اتصال السيارة؛ أزيل خيار نقطة الاتصال المحلية. يظل Wi-Fi Direct وUSB متاحين.",
+      "تحسين اكتشاف عنوان نقطة الاتصال وإخفاء لوحة المفاتيح.",
+      "تصدير السجلات بسهولة وأيقونات مميزة للإعدادات."
     ],
     "compat": "التوافق",
     "compatText": "تم الاختبار على BYD DiLink 5.1 بنظام Android 13، لاسلكياً وبكابل USB فعلي. لم يُتحقق بعد من بقية الشاشات وإصدارات النظام. تعتمد الميزات والأداء على الهاتف والسيارة؛ لا نَعِد بثبات 60 إطاراً في الثانية.",
     "update": "التحديثات والتوقيع",
-    "updateText": "هذا أول إصدار عام بمفتاح توقيع مخصص، وستستخدمه التحديثات العامة القادمة. قد تختلف توقيعات النسخ التجريبية الخاصة ونسخ المشروع الأصلي: صدّر إعداداتك قبل حذف أي نسخة متعارضة. الحذف يزيل بيانات التطبيق المحلية.",
+    "updateText": "ثبّت فوق الإصدار العام السابق للاحتفاظ بالإعدادات؛ مفتاح التوقيع لم يتغير. إصدارات الاختبار تستخدم حزمة تطبيق منفصلة.",
     "follow": "تابع آخر التحديثات",
     "followText": "تابع قناة تيليجرام للحصول على الإصدارات الجديدة وأخبار المشروع.",
     "telegram": "تابعنا على تيليجرام",
@@ -112,22 +110,21 @@
     "steps": [
       "Скачайте APK и установите на головное устройство разрешённым в его системе способом или по инструкции ADB ниже. Настраивайте на стоянке.",
       "Откройте DiAuto и завершите настройку. Предоставьте разрешения Bluetooth, Wi-Fi/геолокации, микрофона и другие разрешения для нужных функций.",
-      "Выполните сопряжение Android-телефона в настройках Bluetooth автомобиля. Включите Bluetooth и Wi-Fi, затем нажмите Connect phone в DiAuto.",
+      "Включите встроенную точку доступа автомобиля (5 ГГц, если доступно). В Настройки → Настройка подключения выберите точку доступа автомобиля и сохраните её точные имя и пароль. Включите Wi-Fi и Bluetooth на телефоне, выполните сопряжение с автомобилем, нажмите «Подключить телефон» и подтвердите запросы.",
       "Предпочитаете кабель? Подключите телефон кабелем USB с передачей данных и выберите Connect with USB."
     ],
     "adb": "Установка и помощь с сопряжением",
     "bssid": "DiAuto 0.3.2 автоматически определяет адрес Wi-Fi Direct на поддерживаемых прошивках DiLink. Оставьте Static BSSID в режиме Auto; для этого не нужна настройка ADB. На некоторых прошивках и телефонах проблемы подключения могут сохраняться.",
     "whats": "Что нового",
     "features": [
-      "Беспроводной Android Auto и подключение по USB.",
-      "Удобные для автомобиля главный экран, настройки и диалоги.",
-      "Режим музыки через Bluetooth автомобиля без конкуренции за аудиофокус мультимедиа.",
-      "Улучшенный выбор канала Wi-Fi и планирование кадров для уменьшения рывков."
+      "Пошаговая настройка точки доступа автомобиля; вариант Local hotspot удалён. Wi-Fi Direct и USB сохранены.",
+      "Улучшено определение адреса точки доступа и закрытие клавиатуры.",
+      "Удобный экспорт журналов и разные значки настроек."
     ],
     "compat": "Совместимость",
     "compatText": "Проверено на BYD DiLink 5.1 с Android 13 по беспроводному соединению и USB. Другие устройства и версии прошивки пока не проверены. Возможности и производительность зависят от телефона и автомобиля; постоянные 60 кадров/с не гарантируются.",
     "update": "Обновления и подпись",
-    "updateText": "Первый публичный релиз подписан отдельным ключом. Он будет использоваться для следующих публичных версий. У закрытых тестовых и исходных сборок подпись может отличаться: экспортируйте настройки перед удалением несовместимой сборки. Удаление стирает локальные данные.",
+    "updateText": "Установите поверх предыдущего публичного выпуска, чтобы сохранить настройки; ключ подписи не изменился. Тестовые сборки используют отдельный пакет приложения.",
     "follow": "Следите за обновлениями",
     "followText": "Новые версии и новости проекта — в Telegram-канале.",
     "telegram": "Подписаться в Telegram",
@@ -158,22 +155,21 @@
     "steps": [
       "Descarga el APK e instálalo en la unidad del coche mediante el método permitido por su sistema, o sigue la guía ADB. Haz la configuración con el coche aparcado.",
       "Abre DiAuto y completa la configuración. Concede los permisos de Bluetooth, Wi-Fi/ubicación, micrófono y los demás necesarios para las funciones que uses.",
-      "Empareja el teléfono Android desde los ajustes Bluetooth del coche. Mantén Bluetooth y Wi-Fi activados y pulsa Connect phone en DiAuto.",
+      "Activa el punto de acceso integrado del coche (5 GHz si está disponible). En Ajustes → Configuración de conexión, selecciónalo y guarda su nombre y contraseña exactos. Mantén Wi-Fi y Bluetooth activos en el teléfono, emparéjalo con el coche, pulsa Conectar teléfono y acepta las indicaciones.",
       "¿Prefieres cable? Conecta el teléfono con un cable USB de datos y elige Connect with USB."
     ],
     "adb": "Instalación y ayuda de conexión",
     "bssid": "DiAuto 0.3.2 recupera automáticamente la dirección Wi-Fi Direct en firmware DiLink compatible. Deja Static BSSID en Auto; esta función no requiere configurar ADB. Algunas combinaciones de firmware y teléfono pueden seguir teniendo problemas de conexión.",
     "whats": "Novedades",
     "features": [
-      "Android Auto inalámbrico y conexión por USB.",
-      "Inicio, ajustes, interruptores y diálogos adaptados al coche.",
-      "Modo de música por Bluetooth del coche para evitar conflictos de foco de audio multimedia.",
-      "Mejor selección del canal Wi-Fi y temporización de fotogramas para reducir tirones."
+      "Configuración guiada del punto de acceso del coche; se elimina Local hotspot. Wi-Fi Direct y USB siguen disponibles.",
+      "Mejor detección de la dirección del punto de acceso y cierre del teclado.",
+      "Exportación sencilla de registros e iconos de ajustes distintos."
     ],
     "compat": "Compatibilidad",
     "compatText": "Probado en BYD DiLink 5.1 con Android 13, tanto inalámbrico como con cable USB. Otras unidades y versiones de firmware aún no están verificadas. Las funciones y el rendimiento dependen del teléfono y del coche; no se prometen 60 FPS constantes.",
     "update": "Actualizaciones y firma",
-    "updateText": "Esta primera versión pública usa una clave de firma dedicada, que se mantendrá en futuras versiones públicas. Las versiones privadas de prueba y las del proyecto original pueden tener otra firma: exporta tus ajustes antes de desinstalar una versión incompatible. La desinstalación borra sus datos locales.",
+    "updateText": "Instala sobre la versión pública anterior para conservar los ajustes; la clave de firma no cambia. Las versiones de prueba usan un paquete de aplicación separado.",
     "follow": "Recibe las novedades",
     "followText": "Sigue el canal de Telegram para conocer nuevas versiones y noticias del proyecto.",
     "telegram": "Seguir en Telegram",
@@ -204,22 +200,21 @@
     "steps": [
       "下载 APK，通过车机系统允许的方式安装，或参照下方 ADB 指南。请在停车时完成设置。",
       "打开 DiAuto 并完成设置，根据所用功能授予蓝牙、Wi-Fi/位置、麦克风等权限。",
-      "在车机蓝牙设置中配对安卓手机。保持蓝牙和 Wi-Fi 开启，然后在 DiAuto 中点击 Connect phone。",
+      "开启车机内置热点，如可选请使用 5 GHz。在“设置 → 连接设置”中选择车机内置热点，准确填写并保存名称和密码。保持手机 Wi-Fi 和蓝牙开启，与车机配对后点击“连接手机”，并同意手机上的提示。",
       "想用有线连接？使用支持数据传输的 USB 线连接手机，选择 Connect with USB。"
     ],
     "adb": "安装与配对帮助",
     "bssid": "DiAuto 0.3.2 可在支持的 DiLink 固件上自动获取 Wi-Fi Direct 地址。请将 Static BSSID 保持为 Auto；此功能无需配置 ADB。部分固件与手机组合仍可能存在连接问题。",
     "whats": "本次更新",
     "features": [
-      "原生无线 Android Auto，并支持 USB 有线连接。",
-      "适合车载使用的主界面、设置、开关和对话框。",
-      "通过车载蓝牙播放音乐的模式，避免媒体音频焦点冲突。",
-      "改进 Wi-Fi 信道选择和帧呈现调度，减少滚动卡顿。"
+      "新增车机内置热点设置指引；移除 Local hotspot 选项，保留 Wi-Fi Direct 和 USB。",
+      "改进热点地址识别及键盘收起操作。",
+      "更便捷的日志导出，以及不同的设置图标。"
     ],
     "compat": "兼容性",
     "compatText": "已在搭载 Android 13 的比亚迪 DiLink 5.1 上测试无线及 USB 有线连接。其他车机和固件版本尚未验证。功能和性能取决于手机与车机，不保证稳定 60 FPS。",
     "update": "更新与签名",
-    "updateText": "这是首个使用专用签名密钥的公开版本，后续公开版本将继续使用该密钥。内部预览版和上游版本的签名可能不同：卸载冲突版本前请导出设置。卸载会删除应用本地数据。",
+    "updateText": "覆盖安装到之前的公开版本即可保留设置，公开版签名密钥不变。测试版使用独立的应用包名。",
     "follow": "获取更新",
     "followText": "关注 Telegram 频道，获取新版本和项目动态。",
     "telegram": "关注 Telegram",
