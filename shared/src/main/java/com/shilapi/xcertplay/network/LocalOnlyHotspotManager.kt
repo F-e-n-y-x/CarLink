@@ -73,12 +73,14 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         try {
             ensureStartActive(attempt)
             onDiagnostic("LocalOnlyHotspot starting with Wi-Fi client enabled=${wifiManager.isWifiEnabled}")
-            requestHotspot(createCallback(attempt))
+            disconnectTwoPointFourStation()
+            val requestedChannel = requestHotspot(createCallback(attempt))
 
             val activeReservation = awaitStart(attempt, deadlineNanos, timeoutMillis)
             radioInfo.start()
             acquiredMulticastLock = acquireMulticastLock(attempt)
             val configuration = readConfiguration(activeReservation)
+            onDiagnostic("LocalOnlyHotspot reservation band=${configuration.bandLabel} channel=${configuration.channel}")
             val apInterface = awaitApInterface(
                 bssid = configuration.bssidBytes,
                 previousAddresses = previousAddresses,
@@ -87,8 +89,7 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                 deadlineNanos = deadlineNanos,
             )
             val liveRadio = awaitRadioInfo(radioInfo, apInterface, configuration, attempt, deadlineNanos)
-            if ((Build.VERSION.SDK_INT == 33 || Build.VERSION.SDK_INT >= 36) &&
-                (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz"))) {
+            if (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz")) {
                 throw IOException("This firmware did not provide the requested 5 GHz local hotspot; choose Wi-Fi Direct or Car hotspot")
             }
 
@@ -104,11 +105,26 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
             }
             radioInfo.watch(apInterface.bssid ?: configuration.bssid, onDiagnostic)
 
+            // With a live radio reading the channel is measured; Android 11/12 BYD units
+            // have neither a live callback nor working WEXT, so there the advertised
+            // channel degrades to the configuration's, the one this manager requested,
+            // or 36 — in that order — and the phone joining is the real verification.
+            val advertisedChannel = when {
+                liveRadio != null -> wifiFrequencyMhzToChannel(liveRadio.frequencyMHz)
+                    ?: configuration.channel.takeIf { it > 0 } ?: requestedChannel ?: 36
+                configuration.channel > 0 -> configuration.channel
+                requestedChannel != null -> requestedChannel
+                else -> 36
+            }
+            if (liveRadio == null && configuration.channel == 0) {
+                onDiagnostic("LocalOnlyHotspot: advertising channel $advertisedChannel (band ${configuration.bandLabel}) without live verification")
+            }
+
             return WirelessHotspotInfo(
                 ssid = configuration.ssid,
                 passphrase = configuration.passphrase,
                 security = configuration.security,
-                channel = liveRadio?.frequencyMHz?.let(::wifiFrequencyMhzToChannel) ?: configuration.channel,
+                channel = advertisedChannel,
                 frequencyMHz = liveRadio?.frequencyMHz,
                 bssid = apInterface.bssid ?: configuration.bssid,
                 interfaceName = apInterface.name,
@@ -129,11 +145,44 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         }
     }
 
-    private fun requestHotspot(callback: WifiManager.LocalOnlyHotspotCallback) {
+    /**
+     * Frees the radio for a 5 GHz hotspot on Android 11/12. Observed on DiLink 5.0 /
+     * Android 12: while the car's Wi-Fi client stays associated to a 2.4 GHz network, the
+     * Qualcomm stack pins the local hotspot onto the same channel even when 5 GHz was
+     * explicitly requested. Disconnecting the station first is best-effort — where the
+     * platform ignores it, the 2.4 GHz refusal message still names the Wi-Fi switch.
+     */
+    @Suppress("DEPRECATION")
+    private fun disconnectTwoPointFourStation() {
+        if (Build.VERSION.SDK_INT !in 30..32) return
+        val connection = runCatching { wifiManager.connectionInfo }.getOrNull() ?: return
+        // The BSSID is masked for ordinary apps on BYD builds, so associate on
+        // supplicant state + frequency alone; a completed 2.4 GHz association is what
+        // pins the hotspot onto 2.4 GHz.
+        val associatedOn2Point4 = connection.supplicantState ==
+            android.net.wifi.SupplicantState.COMPLETED && connection.frequency in 2412..2484
+        if (!associatedOn2Point4) return
+        onDiagnostic(
+            "LocalOnlyHotspot: car Wi-Fi client is associated on ${connection.frequency} MHz (2.4 GHz); disconnecting it so the hotspot can use 5 GHz",
+        )
+        runCatching { wifiManager.disconnect() }
+            .onFailure {
+                onDiagnostic("LocalOnlyHotspot: could not disconnect the Wi-Fi client (${it.javaClass.simpleName}); if the hotspot lands on 2.4 GHz, turn the car's Wi-Fi switch off")
+            }
+    }
+
+    /**
+     * Posts the hotspot request and returns the 5 GHz channel that was explicitly asked
+     * for, or null when the platform got the plain Android-generated AP. The caller uses
+     * the returned channel as the advertised fallback when no live radio reading exists.
+     */
+    private fun requestHotspot(callback: WifiManager.LocalOnlyHotspotCallback): Int? {
         // Android 13's service accepts a custom LOHS configuration from target-33+ callers
-        // with Nearby devices permission. Its framework entry point is SystemApi, so this
-        // compatibility path is capability-checked and never changes global AP settings.
-        // Other pre-36 releases keep the standard reservation path.
+        // with Nearby devices permission. BYD's Android 12 builds expose the same entry
+        // point but return a 2.4 GHz hotspot regardless of the requested band (observed
+        // 2026-09-28 with the Wi-Fi client both on and off), while their plain reservation
+        // runs 5 GHz (Hotspot Check on the same build) — so Android 11/12 keep the plain
+        // path and rely on the band check below. Android 14/15 also keep the plain path.
         val main = Handler(Looper.getMainLooper())
         val executor = Executor { main.post(it) }
         if (Build.VERSION.SDK_INT == 33 || Build.VERSION.SDK_INT >= 36) {
@@ -150,12 +199,19 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                 val stationFrequency = runCatching { wifiManager.connectionInfo?.frequency }.getOrNull()
                 val preferredChannel = stationFrequency?.takeIf { it in 5160..5895 }
                     ?.let(::wifiFrequencyMhzToChannel) ?: 36
-                SoftApConfiguration.Builder::class.java.getMethod("setChannel", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
-                    .invoke(builder, preferredChannel, SoftApConfiguration.BAND_5GHZ)
+                try {
+                    SoftApConfiguration.Builder::class.java.getMethod("setChannel", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                        .invoke(builder, preferredChannel, SoftApConfiguration.BAND_5GHZ)
+                } catch (_: NoSuchMethodException) {
+                    // Android 11 has no setChannel(channel, band); asking for the band
+                    // alone still pins 5 GHz and leaves the channel to the firmware.
+                    SoftApConfiguration.Builder::class.java.getMethod("setBand", Int::class.javaPrimitiveType)
+                        .invoke(builder, SoftApConfiguration.BAND_5GHZ)
+                }
                 val method = if (Build.VERSION.SDK_INT >= 36) "startLocalOnlyHotspotWithConfiguration" else "startLocalOnlyHotspot"
                 WifiManager::class.java.getMethod(method, SoftApConfiguration::class.java, Executor::class.java,
                     WifiManager.LocalOnlyHotspotCallback::class.java).invoke(wifiManager, builder.build(), executor, callback)
-                return
+                return preferredChannel
             } catch (failure: ReflectiveOperationException) {
                 if (failure.cause != null && failure.cause !is SecurityException && failure.cause !is UnsupportedOperationException) {
                     throw IOException("LocalOnlyHotspot custom startup failed", failure.cause)
@@ -167,6 +223,7 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         }
         // Main-loop callback delivery survives cancellation to close late reservations.
         wifiManager.startLocalOnlyHotspot(callback, main)
+        return null
     }
 
     private fun awaitRadioInfo(
@@ -176,12 +233,53 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         attempt: StartAttempt,
         deadlineNanos: Long,
     ): LocalOnlyHotspotRadioInfo.Radio? {
+        val legacy = LegacyHotspotRadio.Settled()
+        val legacyStart = System.nanoTime()
         while (true) {
             ensureStartActive(attempt)
             observer.settledForBssid(ap.bssid ?: configuration.bssid)?.let { return it }
             observer.unavailableReason?.let {
                 if (configuration.channel > 0) return null
-                throw IOException("LocalOnlyHotspot: $it; cannot advertise automatic channel 0 to CarPlay")
+                if (Build.VERSION.SDK_INT < 33) {
+                    val reading = LegacyHotspotRadio.read(ap.name, configuration.bandLabel)
+                    val settled = legacy.observe(reading.frequencyMHz, System.nanoTime() / 1_000_000)
+                    if (settled != null) {
+                        onDiagnostic("LocalOnlyHotspot legacy AP radio iface=${ap.name} frequency=${settled}MHz channel=${wifiFrequencyMhzToChannel(settled)}")
+                        return LocalOnlyHotspotRadioInfo.Radio(ap.bssid ?: configuration.bssid, settled)
+                    }
+                    if (System.nanoTime() - legacyStart >= TimeUnit.MILLISECONDS.toNanos(
+                            if (configuration.bandLabel == "5 GHz") 1500 else 6000
+                        )
+                    ) {
+                        if (configuration.bandLabel == "5 GHz") {
+                            // Every BYD Qualcomm tested answers WEXT with errno 95 and
+                            // Android 11/12 has no live LOHS channel callback, so an
+                            // unreadable channel cannot be treated as a broken hotspot.
+                            // The framework already confirmed the 5 GHz band, so accept
+                            // the reservation; the advertised channel falls back to the
+                            // requested one and the phone joining is the live check.
+                            onDiagnostic("LocalOnlyHotspot: 5 GHz band confirmed by configuration; live channel unreadable (${reading.error ?: "radio did not settle"}); advertising the requested channel without live verification")
+                            return null
+                        }
+                        if (configuration.bandLabel == "2.4 GHz") {
+                            if (Build.VERSION.SDK_INT < 30) {
+                                // Android 10 BYD firmware pins the local hotspot to 2.4 GHz
+                                // regardless of the Wi-Fi switch (extracted-firmware fact);
+                                // switching Wi-Fi off cannot help, so do not suggest it.
+                                throw IOException("LocalOnlyHotspot: this Android 10 firmware always places the local hotspot on 2.4 GHz; use the Car hotspot or Wi-Fi Direct")
+                            }
+                            // Observed on DiLink 5.0 / Android 12: while the car's Wi-Fi
+                            // client stays associated to a 2.4 GHz network, the Qualcomm
+                            // stack pins the local hotspot onto the same channel even when
+                            // 5 GHz was explicitly requested. Name the remedy, not the
+                            // unreadable driver channel.
+                            throw IOException("LocalOnlyHotspot: this firmware placed the hotspot on 2.4 GHz while the car's Wi-Fi client was using a 2.4 GHz network; turn the car's Wi-Fi client off and try again, or choose the Car hotspot")
+                        }
+                        throw IOException("LocalOnlyHotspot: Android ${Build.VERSION.SDK_INT} cannot read the AP channel (${reading.error ?: "radio did not settle"}); choose a 5 GHz Car hotspot or Wi-Fi Direct")
+                    }
+                } else {
+                    throw IOException("LocalOnlyHotspot: $it; cannot advertise automatic channel 0 to CarPlay")
+                }
             }
             val remaining = deadlineNanos - System.nanoTime()
             if (remaining <= 0) throw IOException("LocalOnlyHotspot did not report its live channel; cannot advertise automatic channel 0 to CarPlay")
@@ -417,13 +515,19 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
         configuration: WifiConfiguration,
         channel: Int,
     ): String {
+        // WifiConfiguration.apBand uses its own constants (0=2.4 GHz, 1=5 GHz), which do
+        // not line up with SoftApConfiguration's band values — map them explicitly.
         val band = try {
             (WifiConfiguration::class.java.getField("apBand").get(configuration) as? Number)
                 ?.toInt()
         } catch (_: ReflectiveOperationException) {
             null
         }
-        return band?.let(::softApBandLabel) ?: legacyBandLabel(channel)
+        return when (band) {
+            0 -> "2.4 GHz"
+            1 -> "5 GHz"
+            else -> legacyBandLabel(channel)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)

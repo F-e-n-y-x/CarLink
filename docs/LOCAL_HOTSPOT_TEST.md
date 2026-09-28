@@ -1,3 +1,5 @@
+> Historical engineering notes: Local hotspot is no longer offered in the app. Saved local-hotspot selections migrate to built-in car hotspot; the internal transport code remains for compatibility. Use [Connection setup](CONNECTION_SETUP.md) for current instructions.
+
 # Standalone 5 GHz local hotspot
 
 This transport is optional; existing Wi-Fi Direct and car-hotspot choices keep their settings. The app requests and releases its own Android LocalOnlyHotspot reservation. The car does not need an internet subscription. The phone still needs mobile data or downloaded maps for navigation data. No ADB, root, Shizuku or separate helper is needed at runtime.
@@ -16,3 +18,11 @@ Select **Settings → Wireless link → Local hotspot · experimental**. On DiLi
 A final installed-build check through the ordinary BYD Wi-Fi switch repeated the result for approximately five minutes: 58 audio windows, no underruns/packet loss, no reconnects, main median 33.6 fps and cluster 18.4 fps. Enabling car Wi-Fi reproduced underruns within five seconds.
 
 These are parked-car observations on one firmware, not a promise of zero lag on every car. A longer drive/reboot test remains necessary. The DiLink 5.1 theme fix still uses one cluster stream without reconnecting when themes change; the older DiLink 5 path is retained. Tests use temporary development instrumentation with automatic restoration, not a runtime helper bundled into the app.
+
+## Historical legacy Android compatibility candidate
+
+The retained internal fallback requests the ordinary local-hotspot reservation on older Android and reads the selected AP interface with the read-only Wireless Extensions `SIOCGIWFREQ` ioctl. Android's unprivileged socket ioctl policy permits this query; the vendor driver still has to implement it. It uses no shell, root, ADB, Shizuku or privileged network-setting calls, and it never reads the station interface as a substitute for the AP. Frequency/channel decoding rejects unknown/ambiguous data and waits for two seconds of stable readings before connecting. Automatic channel 0 is never advertised to the phone.
+
+The Android 13 configured-hotspot path remains in place. Older firmware chooses its own default band; this fallback cannot force 5 GHz. A 2.4 GHz result is rejected explicitly, with instructions to select a manually configured 5 GHz car hotspot or Wi-Fi Direct. A driver that cannot report the frequency also fails explicitly. These candidate builds require DiLink 3 vehicle testing before compatibility can be claimed. A car hotspot does not require the car to have an internet subscription.
+
+The native query is scoped to an interface already selected from the app's owned reservation, and all descriptors/reservations are closed on failure. See [Android's unprivileged socket query list](https://android.googlesource.com/platform/system/sepolicy/+/android-10.0.0_r1/public/ioctl_macros) and [Android 10 local-hotspot band selection](https://android.googlesource.com/platform/frameworks/opt/net/wifi/+/android-10.0.0_r1/service/java/com/android/server/wifi/WifiServiceImpl.java).
