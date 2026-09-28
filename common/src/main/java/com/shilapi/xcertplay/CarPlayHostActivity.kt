@@ -619,10 +619,16 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         val presentation = ClusterMapPresentation(this, display, theme) { surface -> runOnUiThread { onClusterSurface(surface) } }
         // The system dismisses a presentation when its display goes away; allow a new one on resume.
-        presentation.setOnDismissListener { if (clusterPresentation === presentation) clusterPresentation = null }
+        presentation.setOnDismissListener {
+            if (clusterPresentation === presentation) {
+                clusterPresentation = null
+                com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+            }
+        }
         try {
             presentation.show()
             clusterPresentation = presentation
+            com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(true)
             presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
             Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
             appendLog("Cluster map: presentation shown display=${display.displayId}")
@@ -676,6 +682,7 @@ class CarPlayHostActivity : ComponentActivity() {
         clusterSurface?.let { sink?.clearSurface(SCREEN_TYPE_ALT, it) }
         clusterSurface = null
         presentations.forEach { runCatching { it.dismiss() } }
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
     }
 
     private fun onClusterSurface(surface: Surface?) {

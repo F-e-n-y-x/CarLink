@@ -33,6 +33,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.hud.BydClusterModeAccess
+import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.io.File
@@ -58,6 +60,7 @@ class DiPlayActivity : ComponentActivity() {
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
+    private var clusterModeStatus: TextView? = null
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         connect(notificationTransport)
     }
@@ -369,6 +372,17 @@ class DiPlayActivity : ComponentActivity() {
                         render()
                         reconnectForClusterMap()
                     }, matchButton(10, 56))
+                    toggle(card, "Dashboard map only in Small and Full navi · needs ADB",
+                        "DiPlay reads the navi mode you pick on the steering wheel. In Off and Turn on by navi the dashboard shows arrows only, so the iPhone does not send the map; in Small and Full screen navi it does, within a second or two of the switch. Needs ADB over network on the head unit.",
+                        BydOutputSettings.clusterStreamPause(this)) {
+                        BydOutputSettings.setClusterStreamPause(this, it)
+                        if (it) checkClusterModeAccess(mayAsk = true)
+                    }
+                    clusterModeStatus = label("", 14, MUTED).also { status ->
+                        card.addView(status)
+                        if (BydOutputSettings.clusterStreamPause(this)) checkClusterModeAccess(mayAsk = false)
+                    }
+                    card.addView(button("Check ADB access", false) { checkClusterModeAccess(mayAsk = true) }, matchButton(10, 56))
                 }
             }
         }
@@ -610,6 +624,30 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    // The car's approval dialog for DiPlay's ADB key opens only from here, never while driving.
+    private fun checkClusterModeAccess(mayAsk: Boolean) {
+        val status = clusterModeStatus ?: return
+        status.setTextColor(MUTED)
+        status.text = if (mayAsk) "Checking ADB access… If the car asks, allow DiPlay and tick “Always allow”." else "Checking ADB access…"
+        Thread({
+            val result = runCatching { BydClusterModeAccess.check(applicationContext, mayAsk) }.getOrNull()
+            runOnUiThread {
+                if (clusterModeStatus !== status) return@runOnUiThread
+                status.setTextColor(if (result?.state == BydClusterModeAccess.State.READY) MUTED else WARNING)
+                status.text = clusterModeText(result)
+            }
+        }, "diplay-adb-check").start()
+    }
+
+    private fun clusterModeText(result: BydClusterModeAccess.Status?): String = when (result?.state) {
+        null -> "The ADB check failed. Try again."
+        BydClusterModeAccess.State.READY ->
+            "ADB access ready. The dashboard is on ${result.modeLabel ?: "an unknown mode"}, so the iPhone ${if (result.showsMap) "sends" else "does not send"} the map."
+        BydClusterModeAccess.State.NOT_APPROVED -> "DiPlay is not approved yet. Tap Check ADB access, then allow DiPlay on the car screen."
+        BydClusterModeAccess.State.ADB_OFF -> "ADB over network is off. Turn it on in the head unit’s developer options."
+        BydClusterModeAccess.State.PAIRING_ONLY -> "This head unit offers only wireless debugging with pairing, which DiPlay does not support yet."
     }
 
     // The cluster screen is described at connection time, so a running session reconnects over
