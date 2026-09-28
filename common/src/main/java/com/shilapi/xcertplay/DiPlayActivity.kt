@@ -244,12 +244,12 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, "BYD navigation", R.drawable.ic_dp_navigation) { card ->
-            toggle(card, "Navigation on HUD and instrument cluster",
+            toggle(card, "Navigation on HUD and dashboard",
                 "Show phone navigation arrows, distance and street names on supported BYD displays. Vehicle compatibility varies.",
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
             if (ClusterMapPresentation.findDisplay(this) != null) {
-                toggle(card, "CarPlay map on instrument cluster · experimental",
-                    "Shows the iPhone's cluster map on the instrument cluster. Choose Small or Full screen navi in the cluster's steering-wheel menu.",
+                toggle(card, "CarPlay map on dashboard · experimental",
+                    "Shows the iPhone's map on the dashboard. Choose Small or Full screen navi in the dashboard's steering-wheel menu.",
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap()
@@ -281,7 +281,7 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 } else {
                     val sizes = CarPlayClusterDisplay.scalePresets
-                    choice(card, "Cluster map size", listOf("Standard · sharpest", "Larger · default", "Largest"),
+                    choice(card, "Dashboard map size", listOf("Standard · sharpest", "Larger · default", "Largest"),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
