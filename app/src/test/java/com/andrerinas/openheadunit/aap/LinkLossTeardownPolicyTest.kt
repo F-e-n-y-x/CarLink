@@ -95,7 +95,7 @@ class LinkLossTeardownPolicyTest {
                     )
                     val ownsItsNetwork =
                         WifiModePolicy.usesWifiDirect(mode, strategy, transport) ||
-                            (mode == 3 && transport == NativeTransport.HOTSPOT) ||
+                            (mode == 3 && transport != NativeTransport.WIFI_DIRECT) ||
                             (mode == 2 && strategy == 4)
                     assertTrue(
                         "mode=$mode strategy=$strategy transport=$transport",

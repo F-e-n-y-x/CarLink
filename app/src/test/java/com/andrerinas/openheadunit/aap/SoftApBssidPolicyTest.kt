@@ -6,6 +6,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SoftApBssidPolicyTest {
+    @Test fun `recovers hotspot address when Android masks every MAC API`() {
+        assertEquals("4E:B1:C7:94:48:3F", SoftApBssidPolicy.choose(
+            "0", null, "02:00:00:00:00:00", "4e:b1:c7:94:48:3f"))
+        assertEquals("AA:BB:CC:DD:EE:FF", SoftApBssidPolicy.choose(
+            "AA:BB:CC:DD:EE:FF", null, null, "4e:b1:c7:94:48:3f"))
+        assertEquals("", SoftApBssidPolicy.choose(null, null, null, "02:00:00:00:00:00"))
+    }
+
 
     @Test
     fun `the user's own setting wins, and is normalised to upper case`() {

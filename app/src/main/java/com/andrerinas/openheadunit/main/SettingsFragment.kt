@@ -840,7 +840,7 @@ class SettingsFragment : Fragment() {
                     getString(R.string.native_ap_transport_wifi_direct),
                     getString(R.string.native_ap_transport_hotspot)
                 ),
-                selectedIndex = if ((pendingNativeApTransport ?: 0) == 1) 1 else 0,
+                selectedIndex = (pendingNativeApTransport ?: 0).takeIf { it in 0..1 } ?: 0,
                 onOptionSelected = { index ->
                     pendingNativeApTransport = index
                     checkChanges()
@@ -2249,6 +2249,16 @@ class SettingsFragment : Fragment() {
         settingsTabGroup?.isEnabled = searchQuery.isBlank()
         settingsAdapter.submitList(filterSettings(fullSettingsList)) {
             scrollState?.let { settingsRecyclerView.layoutManager?.onRestoreInstanceState(it) }
+        }
+    }
+
+    private fun openCarClientWifiSettings() {
+        val wifi = Intent(SystemSettings.ACTION_WIFI_SETTINGS)
+        if (requireContext().packageManager.resolveActivity(wifi, 0)?.activityInfo?.packageName == "com.byd.carsettings") {
+            runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)) }
+        }
+        runCatching { startActivity(wifi) }.onFailure {
+            Toast.makeText(requireContext(), R.string.native_local_hotspot_wifi_settings_unavailable, Toast.LENGTH_LONG).show()
         }
     }
 

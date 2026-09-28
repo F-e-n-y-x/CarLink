@@ -133,6 +133,7 @@ object AppLog {
     @Volatile private var currentLogSource: Settings.LogSource = Settings.LogSource.LOGCAT
 
     fun init(settings: Settings?, context: Context? = null) {
+        context?.let { DiagnosticJournal.init(it.applicationContext) }
         // Cache the level rather than resolving it per call: every call site below, and every
         // LOG_VERBOSE/LOG_DEBUG guard, used to reach SharedPreferences.getInt() through
         // Settings.exporterLogLevel — a lock plus a map lookup for lines that are mostly discarded.
@@ -243,6 +244,7 @@ object AppLog {
     }
 
     private fun log(priority: Int, msg: String) {
+        DiagnosticJournal.record(priority, msg)
         LOGGER.println(priority, TAG, msg)
     }
 
@@ -250,6 +252,7 @@ object AppLog {
 
     private fun loge(message: String, tr: Throwable?) {
         val trace = if (LOGGER is Logger.Android) Log.getStackTraceString(tr) else ""
+        DiagnosticJournal.record(Log.ERROR, message)
         LOGGER.println(Log.ERROR, TAG, message + '\n' + trace)
     }
 

@@ -7,6 +7,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class P2pInterfaceBssidTest {
+    @Test fun decodesBydBuiltInHotspotAddress() {
+        assertEquals("4E:B1:C7:94:48:3F", P2pInterfaceBssid.decode(bytes("fe80::4cb1:c7ff:fe94:483f")))
+    }
+
     private fun bytes(ip: String) = InetAddress.getByName(ip).address
 
     @Test fun decodesLocalAndUniversalMacs() {

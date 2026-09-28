@@ -73,6 +73,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     private var isClientConnected = false
     private val discoveryRunnable = object : Runnable {
         override fun run() {
+            if (!sessionOwnership.current(generation)) return
             if (!isClientConnected) {
                 // Skip while a teardown/recreate is in flight (reuse path or the stuck-retry
                 // self-heal) — the group is disappearing/reforming underneath us, so a
@@ -116,8 +117,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
      * continuation puts a new one up with no receiver, no watchdog and nobody expecting it, which is
      * exactly what the exit was for.
      */
-    @Volatile
-    private var generation = 0
+    private val ownershipPrefs = context.getSharedPreferences("p2p_ownership", Context.MODE_PRIVATE)
+    private val sessionOwnership = P2pSessionOwnership(ownershipPrefs.getString("network_name", null))
+    private val generation get() = sessionOwnership.generation
 
     /** One token per checkGroupAndCreate run, so a stale safety timer cannot clear a later run's guard. */
     private var checkGroupAndCreateToken = 0
@@ -142,7 +144,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
      * session that is over and must not create anything.
      */
     private fun supersededByStop(gen: Int, what: String): Boolean {
-        if (gen == generation) return false
+        if (sessionOwnership.current(gen)) return false
         AppLog.i("WifiDirectManager: $what abandoned - the manager was stopped while it was in flight.")
         return true
     }
@@ -223,13 +225,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION -> {
                     val state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1)
                     AppLog.i("WifiDirectManager: WIFI_P2P_STATE_CHANGED_ACTION state=$state")
+                    sessionOwnership.setEnabled(state == WifiP2pManager.WIFI_P2P_STATE_ENABLED)
                     if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                         val appSettings = com.andrerinas.openheadunit.App.provide(context).settings
                         val commManager = com.andrerinas.openheadunit.App.provide(context).commManager
                         val isConnectingOrConnected = commManager.isConnected ||
                             commManager.connectionState.value is com.andrerinas.openheadunit.connection.CommManager.ConnectionState.Connecting
 
-                        if (!isConnected && !isConnectingOrConnected && !isGroupCreatingOrCreated) {
+                        if (sessionOwnership.requested && !isConnected && !isConnectingOrConnected && !isGroupCreatingOrCreated) {
                             if (appSettings.wifiConnectionMode == 2 && appSettings.helperConnectionStrategy == 1) {
                                 AppLog.i("WifiDirectManager: P2P enabled, auto-starting WiFi Direct visibility")
                                 makeVisible()
@@ -239,6 +242,11 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                             }
                         }
                     } else {
+                        // Hotspot mode can disable P2P while Wi-Fi itself remains enabled.
+                        handler.removeCallbacksAndMessages(null)
+                        credentialsEpoch++
+                        checkGroupAndCreateInFlight = false
+                        isGroupOwner = false
                         isGroupCreatingOrCreated = false
                         isConnected = false
                         isClientConnected = false
@@ -263,6 +271,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     }
                 }
                 WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                    if (!sessionOwnership.current(generation)) return
                     val networkInfo = intent.getParcelableExtra<NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
                     if (networkInfo?.isConnected == true) {
                         AppLog.i("WifiDirectManager: Connected. Requesting info...")
@@ -350,7 +359,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             val mgr = manager
             val ch = channel
             if (mgr != null && ch != null) {
-                mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
+                removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() { createNewGroup(0) }
                     override fun onFailure(reason: Int) {
                         AppLog.w("WifiDirectManager: removeGroup during stuck-loop self-heal failed: ${getP2pErrorString(reason)}")
@@ -379,15 +388,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
+        if (!sessionOwnership.current(generation)) return
         if (info.groupFormed) {
-            isConnected = true
             AapService.scanningState.value = false
-            isGroupOwner = info.isGroupOwner
 
             val goIp = info.groupOwnerAddress?.hostAddress ?: "unknown"
             AppLog.i("WifiDirectManager: Group formed. Owner: $isGroupOwner, GO IP: $goIp")
 
-            if (isGroupOwner) {
+            if (info.isGroupOwner) {
                 // [FIX] requestDeviceInfo is async — call requestGroupInfo only AFTER the callback
                 // fires so that localDeviceAddress is guaranteed to be set before onGroupInfoAvailable
                 // runs. This eliminates the race condition that caused empty BSSIDs on Android 12+.
@@ -401,6 +409,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     manager?.requestGroupInfo(channel, this)
                 }
             } else if (info.groupOwnerAddress != null) {
+                isConnected = true
+                isGroupOwner = false
                 Thread {
                     var socket: Socket? = null
                     try {
@@ -425,6 +435,17 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     override fun onGroupInfoAvailable(group: android.net.wifi.p2p.WifiP2pGroup?) {
+        if (!sessionOwnership.current(generation)) return
+        if (group != null && group.isGroupOwner) {
+            sessionOwnership.observeCreatedGroup(true, group.networkName)
+            if (!sessionOwnership.owns(true, group.networkName)) {
+                foreignGroupDetected()
+                return
+            }
+            isGroupOwner = true
+            isConnected = true
+            ownershipPrefs.edit().putString("network_name", group.networkName).apply()
+        }
         val appSettings = com.andrerinas.openheadunit.App.provide(context).settings
         if (group != null) {
             // [FIX] Check if Location Services (GPS) are enabled.
@@ -740,7 +761,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             if (groupInfoRetries < 20) {
                 groupInfoRetries++
                 AppLog.w("WifiDirectManager: Group info was null! Retrying in 1s (Attempt $groupInfoRetries/20)...")
-                handler.postDelayed({
+                postSessionDelayed({
                     channel?.let { ch ->
                         manager?.requestGroupInfo(ch, this)
                     }
@@ -880,7 +901,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     fun makeVisible() {
+        sessionOwnership.start()
         registerReceiverIfNeeded()
+        if (!sessionOwnership.enabled) return
         val mgr = manager ?: return
         val ch = channel ?: return
 
@@ -913,6 +936,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     private fun checkGroupAndCreate() {
+        if (!sessionOwnership.current(generation)) return
         if (checkGroupAndCreateInFlight) {
             AppLog.d("WifiDirectManager: checkGroupAndCreate already in flight, skipping duplicate call")
             return
@@ -923,7 +947,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // exists to prevent.
         val guardToken = ++checkGroupAndCreateToken
         val gen = generation
-        handler.postDelayed({
+        postSessionDelayed({
             if (guardToken == checkGroupAndCreateToken) checkGroupAndCreateInFlight = false
         }, 8000L)
 
@@ -931,6 +955,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         isConnected = false
 
         manager?.requestGroupInfo(channel) { group ->
+            if (supersededByStop(gen, "group query")) return@requestGroupInfo
             if (group == null) {
                 AppLog.i("No existing P2P group, creating new one")
                 checkGroupAndCreateInFlight = false
@@ -952,7 +977,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             // MAC — a cached BSSID from the group we're tearing down is now stale and must never
             // be delivered for the new one.
             lastKnownBssid = null
-            manager?.removeGroup(channel, object : WifiP2pManager.ActionListener {
+            removeOwnedGroup(manager, channel, object : WifiP2pManager.ActionListener {
                 override fun onSuccess() {
                     checkGroupAndCreateInFlight = false
                     if (supersededByStop(gen, "group recreate")) return
@@ -970,6 +995,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     private fun createNewGroup(retryCount: Int) {
+        val gen = generation
+        if (supersededByStop(gen, "helper create")) return
         val mgr = manager ?: return
         val ch = channel ?: return
 
@@ -980,8 +1007,11 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
         lastKnownBssid = null
 
+        sessionOwnership.expectSystemName()
         mgr.createGroup(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
+                if (!sessionOwnership.created(gen)) return
+                mgr.requestGroupInfo(ch, this@WifiDirectManager)
                 AppLog.i("WifiDirectManager: P2P Group created (fresh this session).")
                 isGroupOwner = true
                 tightBurstCount = 0
@@ -989,9 +1019,10 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 startDiscoveryLoop()
             }
             override fun onFailure(reason: Int) {
+                if (supersededByStop(gen, "helper create result")) return
                 if (reason == 2 && retryCount < 3) { // 2 = BUSY
                     AppLog.w("WifiDirectManager: Chip is BUSY, retrying in 2s...")
-                    handler.postDelayed({ createNewGroup(retryCount + 1) }, 2000L)
+                    postSessionDelayed({ createNewGroup(retryCount + 1) }, 2000L)
                 } else {
                     AppLog.e("WifiDirectManager: createGroup failed: $reason")
                     isGroupCreatingOrCreated = false
@@ -1028,7 +1059,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         if (sessionLive) " while an Android Auto session is connected" else ""
                     )
                     if (appSettings.wifiConnectionMode == 2 && appSettings.helperConnectionStrategy == 1) {
-                        handler.postDelayed({
+                        postSessionDelayed({
                             if (!isClientConnected) {
                                 AapService.scanningState.value = false
                             }
@@ -1063,7 +1094,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             } catch (e2: Exception) {}
         }
 
-        handler.postDelayed({
+        postSessionDelayed({
             try {
                 val intent = Intent(context, com.andrerinas.openheadunit.main.MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -1096,7 +1127,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     fun startNativeAaQuietHost() {
+        sessionOwnership.start()
         registerReceiverIfNeeded()
+        if (!sessionOwnership.enabled || isGroupCreatingOrCreated) return
         isGroupCreatingOrCreated = true
         var mgr = manager
         var ch = channel
@@ -1139,7 +1172,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 return
             }
             // Wait a bit for WiFi to wake up
-            handler.postDelayed({
+            postSessionDelayed({
                 if (isGroupCreatingOrCreated) {
                     isGroupCreatingOrCreated = false
                     startNativeAaQuietHost()
@@ -1164,11 +1197,13 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     }
 
     private fun delayedCreateQuietGroup(retryCount: Int) {
-        handler.postDelayed({ createQuietGroup(retryCount) }, 500L)
+        postSessionDelayed({ createQuietGroup(retryCount) }, 500L)
     }
 
     @SuppressLint("MissingPermission")
     private fun createQuietGroup(retryCount: Int) {
+        val gen = generation
+        if (supersededByStop(gen, "native create")) return
         val mgr = manager ?: return
         val ch = channel ?: return
         isGroupCreatingOrCreated = true
@@ -1220,24 +1255,28 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 // does not exist and standardCreateGroup leaves the field UNSPECIFIED.
                 nativeRequestedBand = band
                 AppLog.i("WifiDirectManager: Requesting Native AA P2P group on $bandLabel band.${if (force24) " Forced by debug setting." else ""}")
+                sessionOwnership.expect(requireNotNull(config.networkName))
+                ownershipPrefs.edit().putString("network_name", config.networkName).apply()
                 mgr.createGroup(ch, config, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
+                        if (!sessionOwnership.created(gen)) return
                         AppLog.i("WifiDirectManager: $bandLabel createGroup SUCCESS!")
                         nativeGroupCreationMode =
                             if (force24) NATIVE_GROUP_MODE_24GHZ_FORCED else NATIVE_GROUP_MODE_5GHZ_REQUESTED
                         isGroupOwner = true
-                        handler.postDelayed({
+                        postSessionDelayed({
                             mgr.requestConnectionInfo(ch, this@WifiDirectManager)
                             mgr.requestGroupInfo(ch, this@WifiDirectManager)
                         }, 1000L)
                     }
                     override fun onFailure(reason: Int) {
+                        if (supersededByStop(gen, "native create result")) return
                         val reasonStr = getP2pErrorString(reason)
                         if (retryCount < MAX_NATIVE_5GHZ_CREATE_RETRIES) {
                             AppLog.w("WifiDirectManager: $bandLabel createGroup failed ($reasonStr), removing group and retrying $bandLabel in 2s (retry ${retryCount + 1}/$MAX_NATIVE_5GHZ_CREATE_RETRIES)...")
-                            mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
-                                override fun onSuccess() { handler.postDelayed({ createQuietGroup(retryCount + 1) }, 2000L) }
-                                override fun onFailure(r: Int) { handler.postDelayed({ createQuietGroup(retryCount + 1) }, 2000L) }
+                            removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
+                                override fun onSuccess() { postSessionDelayed({ createQuietGroup(retryCount + 1) }, 2000L) }
+                                override fun onFailure(r: Int) { postSessionDelayed({ createQuietGroup(retryCount + 1) }, 2000L) }
                             })
                         } else {
                             AppLog.w("WifiDirectManager: $bandLabel createGroup retries exhausted ($reasonStr). Falling back to standard createGroup.")
@@ -1249,7 +1288,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             } catch (t: Throwable) {
                 if (retryCount < MAX_NATIVE_5GHZ_CREATE_RETRIES) {
                     AppLog.e("WifiDirectManager: $bandLabel createGroup crashed before async result. Retrying $bandLabel.", t)
-                    handler.postDelayed({ createQuietGroup(retryCount + 1) }, 2000L)
+                    postSessionDelayed({ createQuietGroup(retryCount + 1) }, 2000L)
                     return
                 }
                 AppLog.e("WifiDirectManager: 5GHz createGroup crashed and retries are exhausted. Falling back to standard.", t)
@@ -1317,8 +1356,13 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
     @SuppressLint("MissingPermission")
     private fun standardCreateGroup(mgr: WifiP2pManager, ch: WifiP2pManager.Channel, retryCount: Int, groupMode: String) {
+        val gen = generation
+        if (supersededByStop(gen, "standard create")) return
+        sessionOwnership.expectSystemName()
         mgr.createGroup(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
+                if (!sessionOwnership.created(gen)) return
+                mgr.requestGroupInfo(ch, this@WifiDirectManager)
                 AppLog.i("WifiDirectManager: Standard createGroup SUCCESS!")
                 nativeGroupCreationMode = groupMode
                 // The platform chose the band here, so there is no mismatch to correct.
@@ -1329,18 +1373,19 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 // channels are banned and discovery cannot run. The group keeps the channel it was
                 // formed on, so the restriction has done its work and must come off now.
                 releaseLegacyChannelRestriction(mgr, ch)
-                handler.postDelayed({
+                postSessionDelayed({
                     mgr.requestConnectionInfo(ch, this@WifiDirectManager)
                     mgr.requestGroupInfo(ch, this@WifiDirectManager)
                 }, 1000L)
             }
             override fun onFailure(reason: Int) {
+                if (supersededByStop(gen, "create result")) return
                 val reasonStr = getP2pErrorString(reason)
                 if (reason == 2 && retryCount < MAX_NATIVE_STANDARD_CREATE_RETRIES) {
                     AppLog.w("WifiDirectManager: standard createGroup failed ($reasonStr), removing group and retrying standard in 2s...")
-                    mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
-                        override fun onSuccess() { handler.postDelayed({ standardCreateGroup(mgr, ch, retryCount + 1, groupMode) }, 2000L) }
-                        override fun onFailure(r: Int) { handler.postDelayed({ standardCreateGroup(mgr, ch, retryCount + 1, groupMode) }, 2000L) }
+                    removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
+                        override fun onSuccess() { postSessionDelayed({ standardCreateGroup(mgr, ch, retryCount + 1, groupMode) }, 2000L) }
+                        override fun onFailure(r: Int) { postSessionDelayed({ standardCreateGroup(mgr, ch, retryCount + 1, groupMode) }, 2000L) }
                     })
                 } else if (legacyChannelRestrictionApplied && !legacyChannelFallbackUsed) {
                     // The restriction is a frequency list, so a unit whose P2P firmware cannot host a
@@ -1411,7 +1456,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // network that will not exist by the time it lands.
         credentialsEpoch++
         val gen = generation
-        mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
+        removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 if (supersededByStop(gen, "5GHz band-mismatch retry")) return
                 delayedCreateQuietGroup(0)
@@ -1448,7 +1493,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             else if (forceStandard) standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_FALLBACK)
             else delayedCreateQuietGroup(0)
         }
-        mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
+        removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() { createFresh() }
             override fun onFailure(reason: Int) {
                 AppLog.d("WifiDirectManager: Native AA removeGroup before recreate failed (reason=${getP2pErrorString(reason)}); expected if no group existed")
@@ -1608,9 +1653,53 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         return null
     }
 
+    private fun postSessionDelayed(action: Runnable, delayMillis: Long) {
+        val gen = generation
+        handler.postDelayed({ if (sessionOwnership.current(gen)) action.run() }, delayMillis)
+    }
+
+    private fun foreignGroupDetected() {
+        // Invalidate delayed creates and credential delivery already queued for this attempt.
+        sessionOwnership.stop()
+        credentialsEpoch++
+        handler.removeCallbacksAndMessages(null)
+        onNativeGroupInvalidated?.invoke()
+        isGroupOwner = false
+        isConnected = false
+        isGroupCreatingOrCreated = false
+        checkGroupAndCreateInFlight = false
+        handler.removeCallbacks(discoveryRunnable)
+        cancelNativeJoinWatchdog()
+        AppLog.w("WifiDirectManager: Another app owns Wi-Fi Direct; leaving its connection untouched. Exit that app before starting DiAuto.")
+        showToast("Wi-Fi Direct is in use by another app. Disconnect it before connecting DiAuto.")
+    }
+
+    /** A removeGroup call acts on the whole radio, even when another app now owns it. */
+    @SuppressLint("MissingPermission")
+    private fun removeOwnedGroup(
+        mgr: WifiP2pManager?, ch: WifiP2pManager.Channel?, listener: WifiP2pManager.ActionListener,
+    ) {
+        if (mgr == null || ch == null) return
+        val gen = generation
+        mgr.requestGroupInfo(ch) { group ->
+            if (gen != generation) return@requestGroupInfo
+            if (group == null) {
+                listener.onSuccess()
+            } else if (sessionOwnership.owns(group.isGroupOwner, group.networkName)) {
+                mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() { if (gen == generation) listener.onSuccess() }
+                    override fun onFailure(reason: Int) { if (gen == generation) listener.onFailure(reason) }
+                })
+            } else {
+                // Do not call a retry continuation: it would immediately contend with the owner.
+                foreignGroupDetected()
+            }
+        }
+    }
+
     fun stop() {
         AppLog.i("WifiDirectManager: Stopping and cleaning up...")
-        generation++
+        sessionOwnership.stop()
         credentialsEpoch++
         isGroupCreatingOrCreated = false
         handler.removeCallbacksAndMessages(null)
@@ -1638,8 +1727,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // successfully joined.
         isReceiverRegistered = false
 
-        if (isGroupOwner) {
-            manager?.removeGroup(channel, object : WifiP2pManager.ActionListener {
+        if (sessionOwnership.networkName != null) {
+            removeOwnedGroup(manager, channel, object : WifiP2pManager.ActionListener {
                 override fun onSuccess() { AppLog.d("WifiDirectManager: Final group removal success") }
                 override fun onFailure(reason: Int) { AppLog.d("WifiDirectManager: Final group removal failed: $reason") }
             })

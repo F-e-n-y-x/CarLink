@@ -25,8 +25,8 @@ object SoftApBssidPolicy {
      * colon-separated upper case, or "" if none yields one. What to do about "" differs by
      * transport — see [NativeCredentialsPolicy].
      */
-    fun choose(staticOverride: String?, shellMac: String?, hardwareAddress: String?): String =
-        listOf(staticOverride, shellMac, hardwareAddress)
+    fun choose(staticOverride: String?, shellMac: String?, hardwareAddress: String?, ipv6DerivedMac: String? = null): String =
+        listOf(staticOverride, shellMac, hardwareAddress, ipv6DerivedMac)
             .firstOrNull { isUsable(it) }
             ?.let { normalise(it) }
             ?: ""

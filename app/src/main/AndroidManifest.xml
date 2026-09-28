@@ -7,6 +7,9 @@
         rikka.shizuku.provider, rikka.shizuku.api, rikka.shizuku.shared, rikka.shizuku.aidl, com.topjohnwu.superuser" />
 
     <queries>
+        <intent>
+            <action android:name="android.settings.WIFI_SETTINGS" />
+        </intent>
         <package android:name="com.byd.clusterdebug" />
         <package android:name="com.byd.amapservice" />
         <package android:name="com.ts.car.someip.service" />

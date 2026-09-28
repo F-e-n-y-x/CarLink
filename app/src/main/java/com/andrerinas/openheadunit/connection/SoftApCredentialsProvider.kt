@@ -397,8 +397,12 @@ class SoftApCredentialsProvider(
         val bssid = SoftApBssidPolicy.choose(
             staticOverride = settings.staticBSSID,
             shellMac = InterfaceMacReader.read(iface.name),
-            hardwareAddress = hardwareAddressOf(iface.name)
+            hardwareAddress = hardwareAddressOf(iface.name),
+            // BYD masks MAC APIs but exposes the AP's MAC-derived IPv6 link-local address.
+            // Read only the already selected AP; never substitute the Wi-Fi client or P2P MAC.
+            ipv6DerivedMac = P2pInterfaceBssid.read(iface.name)
         )
+        AppLog.i("SoftApCredentials: AP address resolution ${if (bssid.isEmpty()) "unavailable" else "ready"} on ${iface.name}")
         if (bssid.isEmpty()) {
             // Not fatal on this route — see NativeCredentialsPolicy. The handshake decides.
             AppLog.w("SoftApCredentials: Could not resolve a real BSSID for ${iface.name}; the credentials will go out without one.")

@@ -1444,14 +1444,20 @@ class Settings(private val context: Context) {
         set(value) = prefs.edit().putString("bluetooth-manager-service-name", value).apply()
 
     // Which network the Native AA mode (wifiConnectionMode 3) puts the phone on.
-    // 0 = WiFi Direct P2P group, 1 = this head unit's own hotspot (experimental).
+    // 0 = WiFi Direct, 1 = car hotspot. Legacy local-hotspot value 2 migrates to 1.
     //
     // Deliberately not folded into helperConnectionStrategy: that setting belongs to mode 2 and
     // means something different in every one of its five values. A wireless mode that reuses
     // another mode's selector is how the two call sites of the old usesWifiDirect() drifted apart.
     var nativeApTransport: Int
-        get() = prefs.getInt("native-ap-transport", 0)
-        set(value) = prefs.edit().putInt("native-ap-transport", value).apply()
+        get() {
+            val stored = prefs.getInt("native-ap-transport", 1)
+            return if (stored == 2) {
+                prefs.edit().putInt("native-ap-transport", 1).apply()
+                1
+            } else stored
+        }
+        set(value) = prefs.edit().putInt("native-ap-transport", if (value == 2) 1 else value).apply()
 
     // Whether the Native AA handshake opens with a WifiVersionRequest (Type 4), as real head units
     // and the OEM ZLink app do, instead of going straight to WifiStartRequest.

@@ -5,13 +5,13 @@ import java.net.NetworkInterface
 import java.util.Locale
 
 /**
- * Some head units mask hardwareAddress but assign their P2P interface a MAC-derived
+ * Some head units mask hardwareAddress but assign their P2P or hotspot interface a MAC-derived
  * IPv6 link-local address. Reverse the modified EUI-64 encoding (RFC 4291 Appendix A).
  * Opaque/privacy IPv6 identifiers cannot be decoded and must not become a BSSID.
  */
 internal object P2pInterfaceBssid {
     fun read(interfaceName: String?): String? {
-        // Never substitute the station, hotspot, or a peer's interface for the active GO.
+        // The caller must pass the active local GO/AP interface, never a station or peer.
         if (interfaceName.isNullOrBlank()) return null
         return try {
             val network = NetworkInterface.getByName(interfaceName) ?: return null
