@@ -261,6 +261,34 @@ class WifiP2pGroupManagerTest {
         assertEquals(0, radio.removals)
     }
 
+    @Test fun closeLeavesAnotherAppsReplacementGroupRunning() {
+        val logs = mutableListOf<String>()
+        val manager = WifiP2pGroupManager(context, logs::add)
+        background { manager.start(5000) }
+        val replacement = radio.makeGroup(null)
+        radio.group = replacement
+        background { manager.close() }
+        assertSame(replacement, radio.group)
+        assertEquals(0, radio.removals)
+        assertTrue(logs.any { it.contains("cleanup skipped=another_app_owns_group") })
+    }
+
+    @Test fun staleCloseCannotRemoveANewerDiPlaySession() {
+        val old = WifiP2pGroupManager(context)
+        val previous = background { old.start(5000) }
+        // The framework has lost the old group; a new controller acquires a fresh one.
+        radio.group = null
+        val current = WifiP2pGroupManager(context)
+        val next = background { current.start(5000) }
+        assertNotEquals(previous.ssid, next.ssid)
+        val replacement = radio.group
+        background { old.close() }
+        assertSame(replacement, radio.group)
+        assertEquals(0, radio.removals)
+        background { current.close() }
+        assertEquals(1, radio.removals)
+    }
+
     @Test fun groupAppearingAfterRejectionIsNotRemovedDuringFallback() {
         radio.rejectCustom = true
         radio.competingGroup = true

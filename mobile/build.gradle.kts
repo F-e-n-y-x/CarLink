@@ -17,8 +17,8 @@ android {
         applicationId = "com.shihab.diplay"
         minSdk = 28
         targetSdk = 37
-        versionCode = 20
-        versionName = "0.2.0"
+        versionCode = 25
+        versionName = "0.2.6"
 
     }
 
@@ -97,3 +97,24 @@ val rejectBundledCredentials by tasks.registering {
     }
 }
 tasks.named("preBuild") { dependsOn(rejectBundledCredentials) }
+
+// Car-test packages must be standalone. Keep ordinary source/CI builds identity-free.
+val verifyStandaloneAuthentication by tasks.registering {
+    group = "verification"
+    description = "Require the explicit runtime authentication input for a standalone car-test APK."
+    val directory = localAuthenticationAssets
+    doLast {
+        check(directory != null) {
+            "Standalone car builds require DIPLAY_AUTH_ASSETS_DIR; assembleDebug alone is source-only."
+        }
+        check(listOf("identity.pk8", "certificate.p7b").all {
+            directory.resolve("offline-mfi/$it").let { file -> file.isFile && file.length() > 0 }
+        }) { "Standalone CarPlay authentication files are missing or empty" }
+    }
+}
+tasks.named("preBuild") { mustRunAfter(verifyStandaloneAuthentication) }
+tasks.register("assembleStandaloneDebug") {
+    group = "build"
+    description = "Build a standalone car-test APK with explicitly provisioned authentication."
+    dependsOn(verifyStandaloneAuthentication, "assembleDebug")
+}

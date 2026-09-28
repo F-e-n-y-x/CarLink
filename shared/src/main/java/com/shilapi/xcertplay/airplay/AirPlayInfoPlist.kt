@@ -163,7 +163,7 @@ object AirPlayInfoPlist {
             "heightPixels" to display.heightPixels,
             "widthPhysical" to widthPhysical,
             "heightPhysical" to heightPhysical,
-            "features" to (DISPLAY_FEATURE_HIGH_FIDELITY_TOUCH or DISPLAY_FEATURE_KNOBS),
+            "features" to (display.features ?: (DISPLAY_FEATURE_HIGH_FIDELITY_TOUCH or DISPLAY_FEATURE_KNOBS)),
             "primaryInputDevice" to display.primaryInputDevice,
         )
 
