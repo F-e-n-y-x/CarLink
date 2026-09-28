@@ -838,10 +838,9 @@ class SettingsFragment : Fragment() {
                 nameResId = R.string.native_ap_transport,
                 options = listOf(
                     getString(R.string.native_ap_transport_wifi_direct),
-                    getString(R.string.native_ap_transport_hotspot),
-                    getString(R.string.native_ap_transport_local_hotspot)
+                    getString(R.string.native_ap_transport_hotspot)
                 ),
-                selectedIndex = (pendingNativeApTransport ?: 0).takeIf { it in 0..2 } ?: 0,
+                selectedIndex = (pendingNativeApTransport ?: 0).takeIf { it in 0..1 } ?: 0,
                 onOptionSelected = { index ->
                     pendingNativeApTransport = index
                     checkChanges()
@@ -849,18 +848,6 @@ class SettingsFragment : Fragment() {
                 }
             ))
 
-            if ((pendingNativeApTransport ?: 0) == 2) {
-                items.add(SettingItem.InfoBanner(
-                    stableId = "nativeLocalHotspotHint",
-                    textResId = R.string.native_ap_transport_local_hotspot_hint
-                ))
-                items.add(SettingItem.SettingEntry(
-                    stableId = "nativeLocalHotspotWifiSettings",
-                    nameResId = R.string.native_local_hotspot_wifi_settings,
-                    value = "",
-                    onClick = { _ -> openCarClientWifiSettings() }
-                ))
-            }
             if ((pendingNativeApTransport ?: 0) == 1) {
                 items.add(SettingItem.InfoBanner(
                     stableId = "nativeApTransportHint",

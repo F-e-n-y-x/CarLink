@@ -13,9 +13,11 @@ class DriveSettingsFragment : Fragment(R.layout.fragment_drive_settings) {
             requireActivity().finish()
         }
         mapOf(
+            R.id.da_connection_setup to R.id.connectionSetupFragment,
             R.id.da_automation to R.id.autoStartFragment,
             R.id.da_display to R.id.settingsFragment,
             R.id.da_permissions to R.id.permissionsFragment,
+            R.id.da_diagnostics to R.id.diagnosticsFragment,
             R.id.da_about to R.id.aboutFragment
         ).forEach { (button, destination) ->
             view.findViewById<View>(button).setOnClickListener { findNavController().navigate(destination) }

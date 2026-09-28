@@ -848,7 +848,7 @@
     <string name="native_local_hotspot_wifi_settings">Open car Wi-Fi settings</string>
     <string name="native_local_hotspot_wifi_settings_unavailable">Open Wi-Fi from the car’s Settings app.</string>
     <string name="native_ap_transport_local_hotspot">Local hotspot</string>
-    <string name="native_ap_transport_local_hotspot_hint">Experimental. DiAuto requests a separate 5 GHz hotspot for Android Auto; no car internet plan is needed. If maps or music stutter on DiLink 5.1, try turning off the car’s Wi-Fi switch in car settings. Keep Bluetooth and your phone’s Wi-Fi on. Compatibility depends on the car.</string>
+    <string name="native_ap_transport_local_hotspot_hint">Experimental. DiAuto uses a separate local hotspot for Android Auto; no car internet plan is needed. Older Android versions must let the app verify a 5 GHz hotspot from the Wi-Fi driver. If maps or music stutter on DiLink 5.1, try turning off the car’s Wi-Fi switch in car settings. Keep Bluetooth and your phone’s Wi-Fi on. Compatibility depends on the car.</string>
     <string name="native_ap_transport_hint">Experimental. The phone joins this device\'s own hotspot instead of a WiFi Direct group. Switch the hotspot on yourself before connecting, and set it to 5 GHz if you can - over 2.4 GHz the phone connects and then drops the session repeatedly without any picture, unless you lower the resolution and frame rate. If the network name cannot be read automatically, enter it below.</string>
     <string name="hotspot_interface_override">Hotspot network interface</string>
     <string name="hotspot_interface_override_message">Leave blank to work it out automatically. Set this if the log says more than one interface could be the access point, or picks the wrong one. The name is the one the log reports after &quot;Providing credentials from&quot;, or the entry holding your hotspot\'s address in &quot;ip -brief addr&quot; from a shell. Common names: ap0, wlan0, wlan1, wlan2, softap0, ra0.</string>
@@ -944,4 +944,11 @@
     <string name="rename_notice_button">Got it</string>
     <string name="byd_navigation_title">BYD HUD and instrument cluster</string>
     <string name="byd_navigation_description">Show Android Auto directions on supported BYD displays. Experimental; vehicle compatibility varies.</string>
+    <string name="da_connection_setup">Connection setup</string>
+    <string name="da_connection_setup_hint">Choose a connection and set up your car hotspot.</string>
+    <string name="da_diagnostics">Diagnostics</string>
+    <string name="da_diagnostics_hint">Save or share a connection report.</string>
+    <string name="diagnostic_report_instructions">Reproduce the connection issue, then save a report. Reports include recent app logs and connection settings, with saved credentials omitted. On Android 10 or newer, reports save to Downloads/DiAuto.</string>
+    <string name="save_diagnostic_report">Save diagnostic report</string>
+    <string name="choose_report_location">Choose save location</string>
 </resources>
