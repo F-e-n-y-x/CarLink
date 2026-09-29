@@ -125,21 +125,26 @@ internal object CarPlayMediaKeys {
         Log.i(TAG, "media key $source -> CarPlay $index sent=$sent")
     }
 
-    private val callback = object : MediaSession.Callback() {
-        override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
-            @Suppress("DEPRECATION")
-            val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
-            val index = CarPlayMediaButton.forKeyCode(event.keyCode) ?: return super.onMediaButtonEvent(mediaButtonIntent)
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                send(index, KeyEvent.keyCodeToString(event.keyCode))
-            }
-            return true
-        }
+    private val callback = CarPlayMediaCallback(::send)
+}
 
-        // Media controllers (not hardware keys) call these directly.
-        override fun onPlay() = send(CarPlayMediaButton.PLAY_PAUSE, "play")
-        override fun onPause() = send(CarPlayMediaButton.PLAY_PAUSE, "pause")
-        override fun onSkipToNext() = send(CarPlayMediaButton.NEXT, "next")
-        override fun onSkipToPrevious() = send(CarPlayMediaButton.PREVIOUS, "previous")
+/**
+ * Media-session input → CarPlay presses. Hardware keys arrive as button events and keep the toggle;
+ * media controllers (not hardware keys) call [onPlay] and [onPause] with an explicit intent.
+ */
+internal class CarPlayMediaCallback(private val send: (index: Int, source: String) -> Unit) : MediaSession.Callback() {
+    override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
+        @Suppress("DEPRECATION")
+        val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
+        val index = CarPlayMediaButton.forKeyCode(event.keyCode) ?: return super.onMediaButtonEvent(mediaButtonIntent)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            send(index, KeyEvent.keyCodeToString(event.keyCode))
+        }
+        return true
     }
+
+    override fun onPlay() = send(CarPlayMediaButton.PLAY, "play")
+    override fun onPause() = send(CarPlayMediaButton.PAUSE, "pause")
+    override fun onSkipToNext() = send(CarPlayMediaButton.NEXT, "next")
+    override fun onSkipToPrevious() = send(CarPlayMediaButton.PREVIOUS, "previous")
 }

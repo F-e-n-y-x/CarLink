@@ -5,10 +5,13 @@ import android.view.KeyEvent
 /**
  * Hardware media keys → CarPlay media HID presses (indices into [AirPlayHid]'s media report).
  *
- * Play and pause both map to the toggle: the head unit does not know the phone's play state, and
- * a wrong guess would make the button do nothing.
+ * Hardware play and pause keys both map to the toggle: BYD picks PLAY or PAUSE from its own idea of
+ * the play state, and a wrong guess would make the button do nothing. Explicit play and pause
+ * commands from media controllers use [PLAY] and [PAUSE].
  */
 object CarPlayMediaButton {
+    const val PLAY = 1
+    const val PAUSE = 2
     const val PLAY_PAUSE = 3
     const val NEXT = 4
     const val PREVIOUS = 5
