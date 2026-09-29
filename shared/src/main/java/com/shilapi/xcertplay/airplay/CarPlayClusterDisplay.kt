@@ -12,6 +12,17 @@ object CarPlayClusterDisplay {
     const val MAP_URL = "maps:/car/instrumentcluster/map"
 
     /**
+     * What the dashboard shows: one of the cluster contents the iPhone lists in `altScreenURLs`.
+     * On the tested car the turn card needed 0–5 kbit/s against 0.3–4 Mbit/s for the map, and
+     * "instrumentcluster" drew the map with the turn card on it.
+     */
+    enum class Content(val url: String) {
+        MAP(MAP_URL),
+        TURN_CARD("maps:/car/instrumentcluster/instructioncard"),
+        INSTRUMENTS("maps:/car/instrumentcluster"),
+    }
+
+    /**
      * Where the car marker goes, as percent of the panel (left, top, right, bottom). Measured on a
      * DiLink 5.0 cluster with a calibration grid. In "Full screen navi" BYD draws a status row,
      * turn/ADAS icons, the ADAS lane view (from x 68 %), speed and power readouts and a bottom band
@@ -51,6 +62,7 @@ object CarPlayClusterDisplay {
         scalePercent: Int = STREAM_SCALE_PERCENT,
         horizontalStep: Int = 0,
         verticalStep: Int = 0,
+        content: Content = Content.MAP,
     ): AirPlayDisplayConfig {
         // Height rounds to a multiple of 8 and width follows it, so the panel's aspect is kept
         // (83 % of 1920x720 gives exactly 1600x600). The cluster scales the stream to the panel.
@@ -65,7 +77,7 @@ object CarPlayClusterDisplay {
             fps = FPS,
             primaryInputDevice = 0,
             features = 0,
-            initialUrl = MAP_URL,
+            initialUrl = content.url,
             safeArea = safeArea(width, height, horizontalStep, verticalStep),
             safeAreaDrawOutside = true,
         )
