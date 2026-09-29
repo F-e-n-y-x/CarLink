@@ -24,6 +24,7 @@ import android.view.View
 import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.TextView
+import com.shilapi.xcertplay.host.R
 
 /**
  * Shows CarPlay's instrument-cluster stream on a BYD cluster projection display.
@@ -108,7 +109,7 @@ internal class ClusterMapPresentation(
             root.addView(surfaceView, videoParams)
         }
         waitingLabel = TextView(context).apply {
-            text = "DiPlay · waiting for the CarPlay map"
+            text = context.getString(R.string.cluster_waiting_for_map)
             setTextColor(if (plan != null && !dark) Color.DKGRAY else Color.WHITE)
             textSize = 26f
             gravity = Gravity.CENTER
