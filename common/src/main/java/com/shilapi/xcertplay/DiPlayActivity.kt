@@ -336,21 +336,34 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 } else {
                     val sizes = CarPlayClusterDisplay.scalePresets
-                    choice(card, getString(R.string.cluster_map_size), listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
+                    val contents = CarPlayClusterDisplay.Content.entries
+                    val content = AirPlayPersistence.loadClusterContent(this)
+                    choice(card, getString(R.string.dashboard_shows), listOf(
+                        getString(R.string.dashboard_content_map),
+                        getString(R.string.dashboard_content_turn_card),
+                        getString(R.string.dashboard_content_map_with_turn_card),
+                    ), contents.indexOf(content)) {
+                        AirPlayPersistence.saveClusterContent(this, contents[it])
+                        render()
+                    }
+                    // Both contents share the same safe area and position controls.
+                    val turnCard = content == CarPlayClusterDisplay.Content.TURN_CARD
+                    choice(card, getString(if (turnCard) R.string.turn_card_size else R.string.cluster_map_size),
+                        listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
                     val across = CarPlayClusterDisplay.horizontalSteps.toList()
-                    choice(card, getString(R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
+                    choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
                         across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
                     }
                     val upDown = CarPlayClusterDisplay.verticalSteps.toList()
-                    choice(card, getString(R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
+                    choice(card, getString(if (turnCard) R.string.turn_card_vertical else R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
                         upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
                     }
-                    card.addView(button(getString(R.string.reset_car_marker_to_centre), false) {
+                    card.addView(button(getString(if (turnCard) R.string.reset_turn_card_to_centre else R.string.reset_car_marker_to_centre), false) {
                         AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
                         AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
                         render()

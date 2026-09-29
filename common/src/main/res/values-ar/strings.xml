@@ -124,7 +124,7 @@
     <string name="carplay_control_running">التحكم في CarPlay قيد التشغيل</string>
     <string name="carplay_control_window_ended">انتهت نافذة التحكم في CarPlay</string>
     <string name="carplay_icon">أيقونة CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات · تجريبية</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات · تجريبي</string>
     <string name="carplay_service_already_running">خدمة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_already_running">جلسة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_ended_reconnecting">انتهت جلسة CarPlay؛ إعادة الاتصال</string>
@@ -144,7 +144,7 @@
     <string name="choose_where_to_save_your_report">اختر أين تحفظ تقريرك.\u0020</string>
     <string name="choose_your_iphone">اختر iPhone الخاص بك</string>
     <string name="close">إغلاق</string>
-    <string name="cluster_map_size">حجم خريطة المجموعة</string>
+    <string name="cluster_map_size">حجم خريطة لوحة العدادات</string>
     <string name="connect">اتصال</string>
     <string name="connect_phone">اتصال بالهاتف</string>
     <string name="connect_when_diplay_opens">الاتصال عند فتح DiPlay</string>
@@ -237,7 +237,7 @@
     <string name="model">الطراز</string>
     <string name="music_buffer">ذاكرة الموسيقى</string>
     <string name="resolution_native">أصلي</string>
-    <string name="navigation_on_hud_and_instrument_cluster">الملاحة على HUD ولوحة العدادات</string>
+    <string name="navigation_on_hud_and_instrument_cluster">الملاحة على شاشة العرض الأمامية ولوحة العدادات</string>
     <string name="navigation_stream_type">نوع بث الملاحة</string>
     <string name="nearby_devices">الأجهزة القريبة</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">«الأجهزة القريبة» تربط iPhone. الميكروفون يمكّن Siri والمكالمات. تتطلب إصدارات Android الأقدم أيضًا الموقع للإعداد اللاسلكي. قد يطلب وضع USB اتصال VPN محلي.</string>
@@ -332,7 +332,7 @@
     <string name="show_password">إظهار كلمة المرور</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">إظهار أسهم الملاحة والمسافة وأسماء الشوارع من الهاتف على شاشات BYD المدعومة. تختلف توافقية المركبة.</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">إظهار الخريطة الجانبية فقط عند فتح بطاقتها، والتبديل إلى الخريطة الكاملة في سمة الخريطة. تغييرات السمة والبطاقة تُبقي CarPlay متصلاً.</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">يعرض خريطة iPhone على لوحة العدادات. اختر «صغير» أو «ملاحة بملء الشاشة» في قائمة المقود الخاصة باللوحة.</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">يعرض خريطة iPhone على لوحة العدادات. اختر عرض الملاحة المصغّر أو الكامل من قائمة لوحة العدادات باستخدام أزرار المقود.</string>
     <string name="start_carplay_automatically_after_device_boot">بدء CarPlay تلقائياً بعد إقلاع الجهاز</string>
     <string name="starting">جارٍ البدء</string>
     <string name="starting_airplay_service">جارٍ بدء خدمة AirPlay</string>
@@ -400,4 +400,12 @@
     <string name="hotspot_error_long_name">يجب ألا يتجاوز اسم نقطة الاتصال 32 بايت</string>
     <string name="hotspot_error_invalid_character">يحتوي الاسم أو كلمة المرور على محرف غير صالح</string>
     <string name="hotspot_error_password_length">يجب أن تتكون كلمة مرور نقطة الاتصال من 8 إلى 63 محرفًا</string>
+    <string name="dashboard_shows">محتوى لوحة العدادات</string>
+    <string name="dashboard_content_map">الخريطة · الافتراضي</string>
+    <string name="dashboard_content_turn_card">بطاقة الانعطاف</string>
+    <string name="dashboard_content_map_with_turn_card">خريطة مع بطاقة الانعطاف</string>
+    <string name="turn_card_size">حجم بطاقة الانعطاف</string>
+    <string name="turn_card_horizontal">بطاقة الانعطاف · أفقيًا</string>
+    <string name="turn_card_vertical">بطاقة الانعطاف · عموديًا</string>
+    <string name="reset_turn_card_to_centre">إعادة بطاقة الانعطاف إلى الوسط</string>
 </resources>

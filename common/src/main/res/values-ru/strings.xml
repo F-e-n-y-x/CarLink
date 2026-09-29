@@ -124,7 +124,7 @@
     <string name="carplay_control_running">Управление CarPlay работает</string>
     <string name="carplay_control_window_ended">Окно управления CarPlay завершено</string>
     <string name="carplay_icon">Значок CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на комбинации приборов · экспериментально</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборной панели · экспериментально</string>
     <string name="carplay_service_already_running">Служба CarPlay уже работает</string>
     <string name="carplay_session_already_running">Сеанс CarPlay уже работает</string>
     <string name="carplay_session_ended_reconnecting">Сеанс CarPlay завершён; переподключение</string>
@@ -144,7 +144,7 @@
     <string name="choose_where_to_save_your_report">Выберите, куда сохранить отчёт.\u0020</string>
     <string name="choose_your_iphone">Выберите свой iPhone</string>
     <string name="close">Закрыть</string>
-    <string name="cluster_map_size">Размер карты комбинации</string>
+    <string name="cluster_map_size">Размер карты на приборной панели</string>
     <string name="connect">Подключить</string>
     <string name="connect_phone">Подключить телефон</string>
     <string name="connect_when_diplay_opens">Подключать при открытии DiPlay</string>
@@ -237,7 +237,7 @@
     <string name="model">Модель</string>
     <string name="music_buffer">Буфер музыки</string>
     <string name="resolution_native">Нативное</string>
-    <string name="navigation_on_hud_and_instrument_cluster">Навигация на HUD и комбинации приборов</string>
+    <string name="navigation_on_hud_and_instrument_cluster">Навигация на HUD и приборной панели</string>
     <string name="navigation_stream_type">Тип потока навигации</string>
     <string name="nearby_devices">Рядом находящиеся устройства</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">«Рядом находящиеся устройства» связывают iPhone. Микрофон нужен для Siri и звонков. Старые версии Android также требуют местоположение для беспроводной настройки. Режим USB может запросить локальное VPN-подключение.</string>
@@ -332,7 +332,7 @@
     <string name="show_password">Показать пароль</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">Показывает стрелки навигации, расстояние и названия улиц с телефона на поддерживаемых дисплеях BYD. Совместимость зависит от автомобиля.</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">Показывать боковую карту только когда её карточка открыта, а для полной карты переключаться в теме карты. Изменения темы и карточек сохраняют подключение CarPlay.</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Показывает карту iPhone на комбинации приборов. Выберите «Маленькая» или «Навигация на весь экран» в меню руля комбинации.</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Показывает карту iPhone на приборной панели. В меню приборной панели, управляемом с руля, выберите навигацию на малом или полном экране.</string>
     <string name="start_carplay_automatically_after_device_boot">Запускать CarPlay автоматически после загрузки устройства</string>
     <string name="starting">Запуск</string>
     <string name="starting_airplay_service">Запуск службы AirPlay</string>
@@ -400,4 +400,12 @@
     <string name="hotspot_error_long_name">Имя точки доступа не должно превышать 32 байта</string>
     <string name="hotspot_error_invalid_character">Имя или пароль содержит недопустимый символ</string>
     <string name="hotspot_error_password_length">Пароль точки доступа должен содержать от 8 до 63 символов</string>
+    <string name="dashboard_shows">Содержимое приборной панели</string>
+    <string name="dashboard_content_map">Карта · по умолчанию</string>
+    <string name="dashboard_content_turn_card">Карточка поворота</string>
+    <string name="dashboard_content_map_with_turn_card">Карта с карточкой поворота</string>
+    <string name="turn_card_size">Размер карточки поворота</string>
+    <string name="turn_card_horizontal">Карточка поворота · по горизонтали</string>
+    <string name="turn_card_vertical">Карточка поворота · по вертикали</string>
+    <string name="reset_turn_card_to_centre">Вернуть карточку поворота в центр</string>
 </resources>

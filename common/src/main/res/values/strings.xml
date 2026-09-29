@@ -126,7 +126,7 @@
     <string name="carplay_control_running">CarPlay control running</string>
     <string name="carplay_control_window_ended">CarPlay control window ended</string>
     <string name="carplay_icon">CarPlay icon</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">CarPlay map on instrument cluster · experimental</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">CarPlay map on dashboard · experimental</string>
     <string name="carplay_service_already_running">CarPlay service already running</string>
     <string name="carplay_session_already_running">CarPlay session already running</string>
     <string name="carplay_session_ended_reconnecting">CarPlay session ended; reconnecting</string>
@@ -146,7 +146,7 @@
     <string name="choose_where_to_save_your_report">Choose where to save your report.\u0020</string>
     <string name="choose_your_iphone">Choose your iPhone</string>
     <string name="close">Close</string>
-    <string name="cluster_map_size">Cluster map size</string>
+    <string name="cluster_map_size">Dashboard map size</string>
     <string name="connect">Connect</string>
     <string name="connect_phone">Connect phone</string>
     <string name="connect_when_diplay_opens">Connect when DiPlay opens</string>
@@ -242,7 +242,7 @@
     <string name="model">Model</string>
     <string name="music_buffer">Music buffer</string>
     <string name="resolution_native">Native</string>
-    <string name="navigation_on_hud_and_instrument_cluster">Navigation on HUD and instrument cluster</string>
+    <string name="navigation_on_hud_and_instrument_cluster">Navigation on HUD and dashboard</string>
     <string name="navigation_stream_type">Navigation stream type</string>
     <string name="nearby_devices">Nearby devices</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">Nearby devices connects your iPhone. Microphone enables Siri and calls. Older Android versions also require Location for wireless setup. USB mode may ask for a local VPN connection.</string>
@@ -341,7 +341,7 @@
     <string name="show_password">Show password</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">Show phone navigation arrows, distance and street names on supported BYD displays. Vehicle compatibility varies.</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">Show the side map only when its card is open, and switch to the full map in Map theme. Theme and card changes keep CarPlay connected.</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Shows the iPhone\'s cluster map on the instrument cluster. Choose Small or Full screen navi in the cluster\'s steering-wheel menu.</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Shows the iPhone\'s map on the dashboard. Choose Small or Full screen navi in the dashboard\'s steering-wheel menu.</string>
     <string name="start_carplay_automatically_after_device_boot">Start CarPlay automatically after device boot</string>
     <string name="starting">Starting</string>
     <string name="starting_airplay_service">Starting AirPlay service</string>
@@ -411,4 +411,12 @@
     <string name="hotspot_error_long_name">The hotspot name must be at most 32 bytes</string>
     <string name="hotspot_error_invalid_character">The name or password contains an invalid character</string>
     <string name="hotspot_error_password_length">The hotspot password must be 8–63 characters</string>
+    <string name="dashboard_shows">Dashboard shows</string>
+    <string name="dashboard_content_map">Map · default</string>
+    <string name="dashboard_content_turn_card">Turn card</string>
+    <string name="dashboard_content_map_with_turn_card">Map with turn card</string>
+    <string name="turn_card_size">Turn card size</string>
+    <string name="turn_card_horizontal">Turn card · horizontal</string>
+    <string name="turn_card_vertical">Turn card · vertical</string>
+    <string name="reset_turn_card_to_centre">Reset turn card to centre</string>
 </resources>

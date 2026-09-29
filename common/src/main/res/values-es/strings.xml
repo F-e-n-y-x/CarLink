@@ -124,7 +124,7 @@
     <string name="carplay_control_running">Control de CarPlay en ejecución</string>
     <string name="carplay_control_window_ended">Ventana de control de CarPlay finalizada</string>
     <string name="carplay_icon">Icono de CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Mapa de CarPlay en el cuadro de instrumentos · experimental</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Mapa de CarPlay en el panel de instrumentos · experimental</string>
     <string name="carplay_service_already_running">El servicio de CarPlay ya está en ejecución</string>
     <string name="carplay_session_already_running">La sesión de CarPlay ya está en ejecución</string>
     <string name="carplay_session_ended_reconnecting">Sesión de CarPlay finalizada; reconectando</string>
@@ -144,7 +144,7 @@
     <string name="choose_where_to_save_your_report">Elige dónde guardar tu informe.\u0020</string>
     <string name="choose_your_iphone">Elige tu iPhone</string>
     <string name="close">Cerrar</string>
-    <string name="cluster_map_size">Tamaño del mapa del cuadro</string>
+    <string name="cluster_map_size">Tamaño del mapa del panel de instrumentos</string>
     <string name="connect">Conectar</string>
     <string name="connect_phone">Conectar teléfono</string>
     <string name="connect_when_diplay_opens">Conectar al abrir DiPlay</string>
@@ -237,7 +237,7 @@
     <string name="model">Modelo</string>
     <string name="music_buffer">Búfer de música</string>
     <string name="resolution_native">Nativa</string>
-    <string name="navigation_on_hud_and_instrument_cluster">Navegación en HUD y cuadro de instrumentos</string>
+    <string name="navigation_on_hud_and_instrument_cluster">Navegación en HUD y panel de instrumentos</string>
     <string name="navigation_stream_type">Tipo de flujo de navegación</string>
     <string name="nearby_devices">Dispositivos cercanos</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">«Dispositivos cercanos» conecta tu iPhone. El micrófono activa Siri y las llamadas. Las versiones antiguas de Android también requieren Ubicación para la configuración inalámbrica. El modo USB puede pedir una conexión VPN local.</string>
@@ -332,7 +332,7 @@
     <string name="show_password">Mostrar contraseña</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">Muestra las flechas de navegación, la distancia y los nombres de calles del teléfono en pantallas BYD compatibles. La compatibilidad varía según el vehículo.</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">Muestra el mapa lateral solo cuando su tarjeta está abierta y cambia al mapa completo en el tema del mapa. Los cambios de tema y tarjeta mantienen CarPlay conectado.</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Muestra el mapa del iPhone en el cuadro de instrumentos. Elige «Pequeño» o «Navegación a pantalla completa» en el menú del volante del cuadro.</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">Muestra el mapa del iPhone en el panel de instrumentos. Selecciona navegación en pantalla pequeña o completa en el menú del panel mediante los controles del volante.</string>
     <string name="start_carplay_automatically_after_device_boot">Iniciar CarPlay automáticamente tras el arranque del dispositivo</string>
     <string name="starting">Iniciando</string>
     <string name="starting_airplay_service">Iniciando el servicio de AirPlay</string>
@@ -400,4 +400,12 @@
     <string name="hotspot_error_long_name">El nombre del punto de acceso no debe superar los 32 bytes</string>
     <string name="hotspot_error_invalid_character">El nombre o la contraseña contiene un carácter no válido</string>
     <string name="hotspot_error_password_length">La contraseña del punto de acceso debe tener entre 8 y 63 caracteres</string>
+    <string name="dashboard_shows">Contenido del panel de instrumentos</string>
+    <string name="dashboard_content_map">Mapa · predeterminado</string>
+    <string name="dashboard_content_turn_card">Tarjeta de giro</string>
+    <string name="dashboard_content_map_with_turn_card">Mapa con tarjeta de giro</string>
+    <string name="turn_card_size">Tamaño de la tarjeta de giro</string>
+    <string name="turn_card_horizontal">Tarjeta de giro · horizontal</string>
+    <string name="turn_card_vertical">Tarjeta de giro · vertical</string>
+    <string name="reset_turn_card_to_centre">Centrar la tarjeta de giro</string>
 </resources>

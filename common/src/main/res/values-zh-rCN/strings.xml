@@ -120,7 +120,7 @@
     <string name="carplay_control_running">CarPlay 控制通道运行中</string>
     <string name="carplay_control_window_ended">CarPlay 控制会话已结束</string>
     <string name="carplay_icon">CarPlay 图标</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘显示 CarPlay 地图 · 实验性</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘上的CarPlay地图 · 实验性</string>
     <string name="carplay_service_already_running">CarPlay 服务已在运行</string>
     <string name="carplay_session_already_running">CarPlay 会话已在运行</string>
     <string name="carplay_session_ended_reconnecting">CarPlay 会话已结束；正在重新连接</string>
@@ -140,7 +140,7 @@
     <string name="choose_where_to_save_your_report">选择报告的保存位置。</string>
     <string name="choose_your_iphone">选择 iPhone</string>
     <string name="close">关闭</string>
-    <string name="cluster_map_size">仪表盘地图尺寸</string>
+    <string name="cluster_map_size">仪表盘地图大小</string>
     <string name="common_cancel">取消</string>
     <string name="connect">连接</string>
     <string name="connect_phone">连接手机</string>
@@ -242,7 +242,7 @@
     <string name="model">型号</string>
     <string name="music_buffer">音乐缓冲</string>
     <string name="resolution_native">原生</string>
-    <string name="navigation_on_hud_and_instrument_cluster">在 HUD 和仪表盘显示导航</string>
+    <string name="navigation_on_hud_and_instrument_cluster">HUD和仪表盘导航</string>
     <string name="navigation_stream_type">导航音频流类型</string>
     <string name="nearby_devices">附近的设备</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">“附近的设备”权限用于连接 iPhone；麦克风权限用于 Siri 和通话。较旧的 Android 版本还需要位置权限来设置无线连接。USB 模式可能会请求建立本地 VPN 连接。</string>
@@ -341,7 +341,7 @@
     <string name="show_password">显示密码</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">在支持的比亚迪显示屏上显示手机导航箭头、距离和道路名称。不同车型的兼容性有所差异。</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">仅在地图卡片展开时显示侧方地图，并在“地图主题”中切换为完整地图。更改主题或卡片不会中断 CarPlay 连接。</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">在仪表盘上显示 iPhone 的地图。可在方向盘菜单中选择“小”或“全屏导航”。</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">在仪表盘上显示iPhone地图。通过方向盘操作仪表盘菜单，选择小屏导航或全屏导航。</string>
     <string name="start_carplay_automatically_after_device_boot">设备启动后自动启动 CarPlay</string>
     <string name="starting">正在启动</string>
     <string name="starting_airplay_service">正在启动 AirPlay 服务</string>
@@ -411,4 +411,12 @@
     <string name="hotspot_error_long_name">热点名称不能超过32字节</string>
     <string name="hotspot_error_invalid_character">名称或密码包含无效字符</string>
     <string name="hotspot_error_password_length">热点密码长度必须为8至63个字符</string>
+    <string name="dashboard_shows">仪表盘显示内容</string>
+    <string name="dashboard_content_map">地图 · 默认</string>
+    <string name="dashboard_content_turn_card">转向提示卡</string>
+    <string name="dashboard_content_map_with_turn_card">地图和转向提示卡</string>
+    <string name="turn_card_size">转向提示卡大小</string>
+    <string name="turn_card_horizontal">转向提示卡 · 水平位置</string>
+    <string name="turn_card_vertical">转向提示卡 · 垂直位置</string>
+    <string name="reset_turn_card_to_centre">将转向提示卡重置到中央</string>
 </resources>
