@@ -881,7 +881,7 @@ class CarPlayHostActivity : ComponentActivity() {
             setOnCheckedChangeListener { _, checked ->
                 if (wirelessEnabled == checked) return@setOnCheckedChangeListener
                 wirelessEnabled = checked
-                hotspotStatus = HotspotStatus(state = if (wirelessEnabled) "stopped" else "off")
+                hotspotStatus = HotspotStatus(state = if (wirelessEnabled) getString(R.string.hotspot_state_stopped) else getString(R.string.hotspot_state_off))
                 updateHotspotStatusBlock()
                 appendLog(
                     "Wireless CarPlay ${if (wirelessEnabled) "enabled" else "disabled"}; " +
@@ -1498,7 +1498,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         settingsBaseline = null
         locationPermissionAvailable = hasFineLocationPermission()
-        hotspotStatus = HotspotStatus(state = if (wirelessEnabled) "stopped" else "off")
+        hotspotStatus = HotspotStatus(state = if (wirelessEnabled) getString(R.string.hotspot_state_stopped) else getString(R.string.hotspot_state_off))
         syncMfiSettingsControls()
         updateManualHotspotFields()
         updateAirPlayIconPreview()
@@ -2269,7 +2269,7 @@ class CarPlayHostActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 add(WirelessHotspotMode.WIFI_P2P to getString(R.string.wi_fi_p2p_5_ghz))
             }
-            add(WirelessHotspotMode.MANUAL to "Built-in car hotspot")
+            add(WirelessHotspotMode.MANUAL to getString(R.string.built_in_car_hotspot))
         }
         var selectedId = View.NO_ID
         for ((mode, label) in modes) {
@@ -2301,7 +2301,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 ?: return@setOnCheckedChangeListener
             if (wirelessHotspotMode == selected) return@setOnCheckedChangeListener
             wirelessHotspotMode = selected
-            hotspotStatus = HotspotStatus(state = if (wirelessEnabled) "stopped" else "off")
+            hotspotStatus = HotspotStatus(state = if (wirelessEnabled) getString(R.string.hotspot_state_stopped) else getString(R.string.hotspot_state_off))
             updateHotspotStatusBlock()
             updateManualHotspotFields()
             appendLog(
@@ -2528,12 +2528,12 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         val status = hotspotStatus
         hotspotStatusView?.text = buildString {
-            append("Wireless hotspot: ").append(status.state)
-            status.ssid?.let { append("\nSSID: ").append(it) }
-            status.backend?.let { append("\nBackend: ").append(it) }
-            status.band?.let { append("\nBand: ").append(it) }
+            append(getString(R.string.hotspot_wireless_prefix)).append(status.state)
+            status.ssid?.let { append(getString(R.string.hotspot_ssid_prefix)).append(it) }
+            status.backend?.let { append(getString(R.string.hotspot_backend_prefix)).append(it) }
+            status.band?.let { append(getString(R.string.hotspot_band_prefix)).append(it) }
             status.channel?.let {
-                append("\nChannel: ").append(if (it == 0) "Auto" else it.toString())
+                append(getString(R.string.hotspot_channel_prefix)).append(if (it == 0) getString(R.string.auto_label) else it.toString())
             }
         }
     }
@@ -2618,42 +2618,42 @@ class CarPlayHostActivity : ComponentActivity() {
             "HEVC (H.265, ${if (hevcSoftwareDecoderEnabled) "software" else "hardware"})"
         }
         val fullscreen = buildString {
-            append(if (hideTopBar) "top hidden" else "top shown")
+            append(if (hideTopBar) getString(R.string.fullscreen_top_hidden) else getString(R.string.fullscreen_top_shown))
             append(", ")
-            append(if (hideBottomBar) "bottom hidden" else "bottom shown")
+            append(if (hideBottomBar) getString(R.string.fullscreen_bottom_hidden) else getString(R.string.fullscreen_bottom_shown))
         }
         resolutionPreviewView?.text = buildString {
             append(resolution).append('\n')
-            append("Identity: ").append(normalizedManufacturer()).append(" / ")
+            append(getString(R.string.preview_identity)).append(normalizedManufacturer()).append(" / ")
                 .append(normalizedModel()).append('\n')
-            append("OEM label: ").append(oemLabel.ifBlank { "(empty)" }).append('\n')
-            append("Frame rate: ").append(fps).append(" fps\n")
-            append("Detected maximum: ")
+            append(getString(R.string.preview_oem_label)).append(oemLabel.ifBlank { getString(R.string.preview_empty) }).append('\n')
+            append(getString(R.string.preview_frame_rate)).append(fps).append(" fps\n")
+            append(getString(R.string.preview_detected_maximum))
                 .append(maximumDetectedWidthPixels).append(" x ")
                 .append(maximumDetectedHeightPixels).append(" px\n")
-            append("Physical reference: ")
+            append(getString(R.string.preview_physical_reference))
                 .append(
                     when (physicalSizeBasis) {
-                        AirPlayPhysicalSizeBasis.WIDTH -> "widest width"
-                        AirPlayPhysicalSizeBasis.HEIGHT -> "longest height"
+                        AirPlayPhysicalSizeBasis.WIDTH -> getString(R.string.basis_widest_width)
+                        AirPlayPhysicalSizeBasis.HEIGHT -> getString(R.string.basis_longest_height)
                     },
                 )
                 .append(" = ").append(widthPhysicalMm).append(" mm\n")
             native?.let { size ->
                 val physical = resolvePhysicalSize(size)
-                append("CarPlay physical size: ")
+                append(getString(R.string.preview_carplay_physical_size))
                     .append(physical.widthMm).append(" x ")
                     .append(physical.heightMm).append(" mm\n")
             }
-            append("Driving side: ").append(if (rightHandDrive) "right" else "left").append('\n')
-            append("Fullscreen: ").append(fullscreen).append('\n')
-            append("Video transport: ").append(transport).append('\n')
-            append("Location reporting: ")
-                .append(if (locationReportingEnabled) "enabled" else "disabled")
+            append(getString(R.string.preview_driving_side)).append(if (rightHandDrive) getString(R.string.driving_side_right) else getString(R.string.driving_side_left)).append('\n')
+            append(getString(R.string.preview_fullscreen)).append(fullscreen).append('\n')
+            append(getString(R.string.preview_video_transport)).append(transport).append('\n')
+            append(getString(R.string.preview_location_reporting))
+                .append(if (locationReportingEnabled) getString(R.string.enabled_value) else getString(R.string.disabled_value))
                 .append('\n')
             if (advancedAudioChannelMappingSupported) {
-                append("Audio channel mapping: ")
-                    .append(if (advancedAudioChannelMapping) "AAOS buses" else "Mobile compatible")
+                append(getString(R.string.preview_audio_channel_mapping))
+                    .append(if (advancedAudioChannelMapping) getString(R.string.mapping_aaos_buses) else getString(R.string.mapping_mobile_compatible))
                     .append('\n')
             }
             append(safeAreaSummary())
@@ -3577,8 +3577,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.MfiReady -> getString(R.string.mfi_authentication_ready)
         CarPlayStatus.StartingHotspot -> getString(R.string.starting_wireless_hotspot)
         is CarPlayStatus.HotspotReady ->
-            "Hotspot ready: $backend, $ssid, $band, " +
-                "channel ${if (channel == 0) "auto" else channel}"
+            getString(R.string.status_hotspot_ready, backend, ssid, band, if (channel == 0) getString(R.string.auto_value) else channel.toString())
         CarPlayStatus.WaitingForPairedIphone -> getString(R.string.waiting_for_paired_iphone)
         CarPlayStatus.ConnectingBluetooth -> getString(R.string.connecting_bluetooth)
         CarPlayStatus.RunningWireless -> getString(R.string.wireless_carplay_control_running)
@@ -3586,16 +3585,16 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.DiscoveringIphone -> getString(R.string.discovering_iphone)
         CarPlayStatus.WaitingForIphone -> getString(R.string.waiting_for_iphone_over_usb)
         CarPlayStatus.RequestingIphonePermission -> getString(R.string.requesting_iphone_usb_permission)
-        CarPlayStatus.WaitingForReenumeration -> "Waiting for iPhone re-enumeration"
+        CarPlayStatus.WaitingForReenumeration -> getString(R.string.status_waiting_reenumeration)
         CarPlayStatus.SelectingConfiguration -> getString(R.string.selecting_carplay_configuration)
         CarPlayStatus.OpeningDataPaths -> getString(R.string.opening_usb_data_paths)
         CarPlayStatus.Pairing -> getString(R.string.pairing_with_iphone)
         CarPlayStatus.ConnectingControl -> getString(R.string.connecting_iap2_control)
         CarPlayStatus.AttachingNetwork ->
-            if (wirelessEnabled) getString(R.string.starting_airplay_service) else "Attaching NCM/AirPlay network"
+            if (wirelessEnabled) getString(R.string.starting_airplay_service) else getString(R.string.status_attaching_ncm)
         CarPlayStatus.RunningControl -> getString(R.string.carplay_control_running)
         CarPlayStatus.ControlEnded -> getString(R.string.carplay_control_window_ended)
-        is CarPlayStatus.Failed -> "Failed: ${message}"
+        is CarPlayStatus.Failed -> getString(R.string.status_failed, message)
     }
 
     private companion object {

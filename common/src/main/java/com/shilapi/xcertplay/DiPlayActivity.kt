@@ -86,7 +86,7 @@ class DiPlayActivity : ComponentActivity() {
         }
         setupError = runCatching { DiPlayBootstrap.ensure(this) }.exceptionOrNull()?.let {
             android.util.Log.e("DiPlaySetup", "CarPlay authentication could not be loaded", it)
-            "CarPlay authentication could not be loaded. Install the complete DiPlay build over this app. No uninstall or hotspot change is needed."
+            getString(R.string.setup_error_auth)
         }
         pendingCarHotspotSetup = savedInstanceState?.getBoolean("pending_car_hotspot") ?: false
         page = savedInstanceState?.getString("page") ?: intent.getStringExtra("page") ?: "home"
@@ -162,9 +162,9 @@ class DiPlayActivity : ComponentActivity() {
         }
         card.addView(connectButton, matchButton())
         val connectionHint = when (AirPlayPersistence.loadWirelessHotspotMode(this)) {
-            WirelessHotspotMode.MANUAL -> "Built-in car hotspot · Keep the car hotspot, Bluetooth and your iPhone’s Wi-Fi on."
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> "Open Connection setup to save your built-in car hotspot details."
-            else -> "Wi-Fi Direct · Keep the car’s Wi-Fi switch, Bluetooth and your iPhone’s Wi-Fi on."
+            WirelessHotspotMode.MANUAL -> getString(R.string.hotspot_hint_manual)
+            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> getString(R.string.hotspot_hint_local)
+            else -> getString(R.string.hotspot_hint_p2p)
         }
         card.addView(label(connectionHint, 15, MUTED).apply { setPadding(0, dp(14), 0, 0) })
         if (carHotspotOff()) {
@@ -329,17 +329,17 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 } else {
                     val sizes = CarPlayClusterDisplay.scalePresets
-                    choice(card, getString(R.string.cluster_map_size), listOf("Standard · sharpest", "Larger · default", "Largest"),
+                    choice(card, getString(R.string.cluster_map_size), listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
                     val across = CarPlayClusterDisplay.horizontalSteps.toList()
-                    choice(card, getString(R.string.car_marker_horizontal), across.map { markerStepLabel(it, "Left", "Right") },
+                    choice(card, getString(R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
                         across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
                     }
                     val upDown = CarPlayClusterDisplay.verticalSteps.toList()
-                    choice(card, getString(R.string.car_marker_vertical), upDown.map { markerStepLabel(it, "Up", "Down") },
+                    choice(card, getString(R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
                         upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
                     }
@@ -436,10 +436,10 @@ class DiPlayActivity : ComponentActivity() {
     private fun wirelessLinkControls(parent: LinearLayout) {
         val mode = if (pendingCarHotspotSetup) WirelessHotspotMode.MANUAL else AirPlayPersistence.loadWirelessHotspotMode(this)
         val modes = listOf(WirelessHotspotMode.MANUAL, WirelessHotspotMode.WIFI_P2P)
-        val titles = listOf("Built-in car hotspot", "Wi-Fi Direct")
+        val titles = listOf(getString(R.string.built_in_car_hotspot), getString(R.string.wifi_direct))
         val descriptions = listOf(
-            "Use the car’s own hotspot. Select 5 GHz in car settings if available.",
-            "Alternative setup. Requires the car’s Wi-Fi switch on; a 2.4 GHz connection may stutter."
+            getString(R.string.hotspot_mode_manual_desc),
+            getString(R.string.hotspot_mode_p2p_desc)
         )
         val wide = resources.configuration.screenWidthDp >= 850
         val choices = if (wide) row().apply { gravity = Gravity.TOP } else column()
@@ -471,7 +471,7 @@ class DiPlayActivity : ComponentActivity() {
                     applyWirelessLink(WirelessHotspotMode.MANUAL)
                 }
             }, matchButton(12, 60))
-            parent.addView(label(if (pendingCarHotspotSetup) getString(R.string.finish_setup_save_your_hotspot_details_to_use_this_mode) else if (carHotspotOff()) "Hotspot is off · Turn it on in car settings." else "Details saved · Check that the car hotspot is on before connecting.", 15, if (carHotspotOff()) WARNING else MUTED).apply { setPadding(0, dp(12), 0, 0) })
+            parent.addView(label(if (pendingCarHotspotSetup) getString(R.string.finish_setup_save_your_hotspot_details_to_use_this_mode) else if (carHotspotOff()) getString(R.string.hotspot_details_off) else getString(R.string.hotspot_details_saved), 15, if (carHotspotOff()) WARNING else MUTED).apply { setPadding(0, dp(12), 0, 0) })
         } else {
             parent.addView(label(getString(R.string.turn_the_car_s_wi_fi_switch_on_allow_location_nearby_devic), 16, MUTED))
             parent.addView(button(getString(R.string.open_car_wi_fi_settings), false) { openCarClientWifiSettings() }, matchButton(12, 60))
@@ -545,7 +545,7 @@ class DiPlayActivity : ComponentActivity() {
 
     // "Left 20 %", "Centre · default", "Down 10 %": a signed step reads as a direction and a distance.
     private fun markerStepLabel(step: Int, negative: String, positive: String): String = when {
-        step == 0 -> "Centre · default"
+        step == 0 -> getString(R.string.marker_centre_default)
         step < 0 -> "$negative ${-step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
         else -> "$positive ${step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
     }
@@ -563,12 +563,12 @@ class DiPlayActivity : ComponentActivity() {
         })
         body.addView(button(getString(R.string.copy_command), false) {
             getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
-                android.content.ClipData.newPlainText("DiPlay Usage Access", command))
+                android.content.ClipData.newPlainText(getString(R.string.clipboard_usage_access), command))
             toast(getString(R.string.copied_to_the_car_clipboard_run_the_command_on_your_comput))
         }, matchButton(0, 56))
         body.addView(label(getString(R.string.cluster_adb_multi_device, packageName), 14, MUTED))
         body.addView(label(getString(R.string.s_3_tap_check_and_enable_below_this_enables_the_cluster_ma), 16, TEXT))
-        val status = label(if (DiLink51ClusterMonitor.hasAccess(this)) "Permission enabled · ready to use" else "Permission not enabled yet", 16, TEXT)
+        val status = label(if (DiLink51ClusterMonitor.hasAccess(this)) getString(R.string.permission_enabled_ready) else getString(R.string.permission_not_enabled), 16, TEXT)
         body.addView(status)
         val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.automatic_cluster_map_setup))
             .setView(ScrollView(this).apply { addView(body) })
@@ -826,9 +826,9 @@ class DiPlayActivity : ComponentActivity() {
                             runCatching {
                                 startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"; putExtra(Intent.EXTRA_STREAM, savedUri)
-                                    clipData = android.content.ClipData.newRawUri("Diagnostic report", savedUri)
+                                    clipData = android.content.ClipData.newRawUri(getString(R.string.report_clip_label), savedUri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }, "Share diagnostic report"))
+                                }, getString(R.string.share_diagnostic_report)))
                             }.onFailure { toast(getString(R.string.report_saved_open_it_from_your_file_manager_to_share_it)) }
                         }.show()
                 } else {
