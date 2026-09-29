@@ -15,7 +15,6 @@
     <string name="title">DiAuto</string>
     <string name="remove">Eliminar</string>
     <string name="usb">USB</string>
-    <string name="wifi">WiFi</string>
     <string name="dpi">Densidad de píxeles (DPI)</string>
     <string name="mic_sample_rate">Tasa de muestreo del micro</string>
     <string name="keymap">Mapa de teclas</string>
@@ -44,7 +43,6 @@
     <string name="category_dark_mode">Modo oscuro</string>
     <string name="category_automation">Automatización</string>
     <string name="dark_mode_settings">Ajustes del modo oscuro</string>
-    <string name="app_theme_short">App</string>
     <string name="night_mode_short">Android Auto</string>
     <string name="aa_monochrome">Android Auto monocromático</string>
     <string name="aa_monochrome_description">Reduce los colores de Android Auto para la conducción nocturna. Requiere el modo de vista GLES. Solo tiene efecto cuando el modo oscuro está activado</string>
@@ -71,14 +69,9 @@
     <string name="change_dpi">Cambiar DPI</string>
     <string name="change_view_mode">Cambiar modo de vista</string>
     <string name="view_mode">Modo de vista</string>
-    <string name="surface_view">SurfaceView</string>
-    <string name="texture_view">TextureView</string>
-    <string name="gles_view">GLES20</string>
-    <string name="auto">Auto</string>
     <string name="screen_orientation">Orientación de pantalla</string>
     <string name="change_screen_orientation">Cambiar orientación de pantalla</string>
     <string name="orientation_system_default">Predeterminado del sistema</string>
-    <string name="orientation_auto_sensor">Auto (Sensor)</string>
     <string name="orientation_landscape">Horizontal (0°)</string>
     <string name="orientation_landscape_reverse">Horizontal invertido (180°)</string>
     <string name="orientation_portrait">Vertical (90°)</string>
@@ -392,7 +385,6 @@
     <string name="nav_action_roundabout_exit">Salir de rotonda</string>
     <string name="nav_action_roundabout">Rotonda</string>
     <string name="nav_action_straight">Recto</string>
-    <string name="nav_action_ferry">Ferry</string>
     <string name="nav_action_ferry_train">Ferry / tren</string>
     <string name="nav_action_destination">Llegada</string>
     <string name="monochrome_icons">Iconos monocromáticos</string>
@@ -648,7 +640,6 @@
     <string name="geofence_override_theme">Forzar un tema aquí</string>
     <string name="geofence_dark_inside">Oscuro dentro de esta zona</string>
     <string name="geofence_scope_label">Se aplica a</string>
-    <string name="geofence_scope_app">App</string>
     <string name="geofence_scope_aa">Android Auto</string>
     <string name="geofence_scope_both">Ambos</string>
     <string name="geofence_gate_here">Solo iniciar/conectar automáticamente aquí</string>
@@ -696,7 +687,6 @@
     <string name="onb_display_result">Aplicado: %1$s, %2$d dpi, %3$s, vista %4$s.</string>
     <string name="onb_appearance_title">Apariencia</string>
     <string name="onb_appearance_theme_label">Tema de la aplicación</string>
-    <string name="onb_theme_auto">Auto</string>
     <string name="onb_theme_light">Claro</string>
     <string name="onb_theme_dark">Oscuro</string>
     <string name="onb_appearance_night_label">Modo oscuro de Android Auto</string>
@@ -816,7 +806,6 @@
     <string name="rename_notice_message">Headunit Revived está creciendo, gracias a vosotros, y se está convirtiendo en algo propio: Open Headunit. Vamos a ir cambiando al nuevo nombre en las próximas actualizaciones, así que es posible que sigas viendo el nombre anterior en algunos sitios durante un tiempo.\n\nLa misma app, la misma gente detrás, y todos tus ajustes se quedan exactamente como están.</string>
     <string name="rename_notice_button">Entendido</string>
 
-    <string name="onb_vehicle_help_sideload">Picking a real car brand also shows that brand\'s logo on the Android Auto exit button, but Android Auto then stops listing apps you installed from outside the Play Store. Keep \"Google\" or \"Open Headunit\" if you use those apps.</string>
     <string-array name="vehicle_brands">
         <item>Google</item>
         <item>Android</item>
@@ -847,52 +836,7 @@
     <string name="dpi_size_l">L</string>
     <string name="dpi_size_xl">XL</string>
     <string name="dpi_value_format">%1$d DPI</string>
-    <string name="pixel_aspect_ratio">Pixel aspect ratio</string>
-    <string name="enter_pixel_aspect_ratio_value">Pixel aspect ratio x10000 (10000 = square pixels)</string>
-    <string name="cannot_open_settings">Could not open system settings</string>
-    <string name="static_bssid_title">Static BSSID</string>
-    <string name="static_bssid_enter_value">Enter BSSID (XX:XX:XX:XX:XX:XX)</string>
-    <string name="static_bssid_desc">Manually set the BSSID for the wireless handshake if auto-detection is blocked by system permissions</string>
-    <string name="use_measured_touch_surface">Experimental touch alignment fix</string>
-    <string name="use_measured_touch_surface_description">Normalize touch input against the measured projection overlay. May help when small Android Auto controls feel shifted.</string>
-    <string name="media_key_routing">Send Media Buttons To Android Auto</string>
-    <string name="media_key_routing_always">Always</string>
-    <string name="media_key_routing_auto">Automatic</string>
-    <string name="media_key_routing_never">Never</string>
-    <string name="media_key_routing_always_hint">Next, previous and play/pause are always sent to Android Auto. Use this unless one press skips two tracks.</string>
-    <string name="media_key_routing_auto_hint">Stops sending them while this headunit has a Bluetooth media connection to the phone, because that connection already performs the action. Choose this if one press skips two tracks and your phone is paired to this headunit.</string>
-    <string name="media_key_routing_never_hint">Never sends them, leaving the buttons to Bluetooth. Choose this if one press skips two tracks and your phone is paired to the car\'s own system rather than to this headunit — Automatic cannot detect that connection.</string>
-    <string name="media_key_routing_hint_common">Only the media buttons are affected. Rotary controllers, D-pad, Back and Enter always reach Android Auto.</string>
-    <string name="playback_focus_mode">Pause Other Audio During Playback</string>
-    <string name="playback_focus_mode_auto">Automatic</string>
-    <string name="playback_focus_mode_always">Always</string>
-    <string name="playback_focus_mode_never">Never</string>
-    <string name="playback_focus_mode_auto_hint">Pauses another player on the headunit (for example the radio) while Android Auto audio plays, but not while a Bluetooth audio link is connected — that link is usually the same phone, and pausing it would stop Android Auto\'s own sound.</string>
-    <string name="playback_focus_mode_always_hint">Always pauses other audio while Android Auto plays. If your music stops after a second or two whenever Bluetooth is on, switch back to Automatic.</string>
-    <string name="playback_focus_mode_never_hint">Never touches system audio focus. Other audio on the headunit may keep playing over Android Auto.</string>
-    <string name="playback_focus_mode_static_hint">With Static Audio Focus on, this applies from the moment the phone connects and lasts the whole session, rather than only while audio is playing.</string>
     <string name="github_issues_url">https://github.com/shihabal3amri/DiAuto/issues</string>
     <string name="support_rules_english_title">All posts in English</string>
-    <string name="boot_loop_paused_title">Wireless start-up paused</string>
-    <string name="boot_loop_paused_generic">This device restarted three times in a row shortly after Open Headunit started wireless, so wireless was left off this time. USB still works. Open the app to turn it back on.</string>
-    <string name="boot_loop_paused_native_wifi_direct">This device restarted three times in a row shortly after Open Headunit started wireless, so wireless was left off this time. On some head units the WiFi chipset takes the whole system down when a phone joins a WiFi Direct network. Try switching Android Auto mode to the head unit hotspot. USB still works.</string>
-    <string name="vehicle_make_hint">A real car brand shows that brand\'s logo on the Android Auto exit button, but Android Auto then stops listing apps installed from outside the Play Store. Set it back to \"Google\" to get those apps listed again.</string>
-    <string name="external_bt_nativeaa">Native Wireless cannot work on this head unit</string>
-    <string name="external_bt_nativeaa_desc">This head unit uses its own Bluetooth module (%1$s) instead of the one Android exposes to apps. Your phone pairs with that module, so anything this app sends over Bluetooth never reaches it — the connection will look like it is working and then stall.\n\nThis is a hardware limitation and cannot be worked around from the app. Please use USB, or the \"Wireless Helper\" or \"Auto (Headunit Server)\" mode, which do not need the Bluetooth handshake.</string>
-    <string name="manual_secondary_bt_service_title">Manual Secondary Radio</string>
-    <string name="manual_secondary_bt_service_message">Advanced: force an extra Bluetooth radio, for dual-radio units whose second radio isn\'t found automatically. Find it via \"adb shell service list\" (look for a Bluetooth-sounding entry besides bluetooth_manager) or an engineering menu, then paste either the name before the colon or the interface shown in brackets - both work. Not guaranteed to help on every unit: some head units run a customized Bluetooth stack that this can\'t bridge to no matter what you enter here. Leave blank to disable.</string>
-    <string name="native_ap_transport">Network transport</string>
     <string name="native_ap_transport_wifi_direct">WiFi Direct</string>
-    <string name="native_ap_transport_hotspot">Hotspot</string>
-    <string name="native_ap_transport_hint">Experimental. The phone joins this device\'s own hotspot instead of a WiFi Direct group. Switch the hotspot on yourself before connecting, and set it to 5 GHz if you can - over 2.4 GHz the phone connects and then drops the session repeatedly without any picture, unless you lower the resolution and frame rate. If the network name cannot be read automatically, enter it below.</string>
-    <string name="hotspot_interface_override">Hotspot network interface</string>
-    <string name="hotspot_interface_override_message">Leave blank to work it out automatically. Set this if the log says more than one interface could be the access point, or picks the wrong one. The name is the one the log reports after &quot;Providing credentials from&quot;, or the entry holding your hotspot\'s address in &quot;ip -brief addr&quot; from a shell. Common names: ap0, wlan0, wlan1, wlan2, softap0, ra0.</string>
-    <string name="hotspot_ssid_override">Hotspot name (manual)</string>
-    <string name="hotspot_ssid_override_message">Leave blank to read the name from this device\'s hotspot settings automatically. Some devices do not let apps read it - if the log says the name could not be read, type it here exactly as it appears in your hotspot settings.</string>
-    <string name="hotspot_password_override">Hotspot password (manual)</string>
-    <string name="hotspot_password_override_message">Leave blank to read the password automatically. Needed on devices that do not let apps read the hotspot configuration. The phone will be given this password to join.</string>
-    <string name="hotspot_config_unreadable_toast">Can\'t read this device\'s hotspot name. Set it manually under Hotspot name/password in Settings.</string>
-    <string name="native_wifi_version_exchange">Modern handshake (version exchange)</string>
-    <string name="native_wifi_version_exchange_description">Opens the Bluetooth handshake by telling the phone which protocol version this head unit speaks, the way factory head units do, instead of going straight to the connection details. Off by default. Worth trying if wireless worked before an Android Auto update and has failed since; if it makes no difference, turn it back off.</string>
-    <string name="su_needed_keymaps_warning">Warning: Your headunit must be either rooted, or have Shizuku installed. If that\'s the case, you must allow SU rights, once prompted. Steering keys likely are not functional until this is fixed.</string>
 </resources>

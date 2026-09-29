@@ -84,6 +84,7 @@
         android:label="@string/title"
         android:largeHeap="true"
         android:supportsRtl="true"
+        android:localeConfig="@xml/locales_config"
         tools:ignore="GoogleAppIndexingWarning">
 
         <activity

@@ -210,7 +210,7 @@ object SettingsBackupManager {
 
     fun exportFromContext(context: Context): String {
         val prefs = context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE)
-        return exportToJson(prefs.all, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+        return exportToJson(prefs.all + ("app-language" to LocaleHelper.preference(context)), BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
     }
 
     fun exportToJson(
@@ -286,9 +286,11 @@ object SettingsBackupManager {
     fun importFromJson(context: Context, json: String): ImportResult {
         val prefs = context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE)
         val importData = parseImportJson(json)
-        val changedKeys = importData.values.filter { (key, value) -> prefs.all[key] != value }.keys
+        val current = prefs.all + ("app-language" to LocaleHelper.preference(context))
+        val changedKeys = importData.values.filter { (key, value) -> current[key] != value }.keys
 
         applyValues(prefs, importData.values)
+        (importData.values["app-language"] as? String)?.let { LocaleHelper.save(context, it) }
         syncImportedSettings(context)
 
         return ImportResult(
@@ -300,9 +302,12 @@ object SettingsBackupManager {
 
     fun resetFromContext(context: Context): ResetResult {
         val prefs = context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE)
+        val hadLanguage = LocaleHelper.preference(context).isNotEmpty()
         val result = resetPreferencesToDefaults(prefs)
+        LocaleHelper.save(context, LocaleHelper.SYSTEM_DEFAULT)
         syncImportedSettings(context)
-        return result
+        val keys = if (hadLanguage) result.changedKeys + "app-language" else result.changedKeys
+        return ResetResult(keys.size, keys)
     }
 
     fun resetPreferencesToDefaults(prefs: SharedPreferences): ResetResult {

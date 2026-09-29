@@ -782,8 +782,8 @@ class Settings(private val context: Context) {
         }
 
     var appLanguage: String
-        get() = prefs.getString("app-language", "")!!
-        set(value) { prefs.edit().putString("app-language", value).apply() }
+        get() = LocaleHelper.preference(context)
+        set(value) { LocaleHelper.save(context, value) }
 
     var mediaVolumeOffset: Int
         get() = prefs.getInt("media-volume-offset", 0)

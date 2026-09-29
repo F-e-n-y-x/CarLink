@@ -211,7 +211,7 @@ class KeymapFragment : Fragment(), MainActivity.KeyListener {
         
         AppLog.i("KeymapFragment: Captured $keyName ($keyCode) $actionName")
         
-        keypressDebuggerTextView.text = "Key: $keyName ($keyCode) - $actionName"
+        keypressDebuggerTextView.text = getString(R.string.keymap_test_event, keyName, keyCode, actionName)
         keypressDebuggerTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.brand_teal))
 
         if (assignTargetCode != KeyEvent.KEYCODE_UNKNOWN) {

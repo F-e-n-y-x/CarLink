@@ -90,32 +90,60 @@ object LocaleHelper {
         }
     }
 
-    /**
-     * Applies the selected locale to a context.
-     * Returns a new Context with the applied locale.
-     */
-    fun applyLocale(context: Context, settings: Settings): Context {
-        val localeString = settings.appLanguage
-        if (localeString.isEmpty()) {
-            // Use system default
-            return context
+    private const val KEY = "app-language"
+    private const val MIGRATED = "app-language-platform-migrated"
+
+    private fun preferences(context: Context) =
+        context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** Android 13 settings and the in-app picker share the same source of truth. */
+    fun preference(context: Context): String {
+        if (Build.VERSION.SDK_INT >= 33) {
+            migrate(context)
+            val locales = context.getSystemService(android.app.LocaleManager::class.java).applicationLocales
+            return if (locales.isEmpty) SYSTEM_DEFAULT else localeToString(locales[0])
         }
+        return preferences(context).getString(KEY, SYSTEM_DEFAULT) ?: SYSTEM_DEFAULT
+    }
 
-        val locale = stringToLocale(localeString) ?: return context
-        Locale.setDefault(locale)
+    fun save(context: Context, language: String) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            val locale = stringToLocale(language)
+            context.getSystemService(android.app.LocaleManager::class.java).applicationLocales =
+                if (locale == null) android.os.LocaleList.getEmptyLocaleList() else android.os.LocaleList(locale)
+            preferences(context).edit().putBoolean(MIGRATED, true).remove(KEY).apply()
+        } else {
+            preferences(context).edit().putString(KEY, language).apply()
+        }
+    }
 
+    @androidx.annotation.RequiresApi(33)
+    private fun migrate(context: Context) {
+        val prefs = preferences(context)
+        if (prefs.getBoolean(MIGRATED, false)) return
+        val manager = context.getSystemService(android.app.LocaleManager::class.java)
+        val previous = stringToLocale(prefs.getString(KEY, SYSTEM_DEFAULT) ?: SYSTEM_DEFAULT)
+        if (manager.applicationLocales.isEmpty && previous != null) {
+            manager.applicationLocales = android.os.LocaleList(previous)
+        }
+        prefs.edit().putBoolean(MIGRATED, true).remove(KEY).apply()
+    }
+
+    fun applyLocale(context: Context, settings: Settings): Context {
+        val selected = settings.appLanguage
+        if (Build.VERSION.SDK_INT >= 33) return context
+        // Do not mutate Locale.getDefault(): returning to System default must restore the system locale.
+        @Suppress("DEPRECATION")
+        val locale = stringToLocale(selected) ?: android.content.res.Resources.getSystem().configuration.locale
         val config = Configuration(context.resources.configuration)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= 17) {
             config.setLocale(locale)
-            config.setLocales(android.os.LocaleList(locale))
+            config.setLayoutDirection(locale)
         } else {
             @Suppress("DEPRECATION")
             config.locale = locale
         }
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            context.createConfigurationContext(config)
-        } else {
+        return if (Build.VERSION.SDK_INT >= 17) context.createConfigurationContext(config) else {
             @Suppress("DEPRECATION")
             context.resources.updateConfiguration(config, context.resources.displayMetrics)
             context

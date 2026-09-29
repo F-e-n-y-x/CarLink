@@ -38,7 +38,7 @@ class DiagnosticsFragment : Fragment(R.layout.fragment_diagnostics) {
     private fun fileName() = "DiAuto-report-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.txt"
     private fun chooseLocation() {
         runCatching { destination.launch(fileName()) }.onFailure {
-            Toast.makeText(requireContext(), "No file picker is available. Use Save diagnostic report on Android 10 or newer.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.diagnostic_file_picker_unavailable), Toast.LENGTH_LONG).show()
         }
     }
     private fun export(destination: Uri? = null) {
@@ -47,7 +47,7 @@ class DiagnosticsFragment : Fragment(R.layout.fragment_diagnostics) {
         val context = requireContext().applicationContext
         val fileName = fileName()
         val button = view?.findViewById<MaterialButton>(R.id.save_diagnostic_report)
-        button?.apply { isEnabled = false; text = "Saving report…" }
+        button?.apply { isEnabled = false; text = getString(R.string.diagnostic_saving_report) }
         view?.findViewById<View>(R.id.choose_diagnostic_location)?.isEnabled = false
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -68,8 +68,8 @@ class DiagnosticsFragment : Fragment(R.layout.fragment_diagnostics) {
             view?.findViewById<View>(R.id.choose_diagnostic_location)?.isEnabled = true
             result.onSuccess { uri ->
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
-                    .setTitle("Diagnostic report saved")
-                    .setMessage(if (destination == null) "Downloads/DiAuto/$fileName" else "Saved to your selected location.")
+                    .setTitle(getString(R.string.diagnostic_report_saved))
+                    .setMessage(if (destination == null) "Downloads/DiAuto/$fileName" else getString(R.string.diagnostic_saved_to_your_selected_location))
                     .setPositiveButton(R.string.share) { _, _ ->
                         runCatching {
                             startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
@@ -77,14 +77,14 @@ class DiagnosticsFragment : Fragment(R.layout.fragment_diagnostics) {
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 clipData = android.content.ClipData.newRawUri("Diagnostic report", uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }, "Share diagnostic report"))
-                        }.onFailure { Toast.makeText(requireContext(), "Report saved. Open it from your file manager to share it.", Toast.LENGTH_LONG).show() }
-                    }.setNegativeButton("Done", null).show()
+                            }, getString(R.string.diagnostic_share_diagnostic_report)))
+                        }.onFailure { Toast.makeText(requireContext(), getString(R.string.diagnostic_share_manually), Toast.LENGTH_LONG).show() }
+                    }.setNegativeButton(getString(R.string.diagnostic_done), null).show()
             }.onFailure {
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
-                    .setTitle("Could not save the report")
-                    .setMessage("Check available storage or choose another save location.")
-                    .setPositiveButton("Choose location") { _, _ -> chooseLocation() }
+                    .setTitle(getString(R.string.diagnostic_could_not_save_the_report))
+                    .setMessage(getString(R.string.diagnostic_save_failure_hint))
+                    .setPositiveButton(getString(R.string.diagnostic_choose_location)) { _, _ -> chooseLocation() }
                     .setNegativeButton(R.string.close, null).show()
             }
         }

@@ -592,7 +592,7 @@ class LoadingScreenFragment : Fragment() {
                 }
             }
             com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.DarkAlertDialog)
-                .setTitle("No files found")
+                .setTitle(R.string.no_files_found)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()

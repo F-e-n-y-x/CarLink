@@ -1481,7 +1481,7 @@ class SettingsFragment : Fragment() {
             value = pendingVideoCodec!!,
             searchKeywords = "Auto H.264 H.265",
             onClick = { _ ->
-                val codecs = arrayOf("Auto", "H.264", "H.265")
+                val codecs = arrayOf(getString(R.string.auto), "H.264", "H.265")
                 val currentCodecIndex = codecs.indexOf(pendingVideoCodec)
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.video_codec)
@@ -1760,9 +1760,9 @@ class SettingsFragment : Fragment() {
         items.add(SettingItem.SettingEntry(
             stableId = "audioQueueCapacity",
             nameResId = R.string.audio_queue_capacity,
-            value = if (pendingAudioQueueCapacity == 0) "Unbounded (Legacy)" else "${pendingAudioQueueCapacity} chunks",
+            value = if (pendingAudioQueueCapacity == 0) getString(R.string.audio_queue_unbounded) else getString(R.string.audio_queue_chunks, pendingAudioQueueCapacity ?: 0),
             onClick = { _ ->
-                val options = arrayOf("10 chunks (Low Latency)", "20 chunks (Balanced)", "50 chunks (High Latency)", "Unbounded (Max Backlog)")
+                val options = arrayOf(getString(R.string.audio_queue_low), getString(R.string.audio_queue_balanced), getString(R.string.audio_queue_high), getString(R.string.audio_queue_backlog))
                 val values = intArrayOf(10, 20, 50, 0)
                 val currentIndex = values.indexOf(pendingAudioQueueCapacity ?: 0).coerceAtLeast(0)
                 AlertDialog.Builder(requireContext())

@@ -49,6 +49,9 @@ jobs:
           echo "sdkmanager failed after 3 attempts" >&2
           exit 1
 
+      - name: Check core translations
+        run: python3 scripts/check_localization.py
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -95,6 +98,9 @@ jobs:
           done
           echo "sdkmanager failed after 3 attempts" >&2
           exit 1
+
+      - name: Check core translations
+        run: python3 scripts/check_localization.py
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

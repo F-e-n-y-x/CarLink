@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="da_brand">DiAuto</string>
+    <string name="da_tagline">TU TELÉFONO. TU VIAJE.</string>
+    <string name="da_headline">Un viaje familiar.</string>
+    <string name="da_description">Tus mapas, música y conversaciones.\nAndroid Auto, aquí en la pantalla de tu coche.</string>
+    <string name="da_connect">Conectar teléfono</string>
+    <string name="da_open">Abrir Android Auto</string>
+    <string name="da_ready">Listo cuando tú lo estés</string>
+    <string name="da_connecting">Conectando con tu teléfono…</string>
+    <string name="da_connected">Android Auto está conectado</string>
+    <string name="da_hint">Empareja el teléfono en los ajustes Bluetooth del coche y elige Conectar teléfono. Mantén Bluetooth y Wi-Fi activados.</string>
+    <string name="da_wireless">ANDROID AUTO INALÁMBRICO</string>
+    <string name="da_usb">Conectar por USB</string>
+    <string name="da_usb_hint">¿Prefieres un cable? Conecta tu teléfono.</string>
+    <string name="da_settings">Ajustes</string>
+    <string name="da_settings_hint">Siéntete como en casa.</string>
+    <string name="da_close">Inicio del coche</string>
+    <string name="da_pair">Emparejar un teléfono</string>
+    <string name="da_no_paired">Primero empareja tu teléfono Android con el coche. Vuelve aquí cuando termine el emparejamiento.</string>
+    <string name="da_bluetooth_off">Activa Bluetooth en los ajustes del coche para conectar el teléfono.</string>
+    <string name="da_system_settings">Ajustes de Bluetooth</string>
+    <string name="da_device">Teléfono Android</string>
+    <string name="da_preferences">Tu viaje, a tu manera.</string>
+    <string name="da_preferences_hint">Conexión, pantalla y sonido, todo en un solo lugar.</string>
+    <string name="da_automation">Conexión automática</string>
+    <string name="da_automation_hint">Inicia con el coche y vuelve a conectar el teléfono.</string>
+    <string name="da_display">Pantalla y rendimiento</string>
+    <string name="da_display_hint">Tamaño de imagen, fotogramas por segundo y ajustes de audio.</string>
+    <string name="da_permissions">Permisos</string>
+    <string name="da_permissions_hint">Revisa el acceso a Bluetooth, micrófono y ubicación.</string>
+    <string name="da_about">Acerca de DiAuto</string>
+    <string name="da_about_hint">Versión, licencias y créditos de código abierto.</string>
+    <string name="da_saved_hint">Los cambios de vídeo se aplican en la próxima conexión.</string>
+    <string name="da_settings_subtitle">Ajusta la pantalla, el sonido y la conexión.</string>
+    <string name="da_bluetooth_music">Música por Bluetooth del coche</string>
+    <string name="da_bluetooth_music_hint">Mantén la música en el reproductor Bluetooth del coche. DiAuto no modifica su foco de audio; el sonido de navegación y del asistente sigue disponible. Vuelve a conectar Android Auto tras cambiar esta opción.</string>
+</resources>
