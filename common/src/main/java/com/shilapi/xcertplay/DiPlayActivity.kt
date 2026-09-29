@@ -281,21 +281,32 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 } else {
                     val sizes = CarPlayClusterDisplay.scalePresets
-                    choice(card, "Dashboard map size", listOf("Standard · sharpest", "Larger · default", "Largest"),
+                    val contents = CarPlayClusterDisplay.Content.entries
+                    val content = AirPlayPersistence.loadClusterContent(this)
+                    choice(card, "Dashboard shows", listOf("Map · default", "Turn card", "Map with turn card"),
+                        contents.indexOf(content)) {
+                        AirPlayPersistence.saveClusterContent(this, contents[it])
+                        render() // the size and position settings below are named after what is shown
+                    }
+                    // The iPhone lays out the map, the car marker and the turn card inside the same safe
+                    // area, so the position settings move whichever the dashboard shows.
+                    val shown = if (content == CarPlayClusterDisplay.Content.TURN_CARD) "Turn card" else "Car marker"
+                    choice(card, if (content == CarPlayClusterDisplay.Content.TURN_CARD) "Turn card size" else "Dashboard map size",
+                        listOf("Standard · sharpest", "Larger · default", "Largest"),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
                     val across = CarPlayClusterDisplay.horizontalSteps.toList()
-                    choice(card, "Car marker · horizontal", across.map { markerStepLabel(it, "Left", "Right") },
+                    choice(card, "$shown · horizontal", across.map { markerStepLabel(it, "Left", "Right") },
                         across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
                     }
                     val upDown = CarPlayClusterDisplay.verticalSteps.toList()
-                    choice(card, "Car marker · vertical", upDown.map { markerStepLabel(it, "Up", "Down") },
+                    choice(card, "$shown · vertical", upDown.map { markerStepLabel(it, "Up", "Down") },
                         upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
                     }
-                    card.addView(button("Reset car marker to centre", false) {
+                    card.addView(button("Reset ${shown.lowercase()} to centre", false) {
                         AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
                         AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
                         render()
