@@ -27,9 +27,11 @@
     "bssid": "DiAuto 0.3.2 automatically recovers the Wi-Fi Direct address on supported DiLink firmware. Leave Static BSSID on Auto; no ADB setup is needed for this recovery. Some firmware and phone combinations may still have connection issues.",
     "whats": "What’s new",
     "features": [
-      "Guided built-in car hotspot setup; Local hotspot removed. Wi-Fi Direct and USB remain available.",
-      "Improved hotspot address recovery and keyboard dismissal.",
-      "Easy diagnostic export and distinct settings icons."
+      "Completed English, Simplified Chinese, Arabic, Russian and Spanish coverage, including home, connection setup, diagnostics and audio settings.",
+      "Arabic right-to-left layout support and Simplified Chinese display/theme options.",
+      "On Android 13+, Android Settings and the in-app language picker now stay synchronized; older Android keeps the saved language choice.",
+      "Language selection survives settings export/import and resets correctly to System default.",
+      "Automatic translation-coverage and format checks help prevent regressions."
     ],
     "compat": "Compatibility",
     "compatText": "Tested on BYD DiLink 5.1 running Android 13, with wireless and physical USB connections. Other head units and firmware versions are not yet verified. Features and performance depend on your phone and car; constant 60 FPS is not promised.",
@@ -42,7 +44,8 @@
     "source": "Source code",
     "feedback": "Report an issue",
     "footer": "Independent fork of Open Headunit. Not affiliated with or endorsed by Google or BYD. Android Auto is a Google trademark.",
-    "guide": "Installation guide"
+    "guide": "Installation guide",
+    "supportScope": "These projects focus on BYD cars. They may work on other brands, but other brands are unsupported and there are no plans to add support or fix brand-specific incompatibilities."
   },
   "ar": {
     "name": "العربية",
@@ -72,9 +75,11 @@
     "bssid": "يستخرج DiAuto 0.3.2 عنوان Wi-Fi Direct تلقائيًا على إصدارات DiLink المدعومة. اترك Static BSSID على Auto؛ لا تتطلب هذه الميزة إعداد ADB. قد تستمر مشكلات الاتصال مع بعض إصدارات النظام والهواتف.",
     "whats": "الجديد في هذا الإصدار",
     "features": [
-      "إعداد واضح لنقطة اتصال السيارة؛ أزيل خيار نقطة الاتصال المحلية. يظل Wi-Fi Direct وUSB متاحين.",
-      "تحسين اكتشاف عنوان نقطة الاتصال وإخفاء لوحة المفاتيح.",
-      "تصدير السجلات بسهولة وأيقونات مميزة للإعدادات."
+      "استكمال الإنجليزية والصينية المبسطة والعربية والروسية والإسبانية، بما يشمل الرئيسية وإعداد الاتصال والتشخيص وإعدادات الصوت.",
+      "دعم اتجاه الواجهة العربية من اليمين إلى اليسار وخيارات العرض والسمات بالصينية المبسطة.",
+      "على Android 13 أو أحدث، تتزامن لغة التطبيق مع إعدادات Android؛ وتحتفظ الإصدارات الأقدم باللغة المحفوظة.",
+      "يُحفظ اختيار اللغة عند تصدير الإعدادات واستيرادها، وتعمل العودة إلى لغة النظام بشكل صحيح.",
+      "فحوص تلقائية لاكتمال الترجمات وصحة تنسيق النصوص."
     ],
     "compat": "التوافق",
     "compatText": "تم الاختبار على BYD DiLink 5.1 بنظام Android 13، لاسلكياً وبكابل USB فعلي. لم يُتحقق بعد من بقية الشاشات وإصدارات النظام. تعتمد الميزات والأداء على الهاتف والسيارة؛ لا نَعِد بثبات 60 إطاراً في الثانية.",
@@ -87,7 +92,8 @@
     "source": "الكود المصدري",
     "feedback": "الإبلاغ عن مشكلة",
     "footer": "نسخة مستقلة مبنية على Open Headunit. غير تابعة أو معتمدة من Google أو BYD. Android Auto علامة تجارية لشركة Google.",
-    "guide": "دليل التثبيت"
+    "guide": "دليل التثبيت",
+    "supportScope": "يركز هذان المشروعان على سيارات BYD. قد يعملان على علامات أخرى، لكنها غير مدعومة، ولا توجد خطط لإضافة دعم لها أو إصلاح مشكلات التوافق الخاصة بها."
   },
   "ru": {
     "name": "Русский",
@@ -117,9 +123,11 @@
     "bssid": "DiAuto 0.3.2 автоматически определяет адрес Wi-Fi Direct на поддерживаемых прошивках DiLink. Оставьте Static BSSID в режиме Auto; для этого не нужна настройка ADB. На некоторых прошивках и телефонах проблемы подключения могут сохраняться.",
     "whats": "Что нового",
     "features": [
-      "Пошаговая настройка точки доступа автомобиля; вариант Local hotspot удалён. Wi-Fi Direct и USB сохранены.",
-      "Улучшено определение адреса точки доступа и закрытие клавиатуры.",
-      "Удобный экспорт журналов и разные значки настроек."
+      "Завершён перевод на английский, упрощённый китайский, арабский, русский и испанский, включая главный экран, подключение, диагностику и звук.",
+      "Поддержка арабского интерфейса справа налево и переводы параметров экрана и темы на упрощённый китайский.",
+      "На Android 13+ язык в системных настройках и приложении синхронизирован; на старых версиях сохраняется выбор приложения.",
+      "Язык сохраняется при экспорте и импорте настроек и корректно сбрасывается к системному.",
+      "Автоматические проверки полноты переводов и аргументов форматирования."
     ],
     "compat": "Совместимость",
     "compatText": "Проверено на BYD DiLink 5.1 с Android 13 по беспроводному соединению и USB. Другие устройства и версии прошивки пока не проверены. Возможности и производительность зависят от телефона и автомобиля; постоянные 60 кадров/с не гарантируются.",
@@ -132,7 +140,8 @@
     "source": "Исходный код",
     "feedback": "Сообщить о проблеме",
     "footer": "Независимый форк Open Headunit. Не связан с Google или BYD и не одобрен ими. Android Auto — товарный знак Google.",
-    "guide": "Инструкция по установке"
+    "guide": "Инструкция по установке",
+    "supportScope": "Эти проекты ориентированы на автомобили BYD. На других марках они могут работать, но другие марки не поддерживаются; добавление поддержки и исправление несовместимости с ними не планируются."
   },
   "es": {
     "name": "Español",
@@ -162,9 +171,11 @@
     "bssid": "DiAuto 0.3.2 recupera automáticamente la dirección Wi-Fi Direct en firmware DiLink compatible. Deja Static BSSID en Auto; esta función no requiere configurar ADB. Algunas combinaciones de firmware y teléfono pueden seguir teniendo problemas de conexión.",
     "whats": "Novedades",
     "features": [
-      "Configuración guiada del punto de acceso del coche; se elimina Local hotspot. Wi-Fi Direct y USB siguen disponibles.",
-      "Mejor detección de la dirección del punto de acceso y cierre del teclado.",
-      "Exportación sencilla de registros e iconos de ajustes distintos."
+      "Traducciones completas en inglés, chino simplificado, árabe, ruso y español, incluidas las pantallas de inicio, conexión, diagnóstico y audio.",
+      "Interfaz árabe de derecha a izquierda y opciones de pantalla y tema en chino simplificado.",
+      "En Android 13 o posterior, el idioma del sistema y el selector de la aplicación están sincronizados; las versiones anteriores conservan la selección guardada.",
+      "El idioma se conserva al exportar e importar ajustes y se restablece correctamente al predeterminado del sistema.",
+      "Comprobaciones automáticas de cobertura de traducciones y formato."
     ],
     "compat": "Compatibilidad",
     "compatText": "Probado en BYD DiLink 5.1 con Android 13, tanto inalámbrico como con cable USB. Otras unidades y versiones de firmware aún no están verificadas. Las funciones y el rendimiento dependen del teléfono y del coche; no se prometen 60 FPS constantes.",
@@ -177,7 +188,8 @@
     "source": "Código fuente",
     "feedback": "Informar de un problema",
     "footer": "Bifurcación independiente de Open Headunit. Sin afiliación ni respaldo de Google o BYD. Android Auto es una marca de Google.",
-    "guide": "Guía de instalación"
+    "guide": "Guía de instalación",
+    "supportScope": "Estos proyectos se centran en coches BYD. Pueden funcionar en otras marcas, pero no se ofrece soporte para ellas ni hay planes de añadirlo o corregir incompatibilidades específicas."
   },
   "zh-Hans": {
     "name": "简体中文",
@@ -207,9 +219,11 @@
     "bssid": "DiAuto 0.3.2 可在支持的 DiLink 固件上自动获取 Wi-Fi Direct 地址。请将 Static BSSID 保持为 Auto；此功能无需配置 ADB。部分固件与手机组合仍可能存在连接问题。",
     "whats": "本次更新",
     "features": [
-      "新增车机内置热点设置指引；移除 Local hotspot 选项，保留 Wi-Fi Direct 和 USB。",
-      "改进热点地址识别及键盘收起操作。",
-      "更便捷的日志导出，以及不同的设置图标。"
+      "完善英语、简体中文、阿拉伯语、俄语和西班牙语翻译，涵盖主页、连接设置、诊断和音频设置。",
+      "支持阿拉伯语从右到左布局，并提供简体中文显示与主题选项。",
+      "Android 13 及以上版本的系统应用语言与应用内选择同步；旧版 Android 保留已保存的语言选择。",
+      "导出和导入设置时保留语言选择，并可正确恢复为系统默认语言。",
+      "自动检查翻译覆盖和格式参数，减少后续回归。"
     ],
     "compat": "兼容性",
     "compatText": "已在搭载 Android 13 的比亚迪 DiLink 5.1 上测试无线及 USB 有线连接。其他车机和固件版本尚未验证。功能和性能取决于手机与车机，不保证稳定 60 FPS。",
@@ -222,6 +236,7 @@
     "source": "源代码",
     "feedback": "反馈问题",
     "footer": "基于 Open Headunit 的独立分支，与 Google 或比亚迪无隶属关系，也未经其认可。Android Auto 是 Google 的商标。",
-    "guide": "安装指南"
+    "guide": "安装指南",
+    "supportScope": "这些项目专注于比亚迪汽车。它们可能在其他品牌上运行，但其他品牌不在支持范围内，也没有增加支持或修复其品牌特定兼容性问题的计划。"
   }
 }

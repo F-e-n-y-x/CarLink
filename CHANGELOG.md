@@ -1,3 +1,12 @@
+# DiAuto 0.3.10 — 2026-09-29
+
+- Completed English, Simplified Chinese, Arabic, Russian and Spanish coverage, including home, connection setup, diagnostics and audio settings.
+- Arabic right-to-left layout support and Simplified Chinese display/theme options.
+- On Android 13+, Android Settings and the in-app language picker now stay synchronized; older Android keeps the saved language choice.
+- Language selection survives settings export/import and resets correctly to System default.
+- Automatic translation-coverage and format checks help prevent regressions.
+- Clarify the BYD-only support scope on the README and all five website editions.
+
 # DiAuto 0.3.3 — BYD HUD navigation
 
 - Standalone windshield arrows, next-turn distance and street names on verified DiLink5.1 firmware, without ADB, root or a computer helper.

@@ -2,6 +2,8 @@
 
 **Android Auto on your BYD display. Wireless or USB.**
 
+> **BYD support scope:** These projects focus on BYD cars. They may work on other brands, but other brands are unsupported and there are no plans to add support or fix brand-specific incompatibilities.
+
 [Download & installation](https://shihabal3amri.github.io/DiAuto/) ·
 [Latest release](https://github.com/shihabal3amri/DiAuto/releases/latest) ·
 [Telegram updates](https://t.me/byd_localized)
@@ -14,6 +16,14 @@ root or firmware modification is required.** An Android phone is still required;
 this is not Apple CarPlay.
 
 ![Android Auto with the current music card and a freely panned map, without a destination](site/assets/projection-music.png)
+
+## What’s new in 0.3.10
+
+- Completed English, Simplified Chinese, Arabic, Russian and Spanish coverage, including home, connection setup, diagnostics and audio settings.
+- Arabic right-to-left layout support and Simplified Chinese display/theme options.
+- On Android 13+, Android Settings and the in-app language picker now stay synchronized; older Android keeps the saved language choice.
+- Language selection survives settings export/import and resets correctly to System default.
+- Automatic translation-coverage and format checks help prevent regressions.
 
 ## Features
 
@@ -31,8 +41,7 @@ this is not Apple CarPlay.
 
 Tested on **BYD DiLink 5.1 with Android 13**, using wireless and physical USB connections.
 Other models and firmware versions are not yet verified. A compatible Android phone
-with functioning Android Auto is required. The download site's languages do not imply
-that every in-app label has been translated.
+with functioning Android Auto is required. The app and website support English, Simplified Chinese, Arabic, Russian and Spanish. Other existing community translations remain available.
 
 See [BYD HUD compatibility and cleanup limits](docs/BYD_NAVIGATION.md).
 
