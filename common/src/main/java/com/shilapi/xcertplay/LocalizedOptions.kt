@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.content.Context
 import com.shilapi.xcertplay.airplay.CarPlaySize
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.hud.BydClusterNaviMode
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 
 internal fun CarPlaySize.localizedLabel(context: Context): String = context.getString(when (this) {
@@ -21,6 +22,13 @@ internal fun DiLink51ClusterLayout.Contrast.localizedLabel(context: Context): St
     DiLink51ClusterLayout.Contrast.DEFAULT -> R.string.option_contrast_default
     DiLink51ClusterLayout.Contrast.LIGHT -> R.string.option_contrast_light
     DiLink51ClusterLayout.Contrast.DARK -> R.string.option_contrast_dark
+})
+
+internal fun BydClusterNaviMode.localizedLabel(context: Context): String = context.getString(when (this) {
+    BydClusterNaviMode.OFF -> R.string.navi_mode_off
+    BydClusterNaviMode.TURN_ON_BY_NAVI -> R.string.navi_mode_turn_on_by_navi
+    BydClusterNaviMode.SMALL -> R.string.navi_mode_small
+    BydClusterNaviMode.FULL -> R.string.navi_mode_full
 })
 
 internal fun ManualHotspotValidation.Error.messageResource(): Int = when (this) {

@@ -33,6 +33,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.hud.BydClusterModeAccess
+import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.io.File
@@ -58,6 +60,7 @@ class DiPlayActivity : ComponentActivity() {
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
+    private var clusterModeStatus: TextView? = null
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         connect(notificationTransport)
     }
@@ -369,6 +372,17 @@ class DiPlayActivity : ComponentActivity() {
                         render()
                         reconnectForClusterMap()
                     }, matchButton(10, 56))
+                    toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),
+                        getString(R.string.dashboard_map_only_in_small_and_full_navi_description),
+                        BydOutputSettings.clusterStreamPause(this)) {
+                        BydOutputSettings.setClusterStreamPause(this, it)
+                        if (it) checkClusterModeAccess(mayAsk = true)
+                    }
+                    clusterModeStatus = label("", 14, MUTED).also { status ->
+                        card.addView(status)
+                        if (BydOutputSettings.clusterStreamPause(this)) checkClusterModeAccess(mayAsk = false)
+                    }
+                    card.addView(button(getString(R.string.check_adb_access), false) { checkClusterModeAccess(mayAsk = true) }, matchButton(10, 56))
                 }
             }
         }
@@ -610,6 +624,31 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    // The car's approval dialog for DiPlay's ADB key opens only from here, never while driving.
+    private fun checkClusterModeAccess(mayAsk: Boolean) {
+        val status = clusterModeStatus ?: return
+        status.setTextColor(MUTED)
+        status.text = getString(if (mayAsk) R.string.adb_checking_may_ask else R.string.adb_checking)
+        Thread({
+            val result = runCatching { BydClusterModeAccess.check(applicationContext, mayAsk) }.getOrNull()
+            runOnUiThread {
+                if (clusterModeStatus !== status) return@runOnUiThread
+                status.setTextColor(if (result?.state == BydClusterModeAccess.State.READY) MUTED else WARNING)
+                status.text = clusterModeText(result)
+            }
+        }, "diplay-adb-check").start()
+    }
+
+    private fun clusterModeText(result: BydClusterModeAccess.Status?): String = when (result?.state) {
+        null -> getString(R.string.adb_check_failed)
+        BydClusterModeAccess.State.READY -> getString(R.string.adb_access_ready) + " " +
+            getString(if (result.showsMap) R.string.adb_dashboard_sends_map else R.string.adb_dashboard_does_not_send_map,
+                result.mode?.localizedLabel(this) ?: getString(R.string.navi_mode_unknown))
+        BydClusterModeAccess.State.NOT_APPROVED -> getString(R.string.adb_not_approved)
+        BydClusterModeAccess.State.ADB_OFF -> getString(R.string.adb_off)
+        BydClusterModeAccess.State.PAIRING_ONLY -> getString(R.string.adb_pairing_only)
     }
 
     // The cluster screen is described at connection time, so a running session reconnects over

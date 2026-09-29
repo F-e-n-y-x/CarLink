@@ -13,6 +13,16 @@ object BydNavigationOutputs {
     private val hud = NavigationOutputWorker("diplay-hud-output", BydHudBridge::clear)
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
 
+    /** The host reports whether its CarPlay map window is on the cluster (see [BydClusterMapPause]). */
+    fun setClusterMapShown(shown: Boolean) { BydClusterMapPause.clusterMapShown = shown }
+
+    /** The running CarPlay session: told every second whether the cluster currently shows the map. */
+    fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }
+
+    fun clearClusterStreamControl(control: (Boolean) -> Unit) {
+        if (BydClusterMapPause.streamControl == control) BydClusterMapPause.streamControl = null
+    }
+
     fun start(context: Context) {
         val app = context.applicationContext
         useStandalone = BydStandaloneHudOutput.available(app)
@@ -21,6 +31,7 @@ object BydNavigationOutputs {
             hud.start { BydHudBridge.initialize(app) }
             cluster.start { BydClusterBridge.initialize(app) }
         }
+        BydClusterMapPause.initialize(app)
     }
 
     internal fun onFrame(frame: Iap2Frame) {

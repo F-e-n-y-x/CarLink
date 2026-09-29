@@ -408,4 +408,21 @@
     <string name="turn_card_horizontal">Tarjeta de giro · horizontal</string>
     <string name="turn_card_vertical">Tarjeta de giro · vertical</string>
     <string name="reset_turn_card_to_centre">Centrar la tarjeta de giro</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">Mapa del panel solo en navegación en pantalla pequeña y completa · requiere ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay lee el modo de navegación que eliges con el volante. En «Apagado» y «Activar con la navegación» el panel solo muestra flechas, así que el iPhone no envía el mapa; en navegación en pantalla pequeña y completa sí lo envía, uno o dos segundos después del cambio. Requiere ADB por red en la unidad principal.</string>
+    <string name="check_adb_access">Comprobar acceso ADB</string>
+    <string name="adb_checking">Comprobando el acceso ADB…</string>
+    <string name="adb_checking_may_ask">Comprobando el acceso ADB… Si el coche lo pide, permite DiPlay y marca «Permitir siempre».</string>
+    <string name="adb_check_failed">La comprobación de ADB falló. Inténtalo de nuevo.</string>
+    <string name="adb_access_ready">Acceso ADB listo.</string>
+    <string name="adb_dashboard_sends_map">Panel: %1$s, así que el iPhone envía el mapa.</string>
+    <string name="adb_dashboard_does_not_send_map">Panel: %1$s, así que el iPhone no envía el mapa.</string>
+    <string name="adb_not_approved">DiPlay aún no está autorizado. Toca «Comprobar acceso ADB» y permite DiPlay en la pantalla del coche.</string>
+    <string name="adb_off">ADB por red está desactivado. Actívalo en las opciones de desarrollador de la unidad principal.</string>
+    <string name="adb_pairing_only">Esta unidad principal solo ofrece depuración inalámbrica con emparejamiento, que DiPlay aún no admite.</string>
+    <string name="navi_mode_off">Apagado</string>
+    <string name="navi_mode_turn_on_by_navi">Activar con la navegación</string>
+    <string name="navi_mode_small">Navegación en pantalla pequeña</string>
+    <string name="navi_mode_full">Navegación en pantalla completa</string>
+    <string name="navi_mode_unknown">modo desconocido</string>
 </resources>

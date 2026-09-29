@@ -149,6 +149,7 @@ class CarPlayController(
             "A location provider is required when location reporting is enabled"
         }
         BydNavigationOutputs.start(context.applicationContext)
+        BydNavigationOutputs.setClusterStreamControl(::applyClusterUi)
     }
 
     private enum class Phase { IDLE, MFI, WIRELESS, IPHONE, REENUMERATION, DATAPATHS, CONTROL }
@@ -189,6 +190,9 @@ class CarPlayController(
     @Volatile private var mux: Iap2UsbMuxHost? = null
     @Volatile private var csm: Iap2Session? = null
     @Volatile private var activeSession: AirPlaySession? = null
+    private val clusterUiLock = Any()
+    private var clusterUiStream: Pair<AirPlaySession, Int>? = null
+    private var clusterUiShown = true
     private val playbackStatus = com.shilapi.xcertplay.media.CarPlayPlaybackStatus()
 
     /** Told when the iPhone starts or stops playing media; may run on any thread. */
@@ -387,6 +391,7 @@ class CarPlayController(
             closed = true
         }
         BydNavigationOutputs.endNow()
+        BydNavigationOutputs.clearClusterStreamControl(::applyClusterUi)
         closeReceivers()
         availabilityPollGeneration.incrementAndGet()
         wirelessGeneration.incrementAndGet()
@@ -428,6 +433,21 @@ class CarPlayController(
         ).apply {
             isDaemon = true
             start()
+        }
+    }
+
+    // Each new cluster stream starts with the map drawn (its initialURL); send only real changes.
+    private fun applyClusterUi(shown: Boolean) = synchronized(clusterUiLock) {
+        val session = activeSession ?: return@synchronized
+        val stream = session.clusterStream.takeIf { it > 0 } ?: return@synchronized
+        if (clusterUiStream != session to stream) {
+            clusterUiStream = session to stream
+            clusterUiShown = true
+        }
+        if (shown == clusterUiShown) return@synchronized
+        if (session.setClusterUiShown(shown)) {
+            clusterUiShown = shown
+            debugLog("Cluster map: ${if (shown) "showUI, the cluster shows the map" else "stopUI, the cluster hides the map"}")
         }
     }
 
