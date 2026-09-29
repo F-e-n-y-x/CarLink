@@ -51,6 +51,9 @@ internal object AudioChannelMapper {
         }
     }
 
+    fun usesNavigationStream(audioType: String, payloadType: Int, advanced: Boolean): Boolean =
+        !advanced && map(audioType, payloadType, AudioChannelMappingMode.MOBILE_COMPATIBLE).channel == AudioChannel.NAVIGATION
+
     private fun mapMobileCompatible(
         audioType: String,
         payloadType: Int,

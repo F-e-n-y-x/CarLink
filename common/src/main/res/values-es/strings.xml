@@ -387,4 +387,17 @@
     <string name="your_phone_your_drive">TU TELÉFONO. TU TRAYECTO.</string>
     <string name="your_report_was_saved_to_the_selected_location">Tu informe se guardó en la ubicación seleccionada.</string>
     <string name="cluster_waiting_for_map">DiPlay · esperando el mapa de CarPlay</string>
+    <string name="option_size_large">Grande</string>
+    <string name="option_size_medium">Mediano</string>
+    <string name="option_size_small">Pequeño</string>
+    <string name="option_theme_scenario">Escenario · mapa lateral</string>
+    <string name="option_theme_map">Mapa · mapa completo</string>
+    <string name="option_theme_simple">Simple · mapa lateral</string>
+    <string name="option_contrast_default">Predeterminado del tema</string>
+    <string name="option_contrast_light">Fondo claro · instrumentos oscuros</string>
+    <string name="option_contrast_dark">Fondo oscuro · instrumentos claros</string>
+    <string name="hotspot_error_empty_name">Introduce el nombre del punto de acceso del coche</string>
+    <string name="hotspot_error_long_name">El nombre del punto de acceso no debe superar los 32 bytes</string>
+    <string name="hotspot_error_invalid_character">El nombre o la contraseña contiene un carácter no válido</string>
+    <string name="hotspot_error_password_length">La contraseña del punto de acceso debe tener entre 8 y 63 caracteres</string>
 </resources>

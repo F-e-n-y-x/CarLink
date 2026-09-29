@@ -387,4 +387,17 @@
     <string name="your_phone_your_drive">ВАШ ТЕЛЕФОН. ВАША ПОЕЗДКА.</string>
     <string name="your_report_was_saved_to_the_selected_location">Отчёт сохранён в выбранном месте.</string>
     <string name="cluster_waiting_for_map">DiPlay · ожидание карты CarPlay</string>
+    <string name="option_size_large">Большой</string>
+    <string name="option_size_medium">Средний</string>
+    <string name="option_size_small">Маленький</string>
+    <string name="option_theme_scenario">Сценарий · карта сбоку</string>
+    <string name="option_theme_map">Карта · полная карта</string>
+    <string name="option_theme_simple">Простой · карта сбоку</string>
+    <string name="option_contrast_default">По умолчанию для темы</string>
+    <string name="option_contrast_light">Светлый фон · тёмные приборы</string>
+    <string name="option_contrast_dark">Тёмный фон · светлые приборы</string>
+    <string name="hotspot_error_empty_name">Введите имя точки доступа автомобиля</string>
+    <string name="hotspot_error_long_name">Имя точки доступа не должно превышать 32 байта</string>
+    <string name="hotspot_error_invalid_character">Имя или пароль содержит недопустимый символ</string>
+    <string name="hotspot_error_password_length">Пароль точки доступа должен содержать от 8 до 63 символов</string>
 </resources>

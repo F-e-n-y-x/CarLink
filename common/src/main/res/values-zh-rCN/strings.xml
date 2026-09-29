@@ -398,4 +398,17 @@
     <string name="your_phone_your_drive">你的手机，畅享旅程。</string>
     <string name="your_report_was_saved_to_the_selected_location">报告已保存到所选位置。</string>
     <string name="cluster_waiting_for_map">DiPlay · 等待 CarPlay 地图</string>
+    <string name="option_size_large">大</string>
+    <string name="option_size_medium">中</string>
+    <string name="option_size_small">小</string>
+    <string name="option_theme_scenario">场景 · 侧边地图</string>
+    <string name="option_theme_map">地图 · 全屏地图</string>
+    <string name="option_theme_simple">简约 · 侧边地图</string>
+    <string name="option_contrast_default">主题默认</string>
+    <string name="option_contrast_light">浅色背景 · 深色仪表</string>
+    <string name="option_contrast_dark">深色背景 · 浅色仪表</string>
+    <string name="hotspot_error_empty_name">请输入车载热点名称</string>
+    <string name="hotspot_error_long_name">热点名称不能超过32字节</string>
+    <string name="hotspot_error_invalid_character">名称或密码包含无效字符</string>
+    <string name="hotspot_error_password_length">热点密码长度必须为8至63个字符</string>
 </resources>

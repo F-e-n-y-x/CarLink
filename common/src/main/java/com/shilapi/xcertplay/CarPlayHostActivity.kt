@@ -566,7 +566,7 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         val languagePreference = AppLocale.preference(this)
-        if (languagePreference != languagePreferenceAtCreate) {
+        if (Build.VERSION.SDK_INT < 33 && languagePreference != languagePreferenceAtCreate) {
             languagePreferenceAtCreate = languagePreference
             recreate()
             return
@@ -1361,6 +1361,12 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(12) },
         )
+
+        content.addView(Button(this).apply {
+            text = getString(R.string.language_app_language)
+            isAllCaps = false
+            setOnClickListener { AppLocale.showPicker(this@CarPlayHostActivity) }
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true

@@ -641,7 +641,7 @@ private class AudioRenderer(
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
         var routeLabel: String
-        if (advancedAudioChannelMapping) {
+        if (!AudioChannelMapper.usesNavigationStream(format.audioType, format.payloadType, advancedAudioChannelMapping)) {
             val attributes = audioAttributes()
             routeLabel = "usage"
             built = AudioTrack.Builder()
@@ -653,26 +653,24 @@ private class AudioRenderer(
         } else {
             val streamType = streamType()
             routeLabel = "streamType=$streamType"
-            var candidate = AudioTrack(
-                streamType,
-                format.sampleRate,
-                channelMask,
-                encoding,
-                plan.trackBufferBytes,
-                AudioTrack.MODE_STREAM,
+            built = LegacyAudioFallback.build(
+                createLegacy = {
+                    AudioTrack(streamType, format.sampleRate, channelMask, encoding,
+                        plan.trackBufferBytes, AudioTrack.MODE_STREAM)
+                },
+                isInitialized = { it.state == AudioTrack.STATE_INITIALIZED },
+                release = { it.release() },
+                createFallback = {
+                    routeLabel = "streamType=$streamType(fallback=usage)"
+                    Log.w(TAG, "streamType=$streamType rejected by this ROM; falling back to usage-based track")
+                    AudioTrack.Builder()
+                        .setAudioAttributes(audioAttributes())
+                        .setAudioFormat(pcmFormat(encoding, channelMask))
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .setBufferSizeInBytes(plan.trackBufferBytes)
+                        .build()
+                },
             )
-            if (candidate.state != AudioTrack.STATE_INITIALIZED) {
-                candidate.release()
-                candidate = AudioTrack.Builder()
-                    .setAudioAttributes(audioAttributes())
-                    .setAudioFormat(pcmFormat(encoding, channelMask))
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .setBufferSizeInBytes(plan.trackBufferBytes)
-                    .build()
-                routeLabel = "streamType=$streamType(fallback=usage)"
-                Log.w(TAG, "streamType=$streamType rejected by this ROM; falling back to usage-based track")
-            }
-            built = candidate
         }
         track = built
         val capacityBytes = built.bufferSizeInFrames * frameBytes

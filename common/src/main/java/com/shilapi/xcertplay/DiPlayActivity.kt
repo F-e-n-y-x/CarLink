@@ -71,12 +71,15 @@ class DiPlayActivity : ComponentActivity() {
         if (uri != null) exportDiagnostics(uri)
     }
 
+    private var languagePreferenceAtCreate = AppLocale.SYSTEM
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLocale.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, true)
         window.statusBarColor = BG; window.navigationBarColor = BG
@@ -108,7 +111,12 @@ class DiPlayActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) { outState.putString("page", page); outState.putBoolean("pending_car_hotspot", pendingCarHotspotSetup); super.onSaveInstanceState(outState) }
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
     override fun onResume() {
-        super.onResume(); handler.removeCallbacks(tick); handler.post(tick)
+        super.onResume()
+        if (Build.VERSION.SDK_INT < 33 && AppLocale.preference(this) != languagePreferenceAtCreate) {
+            recreate()
+            return
+        }
+        handler.removeCallbacks(tick); handler.post(tick)
         // Back from the car settings: refresh the car hotspot reminder on the home page.
         if (!initialLaunch && (page == "home" || page == "settings" || page == "connection")) render()
         if (initialLaunch) {
@@ -315,14 +323,14 @@ class DiPlayActivity : ComponentActivity() {
                     card.addView(button(getString(R.string.automatic_map_setup_adb), false) { showClusterAccessSetup() }, matchButton(10, 56))
                     if (!automatic) {
                         val themes = DiLink51ClusterLayout.Theme.entries
-                        choice(card, getString(R.string.instrument_theme), themes.map { it.label }, themes.indexOf(DiLink51ClusterLayout.theme(this))) {
+                        choice(card, getString(R.string.instrument_theme), themes.map { it.localizedLabel(this) }, themes.indexOf(DiLink51ClusterLayout.theme(this))) {
                             DiLink51ClusterLayout.saveTheme(this, themes[it])
                             reconnectForClusterMap()
                         }
                         card.addView(label(getString(R.string.manual_mode_match_the_cluster_theme_here_the_map_cannot_fo), 14, MUTED))
                     }
                     val contrasts = DiLink51ClusterLayout.Contrast.entries
-                    choice(card, getString(R.string.instrument_contrast), contrasts.map { it.label }, contrasts.indexOf(DiLink51ClusterLayout.contrast(this))) {
+                    choice(card, getString(R.string.instrument_contrast), contrasts.map { it.localizedLabel(this) }, contrasts.indexOf(DiLink51ClusterLayout.contrast(this))) {
                         DiLink51ClusterLayout.saveContrast(this, contrasts[it])
                         reconnectForClusterMap()
                     }
@@ -481,7 +489,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun storedSsid() = AirPlayPersistence.loadManualHotspotSsid(this)
     private fun storedPassword() = AirPlayPersistence.loadManualHotspotPassphrase(this)
     private fun hotspotError(ssid: String, password: String) =
-        com.shilapi.xcertplay.orchestration.ManualHotspotValidation.validate(ssid, password)
+        com.shilapi.xcertplay.orchestration.ManualHotspotValidation.error(ssid, password)?.let { getString(it.messageResource()) }
 
     private fun saveHotspotCredentials(ssid: String, password: String) {
         AirPlayPersistence.saveManualHotspotSsid(this, ssid)
@@ -621,7 +629,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun carPlaySizeControl(parent: LinearLayout) {
         val sizes = com.shilapi.xcertplay.airplay.CarPlaySize.entries
         val current = com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(this))
-        choice(parent, getString(R.string.carplay_size), sizes.map { it.label }, sizes.indexOf(current)) {
+        choice(parent, getString(R.string.carplay_size), sizes.map { it.localizedLabel(this) }, sizes.indexOf(current)) {
             AirPlayPersistence.saveWidthPhysicalMm(this, sizes[it].widthMillimeters)
         }
         parent.addView(label(getString(R.string.changes_the_size_of_carplay_icons_and_text_applying_a_size), 14, MUTED).apply {
@@ -853,23 +861,23 @@ class DiPlayActivity : ComponentActivity() {
         toneStop = null
         testToneTrack?.let { runCatching { it.stop(); it.release() } }
         testToneTrack = null
-        val pcm = assets.open("navigation_test.pcm").use { it.readBytes() }
-        val track = AudioTrack(
-            streamType,
-            44100,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-            pcm.size,
-            AudioTrack.MODE_STREAM
-        )
-        if (track.state != AudioTrack.STATE_INITIALIZED) {
-            Log.w("DiPlay", "playTestTone streamType=$streamType state=${track.state}")
-            track.release()
-                toast(getString(R.string.audio_stream_unavailable, streamType, track.state))
+        var candidate: AudioTrack? = null
+        val track = try {
+            val pcm = assets.open("navigation_test.pcm").use { it.readBytes() }
+            AudioTrack(streamType, 44100, AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT, pcm.size, AudioTrack.MODE_STREAM).also {
+                candidate = it
+                check(it.state == AudioTrack.STATE_INITIALIZED)
+                check(it.write(pcm, 0, pcm.size) == pcm.size)
+                it.play()
+            }
+        } catch (error: Exception) {
+            val state = candidate?.state ?: AudioTrack.STATE_UNINITIALIZED
+            candidate?.let { runCatching { it.release() } }
+            Log.w("DiPlay", "playTestTone streamType=$streamType unavailable", error)
+            toast(getString(R.string.audio_stream_unavailable, streamType, state))
             return
         }
-        track.write(pcm, 0, pcm.size)
-        track.play()
         Log.i("DiPlay", "playTestTone streamType=$streamType state=${track.state} playState=${track.playState}")
         testToneTrack = track
         val stop = Runnable {
@@ -937,21 +945,7 @@ class DiPlayActivity : ComponentActivity() {
             card.addView(label(getString(R.string.language_hint), 14, MUTED))
             val current = AppLocale.preference(this)
             val languageButton = button("${getString(R.string.language_app_language)} · ${AppLocale.displayName(this, current)}", false) { }
-            languageButton.setOnClickListener {
-                var selected = AppLocale.ALL.indexOf(AppLocale.preference(this)).coerceAtLeast(0)
-                val labels = AppLocale.ALL.map { AppLocale.displayName(this, it) }.toTypedArray()
-                AlertDialog.Builder(this).setTitle(getString(R.string.language_app_language))
-                    .setSingleChoiceItems(labels, selected) { _, index -> selected = index }
-                    .setPositiveButton(getString(R.string.language_apply)) { _, _ ->
-                        val next = AppLocale.ALL[selected]
-                        if (next != AppLocale.preference(this)) {
-                            AppLocale.save(this, next)
-                            recreate()
-                        }
-                    }
-                    .setNegativeButton(getString(R.string.common_cancel), null)
-                    .show()
-            }
+            languageButton.setOnClickListener { AppLocale.showPicker(this) }
             card.addView(languageButton, matchButton(12, 60))
         }
     }
