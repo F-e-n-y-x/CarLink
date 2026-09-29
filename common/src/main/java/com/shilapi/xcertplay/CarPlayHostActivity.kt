@@ -28,6 +28,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -47,6 +48,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayDisplaySettings
 import com.shilapi.xcertplay.airplay.AirPlayPhysicalSizeBasis
@@ -721,6 +723,16 @@ class CarPlayHostActivity : ComponentActivity() {
         ).also {
             appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
         }
+    }
+
+    // The steering-wheel voice key reaches the focused window; while CarPlay is on screen it opens Siri.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (!CarPlayMediaButton.opensSiri(event.keyCode)) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_UP) {
+            val sent = controller?.requestSiri() == true
+            appendLog("Siri: voice key ${event.keyCode} sent=$sent")
+        }
+        return true
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -2951,6 +2963,7 @@ class CarPlayHostActivity : ComponentActivity() {
             onAudioDiagnostic = { message ->
                 diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
             },
+            onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
         )
     }
 
@@ -3152,6 +3165,7 @@ class CarPlayHostActivity : ComponentActivity() {
             },
         )
         controller = next
+        CarPlayMediaKeys.attach(this, next)
         CarPlayBackgroundSession.store(next, renderer, size.width, size.height, this) { completion ->
             runOnUiThread {
                 shutdown(terminateProcess = false, reason = "DiPlay disconnect", completion = completion)
@@ -3295,6 +3309,7 @@ class CarPlayHostActivity : ComponentActivity() {
         handshakeResetInProgress = true
         val oldController = controller
         val oldSink = sink
+        CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController, keepOwner = true)
         controller = null
         sink = null
@@ -3368,6 +3383,7 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
         val oldSink = sink
+        CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController)
         controller = null
         sink = null
