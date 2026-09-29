@@ -5,6 +5,7 @@ package com.shilapi.xcertplay
 import android.Manifest
 import android.app.AlertDialog
 import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -68,6 +69,10 @@ class DiPlayActivity : ComponentActivity() {
     }
     private val export = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) exportDiagnostics(uri)
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -215,6 +220,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun settings(content: LinearLayout) {
         content.addView(label("Your drive, your way.", 34, TEXT, true))
         content.addView(label("Apply reconnects CarPlay for size, resolution, music buffer and frame rate. Other changes apply to your next connection.", 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
+        languageSettings(content)
         section(content, "Connection setup", R.drawable.ic_dp_connection) { card ->
             card.addView(label("Choose how to connect, follow the setup steps and save your car hotspot details.", 16, MUTED))
             card.addView(button("Open connection setup", false) { page = "connection"; render() }, matchButton(12, 60))
@@ -926,6 +932,30 @@ class DiPlayActivity : ComponentActivity() {
         return grid
     }
     private fun version() = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.1.0-beta.1"
+    private fun languageSettings(content: LinearLayout) {
+        section(content, getString(R.string.language_section_title)) { card ->
+            card.addView(label(getString(R.string.language_hint), 14, MUTED))
+            val current = AppLocale.preference(this)
+            val languageButton = button("${getString(R.string.language_app_language)} · ${AppLocale.displayName(this, current)}", false) { }
+            languageButton.setOnClickListener {
+                var selected = AppLocale.ALL.indexOf(AppLocale.preference(this)).coerceAtLeast(0)
+                val labels = AppLocale.ALL.map { AppLocale.displayName(this, it) }.toTypedArray()
+                AlertDialog.Builder(this).setTitle(getString(R.string.language_app_language))
+                    .setSingleChoiceItems(labels, selected) { _, index -> selected = index }
+                    .setPositiveButton(getString(R.string.language_apply)) { _, _ ->
+                        val next = AppLocale.ALL[selected]
+                        if (next != AppLocale.preference(this)) {
+                            AppLocale.save(this, next)
+                            recreate()
+                        }
+                    }
+                    .setNegativeButton(getString(R.string.common_cancel), null)
+                    .show()
+            }
+            card.addView(languageButton, matchButton(12, 60))
+        }
+    }
+
     private fun section(parent: LinearLayout, title: String, icon: Int? = null, build: (LinearLayout) -> Unit) {
         val card = card()
         val heading = row().apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, 0, 0, dp(16)) }

@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">DiPlay</string>
+    <string name="language_section_title">Language</string>
+    <string name="language_app_language">App language</string>
+    <string name="language_system_default">System default</string>
+    <string name="language_hint">Choose a language for DiPlay. System default follows the device language.</string>
+    <string name="language_apply">Apply</string>
+    <string name="common_cancel">Cancel</string>
 </resources>
