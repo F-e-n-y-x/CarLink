@@ -251,6 +251,7 @@ class AirPlaySession(
         )
 
     private fun runControl() {
+        com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
         var accumulated = ByteArray(0)

@@ -66,6 +66,8 @@ class WifiP2pGroupManager(
     private var created = false
     private var closed = false
     private var startAttempt: StartAttempt? = null
+    @Volatile private var observedCreatedName: String? = null
+    @Volatile private var requestedName: String? = null
 
     override fun start(timeoutMillis: Long): WirelessHotspotInfo {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -123,7 +125,7 @@ class WifiP2pGroupManager(
                     throw P2pResetRequiredException()
                 }
                 diagnostic("Wi-Fi P2P reclaiming retained owned group")
-                removeGroupBlocking(p2pChannel)
+                removeGroupBlocking(p2pChannel, existing.networkName)
                 val removalDeadline = minOf(deadlineNanos, deadlineAfter(REMOVE_GROUP_TIMEOUT_MILLIS))
                 while (requestGroupInfo(attempt, p2pChannel, REQUEST_POLL_NANOS, requireResponse = true) != null) {
                     if (remainingNanos(removalDeadline) == 0L) throw IOException("Wi-Fi Direct reset did not finish")
@@ -159,6 +161,7 @@ class WifiP2pGroupManager(
                         throw IOException("Could not record Wi-Fi P2P group ownership")
                     }
                     val request = CreateRequest()
+                    requestedName = config?.networkName
                     synchronized(stateLock) {
                         ensureStartActiveLocked(attempt)
                         attempt.request = request
@@ -409,6 +412,12 @@ class WifiP2pGroupManager(
         val result = AtomicReference<WifiP2pGroup?>()
         val latch = CountDownLatch(1)
         p2pManager.requestGroupInfo(channel) {
+            // Keep the first identity returned after our successful creation. A later global
+            // broadcast may describe a replacement group belonging to another app.
+            if (attempt.createSucceeded && observedCreatedName == null && it?.isGroupOwner == true &&
+                (requestedName == null || it.networkName == requestedName)) {
+                observedCreatedName = it.networkName
+            }
             result.set(it)
             latch.countDown()
         }
@@ -599,16 +608,29 @@ class WifiP2pGroupManager(
         failedThread?.quitSafely()
     }
 
-    private fun removeGroupBlocking(channel: WifiP2pManager.Channel) {
-        removeGroup(channel, waitForCallback = true)
+    private fun removeGroupBlocking(channel: WifiP2pManager.Channel, expectedName: String? = observedCreatedName ?: requestedName) {
+        removeGroup(channel, waitForCallback = true, expectedName = expectedName)
     }
 
-    private fun removeGroup(channel: WifiP2pManager.Channel, waitForCallback: Boolean) {
+    private fun removeGroup(channel: WifiP2pManager.Channel, waitForCallback: Boolean,
+        expectedName: String? = observedCreatedName ?: requestedName) {
         val latch = CountDownLatch(1)
         try {
-            p2pManager.removeGroup(
-                channel,
-                object : WifiP2pManager.ActionListener {
+            p2pManager.requestGroupInfo(channel) { current ->
+                if (current == null) {
+                    latch.countDown()
+                    return@requestGroupInfo
+                }
+                // Cleanup needs this attempt's exact identity. The reinstall namespace used at
+                // startup is broader and could also match a newer DiPlay session.
+                val ours = current.isGroupOwner && !expectedName.isNullOrBlank() &&
+                    current.networkName == expectedName
+                if (!ours) {
+                    diagnostic("Wi-Fi P2P cleanup skipped=another_app_owns_group")
+                    latch.countDown()
+                    return@requestGroupInfo
+                }
+                p2pManager.removeGroup(channel, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
                         latch.countDown()
                     }
@@ -617,8 +639,8 @@ class WifiP2pGroupManager(
                         diagnostic("Wi-Fi P2P remove rejected code=$reason reason=${failureReason(reason)}")
                         latch.countDown()
                     }
-                },
-            )
+                })
+            }
         } catch (failure: RuntimeException) {
             Log.w(TAG, "Wi-Fi P2P removeGroup could not be issued", failure)
             latch.countDown()

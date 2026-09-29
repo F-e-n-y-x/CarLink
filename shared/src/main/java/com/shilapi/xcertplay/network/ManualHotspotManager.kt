@@ -214,7 +214,9 @@ class ManualHotspotManager(
                     LocalHotspotInterface(
                         name = networkInterface.name,
                         hostAddress = address,
-                        hardwareAddress = networkInterface.hardwareAddress?.toMacAddressString(),
+                        hardwareAddress = runCatching { networkInterface.hardwareAddress?.toMacAddressString() }
+                            .getOrNull()?.takeUnless { it == "02:00:00:00:00:00" || it == "00:00:00:00:00:00" }
+                            ?: HotspotInterfaceBssid.read(networkInterface.name),
                         score = interfaceScore(networkInterface.name, address),
                     )
                 }

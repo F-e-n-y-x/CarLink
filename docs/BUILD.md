@@ -23,3 +23,17 @@ Set `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, a
 Output: `mobile/build/outputs/apk/release/mobile-release.apk`. The release APK deliberately contains the experimental identity described in the notices; it is extractable by recipients. The separate Android signing key is not included. The retired build-beta.py helper is not used; this Gradle workflow uses explicit environment inputs.
 
 The public release source archive corresponds to the tagged source and excludes runtime identities, signing keys, local configuration and build output.
+
+## Standalone car-test APK
+
+Use `:mobile:assembleStandaloneDebug` for a test APK that must connect to an iPhone:
+
+```sh
+DIPLAY_AUTH_ASSETS_DIR=/absolute/path/to/runtime-assets ./gradlew :mobile:assembleStandaloneDebug
+```
+
+This task refuses missing or empty runtime inputs. `assembleDebug` remains an identity-free
+source/CI build when the explicit asset input is absent; do not install that output as a
+standalone car-test package. Before delivery, verify both `assets/offline-mfi/identity.pk8`
+and `assets/offline-mfi/certificate.p7b` in the APK against the selected local inputs.
+Update the existing test app without uninstalling it to preserve its settings.
