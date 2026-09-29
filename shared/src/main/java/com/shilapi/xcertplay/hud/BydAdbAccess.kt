@@ -26,9 +26,15 @@ object BydAdbAccess {
                 LocalAdb.Access.UNSUPPORTED -> State.PAIRING_ONLY
             }
             if (state != State.READY) return Status(state)
-            val mode = BydClusterNaviMode.parseRead(adb.shell(BydClusterNaviMode.READ_COMMAND))
-            val battery = BydBattery.read(adb::shell)
-            return Status(state, mode, mode?.showsMap != false, battery?.percent, battery?.rangeKm)
+            return readStatus(context, adb::shell)
         }
+    }
+
+    /** Read and publish the same battery data that the settings page reports as ready. */
+    internal fun readStatus(context: Context, shell: (String) -> String?): Status {
+        val mode = BydClusterNaviMode.parseRead(shell(BydClusterNaviMode.READ_COMMAND))
+        val battery = BydBattery.read(shell)
+        battery?.let { BydBatteryStatus.accept(context, it) }
+        return Status(State.READY, mode, mode?.showsMap != false, battery?.percent, battery?.rangeKm)
     }
 }

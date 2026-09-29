@@ -436,4 +436,5 @@
     <string name="percent_default">%1$d %% · predeterminado</string>
     <string name="adb_battery_reading">Batería: %1$d %%, %2$d km.</string>
     <string name="adb_battery_unreadable">No se puede leer la batería de este coche, así que el iPhone no sabe que es un coche eléctrico.</string>
+    <string name="adb_battery_reconnect">Si CarPlay se conectó antes de que la batería estuviera lista, usa Aplicar y reconectar para activar el envío de los datos de la batería.</string>
 </resources>

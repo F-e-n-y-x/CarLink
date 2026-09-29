@@ -74,3 +74,5 @@ The values come from the adb shell (apps need a BYD signature for them), read ev
 - charging: charging device 1009, `876609560` (BMS state, 1 = charging).
 
 Full charge and full range are scaled up from the current values. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.
+
+If CarPlay connected before the first battery reading was available, battery reporting stays off for that connection. In BYD navigation settings, **Check ADB access** now caches the reading it displays. **Apply and reconnect** checks and caches a valid reading before reconnecting; if ADB or the battery is unavailable, it keeps the current connection and shows the failure instead. Enabling battery reporting during an active session uses the same check-before-reconnect path. Returning after idle also requests an immediate background refresh rather than waiting for the next 30-second poll. The UI and iAP2 loop never wait for ADB.

@@ -63,6 +63,7 @@ class DiPlayActivity : ComponentActivity() {
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
     private var adbStatus: TextView? = null
+    private var adbCheckGeneration = 0
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         connect(notificationTransport)
     }
@@ -386,8 +387,11 @@ class DiPlayActivity : ComponentActivity() {
                 getString(R.string.car_battery_for_the_iphone_description),
                 BydOutputSettings.batteryToIphone(this)) {
                 BydOutputSettings.setBatteryToIphone(this, it)
-                if (it) checkAdbAccess(mayAsk = true)
-                if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+                if (it) {
+                    checkAdbAccess(mayAsk = true, reconnectWhenReady = CarPlayBackgroundSession.hasSession())
+                } else if (CarPlayBackgroundSession.hasSession()) {
+                    connect(AirPlayPersistence.loadWirelessEnabled(this))
+                }
             }
             val connectors = EvChargingConnectors.entries
             choice(card, getString(R.string.charging_connectors), connectors.map { it.localizedLabel(this) },
@@ -403,9 +407,16 @@ class DiPlayActivity : ComponentActivity() {
             }
             adbStatus = label("", 14, MUTED).also { status ->
                 card.addView(status)
-                if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this)) checkAdbAccess(mayAsk = false)
             }
+            if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this)) checkAdbAccess(mayAsk = false)
             card.addView(button(getString(R.string.check_adb_access), false) { checkAdbAccess(mayAsk = true) }, matchButton(10, 56))
+            card.addView(button(getString(R.string.apply_and_reconnect), false) {
+                if (BydOutputSettings.batteryToIphone(this)) {
+                    checkAdbAccess(mayAsk = true, reconnectWhenReady = true)
+                } else {
+                    connect(AirPlayPersistence.loadWirelessEnabled(this))
+                }
+            }, matchButton(10, 56))
         }
         section(content, getString(R.string.permissions_and_connection_help), R.drawable.ic_dp_permissions) { card ->
             card.addView(label(getString(R.string.nearby_devices_connects_your_iphone_microphone_enables_sir), 16, MUTED))
@@ -648,16 +659,21 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     // The car's approval dialog for DiPlay's ADB key opens only from here, never while driving.
-    private fun checkAdbAccess(mayAsk: Boolean) {
+    private fun checkAdbAccess(mayAsk: Boolean, reconnectWhenReady: Boolean = false) {
         val status = adbStatus ?: return
+        val generation = ++adbCheckGeneration
         status.setTextColor(MUTED)
         status.text = getString(if (mayAsk) R.string.adb_checking_may_ask else R.string.adb_checking)
         Thread({
             val result = runCatching { BydAdbAccess.check(applicationContext, mayAsk) }.getOrNull()
             runOnUiThread {
-                if (adbStatus !== status) return@runOnUiThread
+                if (adbStatus !== status || generation != adbCheckGeneration || isFinishing || isDestroyed) return@runOnUiThread
                 status.setTextColor(if (result?.state == BydAdbAccess.State.READY) MUTED else WARNING)
                 status.text = adbStatusText(result)
+                if (reconnectWhenReady && BydOutputSettings.batteryToIphone(this) &&
+                    result?.state == BydAdbAccess.State.READY && result.batteryPercent != null) {
+                    connect(AirPlayPersistence.loadWirelessEnabled(this))
+                }
             }
         }, "diplay-adb-check").start()
     }
@@ -672,6 +688,9 @@ class DiPlayActivity : ComponentActivity() {
             },
             result.batteryPercent?.let { getString(R.string.adb_battery_reading, it.roundToInt(), result.rangeKm ?: 0) }
                 ?: getString(R.string.adb_battery_unreadable).takeIf { BydOutputSettings.batteryToIphone(this) },
+            getString(R.string.adb_battery_reconnect).takeIf {
+                BydOutputSettings.batteryToIphone(this) && result.batteryPercent != null
+            },
         ).joinToString(" ")
         BydAdbAccess.State.NOT_APPROVED -> getString(R.string.adb_not_approved)
         BydAdbAccess.State.ADB_OFF -> getString(R.string.adb_off)

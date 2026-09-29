@@ -1,8 +1,8 @@
 package com.shilapi.xcertplay.hud
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.Log
+import android.os.SystemClock
 import com.shilapi.xcertplay.transport.VehicleStatusProvider
 import com.shilapi.xcertplay.transport.VehicleStatusSnapshot
 import java.util.concurrent.Executors
@@ -74,47 +74,78 @@ internal object BydBatteryStatus : VehicleStatusProvider {
     private const val TAG = "DiPlay-BYD-Battery"
     private const val READ_MILLIS = 30_000L
     private const val IDLE_MILLIS = 2 * 60_000L
-    private const val STALE_MILLIS = 3 * 60_000L
 
     private val shell = BydAdbShell(TAG)
-    private var context: Context? = null
+    @Volatile private var context: Context? = null
     private var started = false
-    @Volatile private var latest: BydBatteryReading? = null
-    @Volatile private var latestMillis = 0L
-    @Volatile private var fullKwh: Double? = null
+    private val cache = BydBatteryCache(::now)
+    @Volatile internal var readBattery: (Context) -> BydBatteryReading? = { app ->
+        BydBattery.read { shell.run(app, it) }
+    }
+    private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
+        Thread(runnable, "diplay-battery").apply { isDaemon = true }
+    }
     @Volatile private var askedMillis = 0L
 
     @Synchronized
     fun start(appContext: Context) {
         context = appContext.applicationContext
         askedMillis = now()
-        if (started) return
-        started = true
-        Executors.newSingleThreadScheduledExecutor { runnable ->
-            Thread(runnable, "diplay-battery").apply { isDaemon = true }
-        }.scheduleWithFixedDelay(::poll, 0, READ_MILLIS, TimeUnit.MILLISECONDS)
+        if (started) {
+            // A reconnect after idle must not wait for the next 30-second tick.
+            executor.execute(::poll)
+        } else {
+            started = true
+            executor.scheduleWithFixedDelay(::poll, 0, READ_MILLIS, TimeUnit.MILLISECONDS)
+        }
     }
 
     override fun snapshot(): VehicleStatusSnapshot? {
         askedMillis = now()
-        val reading = latest ?: return null
-        if (now() - latestMillis > STALE_MILLIS) return null
         val app = context ?: return null
-        return BydBattery.snapshot(reading, BydOutputSettings.lowChargePercent(app), fullKwh)
+        return cache.snapshot(BydOutputSettings.lowChargePercent(app))
     }
 
     private fun poll() {
         val app = context ?: return
         // Nobody asked for a while: the session ended. Keep adb closed until the next one.
         if (now() - askedMillis > IDLE_MILLIS) return shell.close()
-        val reading = BydBattery.read { shell.run(app, it) } ?: return
-        if (latest?.let { it.percent.roundToInt() != reading.percent.roundToInt() || it.charging != reading.charging } != false) {
+        val reading = readBattery(app) ?: return
+        accept(app, reading)
+    }
+
+    /** Publish a settings check before telling the user that the battery is ready. No ADB I/O. */
+    fun accept(appContext: Context, reading: BydBatteryReading) {
+        context = appContext.applicationContext
+        if (cache.accept(reading)) {
             Log.i(TAG, "battery ${reading.percent} % range ${reading.rangeKm} km ${reading.remainingKwh} kWh charging=${reading.charging}")
         }
-        BydBattery.fullKwh(reading)?.let { fullKwh = it }
-        latest = reading
-        latestMillis = now()
     }
 
     private fun now() = SystemClock.elapsedRealtime()
+}
+
+/** Atomically publishes the reading, timestamp and capacity estimate across both ADB readers. */
+internal class BydBatteryCache(private val now: () -> Long) {
+    private var latest: BydBatteryReading? = null
+    private var latestMillis = 0L
+    private var fullKwh: Double? = null
+
+    @Synchronized
+    fun accept(reading: BydBatteryReading): Boolean {
+        val changed = latest?.let {
+            it.percent.roundToInt() != reading.percent.roundToInt() || it.charging != reading.charging
+        } != false
+        BydBattery.fullKwh(reading)?.let { fullKwh = it }
+        latest = reading
+        latestMillis = now()
+        return changed
+    }
+
+    @Synchronized
+    fun snapshot(lowPercent: Int): VehicleStatusSnapshot? {
+        val reading = latest ?: return null
+        if (now() - latestMillis > 3 * 60_000L) return null
+        return BydBattery.snapshot(reading, lowPercent, fullKwh)
+    }
 }

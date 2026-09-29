@@ -436,4 +436,5 @@
     <string name="percent_default">%1$d %% · по умолчанию</string>
     <string name="adb_battery_reading">Батарея: %1$d %%, %2$d км.</string>
     <string name="adb_battery_unreadable">Батарею этой машины прочитать не удалось, поэтому iPhone не узнаёт об электромобиле.</string>
+    <string name="adb_battery_reconnect">Если CarPlay подключился до получения данных батареи, нажмите «Применить и переподключить», чтобы включить передачу данных батареи.</string>
 </resources>
