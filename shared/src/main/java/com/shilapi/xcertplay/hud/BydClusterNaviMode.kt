@@ -5,7 +5,7 @@ package com.shilapi.xcertplay.hud
  * in instrument property INSTRUMENT_NAVI_TYPE; apps need a BYD signature for it, the adb shell
  * reads it through the autoservice binder. Verified on DiLink 5.0 (Android 12).
  */
-internal enum class BydClusterNaviMode(val code: Int, val label: String) {
+enum class BydClusterNaviMode(val code: Int, val label: String) {
     OFF(1, "Off"),
     TURN_ON_BY_NAVI(2, "Turn on by navi"),
     SMALL(3, "Small screen navi"),

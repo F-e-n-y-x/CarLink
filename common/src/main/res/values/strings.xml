@@ -419,4 +419,21 @@
     <string name="turn_card_horizontal">Turn card · horizontal</string>
     <string name="turn_card_vertical">Turn card · vertical</string>
     <string name="reset_turn_card_to_centre">Reset turn card to centre</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">Dashboard map only in Small and Full navi · needs ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay reads the navi mode you pick on the steering wheel. In Off and Turn on by navi the dashboard shows arrows only, so the iPhone does not send the map; in Small and Full screen navi it does, within a second or two of the switch. Needs ADB over network on the head unit.</string>
+    <string name="check_adb_access">Check ADB access</string>
+    <string name="adb_checking">Checking ADB access…</string>
+    <string name="adb_checking_may_ask">Checking ADB access… If the car asks, allow DiPlay and tick “Always allow”.</string>
+    <string name="adb_check_failed">The ADB check failed. Try again.</string>
+    <string name="adb_access_ready">ADB access ready.</string>
+    <string name="adb_dashboard_sends_map">Dashboard: %1$s, so the iPhone sends the map.</string>
+    <string name="adb_dashboard_does_not_send_map">Dashboard: %1$s, so the iPhone does not send the map.</string>
+    <string name="adb_not_approved">DiPlay is not approved yet. Tap Check ADB access, then allow DiPlay on the car screen.</string>
+    <string name="adb_off">ADB over network is off. Turn it on in the head unit’s developer options.</string>
+    <string name="adb_pairing_only">This head unit offers only wireless debugging with pairing, which DiPlay does not support yet.</string>
+    <string name="navi_mode_off">Off</string>
+    <string name="navi_mode_turn_on_by_navi">Turn on by navi</string>
+    <string name="navi_mode_small">Small screen navi</string>
+    <string name="navi_mode_full">Full screen navi</string>
+    <string name="navi_mode_unknown">unknown mode</string>
 </resources>

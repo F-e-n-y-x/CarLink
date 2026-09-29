@@ -408,4 +408,21 @@
     <string name="turn_card_horizontal">Карточка поворота · по горизонтали</string>
     <string name="turn_card_vertical">Карточка поворота · по вертикали</string>
     <string name="reset_turn_card_to_centre">Вернуть карточку поворота в центр</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборной панели только в малой и полноэкранной навигации · нужен ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay считывает режим навигации, выбранный кнопками на руле. В режимах «Выкл.» и «Включать при навигации» приборная панель показывает только стрелки, поэтому iPhone не передаёт карту; в режимах малого и полного экрана навигации передаёт — через секунду-две после переключения. Нужен ADB по сети на головном устройстве.</string>
+    <string name="check_adb_access">Проверить доступ ADB</string>
+    <string name="adb_checking">Проверка доступа ADB…</string>
+    <string name="adb_checking_may_ask">Проверка доступа ADB… Если машина спросит, разрешите DiPlay и отметьте «Всегда разрешать».</string>
+    <string name="adb_check_failed">Проверка ADB не удалась. Попробуйте ещё раз.</string>
+    <string name="adb_access_ready">Доступ ADB есть.</string>
+    <string name="adb_dashboard_sends_map">Приборная панель: %1$s, поэтому iPhone передаёт карту.</string>
+    <string name="adb_dashboard_does_not_send_map">Приборная панель: %1$s, поэтому iPhone не передаёт карту.</string>
+    <string name="adb_not_approved">DiPlay ещё не разрешён. Нажмите «Проверить доступ ADB» и разрешите DiPlay на экране машины.</string>
+    <string name="adb_off">ADB по сети выключен. Включите его в параметрах разработчика головного устройства.</string>
+    <string name="adb_pairing_only">Это головное устройство поддерживает только беспроводную отладку с сопряжением, которую DiPlay пока не поддерживает.</string>
+    <string name="navi_mode_off">Выкл.</string>
+    <string name="navi_mode_turn_on_by_navi">Включать при навигации</string>
+    <string name="navi_mode_small">Навигация на малом экране</string>
+    <string name="navi_mode_full">Навигация на полном экране</string>
+    <string name="navi_mode_unknown">неизвестный режим</string>
 </resources>

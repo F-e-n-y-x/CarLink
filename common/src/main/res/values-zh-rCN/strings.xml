@@ -419,4 +419,21 @@
     <string name="turn_card_horizontal">转向提示卡 · 水平位置</string>
     <string name="turn_card_vertical">转向提示卡 · 垂直位置</string>
     <string name="reset_turn_card_to_centre">将转向提示卡重置到中央</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">仅在小屏或全屏导航时显示仪表盘地图 · 需要 ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay 读取你在方向盘菜单中选择的导航模式。在“关闭”和“导航时开启”模式下仪表盘只显示箭头，因此 iPhone 不发送地图；在小屏导航和全屏导航模式下会发送，切换后一两秒内生效。需要在车机上开启网络 ADB。</string>
+    <string name="check_adb_access">检查 ADB 访问</string>
+    <string name="adb_checking">正在检查 ADB 访问…</string>
+    <string name="adb_checking_may_ask">正在检查 ADB 访问…如果车机询问，请允许 DiPlay 并勾选“始终允许”。</string>
+    <string name="adb_check_failed">ADB 检查失败，请重试。</string>
+    <string name="adb_access_ready">ADB 访问已就绪。</string>
+    <string name="adb_dashboard_sends_map">仪表盘：%1$s，因此 iPhone 会发送地图。</string>
+    <string name="adb_dashboard_does_not_send_map">仪表盘：%1$s，因此 iPhone 不发送地图。</string>
+    <string name="adb_not_approved">DiPlay 尚未获得授权。点按“检查 ADB 访问”，然后在车机屏幕上允许 DiPlay。</string>
+    <string name="adb_off">网络 ADB 已关闭。请在车机的开发者选项中开启。</string>
+    <string name="adb_pairing_only">此车机仅提供需要配对的无线调试，DiPlay 暂不支持。</string>
+    <string name="navi_mode_off">关闭</string>
+    <string name="navi_mode_turn_on_by_navi">导航时开启</string>
+    <string name="navi_mode_small">小屏导航</string>
+    <string name="navi_mode_full">全屏导航</string>
+    <string name="navi_mode_unknown">未知模式</string>
 </resources>

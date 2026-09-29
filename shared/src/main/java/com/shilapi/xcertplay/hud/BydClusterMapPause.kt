@@ -7,6 +7,7 @@ import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Optional, needs ADB over network: the iPhone draws and streams the cluster map for the whole
@@ -21,10 +22,12 @@ internal object BydClusterMapPause {
     private const val READ_MILLIS = 1_000L
     private const val ADB_RETRY_MILLIS = 30_000L
 
-    private val lock = Any()
-    private var context: Context? = null
+    private val tickerStarted = AtomicBoolean(false)
+    @Volatile private var context: Context? = null
+
+    // Only the ticker thread touches these, so nothing blocking ever runs under a lock that
+    // initialize() or the UI needs.
     private var adb: LocalAdb? = null
-    private var tickerStarted = false
     private var unavailableLogged = false
     private var adbRetryMillis = 0L
     private var lastMode: BydClusterNaviMode? = null
@@ -35,25 +38,30 @@ internal object BydClusterMapPause {
     /** The running CarPlay session, told every second whether the iPhone should draw the cluster map. */
     @Volatile var streamControl: ((Boolean) -> Unit)? = null
 
-    fun initialize(appContext: Context) = synchronized(lock) {
+    /** Reads the mode over adb. Blocking, and only called on the ticker thread; tests replace it. */
+    @Volatile internal var readMode: (Context) -> BydClusterNaviMode? = { app ->
+        shell(app)?.let { BydClusterNaviMode.parseRead(it.shell(BydClusterNaviMode.READ_COMMAND)) }
+    }
+
+    /** Never waits for the ticker: an adb read in flight does not hold up opening or reconnecting. */
+    fun initialize(appContext: Context) {
         context = appContext.applicationContext
-        if (!tickerStarted) {
-            tickerStarted = true
+        if (tickerStarted.compareAndSet(false, true)) {
             Executors.newSingleThreadScheduledExecutor { runnable ->
                 Thread(runnable, "diplay-cluster-map").apply { isDaemon = true }
             }.scheduleAtFixedRate(::tick, READ_MILLIS, READ_MILLIS, TimeUnit.MILLISECONDS)
         }
     }
 
-    private fun tick() = synchronized(lock) {
-        val app = context ?: return@synchronized
+    private fun tick() {
+        val app = context ?: return
         val control = streamControl
         if (control == null || !clusterMapShown || !BydOutputSettings.clusterStreamPause(app)) {
             control?.invoke(true)
             close()
-            return@synchronized
+            return
         }
-        val mode = shell(app)?.let { BydClusterNaviMode.parseRead(it.shell(BydClusterNaviMode.READ_COMMAND)) }
+        val mode = readMode(app)
         if (mode != lastMode) {
             lastMode = mode
             Log.i(TAG, "cluster mode ${mode?.label ?: "unknown"}")
@@ -92,7 +100,7 @@ internal object BydClusterMapPause {
 object BydClusterModeAccess {
     enum class State { READY, NOT_APPROVED, ADB_OFF, PAIRING_ONLY }
 
-    class Status(val state: State, val modeLabel: String?, val showsMap: Boolean)
+    class Status(val state: State, val mode: BydClusterNaviMode?, val showsMap: Boolean)
 
     /** Blocking: run off the main thread. [mayAsk] lets the car show its approval dialog for DiPlay's key. */
     fun check(context: Context, mayAsk: Boolean): Status {
@@ -105,7 +113,7 @@ object BydClusterModeAccess {
             }
             if (state != State.READY) return Status(state, null, true)
             val mode = BydClusterNaviMode.parseRead(adb.shell(BydClusterNaviMode.READ_COMMAND))
-            return Status(state, mode?.label, mode?.showsMap != false)
+            return Status(state, mode, mode?.showsMap != false)
         }
     }
 }

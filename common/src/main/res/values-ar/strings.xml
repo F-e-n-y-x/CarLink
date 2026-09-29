@@ -408,4 +408,21 @@
     <string name="turn_card_horizontal">بطاقة الانعطاف · أفقيًا</string>
     <string name="turn_card_vertical">بطاقة الانعطاف · عموديًا</string>
     <string name="reset_turn_card_to_centre">إعادة بطاقة الانعطاف إلى الوسط</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">خريطة لوحة العدادات فقط في عرض الملاحة المصغّر والكامل · يتطلب ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi_description">يقرأ DiPlay وضع الملاحة الذي تختاره من أزرار المقود. في وضعي «إيقاف» و«التشغيل عند الملاحة» تعرض لوحة العدادات الأسهم فقط، لذا لا يرسل iPhone الخريطة؛ أما في عرض الملاحة المصغّر والكامل فيرسلها خلال ثانية أو ثانيتين من التبديل. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="check_adb_access">التحقق من الوصول عبر ADB</string>
+    <string name="adb_checking">جارٍ التحقق من الوصول عبر ADB…</string>
+    <string name="adb_checking_may_ask">جارٍ التحقق من الوصول عبر ADB… إذا طلبت السيارة، فاسمح لـ DiPlay وحدّد «السماح دائمًا».</string>
+    <string name="adb_check_failed">فشل التحقق من ADB. حاول مرة أخرى.</string>
+    <string name="adb_access_ready">الوصول عبر ADB جاهز.</string>
+    <string name="adb_dashboard_sends_map">لوحة العدادات: %1$s، لذا يرسل iPhone الخريطة.</string>
+    <string name="adb_dashboard_does_not_send_map">لوحة العدادات: %1$s، لذا لا يرسل iPhone الخريطة.</string>
+    <string name="adb_not_approved">لم تتم الموافقة على DiPlay بعد. اضغط «التحقق من الوصول عبر ADB» ثم اسمح لـ DiPlay على شاشة السيارة.</string>
+    <string name="adb_off">ADB عبر الشبكة متوقف. شغّله من خيارات المطوّر في وحدة القيادة.</string>
+    <string name="adb_pairing_only">توفر وحدة القيادة هذه تصحيح الأخطاء اللاسلكي مع الإقران فقط، وهو ما لا يدعمه DiPlay بعد.</string>
+    <string name="navi_mode_off">إيقاف</string>
+    <string name="navi_mode_turn_on_by_navi">التشغيل عند الملاحة</string>
+    <string name="navi_mode_small">عرض الملاحة المصغّر</string>
+    <string name="navi_mode_full">عرض الملاحة الكامل</string>
+    <string name="navi_mode_unknown">وضع غير معروف</string>
 </resources>

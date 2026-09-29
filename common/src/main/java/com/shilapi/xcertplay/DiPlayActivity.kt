@@ -372,8 +372,8 @@ class DiPlayActivity : ComponentActivity() {
                         render()
                         reconnectForClusterMap()
                     }, matchButton(10, 56))
-                    toggle(card, "Dashboard map only in Small and Full navi · needs ADB",
-                        "DiPlay reads the navi mode you pick on the steering wheel. In Off and Turn on by navi the dashboard shows arrows only, so the iPhone does not send the map; in Small and Full screen navi it does, within a second or two of the switch. Needs ADB over network on the head unit.",
+                    toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),
+                        getString(R.string.dashboard_map_only_in_small_and_full_navi_description),
                         BydOutputSettings.clusterStreamPause(this)) {
                         BydOutputSettings.setClusterStreamPause(this, it)
                         if (it) checkClusterModeAccess(mayAsk = true)
@@ -382,7 +382,7 @@ class DiPlayActivity : ComponentActivity() {
                         card.addView(status)
                         if (BydOutputSettings.clusterStreamPause(this)) checkClusterModeAccess(mayAsk = false)
                     }
-                    card.addView(button("Check ADB access", false) { checkClusterModeAccess(mayAsk = true) }, matchButton(10, 56))
+                    card.addView(button(getString(R.string.check_adb_access), false) { checkClusterModeAccess(mayAsk = true) }, matchButton(10, 56))
                 }
             }
         }
@@ -630,7 +630,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun checkClusterModeAccess(mayAsk: Boolean) {
         val status = clusterModeStatus ?: return
         status.setTextColor(MUTED)
-        status.text = if (mayAsk) "Checking ADB access… If the car asks, allow DiPlay and tick “Always allow”." else "Checking ADB access…"
+        status.text = getString(if (mayAsk) R.string.adb_checking_may_ask else R.string.adb_checking)
         Thread({
             val result = runCatching { BydClusterModeAccess.check(applicationContext, mayAsk) }.getOrNull()
             runOnUiThread {
@@ -642,12 +642,13 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun clusterModeText(result: BydClusterModeAccess.Status?): String = when (result?.state) {
-        null -> "The ADB check failed. Try again."
-        BydClusterModeAccess.State.READY ->
-            "ADB access ready. The dashboard is on ${result.modeLabel ?: "an unknown mode"}, so the iPhone ${if (result.showsMap) "sends" else "does not send"} the map."
-        BydClusterModeAccess.State.NOT_APPROVED -> "DiPlay is not approved yet. Tap Check ADB access, then allow DiPlay on the car screen."
-        BydClusterModeAccess.State.ADB_OFF -> "ADB over network is off. Turn it on in the head unit’s developer options."
-        BydClusterModeAccess.State.PAIRING_ONLY -> "This head unit offers only wireless debugging with pairing, which DiPlay does not support yet."
+        null -> getString(R.string.adb_check_failed)
+        BydClusterModeAccess.State.READY -> getString(R.string.adb_access_ready) + " " +
+            getString(if (result.showsMap) R.string.adb_dashboard_sends_map else R.string.adb_dashboard_does_not_send_map,
+                result.mode?.localizedLabel(this) ?: getString(R.string.navi_mode_unknown))
+        BydClusterModeAccess.State.NOT_APPROVED -> getString(R.string.adb_not_approved)
+        BydClusterModeAccess.State.ADB_OFF -> getString(R.string.adb_off)
+        BydClusterModeAccess.State.PAIRING_ONLY -> getString(R.string.adb_pairing_only)
     }
 
     // The cluster screen is described at connection time, so a running session reconnects over
