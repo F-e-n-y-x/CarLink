@@ -425,4 +425,16 @@
     <string name="navi_mode_small">Навигация на малом экране</string>
     <string name="navi_mode_full">Навигация на полном экране</string>
     <string name="navi_mode_unknown">неизвестный режим</string>
+    <string name="car_battery_for_the_iphone">Батарея машины для iPhone · нужен ADB</string>
+    <string name="car_battery_for_the_iphone_description">DiPlay сообщает iPhone заряд и запас хода машины, чтобы Apple Карты предупреждали о низком заряде и предлагали зарядки по пути. iPhone узнаёт об электромобиле, только пока DiPlay может прочитать батарею. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
+    <string name="charging_connectors">Разъёмы зарядки</string>
+    <string name="connectors_ccs2_type2">CCS2 и Type 2 · Европа</string>
+    <string name="connectors_gb_t">GB/T · Китай</string>
+    <string name="connectors_ccs1_j1772">CCS1 и J1772 · Северная Америка</string>
+    <string name="low_charge_warning">Предупреждение о низком заряде</string>
+    <string name="percent_value">%1$d %%</string>
+    <string name="percent_default">%1$d %% · по умолчанию</string>
+    <string name="adb_battery_reading">Батарея: %1$d %%, %2$d км.</string>
+    <string name="adb_battery_unreadable">Батарею этой машины прочитать не удалось, поэтому iPhone не узнаёт об электромобиле.</string>
+    <string name="adb_battery_reconnect">Если CarPlay подключился до получения данных батареи, нажмите «Применить и переподключить», чтобы включить передачу данных батареи.</string>
 </resources>

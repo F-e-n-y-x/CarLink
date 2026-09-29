@@ -5,6 +5,7 @@ import com.shilapi.xcertplay.airplay.CarPlaySize
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydClusterNaviMode
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
+import com.shilapi.xcertplay.transport.EvChargingConnectors
 
 internal fun CarPlaySize.localizedLabel(context: Context): String = context.getString(when (this) {
     CarPlaySize.LARGE -> R.string.option_size_large
@@ -29,6 +30,12 @@ internal fun BydClusterNaviMode.localizedLabel(context: Context): String = conte
     BydClusterNaviMode.TURN_ON_BY_NAVI -> R.string.navi_mode_turn_on_by_navi
     BydClusterNaviMode.SMALL -> R.string.navi_mode_small
     BydClusterNaviMode.FULL -> R.string.navi_mode_full
+})
+
+internal fun EvChargingConnectors.localizedLabel(context: Context): String = context.getString(when (this) {
+    EvChargingConnectors.CCS2_TYPE2 -> R.string.connectors_ccs2_type2
+    EvChargingConnectors.GB_T -> R.string.connectors_gb_t
+    EvChargingConnectors.CCS1_J1772 -> R.string.connectors_ccs1_j1772
 })
 
 internal fun ManualHotspotValidation.Error.messageResource(): Int = when (this) {

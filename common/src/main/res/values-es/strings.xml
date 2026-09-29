@@ -425,4 +425,16 @@
     <string name="navi_mode_small">Navegación en pantalla pequeña</string>
     <string name="navi_mode_full">Navegación en pantalla completa</string>
     <string name="navi_mode_unknown">modo desconocido</string>
+    <string name="car_battery_for_the_iphone">Batería del coche para el iPhone · requiere ADB</string>
+    <string name="car_battery_for_the_iphone_description">DiPlay indica al iPhone la carga y la autonomía del coche, para que Apple Maps avise de una carga baja y sugiera cargadores en el camino. El iPhone solo sabe que es un coche eléctrico mientras DiPlay puede leer la batería. Reconecta CarPlay. Requiere ADB por red en la unidad principal.</string>
+    <string name="charging_connectors">Conectores de carga</string>
+    <string name="connectors_ccs2_type2">CCS2 y Tipo 2 · Europa</string>
+    <string name="connectors_gb_t">GB/T · China</string>
+    <string name="connectors_ccs1_j1772">CCS1 y J1772 · Norteamérica</string>
+    <string name="low_charge_warning">Aviso de carga baja</string>
+    <string name="percent_value">%1$d %%</string>
+    <string name="percent_default">%1$d %% · predeterminado</string>
+    <string name="adb_battery_reading">Batería: %1$d %%, %2$d km.</string>
+    <string name="adb_battery_unreadable">No se puede leer la batería de este coche, así que el iPhone no sabe que es un coche eléctrico.</string>
+    <string name="adb_battery_reconnect">Si CarPlay se conectó antes de que la batería estuviera lista, usa Aplicar y reconectar para activar el envío de los datos de la batería.</string>
 </resources>

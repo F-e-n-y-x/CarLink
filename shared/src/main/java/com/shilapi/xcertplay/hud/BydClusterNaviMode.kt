@@ -24,17 +24,6 @@ enum class BydClusterNaviMode(val code: Int, val label: String) {
         fun fromCode(code: Int): BydClusterNaviMode? = entries.firstOrNull { it.code == code }
 
         /** `Result: Parcel(00000000 00000002 '........')`: no exception, then the value. */
-        fun parseRead(output: String?): BydClusterNaviMode? {
-            val words = parcelWords(output)
-            if (words.size < 2 || words[0] != 0L) return null
-            return fromCode(words[1].toInt())
-        }
-
-        private fun parcelWords(output: String?): List<Long> {
-            val body = output?.substringAfter("Parcel(", "")?.substringBefore('\'') ?: return emptyList()
-            return body.trim().split(Regex("\\s+")).mapNotNull { word ->
-                word.takeIf { it.length == 8 }?.toLongOrNull(16)
-            }
-        }
+        fun parseRead(output: String?): BydClusterNaviMode? = BydParcel.value(output)?.let(::fromCode)
     }
 }
