@@ -37,6 +37,12 @@ class DiPlaySessionService : Service() {
             if (Build.VERSION.SDK_INT >= 30 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
             }
+            // Without it Android stops location updates while another car app (the reversing camera,
+            // the car's own map) covers CarPlay, and the iPhone gets no position until DiPlay is back.
+            if (AirPlayPersistence.loadLocationReportingEnabled(this) &&
+                checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            }
             startForeground(1, notification, types)
         } else startForeground(1, notification)
         return START_NOT_STICKY
