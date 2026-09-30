@@ -108,8 +108,24 @@ class VideoInCarTest {
         assertEquals(mapOf("key" to "hasEnabledAudio", "value" to true, "kind" to "response", "type" to "property", "messageID" to 3L), audio)
         assertEquals(1, (VideoInCar.propertyResponse(4L, "loadedTimeRanges", state)["value"] as List<*>).size)
         val log = VideoInCar.propertyResponse(5L, "playbackAccessLog", state)
-        assertTrue(log.containsKey("value"))
-        assertNull(log["value"])
+        assertEquals(mapOf("key" to "playbackAccessLog", "kind" to "response", "type" to "property", "messageID" to 5L), log)
+    }
+
+    @Test
+    fun everyReplyEncodesAsABinaryPlist() {
+        // A null in a reply crashed DiPlay in the car: plists have no null.
+        val loading = VideoInCar.PlayerState(prepared = false, playing = false, positionSeconds = 0.0, durationSeconds = 0.0, bufferedSeconds = 0.0)
+        listOf(
+            VideoInCar.propertyResponse(null, "playbackAccessLog", null),
+            VideoInCar.propertyResponse(1L, "seekableTimeRanges", loading),
+            VideoInCar.playbackInfoResponse(null, null, null),
+            VideoInCar.playbackInfoResponse(2L, null, loading),
+            VideoInCar.seekResponse(null),
+            VideoInCar.playbackStateNotification(true, null),
+        ).forEach { reply ->
+            val decoded = BplistCodec.decode(BplistCodec.encode(reply)) as Map<*, *>
+            assertEquals(reply["type"], decoded["type"])
+        }
     }
 
     @Test

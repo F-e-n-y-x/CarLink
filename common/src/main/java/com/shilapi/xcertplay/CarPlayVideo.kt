@@ -139,7 +139,11 @@ internal object CarPlayVideo : CarPlayVideoListener {
     private fun reply(streamId: Long, message: Map<String, Any?>) {
         val target = controller ?: return
         sender.execute {
-            if (!target.sendVideoMessage(streamId, message)) Log.w(TAG, "reply ${message["type"]} not sent")
+            // A reply that cannot be sent must never take CarPlay down with it.
+            val sent = runCatching { target.sendVideoMessage(streamId, message) }
+                .onFailure { Log.w(TAG, "reply ${message["type"]} failed: ${it.javaClass.simpleName}") }
+                .getOrDefault(false)
+            if (!sent) Log.w(TAG, "reply ${message["type"]} not sent")
         }
     }
 

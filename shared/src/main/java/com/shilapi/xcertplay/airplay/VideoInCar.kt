@@ -116,15 +116,15 @@ object VideoInCar {
             else -> "paused"
         }
         info["interstitialInfo"] = linkedMapOf<String, Any?>()
-        return linkedMapOf("info" to info, "kind" to "response", "type" to "playbackInfo", "messageID" to messageId)
+        return linkedMapOf("info" to info, "kind" to "response", "type" to "playbackInfo", "messageID" to messageId).withoutNulls()
     }
 
     fun seekResponse(messageId: Any?): Map<String, Any?> =
-        linkedMapOf("type" to "seek", "kind" to "response", "messageID" to messageId)
+        linkedMapOf("type" to "seek", "kind" to "response", "messageID" to messageId).withoutNulls()
 
     /**
-     * The answer to a property request: {key, value}, with value null for what this player does not
-     * report, as the web app answers properties it does not support.
+     * The answer to a property request: {key, value}. What this player does not report has no value,
+     * as the web app answers null for properties it does not support (plists have no null).
      */
     fun propertyResponse(messageId: Any?, key: Any?, state: PlayerState?): Map<String, Any?> {
         val ready = state?.prepared == true
@@ -136,12 +136,13 @@ object VideoInCar {
             else -> null
         }
         return linkedMapOf("key" to key, "value" to value, "kind" to "response", "type" to "property", "messageID" to messageId)
+            .withoutNulls()
     }
 
     /** Tells the iPhone at once that the car's player started or paused, e.g. from the steering wheel. */
     fun playbackStateNotification(playing: Boolean, itemUuid: Any?): Map<String, Any?> =
         if (playing) {
-            linkedMapOf("type" to "playbackState", "name" to "playing", "item" to linkedMapOf("uuid" to itemUuid))
+            linkedMapOf("type" to "playbackState", "name" to "playing", "item" to linkedMapOf("uuid" to itemUuid)).withoutNulls()
         } else {
             linkedMapOf("type" to "playbackState", "name" to "paused")
         }
@@ -151,6 +152,17 @@ object VideoInCar {
         linkedMapOf("value" to Math.round(seconds * 1000), "timescale" to 1000L, "flags" to 1L, "epoch" to 0L)
 
     private fun range(start: Double, duration: Double) = linkedMapOf("start" to cmTime(start), "duration" to cmTime(duration))
+
+    /** Plists have no null; a missing key stands for it, as the iPhone reads it. */
+    private fun Map<String, Any?>.withoutNulls(): Map<String, Any?> {
+        fun strip(value: Any?): Any? = when (value) {
+            is Map<*, *> -> value.entries.filter { it.value != null }.associateTo(linkedMapOf()) { it.key.toString() to strip(it.value) }
+            is List<*> -> value.filterNotNull().map(::strip)
+            else -> value
+        }
+        @Suppress("UNCHECKED_CAST")
+        return strip(this) as Map<String, Any?>
+    }
 
     private fun seconds(time: Map<*, *>): Double? {
         val value = (time["value"] as? Number)?.toDouble() ?: return null
