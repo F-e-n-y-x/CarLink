@@ -59,6 +59,8 @@ class Iap2LocationReporterTest {
         link.tick { sent += it }
 
         assertTrue(provider.started)
+        // The provider learns what was asked for, so vehicle speed follows the request onto Wi-Fi.
+        assertEquals(setOf(0, 1, 2, 4, 0x8001), provider.requested)
         assertEquals(2, sent.size)
         assertTrue(progress.any { it.startsWith("iap2 location request continues from the Bluetooth link") })
         assertEquals(1_000L, link.pollTimeout(60_000L))
@@ -122,7 +124,9 @@ class Iap2LocationReporterTest {
 
     private class FakeProvider : Iap2LocationProvider {
         var started = false
+        var requested: Set<Int>? = null
         var nmea: String? = "\$GPGGA,123519.00,4807.0380,N,01131.0000,E,1,08,1.0,545.4,M,0.0,M,,*00\r\n"
+        override fun onRequested(components: Set<Int>) { requested = components }
         override fun start(): Boolean { started = true; return true }
         override fun stop() { started = false }
         override fun latestNmea() = nmea

@@ -423,10 +423,18 @@ class DiPlayActivity : ComponentActivity() {
                 lowCharge.indexOf(BydOutputSettings.lowChargePercent(this)).coerceAtLeast(0), reconnects = false) {
                 BydOutputSettings.setLowChargePercent(this, lowCharge[it])
             }
+            toggle(card, getString(R.string.wheel_speed_for_tunnels),
+                getString(R.string.wheel_speed_for_tunnels_description),
+                BydOutputSettings.wheelSpeedToIphone(this)) {
+                BydOutputSettings.setWheelSpeedToIphone(this, it)
+                if (it) checkAdbAccess(mayAsk = true)
+                if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+            }
             adbStatus = label("", 14, MUTED).also { status ->
                 card.addView(status)
             }
-            if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this)) checkAdbAccess(mayAsk = false)
+            if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this) || BydOutputSettings.wheelSpeedToIphone(this))
+                checkAdbAccess(mayAsk = false)
             card.addView(button(getString(R.string.check_adb_access), false) { checkAdbAccess(mayAsk = true) }, matchButton(10, 56))
             card.addView(button(getString(R.string.apply_and_reconnect), false) {
                 if (BydOutputSettings.batteryToIphone(this)) {

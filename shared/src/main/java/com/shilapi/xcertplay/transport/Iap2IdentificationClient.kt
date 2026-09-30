@@ -55,6 +55,8 @@ data class Iap2IdentificationConfig(
     val vehicleStatusEnabled: Boolean = false,
     /** The charging inlets declared with [vehicleStatusEnabled]. */
     val chargingConnectors: EvChargingConnectors = EvChargingConnectors.CCS2_TYPE2,
+    /** Also offer wheel speed ($PASCD) in the location component; needs [locationInformationEnabled]. */
+    val vehicleSpeedEnabled: Boolean = false,
 ) {
     constructor(
         name: String,
@@ -246,6 +248,7 @@ class Iap2IdentificationClient(private val session: Iap2Session) {
                         string(1, config.name)
                         void(17)
                         void(18)
+                        if (config.vehicleSpeedEnabled) void(20)
                     }
                 }
                 group(30) {

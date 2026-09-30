@@ -437,4 +437,6 @@
     <string name="adb_battery_reading">Batería: %1$d %%, %2$d km.</string>
     <string name="adb_battery_unreadable">No se puede leer la batería de este coche, así que el iPhone no sabe que es un coche eléctrico.</string>
     <string name="adb_battery_reconnect">Si CarPlay se conectó antes de que la batería estuviera lista, usa Aplicar y reconectar para activar el envío de los datos de la batería.</string>
+    <string name="wheel_speed_for_tunnels">Velocidad de las ruedas para túneles · requiere ADB</string>
+    <string name="wheel_speed_for_tunnels_description">Con «Informar la ubicación al iPhone» activado, DiPlay también envía la velocidad de las ruedas y la marcha, para que Apple Maps siga moviendo tu posición en túneles y aparcamientos. Reconecta CarPlay. Requiere ADB por red en la unidad principal.</string>
 </resources>

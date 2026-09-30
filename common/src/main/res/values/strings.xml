@@ -448,4 +448,6 @@
     <string name="adb_battery_reading">Battery: %1$d %%, %2$d km.</string>
     <string name="adb_battery_unreadable">The battery cannot be read on this car, so the iPhone is not told about an electric car.</string>
     <string name="adb_battery_reconnect">If CarPlay connected before the battery was ready, use Apply and reconnect to enable battery reporting.</string>
+    <string name="wheel_speed_for_tunnels">Wheel speed for tunnels · needs ADB</string>
+    <string name="wheel_speed_for_tunnels_description">With Report location to iPhone on, DiPlay also sends the car\'s wheel speed and gear, so Apple Maps can keep your position moving in tunnels and car parks. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
 </resources>
