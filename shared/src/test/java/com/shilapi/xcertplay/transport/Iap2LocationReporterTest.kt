@@ -13,6 +13,7 @@ class Iap2LocationReporterTest {
     private val sent = mutableListOf<Iap2Frame>()
     private val progress = mutableListOf<String>()
     private val request = Iap2LocationRequest()
+    private var nowMillis = 0L
 
     // What the iPhone sent on the Bluetooth link in the car: GGA, RMC, PASCD and their intervals.
     private val start = Iap2Messages.buildRaw(Iap2LocationMessages.START_LOCATION_INFORMATION) {
@@ -24,8 +25,9 @@ class Iap2LocationReporterTest {
     }
     private val stop = Iap2Messages.buildRaw(Iap2LocationMessages.STOP_LOCATION_INFORMATION) {}
 
-    private fun bluetooth() = Iap2LocationReporter(provider, { progress += it }, request)
-    private fun wifi() = Iap2LocationReporter(provider, { progress += it }, request, continueRequest = true)
+    private fun bluetooth() = Iap2LocationReporter(provider, { progress += it }, request, nanoTime = { nowMillis * 1_000_000 })
+    private fun wifi() =
+        Iap2LocationReporter(provider, { progress += it }, request, continueRequest = true, nanoTime = { nowMillis * 1_000_000 })
 
     @Test
     fun theBluetoothLinkSendsAndRecordsTheRequest() {
@@ -34,6 +36,7 @@ class Iap2LocationReporterTest {
         assertTrue(link.handle(start) { sent += it })
         assertEquals(setOf(0, 1, 2, 4, 0x8001), request.components)
         assertTrue(provider.started)
+        nowMillis += 1_000
         link.tick { sent += it }
         assertEquals(2, sent.size)
         assertTrue(sent.all { it.messageId == Iap2LocationMessages.LOCATION_INFORMATION })
@@ -52,6 +55,7 @@ class Iap2LocationReporterTest {
 
         val link = wifi()
         link.tick { sent += it }
+        nowMillis += 1_000
         link.tick { sent += it }
 
         assertTrue(provider.started)
@@ -84,6 +88,25 @@ class Iap2LocationReporterTest {
         assertFalse(provider.started)
         assertEquals(1, sent.size)
         assertEquals(60_000L, link.pollTimeout(60_000L))
+    }
+
+    @Test
+    fun aBurstOfIncomingMessagesStillSendsOneFixASecond() {
+        // The loop ticks after every incoming message; at session start the iPhone sends dozens at once.
+        val link = bluetooth()
+        link.handle(start) { sent += it }
+        repeat(12) { link.tick { sent += it } }
+        assertEquals(1, sent.size)
+
+        nowMillis += 400
+        repeat(5) { link.tick { sent += it } }
+        assertEquals(1, sent.size)
+        assertEquals(600L, link.pollTimeout(60_000L))
+
+        nowMillis += 600
+        link.tick { sent += it }
+        assertEquals(2, sent.size)
+        assertEquals(1_000L, link.pollTimeout(60_000L))
     }
 
     @Test

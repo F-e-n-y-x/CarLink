@@ -151,10 +151,12 @@ class Iap2LocationReporter(
     private val onProgress: (String) -> Unit,
     private val request: Iap2LocationRequest? = null,
     private val continueRequest: Boolean = false,
+    private val nanoTime: () -> Long = System::nanoTime,
 ) {
     private var active = false
     private var sentLogged = false
     private var continued = false
+    private var lastAttemptNanos = 0L
 
     /** Handles 0xFFFA/0xFFFC; returns false for any other message. */
     fun handle(frame: Iap2Frame, send: (Iap2Frame) -> Unit): Boolean = when (frame.messageId) {
@@ -176,7 +178,11 @@ class Iap2LocationReporter(
         else -> false
     }
 
-    /** Sends the latest fix while active; on the Wi-Fi link first takes over a Bluetooth request once. */
+    /**
+     * Sends the latest fix once a second while active; on the Wi-Fi link first takes over a Bluetooth
+     * request once. The loop calls this after every incoming message too, so it must not send each time:
+     * that sent a dozen fixes in 0.1 s at session start.
+     */
     fun tick(send: (Iap2Frame) -> Unit) {
         if (continueRequest && !active && !continued) {
             val components = request?.components
@@ -187,14 +193,17 @@ class Iap2LocationReporter(
                 return
             }
         }
-        if (active) sendLatest(send)
+        if (active && sinceAttemptMillis() >= POLL_INTERVAL_MILLIS) sendLatest(send)
     }
 
-    /** Wakes the loop every second while sending, or while a Bluetooth request may still arrive to take over. */
-    fun pollTimeout(remainingMillis: Long): Long {
-        val waiting = active || (continueRequest && !continued && provider != null)
-        return if (waiting) min(remainingMillis, POLL_INTERVAL_MILLIS) else remainingMillis
+    /** Wakes the loop when the next fix is due, or every second while a Bluetooth request may still arrive. */
+    fun pollTimeout(remainingMillis: Long): Long = when {
+        active -> min(remainingMillis, (POLL_INTERVAL_MILLIS - sinceAttemptMillis()).coerceAtLeast(1))
+        continueRequest && !continued && provider != null -> min(remainingMillis, POLL_INTERVAL_MILLIS)
+        else -> remainingMillis
     }
+
+    private fun sinceAttemptMillis() = (nanoTime() - lastAttemptNanos) / 1_000_000
 
     private fun start(send: (Iap2Frame) -> Unit) {
         active = startProvider()
@@ -213,6 +222,7 @@ class Iap2LocationReporter(
     }
 
     private fun sendLatest(send: (Iap2Frame) -> Unit) {
+        lastAttemptNanos = nanoTime()
         val sentence = provider?.latestNmea() ?: return
         send(Iap2LocationMessages.locationInformation(sentence))
         if (!sentLogged) {
