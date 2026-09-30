@@ -26,6 +26,8 @@ class Iap2WirelessControlClient(
         timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
         locationProvider: Iap2LocationProvider? = null,
         vehicleStatusProvider: VehicleStatusProvider? = null,
+        locationRequest: Iap2LocationRequest? = null,
+        continueLocationRequest: Boolean = false,
         onReady: () -> Unit = {},
         onIncoming: (Iap2Frame) -> Unit = {},
         onProgress: (String) -> Unit = {},
@@ -68,8 +70,7 @@ class Iap2WirelessControlClient(
         var postTransportWiFiConfigurationsSent = 0
         var transportNotificationSeen = false
         var wirelessCarPlayAvailableSeen = false
-        var locationActive = false
-        var locationSentLogged = false
+        val location = Iap2LocationReporter(locationProvider, onProgress, locationRequest, continueLocationRequest)
         val vehicleStatus = Iap2VehicleStatusReporter(vehicleStatusProvider, onProgress)
         while (true) {
                 val remaining = remainingMillis(deadlineNanos)
@@ -85,18 +86,9 @@ class Iap2WirelessControlClient(
                         wirelessCarPlayAvailableSeen,
                     )
                 }
-                if (locationActive && sendLatestLocation(locationProvider, deadlineNanos) && !locationSentLogged) {
-                    locationSentLogged = true
-                    onProgress("iap2 tx=0xfffb location-information")
-                }
+                location.tick { send(it, deadlineNanos) }
                 vehicleStatus.tick { send(it, deadlineNanos) }
-                val pollTimeout = vehicleStatus.pollTimeout(
-                    if (locationActive) {
-                        min(remaining, LOCATION_POLL_INTERVAL_MILLIS)
-                    } else {
-                        remaining
-                    },
-                )
+                val pollTimeout = vehicleStatus.pollTimeout(location.pollTimeout(remaining))
                 val incoming = session.recv(pollTimeout)
                 if (incoming == null) {
                     if (session.isClosed) {
@@ -210,25 +202,13 @@ class Iap2WirelessControlClient(
                         }
                     }
 
-                    Iap2LocationMessages.START_LOCATION_INFORMATION -> {
-                        onProgress("iap2 rx=0xfffa start-location-information")
-                        locationActive = startLocationUpdates(locationProvider, onProgress)
-                        locationSentLogged = false
-                        if (locationActive && sendLatestLocation(locationProvider, deadlineNanos)) {
-                            locationSentLogged = true
-                            onProgress("iap2 tx=0xfffb location-information")
-                        }
-                    }
-
                     Iap2VehicleStatus.START_VEHICLE_STATUS_UPDATES, Iap2VehicleStatus.STOP_VEHICLE_STATUS_UPDATES -> {
                         vehicleStatus.handle(incoming) { send(it, deadlineNanos) }
                     }
 
+                    Iap2LocationMessages.START_LOCATION_INFORMATION,
                     Iap2LocationMessages.STOP_LOCATION_INFORMATION -> {
-                        onProgress("iap2 rx=0xfffc stop-location-information")
-                        locationActive = false
-                        locationSentLogged = false
-                        locationProvider?.stop()
+                        location.handle(incoming) { send(it, deadlineNanos) }
                     }
 
                     else -> {
@@ -244,33 +224,6 @@ class Iap2WirelessControlClient(
         session.send(frame, requireRemaining(deadlineNanos))
     }
 
-    private fun sendLatestLocation(
-        provider: Iap2LocationProvider?,
-        deadlineNanos: Long,
-    ): Boolean {
-        val sentence = provider?.latestNmea() ?: return false
-        session.send(
-            Iap2LocationMessages.locationInformation(sentence),
-            requireRemaining(deadlineNanos),
-        )
-        return true
-    }
-
-    private fun startLocationUpdates(
-        provider: Iap2LocationProvider?,
-        onProgress: (String) -> Unit,
-    ): Boolean {
-        if (provider == null) return false
-        return try {
-            provider.start().also { started ->
-                if (!started) onProgress("iap2 location provider did not start")
-            }
-        } catch (error: Exception) {
-            onProgress("iap2 location provider start failed: ${error.message}")
-            false
-        }
-    }
-
     companion object {
         private const val REQUEST_ACCESSORY_WIFI_CONFIGURATION = 0x5702
         private const val ACCESSORY_WIFI_CONFIGURATION = 0x5703
@@ -278,7 +231,6 @@ class Iap2WirelessControlClient(
         private const val CARPLAY_START_SESSION = 0x4301
         private const val WIRELESS_CARPLAY_UPDATE = 0x4e0d
         private const val DEVICE_TRANSPORT_IDENTIFIER_NOTIFICATION = 0x4e0e
-        private const val LOCATION_POLL_INTERVAL_MILLIS = 1_000L
         const val NO_TIMEOUT_MILLIS = Long.MAX_VALUE
         private const val DEFAULT_TIMEOUT_MILLIS = 60_000L
         private const val MAX_TIMEOUT_MILLIS = 24 * 60 * 60 * 1_000L

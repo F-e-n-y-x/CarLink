@@ -73,6 +73,12 @@ class DiPlayActivity : ComponentActivity() {
     private val bluetoothPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) choosePhone() else permissionHelp(getString(R.string.nearby_devices), getString(R.string.allow_nearby_devices_so_diplay_can_connect_to_your_paired))
     }
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (hasPreciseLocation()) return@registerForActivityResult reconnectForLocation()
+        AirPlayPersistence.saveLocationReportingEnabled(this, false)
+        render()
+        permissionHelp(getString(R.string.location), getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p))
+    }
     private val export = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) exportDiagnostics(uri)
     }
@@ -279,6 +285,18 @@ class DiPlayActivity : ComponentActivity() {
             }
             mediaChannelControl(card)
             navigationChannelControl(card)
+        }
+        section(content, getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
+            toggle(card, getString(R.string.report_location_to_iphone),
+                getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th),
+                AirPlayPersistence.loadLocationReportingEnabled(this)) {
+                AirPlayPersistence.saveLocationReportingEnabled(this, it)
+                if (it && !hasPreciseLocation()) {
+                    locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                } else {
+                    reconnectForLocation()
+                }
+            }
         }
         if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
@@ -743,6 +761,14 @@ class DiPlayActivity : ComponentActivity() {
         BydAdbAccess.State.NOT_APPROVED -> getString(R.string.adb_not_approved)
         BydAdbAccess.State.ADB_OFF -> getString(R.string.adb_off)
         BydAdbAccess.State.PAIRING_ONLY -> getString(R.string.adb_pairing_only)
+    }
+
+    private fun hasPreciseLocation() =
+        checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    // The location component is part of the iAP2 identification, so a running session reconnects.
+    private fun reconnectForLocation() {
+        if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
     // The cluster screen is described at connection time, so a running session reconnects over
