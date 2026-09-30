@@ -1,3 +1,11 @@
+# DiPlay 0.2.8 — 2026-09-30
+
+- Keep iPhone location reporting active across the wireless Bluetooth-to-Wi-Fi CarPlay handoff; limit location updates to one per second on wireless and USB.
+- Add optional ADB wheel-speed and gear reporting for iPhone dead reckoning when GPS is unavailable. Tunnel use has not yet been verified.
+- Add optional iOS 27 video playback on the car screen while parked, with iPhone, touchscreen and steering-wheel controls; close playback when leaving P.
+- Explain unsupported DRM-protected video such as Apple TV+, which requires a licensed FairPlay receiver.
+- Improve playback error reporting and preserve CarPlay when the head unit cannot play a video.
+
 # DiPlay 0.2.7 — 2026-09-29
 
 - App interface in English, Simplified Chinese, Arabic, Russian and Spanish; synchronized Android app-language settings.
