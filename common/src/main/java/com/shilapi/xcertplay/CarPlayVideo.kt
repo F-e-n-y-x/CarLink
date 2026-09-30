@@ -5,8 +5,10 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.airplay.VideoInCar
+import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.CarPlayVideoListener
@@ -85,6 +87,17 @@ internal object CarPlayVideo : CarPlayVideoListener {
         playing = next
         activity?.applyRate()
         streamId?.let { reply(it, VideoInCar.playbackStateNotification(next, itemUuid)) }
+    }
+
+    /**
+     * The car's player cannot play the item, for example protected video: tell the iPhone as Apple's
+     * receiver does, say so on the car screen and go back to CarPlay instead of showing black. Main thread.
+     */
+    fun onPlayerFailed(code: Int) {
+        Log.w(TAG, "item cannot play here code=$code")
+        streamId?.let { reply(it, VideoInCar.errorNotification(itemUuid, code)) }
+        appContext?.let { Toast.makeText(it, R.string.video_cannot_play, Toast.LENGTH_LONG).show() }
+        stop()
     }
 
     /** The player closed on the car (Back, or the car left P): pause, so the iPhone shows it paused. */

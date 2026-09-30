@@ -444,4 +444,5 @@
     <string name="video_back_to_carplay">العودة إلى CarPlay</string>
     <string name="video_play">تشغيل</string>
     <string name="video_pause">إيقاف مؤقت</string>
+    <string name="video_cannot_play">لا يمكن تشغيل هذا الفيديو على شاشة السيارة. الفيديو المحمي، مثل Apple TV+، يحتاج إلى مستقبل مرخّص.</string>
 </resources>

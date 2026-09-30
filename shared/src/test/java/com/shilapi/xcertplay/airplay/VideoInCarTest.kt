@@ -122,10 +122,19 @@ class VideoInCarTest {
             VideoInCar.playbackInfoResponse(2L, null, loading),
             VideoInCar.seekResponse(null),
             VideoInCar.playbackStateNotification(true, null),
+            VideoInCar.errorNotification(null, VideoInCar.ERROR_INCOMPATIBLE_ASSET),
         ).forEach { reply ->
             val decoded = BplistCodec.decode(BplistCodec.encode(reply)) as Map<*, *>
             assertEquals(reply["type"], decoded["type"])
         }
+    }
+
+    @Test
+    fun anItemThatCannotPlayIsReportedAsAppleReceiversDo() {
+        assertEquals(
+            mapOf("type" to "error", "error" to mapOf("domain" to "", "code" to -12927L), "uuid" to "C6C3"),
+            VideoInCar.errorNotification("C6C3", VideoInCar.ERROR_INCOMPATIBLE_ASSET),
+        )
     }
 
     @Test

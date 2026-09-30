@@ -28,6 +28,11 @@ object VideoInCar {
         "E3DC3EA6-E6C3-4B30-847C-B7ACFEBEA654", // overlay UI
     )
 
+    /** CoreMedia errors Apple's receiver reports when an item cannot play. */
+    const val ERROR_NETWORK = -17221
+    const val ERROR_DECODER = -12911
+    const val ERROR_INCOMPATIBLE_ASSET = -12927
+
     /** Whether video may play now; the host sets it from the car's gear (P only). */
     @Volatile var allowed = false
 
@@ -138,6 +143,14 @@ object VideoInCar {
         return linkedMapOf("key" to key, "value" to value, "kind" to "response", "type" to "property", "messageID" to messageId)
             .withoutNulls()
     }
+
+    /**
+     * Tells the iPhone the item cannot play here, as Apple's receiver does before it ends the item:
+     * {type: error, error: {domain, code}, uuid}. The iPhone then stops showing it as playing on CarPlay.
+     */
+    fun errorNotification(itemUuid: Any?, code: Int): Map<String, Any?> =
+        linkedMapOf("type" to "error", "error" to linkedMapOf("domain" to "", "code" to code.toLong()), "uuid" to itemUuid)
+            .withoutNulls()
 
     /** Tells the iPhone at once that the car's player started or paused, e.g. from the steering wheel. */
     fun playbackStateNotification(playing: Boolean, itemUuid: Any?): Map<String, Any?> =

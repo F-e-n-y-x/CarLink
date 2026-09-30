@@ -444,4 +444,5 @@
     <string name="video_back_to_carplay">Назад в CarPlay</string>
     <string name="video_play">Воспроизвести</string>
     <string name="video_pause">Пауза</string>
+    <string name="video_cannot_play">Это видео нельзя воспроизвести на экране машины. Защищённому видео, например Apple TV+, нужен лицензированный приёмник.</string>
 </resources>

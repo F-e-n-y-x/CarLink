@@ -61,6 +61,13 @@ class CarPlayVideoActivity : Activity() {
         }
         video.setOnErrorListener { _, what, extra ->
             Log.w(TAG, "player error what=$what extra=$extra")
+            CarPlayVideo.onPlayerFailed(
+                when (extra) {
+                    MediaPlayer.MEDIA_ERROR_IO, MediaPlayer.MEDIA_ERROR_TIMED_OUT -> VideoInCar.ERROR_NETWORK
+                    MediaPlayer.MEDIA_ERROR_MALFORMED, MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> VideoInCar.ERROR_INCOMPATIBLE_ASSET
+                    else -> VideoInCar.ERROR_DECODER
+                },
+            )
             true
         }
         CarPlayVideo.activity = this
