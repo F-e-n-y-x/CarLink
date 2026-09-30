@@ -32,7 +32,11 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.TimeUnit
 
 /** Owns one focus request for all eligible tracks in a CarPlay sink. */
-internal class AudioFocusCoordinator(context: Context?, private val enabled: Boolean) {
+internal class AudioFocusCoordinator(
+    context: Context?,
+    private val enabled: Boolean,
+    private val report: (String) -> Unit = {},
+) {
     private data class Entry(val channel: AudioChannel, val attributes: AudioAttributes)
 
     private val manager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
@@ -41,6 +45,7 @@ internal class AudioFocusCoordinator(context: Context?, private val enabled: Boo
     private var requestedChannel: AudioChannel? = null
     private val listener = AudioManager.OnAudioFocusChangeListener { change ->
         synchronized(this) {
+            runCatching { report("Audio: focus change=$change activeTracks=${active.size}") }
             when (change) {
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> setVolume(DUCKED_VOLUME)
                 AudioManager.AUDIOFOCUS_GAIN -> setVolume(FULL_VOLUME)
@@ -85,7 +90,9 @@ internal class AudioFocusCoordinator(context: Context?, private val enabled: Boo
         request = next
         requestedChannel = primary.channel
         val result = manager?.requestAudioFocus(next)
-        Log.i(TAG, "audio focus requested channel=${primary.channel} gain=$gain granted=$result active=${active.size}")
+        val line = "Audio: focus requested channel=${primary.channel} gain=$gain granted=$result activeTracks=${active.size}"
+        Log.i(TAG, line)
+        runCatching { report(line) }
     }
 
     private fun setVolume(volume: Float) {
@@ -131,7 +138,11 @@ class AndroidMediaSink(
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
 ) : MediaSink {
     private val appContext = context?.applicationContext
-    private val audioFocusCoordinator = AudioFocusCoordinator(appContext, audioFocusEnabled)
+    private val audioFocusCoordinator = AudioFocusCoordinator(
+        appContext,
+        audioFocusEnabled,
+        onAudioDiagnostic,
+    )
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
     private val defaultSurface = surface
@@ -647,6 +658,14 @@ private class AudioRenderer(
     private val packetsDropped = AtomicInteger()
     private val lastArrivalNs = AtomicLong()
     private val maxArrivalGapMs = AtomicLong()
+    private val frameBytes = if (format.channels >= 2) 4 else 2
+    private var totalWrittenFrames = 0L
+    private var writtenFramesThisWindow = 0L
+    private var writeErrorsThisWindow = 0
+    private var lastWriteErrorCode: Int? = null
+    private var zeroWritesThisWindow = 0
+    private var partialWritesThisWindow = 0
+    private var lastPlaybackHeadFrames: Long? = null
     private var maxWriteMs = 0L
     private var statsWindowStartNs = 0L
     private var statsLastUnderruns = 0
@@ -765,7 +784,6 @@ private class AudioRenderer(
         trackAttributes = attributes
         val plan = MediaAudioBuffer.plan(selection.channel == AudioChannel.MEDIA,
             format.sampleRate, format.channels, minBuffer, mediaBufferMillis)
-        val frameBytes = if (format.channels >= 2) 4 else 2
         bytesPerSecond = format.sampleRate * frameBytes
         val built: AudioTrack
         var routeLabel: String
@@ -1099,8 +1117,20 @@ private class AudioRenderer(
             val writeStarted = System.nanoTime()
             val count = track.write(data, offset + written, writeLength, AudioTrack.WRITE_BLOCKING)
             maxWriteMs = maxOf(maxWriteMs, (System.nanoTime() - writeStarted) / 1_000_000L)
-            if (count <= 0) break
+            if (count < 0) {
+                writeErrorsThisWindow++
+                lastWriteErrorCode = count
+                break
+            }
+            if (count == 0) {
+                zeroWritesThisWindow++
+                break
+            }
+            if (count < writeLength) partialWritesThisWindow++
             written += count
+            val framesWritten = count / frameBytes
+            totalWrittenFrames += framesWritten
+            writtenFramesThisWindow += framesWritten
             bufferProgress.written(count)
             lastPcmWriteNs = System.nanoTime()
             if (!playbackStarted) {
@@ -1144,16 +1174,39 @@ private class AudioRenderer(
         if (!force && now - statsWindowStartNs < STATS_WINDOW_NS) return
         val underruns = track?.underrunCount ?: 0
         val lastRx = lastArrivalNs.get()
+        val currentTrack = track
+        val playbackHeadFrames = currentTrack?.playbackHeadPosition
+            ?.toLong()?.and(0xffff_ffffL)
+        val playbackAdvanceFrames = playbackHeadFrames?.let { current ->
+            val previous = lastPlaybackHeadFrames
+            lastPlaybackHeadFrames = current
+            previous?.let { (current - it) and 0xffff_ffffL }
+        }
+        val queuedFrames = playbackHeadFrames?.let { (totalWrittenFrames - it).coerceAtLeast(0L) }
         val line = "audio stats audioType=${format.audioType} channel=$mappedChannel " +
-            "routeType=${track?.routedDevice?.type ?: -1} codec=${format.codec} rx=${packetsReceived.getAndSet(0)} " +
+            "routeType=${currentTrack?.routedDevice?.type ?: -1} codec=${format.codec} " +
+            "trackState=${currentTrack?.state ?: -1} playState=${currentTrack?.playState ?: -1} " +
+            "sampleRate=${currentTrack?.sampleRate ?: format.sampleRate} " +
+            "trackBufferFrames=${currentTrack?.bufferSizeInFrames ?: -1} " +
+            "rx=${packetsReceived.getAndSet(0)} " +
             "dropped=${packetsDropped.getAndSet(0)} underruns=+${underruns - statsLastUnderruns} queue=${queue.size} " +
             "playing=$playbackStarted maxGapMs=${maxArrivalGapMs.getAndSet(0)} " +
             "sinceRxMs=${if (lastRx == 0L) -1 else (now - lastRx) / 1_000_000L} maxWriteMs=$maxWriteMs " +
+            "writtenFrames=$writtenFramesThisWindow totalWrittenFrames=$totalWrittenFrames " +
+            "playbackHeadFrames=${playbackHeadFrames ?: -1} playbackAdvanceFrames=${playbackAdvanceFrames ?: -1} " +
+            "estimatedQueuedFrames=${queuedFrames ?: -1} writeErrors=$writeErrorsThisWindow " +
+            "lastWriteError=${lastWriteErrorCode ?: "none"} zeroWrites=$zeroWritesThisWindow " +
+            "partialWrites=$partialWritesThisWindow " +
             "decoderDroppedTotal=$inputDropped outputBuffersTotal=$outputBuffers rebuffers=$rebufferCount ended=$force"
         Log.i(STATS_TAG, line)
         report(line)
         statsLastUnderruns = underruns
         maxWriteMs = 0L
+        writtenFramesThisWindow = 0L
+        writeErrorsThisWindow = 0
+        lastWriteErrorCode = null
+        zeroWritesThisWindow = 0
+        partialWritesThisWindow = 0
         statsWindowStartNs = now
     }
 

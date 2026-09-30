@@ -95,8 +95,13 @@ class AudioStream(
                 } catch (_: Exception) {
                     if (closed.get()) return else continue
                 }
-                stats.received(packet.length, if (packet.length >= 12)
-                    ((buffer[2].toInt() and 0xff) shl 8) or (buffer[3].toInt() and 0xff) else null)
+                stats.received(
+                    size = packet.length,
+                    sequence = if (packet.length >= RTP_HEADER_LEN) {
+                        ((buffer[2].toInt() and 0xff) shl 8) or (buffer[3].toInt() and 0xff)
+                    } else null,
+                    timestamp = if (packet.length >= RTP_HEADER_LEN) readU32Be(buffer, 4) else null,
+                )
                 val wire = packet.data.copyOf(packet.length)
                 val packetNumber = receivedPackets.incrementAndGet()
                 if (wire.size < RTP_HEADER_LEN + TAIL_LEN) {
