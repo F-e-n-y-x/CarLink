@@ -15,6 +15,7 @@ object BydOutputSettings {
     private const val KEY_LOW_CHARGE_PERCENT = "low_charge_percent"
     private const val KEY_CHARGING_CONNECTORS = "charging_connectors"
     private const val KEY_WHEEL_SPEED_TO_IPHONE = "wheel_speed_to_iphone"
+    private const val KEY_VIDEO_WHILE_PARKED = "video_while_parked"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
 
@@ -48,6 +49,11 @@ object BydOutputSettings {
 
     fun setWheelSpeedToIphone(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_WHEEL_SPEED_TO_IPHONE, enabled).apply()
+    /** Offer iOS 27 video in car, played only while the gear reads P (needs ADB over network). */
+    fun videoWhileParked(context: Context): Boolean = prefs(context).getBoolean(KEY_VIDEO_WHILE_PARKED, false)
+
+    fun setVideoWhileParked(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_VIDEO_WHILE_PARKED, enabled).apply()
 
     /** At or below this charge the iPhone gets the low-range warning. */
     fun lowChargePercent(context: Context): Int = prefs(context).getInt(KEY_LOW_CHARGE_PERCENT, DEFAULT_LOW_CHARGE_PERCENT)

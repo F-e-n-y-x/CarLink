@@ -49,4 +49,6 @@ data class AirPlayConfig(
     val model: String = "xcertplay",
     val oemLabel: String = "xcertplay",
     val icons: List<AirPlayIcon> = emptyList(),
+    /** iOS 27 video in car (see [VideoInCar]); video plays only while [VideoInCar.allowed]. */
+    val videoInCar: Boolean = false,
 )

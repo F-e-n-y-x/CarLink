@@ -439,4 +439,10 @@
     <string name="adb_battery_reconnect">Si CarPlay se conectó antes de que la batería estuviera lista, usa Aplicar y reconectar para activar el envío de los datos de la batería.</string>
     <string name="wheel_speed_for_tunnels">Velocidad de las ruedas para túneles · requiere ADB</string>
     <string name="wheel_speed_for_tunnels_description">Con «Informar la ubicación al iPhone» activado, DiPlay también envía la velocidad de las ruedas y la marcha, para que Apple Maps siga moviendo tu posición en túneles y aparcamientos. Reconecta CarPlay. Requiere ADB por red en la unidad principal.</string>
+    <string name="video_while_parked">Vídeo con el coche aparcado · requiere ADB</string>
+    <string name="video_while_parked_description">iOS 27: el vídeo que envías a CarPlay desde el iPhone se reproduce en la pantalla del coche mientras está en P. El reproductor se cierra al salir de P; sin ADB el vídeo queda desactivado y el iPhone solo reproduce el audio. El vídeo HTTPS normal (por ejemplo, de Safari) funciona; el vídeo protegido con FairPlay, como Apple TV+, necesita un receptor con licencia y aquí no se reproduce. Vuelve a conectar CarPlay. Requiere ADB por red en la unidad principal.</string>
+    <string name="video_back_to_carplay">Volver a CarPlay</string>
+    <string name="video_play">Reproducir</string>
+    <string name="video_pause">Pausa</string>
+    <string name="video_cannot_play">Este vídeo no se puede reproducir en la pantalla del coche. El vídeo protegido, como Apple TV+, necesita un receptor con licencia.</string>
 </resources>
