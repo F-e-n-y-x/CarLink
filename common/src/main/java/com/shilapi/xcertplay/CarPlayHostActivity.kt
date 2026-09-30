@@ -2955,6 +2955,10 @@ class CarPlayHostActivity : ComponentActivity() {
             videoHeight = videoHeight,
             preferSoftwareHevcDecoder = hevcSoftwareDecoderEnabled,
             advancedAudioChannelMapping = advancedAudioChannelMapping,
+            audioFocusEnabled = AirPlayPersistence.loadAudioFocusEnabled(this),
+            mediaChannel = AirPlayPersistence.loadMediaAudioChannel(this),
+            navigationChannel = AirPlayPersistence.loadNavigationAudioChannel(this),
+            context = this,
             navigationStreamType = navigationStreamType,
             onScreenStreamActiveChanged = { type, active ->
                 onScreenStreamStateChanged(controllerGeneration, type, active)

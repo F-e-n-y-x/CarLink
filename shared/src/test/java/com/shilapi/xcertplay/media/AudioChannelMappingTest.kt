@@ -42,21 +42,13 @@ class AudioChannelMappingTest {
 
     @Test
     fun automotiveMappingUsesTheBusSpecificCarPlayTypes() {
-        assertMapped(
-            mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
-            audioType = "media",
-            payloadType = 100,
-            channel = AudioChannel.MEDIA,
-            contentType = AudioContentType.MUSIC,
-        )
-        listOf("default", "compatibility").forEach { audioType ->
+        listOf("media", "compatibility").forEach { audioType ->
             assertMapped(
                 mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
                 audioType = audioType,
                 payloadType = 100,
-                channel = AudioChannel.NAVIGATION,
-                contentType = AudioContentType.SPEECH,
-                streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
+                channel = AudioChannel.MEDIA,
+                contentType = AudioContentType.MUSIC,
             )
         }
         assertMapped(
@@ -73,14 +65,16 @@ class AudioChannelMappingTest {
             channel = AudioChannel.ASSISTANT,
             contentType = AudioContentType.SPEECH,
         )
-        assertMapped(
-            mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
-            audioType = "alert",
-            payloadType = 100,
-            channel = AudioChannel.NAVIGATION,
-            contentType = AudioContentType.SPEECH,
-            streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
-        )
+        listOf("default", "alert").forEach { audioType ->
+            assertMapped(
+                mode = AudioChannelMappingMode.AUTOMOTIVE_BUS,
+                audioType = audioType,
+                payloadType = 100,
+                channel = AudioChannel.NAVIGATION,
+                contentType = AudioContentType.SPEECH,
+                streamType = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
+            )
+        }
     }
 
     @Test

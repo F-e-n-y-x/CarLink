@@ -30,9 +30,8 @@ internal data class AudioChannelSelection(
  *
  * Each selection carries the [AudioChannel] / [AudioContentType] pair used for usage-based
  * AudioAttributes, plus the stream type used when the stream-type AudioTrack path is active.
- * Guidance audio always resolves to [AudioChannel.NAVIGATION] so it can be routed away from the
- * media bus, and `default` / `compatibility` follow it in the automotive mode rather than
- * sharing the media bus.
+ * Guidance resolves to [AudioChannel.NAVIGATION]. Automotive routing keeps compatibility
+ * audio on the media bus, so it receives the configured media buffer and output route.
  */
 internal object AudioChannelMapper {
     const val STREAM_TYPE_MAIN_HIGH_AUDIO = 102
@@ -76,9 +75,9 @@ internal object AudioChannelMapper {
         "telephony" -> AudioChannelSelection(AudioChannel.PHONE, AudioContentType.SPEECH)
         "speechrecognition" ->
             AudioChannelSelection(AudioChannel.ASSISTANT, AudioContentType.SPEECH)
-        "media" -> AudioChannelSelection(AudioChannel.MEDIA, AudioContentType.MUSIC)
-        "alert", "default", "compatibility" ->
-            AudioChannelSelection(AudioChannel.NAVIGATION, AudioContentType.SPEECH, navigationStreamType)
+        "media", "compatibility" ->
+            AudioChannelSelection(AudioChannel.MEDIA, AudioContentType.MUSIC)
+        "default", "alert" -> AudioChannelSelection(AudioChannel.NAVIGATION, AudioContentType.SPEECH, navigationStreamType)
         else -> mainHighAudioOrNavigation(payloadType, navigationStreamType)
     }
 
