@@ -75,10 +75,12 @@ class DiPlayActivity : ComponentActivity() {
         if (granted) choosePhone() else permissionHelp(getString(R.string.nearby_devices), getString(R.string.allow_nearby_devices_so_diplay_can_connect_to_your_paired))
     }
     private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        if (hasPreciseLocation()) return@registerForActivityResult reconnectForLocation()
-        AirPlayPersistence.saveLocationReportingEnabled(this, false)
-        render()
-        permissionHelp(getString(R.string.location), getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p))
+        if (hasPreciseLocation()) {
+            applyLocationReporting(true)
+        } else {
+            render()
+            permissionHelp(getString(R.string.location), getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p))
+        }
     }
     private val export = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) exportDiagnostics(uri)
@@ -307,14 +309,8 @@ class DiPlayActivity : ComponentActivity() {
         section(content, getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),
                 getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th),
-                AirPlayPersistence.loadLocationReportingEnabled(this)) {
-                AirPlayPersistence.saveLocationReportingEnabled(this, it)
-                if (it && !hasPreciseLocation()) {
-                    locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                } else {
-                    reconnectForLocation()
-                }
-            }
+                AirPlayPersistence.loadLocationReportingEnabled(this), ::onLocationReportingChanged)
+            card.addView(label(getString(R.string.location_reporting_reconnects), 14, MUTED))
         }
         if (com.shilapi.xcertplay.hud.BydOutputSettings.available(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
@@ -832,15 +828,33 @@ class DiPlayActivity : ComponentActivity() {
     private fun hasPreciseLocation() =
         checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    // The location component is part of the iAP2 identification, so a running session reconnects.
-    private fun reconnectForLocation() {
-        if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
-    }
-
     // The cluster screen is described at connection time, so a running session reconnects over
     // its current link. The position choices need no call: getString(R.string.apply_and_reconnect) already does it.
     private fun reconnectForClusterMap() {
         if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+    }
+
+    private fun onLocationReportingChanged(enabled: Boolean) {
+        if (enabled && !hasPreciseLocation()) {
+            // Keep the switch off until precise location is actually granted.
+            render()
+            locationPermission.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ))
+            return
+        }
+        applyLocationReporting(enabled)
+    }
+
+    private fun applyLocationReporting(enabled: Boolean) {
+        if (AirPlayPersistence.loadLocationReportingEnabled(this) == enabled) return
+        AirPlayPersistence.saveLocationReportingEnabled(this, enabled)
+        render()
+        // Location support is advertised during iAP2 identification, so both enabling and
+        // disabling it require a new session. The host also refreshes its location service type.
+        if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+        else toast(getString(R.string.saved_for_your_next_connection))
     }
 
     private fun applyWirelessLink(mode: WirelessHotspotMode) {

@@ -97,7 +97,7 @@
     <string name="app_permissions">Permisos de la aplicación</string>
     <string name="app_settings">Ajustes de la aplicación</string>
     <string name="apply_and_reconnect">Aplicar y reconectar</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Aplicar reconecta CarPlay para el tamaño, la resolución, el búfer de música y la frecuencia de imágenes. Los demás cambios se aplican en tu próxima conexión.</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Los ajustes que requieren una nueva conexión reconectan CarPlay al aplicarse. Los demás cambios se aplican en tu próxima conexión.</string>
     <string name="audio">Audio</string>
     <string name="audio_routing">Enrutamiento de audio</string>
     <string name="auto">Auto</string>
@@ -467,4 +467,5 @@
     <string name="center_map_no_permission_screen">Esta unidad principal no tiene pantalla de ajustes para este permiso. Permítelo por ADB.</string>
     <string name="launcher_map_sharing">Compartir el mapa en vivo con otros launchers</string>
     <string name="launcher_map_sharing_description">Los launchers compatibles con DiPlay pueden mostrar el mapa en vivo del panel de instrumentos en su propia pantalla de inicio. Desactivado por defecto, porque entonces cualquier aplicación de la unidad principal podría pedir el mapa. Consulta docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="location_reporting_reconnects">Cambiar este ajuste vuelve a conectar la sesión activa de CarPlay.</string>
 </resources>

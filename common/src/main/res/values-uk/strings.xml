@@ -100,7 +100,7 @@
     <string name="app_permissions">Дозволи застосунку</string>
     <string name="app_settings">Налаштування застосунку</string>
     <string name="apply_and_reconnect">Застосувати й перепідключитися</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Застосування змін розміру, роздільної здатності, музичного буфера й частоти кадрів перепідключає CarPlay. Інші зміни діятимуть після наступного підключення.</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Налаштування, що потребують нового підключення, перепідключають CarPlay під час застосування. Інші зміни діятимуть після наступного підключення.</string>
     <string name="audio">Аудіо</string>
     <string name="audio_routing">Спрямування аудіо</string>
     <string name="auto">Авто</string>
@@ -470,6 +470,7 @@
     <string name="cluster_song_description">Назва й виконавець пісні з CarPlay показуються в музичній картці на приборці, разом із відтворенням і паузою. Картка показується як джерело BYD «Інше», бо приборка не малює власне джерело CarPlay. Застосовується одразу. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="launcher_map_sharing">Ділитися живою картою з іншими лаунчерами</string>
     <string name="launcher_map_sharing_description">Лаунчери з підтримкою DiPlay можуть показувати живу карту приборки на своєму головному екрані. Типово вимкнено, бо тоді карту зможе запитати будь-який застосунок на головному пристрої. Див. docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="location_reporting_reconnects">Зміна цього налаштування перепідключає активний сеанс CarPlay.</string>
     <string name="navigation_widget_description">Наступний поворот, відстань, прибуття й пісня з CarPlay</string>
     <string name="navigation_widget_label">Навігація CarPlay</string>
     <string name="widget_distance_km">%1$d км</string>

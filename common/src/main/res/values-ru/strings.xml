@@ -97,7 +97,7 @@
     <string name="app_permissions">Разрешения приложения</string>
     <string name="app_settings">Настройки приложения</string>
     <string name="apply_and_reconnect">Применить и переподключиться</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Применение переподключает CarPlay для размера, разрешения, буфера музыки и частоты кадров. Остальные изменения применяются при следующем подключении.</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Настройки, требующие нового подключения, переподключают CarPlay при применении. Остальные изменения применяются при следующем подключении.</string>
     <string name="audio">Звук</string>
     <string name="audio_routing">Маршрутизация звука</string>
     <string name="auto">Авто</string>
@@ -467,4 +467,5 @@
     <string name="center_map_no_permission_screen">На этом головном устройстве нет экрана настроек для этого разрешения. Разрешите его через ADB.</string>
     <string name="launcher_map_sharing">Делиться живой картой с другими лаунчерами</string>
     <string name="launcher_map_sharing_description">Лаунчеры с поддержкой DiPlay смогут показывать живую карту приборной панели на своём главном экране. Выключено по умолчанию, потому что тогда карту сможет запросить любое приложение на головном устройстве. Подробнее: docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="location_reporting_reconnects">Изменение этой настройки перезапускает активное подключение CarPlay.</string>
 </resources>

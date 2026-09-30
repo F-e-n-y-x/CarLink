@@ -97,7 +97,7 @@
     <string name="app_permissions">أذونات التطبيق</string>
     <string name="app_settings">إعدادات التطبيق</string>
     <string name="apply_and_reconnect">تطبيق وإعادة الاتصال</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">يعيد التطبيق اتصال CarPlay للحجم والدقة وذاكرة الموسيقى ومعدل الإطارات. تُطبق التغييرات الأخرى في اتصالك التالي.</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">تؤدي الإعدادات التي تتطلب اتصالًا جديدًا إلى إعادة اتصال CarPlay عند تطبيقها. تُطبق التغييرات الأخرى في اتصالك التالي.</string>
     <string name="audio">الصوت</string>
     <string name="audio_routing">توجيه الصوت</string>
     <string name="auto">تلقائي</string>
@@ -467,4 +467,5 @@
     <string name="center_map_no_permission_screen">لا توجد في وحدة القيادة شاشة إعدادات لهذا الإذن. اسمح به عبر ADB.</string>
     <string name="launcher_map_sharing">مشاركة الخريطة المباشرة مع المشغّلات الأخرى</string>
     <string name="launcher_map_sharing_description">يمكن للمشغّلات التي تدعم DiPlay عرض خريطة لوحة العدادات المباشرة داخل شاشتها الرئيسية. معطّل افتراضيًا، لأن أي تطبيق على وحدة القيادة يمكنه عندها طلب الخريطة. راجع docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="location_reporting_reconnects">يؤدي تغيير هذا الإعداد إلى إعادة اتصال جلسة CarPlay النشطة.</string>
 </resources>

@@ -99,7 +99,7 @@
     <string name="app_permissions">App permissions</string>
     <string name="app_settings">App settings</string>
     <string name="apply_and_reconnect">Apply and reconnect</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Apply reconnects CarPlay for size, resolution, music buffer and frame rate. Other changes apply to your next connection.</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Settings that require a new connection restart CarPlay when applied. Other changes apply to your next connection.</string>
     <string name="audio">Audio</string>
     <string name="audio_routing">Audio routing</string>
     <string name="auto">Auto</string>
@@ -478,4 +478,5 @@
     <string name="center_map_no_permission_screen">This head unit has no settings screen for this permission. Allow it over ADB.</string>
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
 </resources>

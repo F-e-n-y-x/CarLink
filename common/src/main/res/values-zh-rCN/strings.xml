@@ -92,7 +92,7 @@
     <string name="app_permissions">应用权限</string>
     <string name="app_settings">应用设置</string>
     <string name="apply_and_reconnect">应用并重新连接</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">应用尺寸、分辨率、音乐缓冲和帧率设置时会重新连接 CarPlay。其他改动将在下次连接时生效。</string>
+    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">需要重新连接的设置会在应用时重连 CarPlay。其他改动将在下次连接时生效。</string>
     <string name="audio">音频</string>
     <string name="audio_routing">音频路由</string>
     <string name="auto">自动</string>
@@ -478,4 +478,5 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
+    <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
 </resources>
