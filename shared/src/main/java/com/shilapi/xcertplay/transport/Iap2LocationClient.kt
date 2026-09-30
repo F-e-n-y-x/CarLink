@@ -184,6 +184,13 @@ class Iap2LocationReporter(
      * that sent a dozen fixes in 0.1 s at session start.
      */
     fun tick(send: (Iap2Frame) -> Unit) {
+        // The Bluetooth reporter receives STOP_LOCATION_INFORMATION and clears the shared request.
+        // Wi-Fi may already have taken over by then, so its active loop must observe that stop too.
+        if (continueRequest && continued && request?.components == null) {
+            active = false
+            sentLogged = false
+            return
+        }
         if (continueRequest && !active && !continued) {
             val components = request?.components
             if (components != null) {
