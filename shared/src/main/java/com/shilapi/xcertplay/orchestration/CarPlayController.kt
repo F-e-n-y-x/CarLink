@@ -1210,6 +1210,18 @@ class CarPlayController(
                         ) {
                             return@Thread
                         }
+                        if (wirelessConnectionProof.hasRenderedFrame(generation)) {
+                            // Some iPhones/firmware combinations establish video but never
+                            // request the type-130 iAP2 tunnel. Do not tear down a proven live
+                            // CarPlay session just because that optional control channel did not
+                            // arrive; that teardown causes the visible reconnect loop.
+                            debugLog(
+                                "wireless handoff tunnel iAP2 unavailable after first video frame; " +
+                                    "preserving the active CarPlay session",
+                            )
+                            onStatus(CarPlayStatus.WirelessActive)
+                            return@Thread
+                        }
                         closeWirelessStack()
                         fail(IOException("Wireless CarPlay handoff timed out waiting for tunnel iAP2"))
                     },
