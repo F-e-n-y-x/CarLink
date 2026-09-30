@@ -306,6 +306,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var menuOpen = false
     private var latestStage = "Preparing CarPlay"
     private var darkMode = false
+    private var lastConfiguration: Configuration? = null
     private var activeAirPlaySession: AirPlaySession? = null
     private val activeScreenStreamTypes = mutableSetOf<Int>()
     private var handshakeResetInProgress = false
@@ -323,6 +324,14 @@ class CarPlayHostActivity : ComponentActivity() {
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
+    // Some head units (e.g. BYD DiLink) update resources.configuration for day/night
+    // without delivering onConfigurationChanged, so poll while the activity is visible.
+    private val pollConfiguration = object : Runnable {
+        override fun run() {
+            refreshConfiguration()
+            mainHandler.postDelayed(this, CONFIGURATION_POLL_INTERVAL_MILLIS)
+        }
+    }
     private val applyDisplaySize = Runnable {
         val size = pendingDisplaySize ?: return@Runnable
         pendingDisplaySize = null
@@ -381,7 +390,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         initializeSessionLog()
-        darkMode = isDarkMode(resources.configuration.uiMode)
+        lastConfiguration = Configuration(resources.configuration)
+        darkMode = nightModeOrNull(resources.configuration.uiMode) ?: false
         advancedAudioChannelMappingSupported =
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
         airPlayIdentity = AirPlayPersistence.loadIdentity(this)
@@ -546,6 +556,12 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        mainHandler.removeCallbacks(pollConfiguration)
+        mainHandler.post(pollConfiguration)
+    }
+
     override fun onResume() {
         super.onResume()
         locationPermissionAvailable = hasFineLocationPermission()
@@ -559,21 +575,21 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) applyFullscreenMode()
+        if (hasFocus) {
+            refreshConfiguration()
+            applyFullscreenMode()
+        }
     }
 
     override fun onStop() {
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
+        mainHandler.removeCallbacks(pollConfiguration)
         super.onStop()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        val nextDarkMode = isDarkMode(newConfig.uiMode)
-        if (nextDarkMode != darkMode) {
-            darkMode = nextDarkMode
-            syncAirPlayDarkMode()
-        }
+        refreshConfiguration(newConfig)
         applyFullscreenMode()
         stageStatusView?.maxWidth = (resources.displayMetrics.widthPixels * 0.78f).toInt()
         scrollLogsToBottom()
@@ -586,6 +602,7 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onDestroy() {
         mainHandler.removeCallbacks(applyDisplaySize)
         mainHandler.removeCallbacks(expireOldLogLines)
+        mainHandler.removeCallbacks(pollConfiguration)
         currentSurface?.let { surface ->
             sink?.clearSurface(SCREEN_TYPE_MAIN, surface)
             sink?.clearSurface(SCREEN_TYPE_ALT, surface)
@@ -2982,6 +2999,17 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    private fun refreshConfiguration(newConfig: Configuration = resources.configuration) {
+        if (lastConfiguration == newConfig) return
+        // resources.configuration is mutated in place, so keep a copy to compare against.
+        lastConfiguration = Configuration(newConfig)
+        val night = nightModeOrNull(newConfig.uiMode) ?: return
+        if (night == darkMode) return
+        darkMode = night
+        appendLog("Head unit switched to ${if (night) "night" else "day"} mode")
+        syncAirPlayDarkMode()
+    }
+
     private fun syncAirPlayDarkMode() {
         val session = activeAirPlaySession ?: return
         val night = darkMode
@@ -3430,6 +3458,7 @@ class CarPlayHostActivity : ComponentActivity() {
         const val SCREEN_TYPE_ALT = 111
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L
+        const val CONFIGURATION_POLL_INTERVAL_MILLIS = 2_000L
         const val RECONNECT_DELAY_MILLIS = 2_000L
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L
         const val CONTROLLER_CLOSE_TIMEOUT_MILLIS = 4_000L
