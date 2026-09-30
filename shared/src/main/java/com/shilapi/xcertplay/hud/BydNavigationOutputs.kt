@@ -34,6 +34,10 @@ object BydNavigationOutputs {
     fun batteryStatus(context: Context): com.shilapi.xcertplay.transport.VehicleStatusProvider =
         BydBatteryStatus.also { it.start(context) }
 
+    /** The car's wheel speed and gear for the iPhone's dead reckoning; read over adb while asked for. */
+    fun wheelSpeed(context: Context): com.shilapi.xcertplay.transport.VehicleSpeedSource =
+        BydWheelSpeedSource.attach(context)
+
     fun start(context: Context) {
         val app = context.applicationContext
         useStandalone = BydStandaloneHudOutput.available(app)

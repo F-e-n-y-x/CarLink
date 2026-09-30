@@ -76,3 +76,13 @@ The values come from the adb shell (apps need a BYD signature for them), read ev
 Full charge and full range are scaled up from the current values. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.
 
 If CarPlay connected before the first battery reading was available, battery reporting stays off for that connection. In BYD navigation settings, **Check ADB access** now caches the reading it displays. **Apply and reconnect** checks and caches a valid reading before reconnecting; if ADB or the battery is unavailable, it keeps the current connection and shows the failure instead. Enabling battery reporting during an active session uses the same check-before-reconnect path. Returning after idle also requests an immediate background refresh rather than waiting for the next 30-second poll. The UI and iAP2 loop never wait for ADB.
+
+## Wheel speed for tunnels (optional, needs ADB)
+
+"Report location to iPhone" (Settings → Location) sends the head unit's position as `$GPGGA` + `$GPRMC` in iAP2 LocationInformation (`0xFFFB`). In a tunnel or car park there is no fix, and the iPhone has only its own motion sensors. "Wheel speed for tunnels · needs ADB" adds the car's speed and gear so the iPhone can keep the position moving:
+
+- DiPlay also sets VehicleSpeedData (id 20) in the LocationInformation identification component. It sends `$PASCD` only if the iPhone selects it (id 4) in StartLocationInformation (`0xFFFA`); the log shows the ids the iPhone asked for (`components=[…]`).
+- Every LocationInformation (about once a second) carries the samples since the previous one, even without a GPS fix: `$PASCD,<first sample, s since boot>,C,<P/R/N/D>,0,<n>,<offset s>,<speed m/s>,…*CS`. The layout copies a production head unit's log; what `C` and `0` stand for is not public.
+- Speed: device 1013, `-1807745016`, float km/h (BYD SDK speed), read four times a second over adb — `service call autoservice 7 i32 1013 i32 -1807745016`. Gear: device 1011, `555745336`, 1 P, 2 R, 3 N, 4 D, read once a second — `service call autoservice 5 i32 1011 i32 555745336`.
+
+Checked in the car at walking speed: the gear followed D, R and P (4, 2, 1), and the speed arrives in whole km/h. With the setting on, the iPhone asked for vehicle speed (id 4) and DiPlay sent `$PASCD` over both the Bluetooth and the Wi-Fi link. Whether the iPhone uses the speed in a tunnel is still to be tested. Gyro and accelerometer (`$PAGCD`, `$PAACD`) are not sent because their layout is not public.

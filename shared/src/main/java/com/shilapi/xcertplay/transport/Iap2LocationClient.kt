@@ -29,6 +29,9 @@ data class CarPlayLocationFix(
 
 /** Supplies location data only while the phone has subscribed to iAP2 LocationInformation. */
 interface Iap2LocationProvider : AutoCloseable {
+    /** The 0xFFFA parameter ids, i.e. the sentence types the iPhone asked for; called before [start]. */
+    fun onRequested(components: Set<Int>) = Unit
+
     /** Starts location updates and returns whether at least one source was subscribed. */
     fun start(): Boolean
 
@@ -164,6 +167,7 @@ class Iap2LocationReporter(
             val components = Iap2LocationMessages.requestedComponents(frame)
             onProgress("iap2 rx=0xfffa start-location-information components=$components")
             request?.components = components
+            provider?.onRequested(components)
             start(send)
             true
         }
@@ -196,6 +200,7 @@ class Iap2LocationReporter(
             if (components != null) {
                 continued = true
                 onProgress("iap2 location request continues from the Bluetooth link components=$components")
+                provider?.onRequested(components)
                 start(send)
                 return
             }
@@ -247,6 +252,9 @@ object Iap2LocationMessages {
     const val START_LOCATION_INFORMATION = 0xfffa
     const val LOCATION_INFORMATION = 0xfffb
     const val STOP_LOCATION_INFORMATION = 0xfffc
+
+    /** 0xFFFA selector for `$PASCD`; the matching IdentificationInformation flag is 20. */
+    const val VEHICLE_SPEED_DATA = 4
 
     /** The parameter ids of a 0xFFFA request (the sentence types asked for), or none if unreadable. */
     fun requestedComponents(frame: Iap2Frame): Set<Int> =
