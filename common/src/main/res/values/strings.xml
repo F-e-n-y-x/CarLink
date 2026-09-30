@@ -450,4 +450,9 @@
     <string name="adb_battery_reconnect">If CarPlay connected before the battery was ready, use Apply and reconnect to enable battery reporting.</string>
     <string name="wheel_speed_for_tunnels">Wheel speed for tunnels · needs ADB</string>
     <string name="wheel_speed_for_tunnels_description">With Report location to iPhone on, DiPlay also sends the car\'s wheel speed and gear, so Apple Maps can keep your position moving in tunnels and car parks. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
+    <string name="video_while_parked">Video while parked · needs ADB</string>
+    <string name="video_while_parked_description">iOS 27: a video you send to CarPlay on the iPhone plays on the car screen while the car is in P. The player closes when you shift out of P; without ADB video stays off and the iPhone plays audio only. Plain HTTPS video (for example from Safari) plays; video protected with FairPlay, such as Apple TV+, needs a licensed receiver and does not play here. Reconnects CarPlay. Needs ADB over network on the head unit.</string>
+    <string name="video_back_to_carplay">Back to CarPlay</string>
+    <string name="video_play">Play</string>
+    <string name="video_pause">Pause</string>
 </resources>

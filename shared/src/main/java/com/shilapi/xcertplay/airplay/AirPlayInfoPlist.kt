@@ -69,6 +69,11 @@ object AirPlayInfoPlist {
             }
         }
         if (config.hevc) info["hevcInfo"] = emptyMap<String, Any?>()
+        if (config.videoInCar) {
+            // The iPhone tears down a session that enables videoPlayback without this key.
+            val legacy = if (config.disableAudioOutput) CARPLAY_FEATURES_NO_AUDIO else CARPLAY_FEATURES
+            info["videoPlaybackInfo"] = VideoInCar.info(legacy, VideoInCar.allowed)
+        }
         return info
     }
 

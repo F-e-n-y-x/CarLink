@@ -439,4 +439,9 @@
     <string name="adb_battery_reconnect">إذا اتصل CarPlay قبل أن تصبح بيانات البطارية جاهزة، استخدم «تطبيق وإعادة الاتصال» لتفعيل إرسال بيانات البطارية.</string>
     <string name="wheel_speed_for_tunnels">سرعة العجلات في الأنفاق · يتطلب ADB</string>
     <string name="wheel_speed_for_tunnels_description">عند تشغيل «إرسال الموقع إلى iPhone»، يرسل DiPlay أيضًا سرعة عجلات السيارة وناقل الحركة، لتواصل «خرائط Apple» تحريك موقعك في الأنفاق ومواقف السيارات. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="video_while_parked">الفيديو أثناء التوقف · يتطلب ADB</string>
+    <string name="video_while_parked_description">iOS 27: يُعرض الفيديو الذي ترسله إلى CarPlay من iPhone على شاشة السيارة ما دامت السيارة على وضع P. يُغلق المشغل عند الخروج من P؛ وبدون ADB يبقى الفيديو متوقفًا ويشغّل iPhone الصوت فقط. يعمل فيديو HTTPS العادي (مثل Safari)؛ أما الفيديو المحمي بـ FairPlay مثل Apple TV+ فيحتاج إلى مستقبل مرخّص ولا يعمل هنا. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
+    <string name="video_back_to_carplay">العودة إلى CarPlay</string>
+    <string name="video_play">تشغيل</string>
+    <string name="video_pause">إيقاف مؤقت</string>
 </resources>

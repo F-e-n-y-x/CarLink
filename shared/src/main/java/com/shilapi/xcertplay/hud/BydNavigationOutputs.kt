@@ -37,6 +37,8 @@ object BydNavigationOutputs {
     /** The car's wheel speed and gear for the iPhone's dead reckoning; read over adb while asked for. */
     fun wheelSpeed(context: Context): com.shilapi.xcertplay.transport.VehicleSpeedSource =
         BydWheelSpeedSource.attach(context)
+    /** Whether the car is in P (read over adb), or null when it cannot tell. Blocking. */
+    fun parked(context: Context): Boolean? = BydParkedState.parked(context.applicationContext)
 
     fun start(context: Context) {
         val app = context.applicationContext

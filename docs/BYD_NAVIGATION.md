@@ -86,3 +86,17 @@ If CarPlay connected before the first battery reading was available, battery rep
 - Speed: device 1013, `-1807745016`, float km/h (BYD SDK speed), read four times a second over adb — `service call autoservice 7 i32 1013 i32 -1807745016`. Gear: device 1011, `555745336`, 1 P, 2 R, 3 N, 4 D, read once a second — `service call autoservice 5 i32 1011 i32 555745336`.
 
 Checked in the car at walking speed: the gear followed D, R and P (4, 2, 1), and the speed arrives in whole km/h. With the setting on, the iPhone asked for vehicle speed (id 4) and DiPlay sent `$PASCD` over both the Bluetooth and the Wi-Fi link. Whether the iPhone uses the speed in a tunnel is still to be tested. Gyro and accelerometer (`$PAGCD`, `$PAACD`) are not sent because their layout is not public.
+
+## Video while parked (optional, needs ADB)
+
+iOS 27 can play video on the CarPlay screen while the car is parked ("video in car"): the iPhone hands the head unit a media URL and drives playback, and the head unit plays it in its own player. With "Video while parked · needs ADB" turned on, DiPlay offers this and plays the video full screen over CarPlay; a tap shows **Back to CarPlay** and play/pause. The switch is off by default and reconnects CarPlay.
+
+Video is allowed only while the gear reads P. DiPlay reads the gearbox once a second through the adb shell (gearbox device 1011, `service call autoservice 5 i32 1011 i32 555745336` → 1 P, 2 R, 3 N, 4 D) and tells the iPhone with `setVideoPlaybackAllowed`. Leaving P closes the player and the iPhone goes on with audio only; so does a gear that cannot be read (no ADB access). The steering-wheel keys drive the car's player while it is open: play/pause toggles it and next/previous skip 10 s. They do not go to the iPhone, which ends the video session on a CarPlay play/pause.
+
+What the iPhone expects, as observed with iOS 27 and checked against Apple's CarPlay Simulator (Additional Tools for Xcode 27) and its AirPlay web app:
+
+- `/info` carries `videoPlaybackInfo`: `videoPlaybackAllowed`, `featuresEx` (the legacy feature bits plus bits 0 and 64, base64 of the little-endian bit set) and `playbackCapabilities`. SETUP enables `videoPlayback` when the iPhone proposes it; without `videoPlaybackInfo` the iPhone tears the session down.
+- The iPhone opens a "CarPlayVideo Settings App" data stream (`BB493F61-…`), encrypted like the iAP tunnel; each `sync` package gets an empty `rply`. Playback runs over remote control sessions without a socket (`A6B27562-…` video setup, `E3DC3EA6-…` overlay UI, `controlType` 1), answered with a stream ID from 3 up. Tearing down one of them must not close the iAP tunnel (stream ID 1).
+- Playback messages arrive as `POST /command` with `X-Apple-StreamID` and `{params: {data: bplist}}`: `insertPlayQueueItem`, `setRate`, `seek`, `playbackInfo`, `property`, `setProperty`, `stop`. DiPlay answers `playbackInfo`, `seek` and `property` the way Apple's web app does and sends `playbackState` when the car pauses or resumes. `requestUI` with `videoplayback:` asks the car to show its player.
+
+What plays: plain HTTPS media, as Safari sends it, worked in the car, including pause, seeking from the iPhone and the wheel keys. Apple TV sends HLS whose key the car's player cannot fetch; Apple's own receiver passes such keys to the iPhone (`unhandledURL`, `streamingKey`) and answers with a FairPlay key request, which needs a licensed FairPlay receiver, so Apple TV+ does not play here. Netflix does not support AirPlay. In testing YouTube played audio only.

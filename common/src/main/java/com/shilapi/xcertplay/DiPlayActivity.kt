@@ -406,10 +406,18 @@ class DiPlayActivity : ComponentActivity() {
                 if (it) checkAdbAccess(mayAsk = true)
                 if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
             }
+            toggle(card, getString(R.string.video_while_parked),
+                getString(R.string.video_while_parked_description),
+                BydOutputSettings.videoWhileParked(this)) {
+                BydOutputSettings.setVideoWhileParked(this, it)
+                if (it) checkAdbAccess(mayAsk = true)
+                if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
+            }
             adbStatus = label("", 14, MUTED).also { status ->
                 card.addView(status)
             }
-            if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this) || BydOutputSettings.wheelSpeedToIphone(this))
+            if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this) ||
+                BydOutputSettings.wheelSpeedToIphone(this) || BydOutputSettings.videoWhileParked(this))
                 checkAdbAccess(mayAsk = false)
             card.addView(button(getString(R.string.check_adb_access), false) { checkAdbAccess(mayAsk = true) }, matchButton(10, 56))
             card.addView(button(getString(R.string.apply_and_reconnect), false) {
