@@ -43,7 +43,11 @@ internal object NavigationWidgetUpdater {
         val manager = AppWidgetManager.getInstance(app)
         val ids = runCatching { manager.getAppWidgetIds(ComponentName(app, NavigationWidget::class.java)) }.getOrNull()
         if (ids == null || ids.isEmpty()) return@Runnable
-        runCatching { manager.updateAppWidget(ids, views(app, CarPlayGlance.snapshot())) }
+        val glance = CarPlayGlance.snapshot()
+        runCatching { manager.updateAppWidget(ids, views(app, glance)) }
+        // Route state has expiry deadlines. Keep checking while an instruction is visible,
+        // including when the iPhone stops sending updates without ending the session.
+        if (glance.connected && glance.maneuverType != null) schedule()
     }
 
     fun attach(appContext: Context) {

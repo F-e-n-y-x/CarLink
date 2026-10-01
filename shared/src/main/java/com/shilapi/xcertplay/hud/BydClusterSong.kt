@@ -23,7 +23,7 @@ internal class ClusterSongState {
     private var playing = false
     private var last: ClusterSong? = null
 
-    /** The card to show when [frame] changed it, otherwise null. */
+    /** Updates the cached card; null can mean unchanged or cleared, so consumers compare [current]. */
     fun accept(frame: Iap2Frame): ClusterSong? {
         if (frame.messageId != NOW_PLAYING_UPDATE) return null
         val body = runCatching { Iap2BodyReader.of(frame) }.getOrNull() ?: return null
@@ -39,8 +39,7 @@ internal class ClusterSongState {
         runCatching { body.optionalGroup(PLAYBACK)?.optionalU8(STATUS) }.getOrNull()?.let { status ->
             playing = status == STATUS_PLAYING || status == STATUS_SEEK_FORWARD || status == STATUS_SEEK_BACKWARD
         }
-        val text = text(title, artist) ?: return null
-        val next = ClusterSong(text, playing)
+        val next = text(title, artist)?.let { ClusterSong(it, playing) }
         if (next == last) return null
         last = next
         return next
@@ -113,8 +112,14 @@ internal object BydClusterSong {
     /** NowPlayingUpdate frames; the song is followed even while the setting is off, so it can show at once. */
     fun onFrame(frame: Iap2Frame) {
         val app = context ?: return
-        val song = synchronized(state) { state.accept(frame) } ?: return
-        if (BydOutputSettings.clusterSong(app)) show(app, song)
+        val song = synchronized(state) {
+            val previous = state.current()
+            state.accept(frame)
+            state.current().also { if (it == previous) return }
+        }
+        if (BydOutputSettings.clusterSong(app)) {
+            if (song == null) stop(app) else show(app, song)
+        }
     }
 
     /** The setting changed: show the current song now, or stop the card DiPlay set. */
