@@ -61,7 +61,7 @@ internal class AudioChannelPreview(private val onUnavailable: (Int) -> Unit) : C
                         .setBufferSizeInBytes(bufferBytes)
                         .build()
                 } else {
-                    // 与实际播放保持一致，交由车机处理厂商扩展 streamType。
+                    // Match playback and let the head unit handle vendor-specific stream types.
                     @Suppress("DEPRECATION")
                     AudioTrack(channel, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
                         AudioFormat.ENCODING_PCM_16BIT, bufferBytes, AudioTrack.MODE_STREAM)

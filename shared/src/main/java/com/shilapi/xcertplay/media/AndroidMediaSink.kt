@@ -888,7 +888,7 @@ private class AudioRenderer(
         )
     }
 
-    /** 0 使用 usage 路由；1–20 尝试 legacy streamType，由车机决定支持情况。 */
+    /** 0 uses usage-based routing; 1–20 attempt legacy stream types supported by the head unit. */
     private fun channelOverride(channel: AudioChannel): Int = when (channel) {
         AudioChannel.MEDIA -> mediaChannel
         AudioChannel.NAVIGATION -> navigationChannel

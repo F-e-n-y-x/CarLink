@@ -20,7 +20,7 @@ import java.io.File
 
 /** SharedPreferences persistence for the accessory identity and paired controllers. */
 object AirPlayPersistence {
-    /** 0 使用 usage 路由；1–20 为 streamType，具体支持情况取决于车机。 */
+    /** 0 uses usage-based routing; 1–20 select stream types supported by the head unit. */
     val AUDIO_CHANNELS = 0..20
     private const val PREFS = "xcertplay_airplay"
     private const val KEY_IDENT_PRIVATE = "identity_private"
@@ -171,7 +171,7 @@ object AirPlayPersistence {
 
     fun loadNavigationAudioChannel(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        // 仅在新键缺失时继承旧配置；新安装保持自动路由，已保存的 0 也优先保留。
+        // Inherit the legacy value only when the new key is absent; preserve fresh-install and explicit 0 defaults.
         return prefs.getInt(KEY_NAVIGATION_AUDIO_CHANNEL, prefs.getInt(KEY_NAVIGATION_STREAM_TYPE, 0))
             .takeIf { it in AUDIO_CHANNELS } ?: 0
     }
