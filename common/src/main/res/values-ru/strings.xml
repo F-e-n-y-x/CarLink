@@ -456,4 +456,13 @@
     <string name="widget_distance_km">%1$d км</string>
     <string name="widget_minutes">%1$d мин</string>
     <string name="widget_hours_minutes">%1$d ч %2$02d мин</string>
+    <string name="center_map_card">Карта приборной панели на центральном экране</string>
+    <string name="center_map_card_description">Пока DiPlay в фоне, карта приборной панели также показывается карточкой на главном экране: главном экране BYD, в режиме карты или в вашем лаунчере по умолчанию. Нажмите на карточку, чтобы открыть CarPlay, перетащите её, чтобы переместить, и измените размер двумя пальцами. Приборная панель сохраняет свою карту. Нужно разрешение показывать поверх других приложений.</string>
+    <string name="center_map_overlay_allowed">Поверх других приложений: разрешено</string>
+    <string name="center_map_overlay_missing">Поверх других приложений: не разрешено. Разрешите в настройках приложения или через ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+    <string name="center_map_usage_allowed">Доступ к истории использования: разрешён, карточка показывается только на главном экране</string>
+    <string name="center_map_usage_missing">Доступ к истории использования: не разрешён, поэтому карточка показывается поверх всех приложений. Через ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="center_map_no_permission_screen">На этом головном устройстве нет экрана настроек для этого разрешения. Разрешите его через ADB.</string>
+    <string name="launcher_map_sharing">Делиться живой картой с другими лаунчерами</string>
+    <string name="launcher_map_sharing_description">Лаунчеры с поддержкой DiPlay смогут показывать живую карту приборной панели на своём главном экране. Выключено по умолчанию, потому что тогда карту сможет запросить любое приложение на головном устройстве. Подробнее: docs/LAUNCHER_INTEGRATION.md.</string>
 </resources>
