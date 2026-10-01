@@ -85,6 +85,8 @@ Service action: `com.shihab.diplay.action.EMBED_MAP`. The package differs betwee
 | DiPlay → launcher | `102` STREAM_STATE | `streamActive` (boolean) | The map started or stopped |
 | DiPlay → launcher | `199` ERROR | `error`: `disabled`, `unsupported` or `bad_request` | The map cannot be shown |
 
+Turning sharing off releases every attached map and sends `ERROR` with `disabled` to its launcher. Treat this as a detach. Enabling sharing again requires a fresh `ATTACH`; old views do not reconnect automatically.
+
 The map is 8:3. If your view has another shape, DiPlay fills it and crops the edges, keeping the car position near the centre. While there is no map, the view shows a "waiting" text. A tap on the map opens CarPlay.
 
 ### Steps
