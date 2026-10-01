@@ -3188,7 +3188,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayMediaKeys.attach(this, next)
         if (airPlayConfig.videoInCar) CarPlayVideo.attach(this, next)
         val display = CarPlaySessionDisplay(airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
-            displayRotation(), hideTopBar, hideBottomBar)
+            displayRotation(), hideTopBar, hideBottomBar, size.width, size.height)
         sessionDisplay = display
         videoView?.let { updateVideoLayout(it.width, it.height) }
         CarPlayBackgroundSession.store(next, renderer, size.width, size.height, this, display) { completion ->
@@ -3257,8 +3257,10 @@ class CarPlayHostActivity : ComponentActivity() {
                 "Display updated while handshake is reset: " +
                     "${previous.width}x${previous.height} -> ${size.width}x${size.height}",
             )
-        } else if (display != null && !layoutChanged) {
-            // Surround view only resizes the window; keep the negotiated canvas and connection.
+        } else if (display != null && !layoutChanged &&
+            size.width <= display.windowWidth && size.height <= display.windowHeight) {
+            // Keep camera shrink/restore cycles within the original window connected. If the
+            // session started in a camera window, growth beyond it needs a full-size canvas.
             val message = "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}; " +
                 "keeping CarPlay session canvas=${display.width}x${display.height}"
             appendLog(message)
@@ -3753,6 +3755,9 @@ internal data class CarPlaySessionDisplay(
     val rotation: Int,
     val hideTopBar: Boolean,
     val hideBottomBar: Boolean,
+    // Compare unscaled startup window dimensions, not the scaled video canvas.
+    val windowWidth: Int,
+    val windowHeight: Int,
 )
 
 /** Process-local hand-off for keeping the CarPlay session alive while no Activity is visible. */

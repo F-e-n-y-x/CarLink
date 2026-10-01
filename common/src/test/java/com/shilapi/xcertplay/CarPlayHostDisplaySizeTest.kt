@@ -71,6 +71,37 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, keepLogs())
     }
 
+    @Test fun connectingInANarrowWindowRebuildsWhenTheCameraCloses() {
+        startSession(windowWidth = 700)
+        applySize(1920, 990)
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(1, getField("restartGeneration"))
+        assertTrue(getField("handshakeResetInProgress") as Boolean)
+        assertNull(getField("sessionDisplay"))
+    }
+
+    @Test fun connectingInAReducedHeightWindowRebuildsWhenTheCameraCloses() {
+        startSession(windowHeight = 942)
+        applySize(1920, 990)
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
+    @Test fun aScaledDownCanvasKeepsTheSessionWhenTheOriginalWindowReturns() {
+        val display = startSession(canvasWidth = 1536, canvasHeight = 792)
+        applySize(700, 990)
+        applySize(1920, 990)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    @Test fun aScaledUpCanvasStillRebuildsWhenTheStartupWindowGrows() {
+        startSession(windowWidth = 700, canvasWidth = 1400, canvasHeight = 1980)
+        applySize(1000, 990)
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
     @Test fun actualScreenRotationStillRebuildsTheSession() {
         startSession(rotation = Surface.ROTATION_90)
         applySize(990, 1920)
@@ -150,7 +181,7 @@ class CarPlayHostDisplaySizeTest {
     }
 
     @Test fun adoptingABackgroundSessionPreservesItsCanvasOnResize() {
-        val display = CarPlaySessionDisplay(1536, 792, Surface.ROTATION_0, true, true)
+        val display = CarPlaySessionDisplay(1536, 792, Surface.ROTATION_0, true, true, 1920, 990)
         val sink = AndroidMediaSink()
         val controller = CarPlayController(activity,
             CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, identification = Iap2IdentificationConfig(
@@ -172,6 +203,12 @@ class CarPlayHostDisplaySizeTest {
             assertEquals(display, CarPlayBackgroundSession.snapshot()?.display)
             assertFalse(controller.isClosed())
             assertEquals(0, getField("restartGeneration"))
+            applySize(1920, 990)
+            assertSame(display, getField("sessionDisplay"))
+            assertEquals(0, getField("restartGeneration"))
+            applySize(2000, 990)
+            assertEquals(1, getField("restartGeneration"))
+            assertNull(getField("sessionDisplay"))
         } finally {
             controller.close()
             controller.awaitClosed(1000)
@@ -179,8 +216,17 @@ class CarPlayHostDisplaySizeTest {
         }
     }
 
-    private fun startSession(rotation: Int = Surface.ROTATION_0): CarPlaySessionDisplay =
-        CarPlaySessionDisplay(1920, 990, rotation, true, true).also { setField("sessionDisplay", it) }
+    private fun startSession(
+        rotation: Int = Surface.ROTATION_0,
+        windowWidth: Int = 1920,
+        windowHeight: Int = 990,
+        canvasWidth: Int = windowWidth,
+        canvasHeight: Int = windowHeight,
+    ): CarPlaySessionDisplay =
+        CarPlaySessionDisplay(canvasWidth, canvasHeight, rotation, true, true, windowWidth, windowHeight).also {
+            setField("activeDisplaySize", size(windowWidth, windowHeight))
+            setField("sessionDisplay", it)
+        }
 
     private fun keepLogs(): Int = ShadowLog.getLogsForTag("xcertplay-usb").count {
         it.msg.contains("keeping CarPlay session")
