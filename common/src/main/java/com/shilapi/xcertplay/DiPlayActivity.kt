@@ -122,6 +122,23 @@ class DiPlayActivity : ComponentActivity() {
     }
     override fun onSaveInstanceState(outState: Bundle) { outState.putString("page", page); outState.putBoolean("pending_car_hotspot", pendingCarHotspotSetup); super.onSaveInstanceState(outState) }
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
+    private fun openOverlayPermission() {
+        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+        if (runCatching { startActivity(intent) }.isFailure) {
+            android.widget.Toast.makeText(this, R.string.center_map_no_permission_screen, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        CenterMapOverlay.onDiPlayScreenShown()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isFinishing && !isChangingConfigurations) CenterMapOverlay.scheduleShow()
+    }
+
     override fun onResume() {
         super.onResume()
         if (Build.VERSION.SDK_INT < 33 && AppLocale.preference(this) != languagePreferenceAtCreate) {
@@ -308,6 +325,19 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap()
+                }
+                toggle(card, getString(R.string.center_map_card), getString(R.string.center_map_card_description),
+                    AirPlayPersistence.loadCenterMapOverlay(this)) {
+                    AirPlayPersistence.saveCenterMapOverlay(this, it)
+                    if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
+                }
+                if (AirPlayPersistence.loadCenterMapOverlay(this)) {
+                    val overlay = CenterMapOverlay.permitted(this)
+                    card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
+                        else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
+                    val usage = HomeScreenMonitor.hasAccess(this)
+                    card.addView(label(if (usage) getString(R.string.center_map_usage_allowed)
+                        else getString(R.string.center_map_usage_missing, packageName), 14, if (usage) MUTED else WARNING))
                 }
                 if (DiLink51ClusterLayout.supported()) {
                     val automatic = DiLink51ClusterLayout.automatic(this)
