@@ -71,7 +71,6 @@
     <string name="audio_stream_unavailable">Тип потока %1$d недоступен здесь (состояние=%2$s)</string>
     <string name="resolution_handshake_prefix">Разрешение рукопожатия:\u0020</string>
     <string name="safe_area_full_screen_at">Безопасная область: полный экран \u0020</string>
-    <string name="safe_area_prefix">Безопасная область:\u0020</string>
     <string name="settings_android9_compat">Следующие настройки недоступны и скрыты на Android 9 (API 28):\n• Wi-Fi P2P (5 ГГц) — вместо него используется LocalOnlyHotspot.\n• Программный декодер HEVC — вместо него используется аппаратное декодирование.</string>
     <string name="settings_mfi_address_hint">Адрес должен начинаться с http:// или https://. Токен необязателен и отправляется как Authorization bearer token.</string>
     <string name="language_section_title">Язык</string>
@@ -447,6 +446,7 @@
     <string name="video_play">Воспроизвести</string>
     <string name="video_pause">Пауза</string>
     <string name="video_cannot_play">Это видео нельзя воспроизвести на экране машины. Защищённому видео, например Apple TV+, нужен лицензированный приёмник.</string>
+    <string name="safe_area_mapping_summary">Безопасная область: %1$d x %2$d в точке (%3$d, %4$d) на экране %5$d x %6$d</string>
     <string name="navigation_widget_label">Навигация CarPlay</string>
     <string name="navigation_widget_description">Следующий поворот, расстояние, прибытие и песня из CarPlay</string>
     <string name="widget_not_connected">CarPlay не подключён</string>

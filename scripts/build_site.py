@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the five static GitHub Pages editions; no runtime dependencies."""
+"""Generate the static GitHub Pages editions, one per language in content.json; no runtime dependencies."""
 from pathlib import Path
 import json
 from html import escape as e

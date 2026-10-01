@@ -71,7 +71,6 @@
     <string name="audio_stream_unavailable">El tipo de flujo %1$d no está disponible aquí (estado=%2$s)</string>
     <string name="resolution_handshake_prefix">Resolución del enlace:\u0020</string>
     <string name="safe_area_full_screen_at">Zona segura: pantalla completa en\u0020</string>
-    <string name="safe_area_prefix">Zona segura:\u0020</string>
     <string name="settings_android9_compat">Los siguientes ajustes no están disponibles y están ocultos en Android 9 (API 28):\n• Wi-Fi P2P (5 GHz) — se usa LocalOnlyHotspot en su lugar.\n• Decodificador por software HEVC — se usa la decodificación por hardware en su lugar.</string>
     <string name="settings_mfi_address_hint">La dirección debe empezar por http:// o https://. El token es opcional y se envía como Authorization bearer token.</string>
     <string name="language_section_title">Idioma</string>
@@ -447,6 +446,7 @@
     <string name="video_play">Reproducir</string>
     <string name="video_pause">Pausa</string>
     <string name="video_cannot_play">Este vídeo no se puede reproducir en la pantalla del coche. El vídeo protegido, como Apple TV+, necesita un receptor con licencia.</string>
+    <string name="safe_area_mapping_summary">Zona segura: %1$d x %2$d en (%3$d, %4$d) dentro de %5$d x %6$d</string>
     <string name="navigation_widget_label">Navegación de CarPlay</string>
     <string name="navigation_widget_description">Próximo giro, distancia, llegada y canción de CarPlay</string>
     <string name="widget_not_connected">CarPlay no está conectado</string>
