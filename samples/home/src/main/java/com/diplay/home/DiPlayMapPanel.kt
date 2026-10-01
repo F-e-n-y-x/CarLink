@@ -133,13 +133,16 @@ class DiPlayMapPanel(context: Context) : FrameLayout(context) {
                 // DiPlay draws its own "waiting" text until the map streams.
                 status.visibility = GONE
             }
-            MSG_ERROR -> show(
+            MSG_ERROR -> {
+                attached = false
+                show(
                 when (message.data.getString(KEY_ERROR)) {
                     ERROR_DISABLED -> "In DiPlay, turn on\n\"Share the live map with other launchers\""
                     ERROR_UNSUPPORTED -> "This head unit is too old for the live map"
                     else -> "DiPlay could not show the map"
                 },
-            )
+                )
+            }
         }
     }
 
