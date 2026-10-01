@@ -53,7 +53,11 @@ object SoftApNetworkPolicy {
      * needed extending three times. [NativeCredentialsPolicy.shouldPublishCredentials] is the
      * defence that does not depend on knowing every name in advance.
      */
-    private val EXCLUDED_PREFIXES = listOf("p2p-", "tun", "dummy", "apcli", "sta", "seth_lte")
+    private val EXCLUDED_PREFIXES = listOf("p2p-", "tun", "dummy", "apcli", "sta", "seth_lte", "ccmni", "rmnet")
+    // BYD's wired/modem interfaces are already up when its hotspot is still starting. A global
+    // ENABLED state does not make eth0 the AP. Match numbered Ethernet names, leaving unusual
+    // vendor AP names such as eth_ap available; an explicit override also bypasses this guess.
+    private val ETHERNET_NAME = Regex("eth[0-9]+")
 
     /**
      * The interface most likely to be our access point, or null if none qualifies. Must be up and
@@ -66,8 +70,20 @@ object SoftApNetworkPolicy {
      */
     fun pickApInterface(
         candidates: List<ApInterfaceCandidate>,
-        stationIpv4: String? = null
-    ): ApInterfaceCandidate? = eligible(candidates, stationIpv4).minByOrNull { rank(it.name) }
+        stationIpv4: String? = null,
+        namedInterface: String = ""
+    ): ApInterfaceCandidate? {
+        val named = namedInterface.trim()
+        if (named.isNotEmpty()) {
+            // Wait for the named AP instead of silently substituting an upstream interface
+            // while it is absent, down, or waiting for its IPv4 address.
+            return candidates.firstOrNull {
+                it.name.equals(named, ignoreCase = true) && it.isUp && !it.isLoopback &&
+                    it.siteLocalIpv4 != null
+            }
+        }
+        return eligible(candidates, stationIpv4).minByOrNull { rank(it.name) }
+    }
 
     /**
      * Everything [pickApInterface] considered, for a caller that wants to say so. More than one
@@ -94,7 +110,10 @@ object SoftApNetworkPolicy {
             !(stationIpv4 != null && candidate.siteLocalIpv4 == stationIpv4)
 
     private fun isExcluded(name: String): Boolean =
-        name.lowercase().let { lower -> EXCLUDED_PREFIXES.any { lower.startsWith(it) } }
+        name.lowercase().let { lower ->
+            EXCLUDED_PREFIXES.any { lower.startsWith(it) } || ETHERNET_NAME.matches(lower) ||
+                lower == "briotgw"
+        }
 
     /** Lower is better; anything unrecognised sorts last but is still usable. */
     private fun rank(name: String): Int {

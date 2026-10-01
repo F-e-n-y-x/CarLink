@@ -2554,6 +2554,15 @@ class AapService : Service(), UsbReceiver.Listener {
         }.apply { name = "AapService-LinkLossTeardown"; start() }
     }
 
+    fun refreshHotspotCredentialsAfterJoinFailure() {
+        // A delayed report from an old handshake must not alter a live session or a transport
+        // the user has since selected. This only re-reads the car AP; it never restarts its radio.
+        if (commManager.isBusy || App.provide(this).settings.wifiConnectionMode != 3 ||
+            nativeTransport() != NativeTransport.HOTSPOT) return
+        AppLog.i("AapService: Phone could not join the hotspot — discarding credentials and resolving the access point again.")
+        softApCredentialsProvider?.refresh()
+    }
+
     fun triggerWifiDirectRefresh() {
         val mode = App.provide(this).settings.wifiConnectionMode
         if (mode != 3) return

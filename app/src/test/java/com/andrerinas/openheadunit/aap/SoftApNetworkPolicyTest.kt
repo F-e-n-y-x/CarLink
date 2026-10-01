@@ -198,6 +198,44 @@ class SoftApNetworkPolicyTest {
     }
 
     @Test
+    fun `late BYD hotspot startup waits for ap0 instead of publishing upstream details`() {
+        val upstream = listOf(
+            iface("eth0", ipv4 = "192.168.8.2"),
+            iface("ccmni0", ipv4 = "10.72.44.51"),
+            iface("briotgw", ipv4 = "192.168.9.1")
+        )
+        // September 30 report: the framework said ENABLED before ap0 had an address.
+        assertNull(SoftApNetworkPolicy.pickApInterface(upstream))
+        assertNull(SoftApNetworkPolicy.pickApInterface(upstream + iface("ap0", up = false)))
+        assertNull(SoftApNetworkPolicy.pickApInterface(upstream + iface("ap0", ipv4 = null)))
+        assertEquals("ap0", SoftApNetworkPolicy.pickApInterface(upstream + iface("ap0"))?.name)
+        assertEquals(listOf("ap0"), SoftApNetworkPolicy.eligible(upstream + iface("ap0")).map { it.name })
+    }
+
+    @Test
+    fun `cellular and numbered Ethernet interfaces never stand in for an automatic hotspot`() {
+        for (name in listOf("eth0", "eth12", "ccmni0", "ccmni1", "rmnet_data0", "briotgw")) {
+            assertFalse(name, SoftApNetworkPolicy.isApHost(iface(name)))
+        }
+        assertEquals("ra0", SoftApNetworkPolicy.pickApInterface(listOf(iface("eth0"), iface("ra0")))?.name)
+    }
+
+    @Test
+    fun `a named hotspot waits until its own address exists without automatic fallback`() {
+        val fallback = listOf(iface("eth0"), iface("wlan0"))
+        assertNull(SoftApNetworkPolicy.pickApInterface(fallback, namedInterface = "ap0"))
+        assertNull(SoftApNetworkPolicy.pickApInterface(fallback + iface("ap0", up = false), namedInterface = "ap0"))
+        assertNull(SoftApNetworkPolicy.pickApInterface(fallback + iface("ap0", ipv4 = null), namedInterface = "ap0"))
+        assertEquals("ap0", SoftApNetworkPolicy.pickApInterface(fallback + iface("ap0"), namedInterface = " AP0 ")?.name)
+    }
+
+    @Test
+    fun `explicit interface overrides remain usable for unusual vendor hotspot layouts`() {
+        assertEquals("eth0", SoftApNetworkPolicy.pickApInterface(listOf(iface("eth0")), namedInterface = "eth0")?.name)
+        assertNull(SoftApNetworkPolicy.pickApInterface(listOf(iface("lo", loopback = true)), namedInterface = "lo"))
+    }
+
+    @Test
     fun `an excluded preferred interface does not shadow a usable unpreferred one`() {
         val picked = SoftApNetworkPolicy.pickApInterface(
             listOf(iface("ap0", up = false), iface("wlan0"))

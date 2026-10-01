@@ -30,6 +30,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.net.Inet4Address
@@ -68,12 +70,15 @@ class SoftApCredentialsProvider(
         private const val WIFI_AP_STATE_CHANGED = "android.net.wifi.WIFI_AP_STATE_CHANGED"
         private const val EXTRA_WIFI_AP_STATE = "wifi_state"
         private const val WIFI_AP_STATE_DISABLED = 11
+        private const val WIFI_AP_STATE_ENABLED = 13
     }
 
     private var onCredentialsReady: ((ssid: String, psk: String, ip: String, bssid: String) -> Unit)? = null
     private var onInvalidated: (() -> Unit)? = null
 
     private var resolveJob: Job? = null
+    /** Fences blocking interface/MAC reads from a resolver superseded by refresh or stop. */
+    private var resolveGeneration = 0L
     @Volatile private var isRunning = false
     @Volatile private var isReceiverRegistered = false
     /** Whether *we* turned the hotspot on, and so may turn it back on if it drops. */
@@ -116,9 +121,16 @@ class SoftApCredentialsProvider(
 
     private val apStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.getIntExtra(EXTRA_WIFI_AP_STATE, -1) != WIFI_AP_STATE_DISABLED) return
+            if (!isRunning) return
+            val state = intent.getIntExtra(EXTRA_WIFI_AP_STATE, -1)
+            if (state == WIFI_AP_STATE_ENABLED) {
+                AppLog.i("SoftApCredentials: The hotspot came up — resolving its current interface and credentials.")
+                refresh()
+                return
+            }
+            if (state != WIFI_AP_STATE_DISABLED) return
             AppLog.w("SoftApCredentials: The hotspot went down — the credentials the phone was given are no longer valid.")
-            onInvalidated?.invoke()
+            refresh()
             if (autoEnabled && isRunning) {
                 AppLog.i("SoftApCredentials: Re-enabling the hotspot we started, once.")
                 autoEnabled = false
@@ -140,6 +152,7 @@ class SoftApCredentialsProvider(
         this.onInvalidated = callback
     }
 
+    @Synchronized
     fun start() {
         if (isRunning) {
             refresh()
@@ -166,13 +179,16 @@ class SoftApCredentialsProvider(
     }
 
     /** Look again, from the top. Called when the handshake has been waiting too long. */
+    @Synchronized
     fun refresh() {
         if (!isRunning) return
         beginResolve()
     }
 
+    @Synchronized
     fun stop() {
         isRunning = false
+        resolveGeneration++
         resolveJob?.cancel()
         resolveJob = null
         autoEnabled = false
@@ -209,7 +225,11 @@ class SoftApCredentialsProvider(
     }
 
     private fun beginResolve() {
+        val generation = ++resolveGeneration
         resolveJob?.cancel()
+        // Re-resolving is also invalidation: retrying must wait for the new AP, rather than
+        // sending the cached eth0 details again while this job looks for ap0.
+        onInvalidated?.invoke()
         reportedNoInterface = false
         resolveJob = scope.launch(Dispatchers.IO + CoroutineName("SoftApCredentials-Resolve")) {
             val deadline = System.currentTimeMillis() + RESOLVE_BUDGET_MS
@@ -217,7 +237,7 @@ class SoftApCredentialsProvider(
             while (isActive && isRunning && System.currentTimeMillis() < deadline) {
                 val chosen = pickApInterface()
                 val apName = chosen?.iface?.name ?: "the access point"
-                when (if (chosen == null) SoftApCredentialsAttempt.NO_AP_YET else publish(chosen)) {
+                when (if (chosen == null) SoftApCredentialsAttempt.NO_AP_YET else publish(chosen, generation)) {
                     SoftApCredentialsAttempt.PUBLISHED -> return@launch
 
                     SoftApCredentialsAttempt.CONFIG_UNREADABLE -> {
@@ -237,7 +257,7 @@ class SoftApCredentialsProvider(
                             )
                             showConfigUnreadableToast()
                         }
-                        onInvalidated?.invoke()
+                        invalidateIfCurrent(generation)
                         return@launch
                     }
 
@@ -260,9 +280,14 @@ class SoftApCredentialsProvider(
 
             if (isActive && isRunning) {
                 reportBudgetExhaustedOnce(System.currentTimeMillis() - runStartedAt, force = true)
-                onInvalidated?.invoke()
+                invalidateIfCurrent(generation)
             }
         }
+    }
+
+    @Synchronized
+    private fun invalidateIfCurrent(generation: Long) {
+        if (isRunning && generation == resolveGeneration) onInvalidated?.invoke()
     }
 
     /**
@@ -317,16 +342,18 @@ class SoftApCredentialsProvider(
         val named = settings.hotspotInterface.trim()
         if (named.isNotEmpty()) {
             val match = candidates.firstOrNull { it.name.equals(named, ignoreCase = true) }
+            val picked = SoftApNetworkPolicy.pickApInterface(candidates, namedInterface = named)
             when {
                 match == null ->
-                    AppLog.w("SoftApCredentials: No interface named '$named'. Present: ${candidates.joinToString { it.name }}. Falling back to automatic selection.")
-                match.siteLocalIpv4 == null || !match.isUp ->
-                    AppLog.w("SoftApCredentials: Interface '$named' is ${if (match.isUp) "up but has no address" else "down"}. Falling back to automatic selection.")
+                    AppLog.w("SoftApCredentials: Waiting for interface '$named'. Present: ${candidates.joinToString { it.name }}.")
+                picked == null ->
+                    AppLog.w("SoftApCredentials: Waiting for interface '$named' to be up with a private IPv4 address.")
                 else -> {
-                    AppLog.i("SoftApCredentials: Using '${match.name}' (${match.siteLocalIpv4}) as named in settings.")
-                    return ChosenInterface(match, namedByUser = true)
+                    AppLog.i("SoftApCredentials: Using '${picked.name}' (${picked.siteLocalIpv4}) as named in settings.")
+                    return ChosenInterface(picked, namedByUser = true)
                 }
             }
+            return null
         }
 
         val stationIpv4 = NetworkAddresses.stationIpv4(context)
@@ -358,7 +385,7 @@ class SoftApCredentialsProvider(
     }
 
     /** Resolves the rest of the credentials for [iface] and hands them over. */
-    private fun publish(chosen: ChosenInterface): SoftApCredentialsAttempt {
+    private suspend fun publish(chosen: ChosenInterface, generation: Long): SoftApCredentialsAttempt {
         val iface = chosen.iface
         val ip = iface.siteLocalIpv4 ?: return SoftApCredentialsAttempt.NO_AP_YET
 
@@ -408,9 +435,16 @@ class SoftApCredentialsProvider(
             AppLog.w("SoftApCredentials: Could not resolve a real BSSID for ${iface.name}; the credentials will go out without one.")
         }
 
-        AppLog.i("SoftApCredentials: SUCCESS - Providing credentials from ${iface.name}: SSID=$ssid, IP=$ip, BSSID=${bssid.ifEmpty { "<none>" }}")
-        onCredentialsReady?.invoke(ssid, psk, ip, bssid)
-        return SoftApCredentialsAttempt.PUBLISHED
+        currentCoroutineContext().ensureActive()
+        return synchronized(this) {
+            if (!isRunning || generation != resolveGeneration) {
+                SoftApCredentialsAttempt.NO_AP_YET
+            } else {
+                AppLog.i("SoftApCredentials: SUCCESS - Providing credentials from ${iface.name}: SSID=$ssid, IP=$ip, BSSID=${bssid.ifEmpty { "<none>" }}")
+                onCredentialsReady?.invoke(ssid, psk, ip, bssid)
+                SoftApCredentialsAttempt.PUBLISHED
+            }
+        }
     }
 
     private fun hardwareAddressOf(name: String): String? = try {

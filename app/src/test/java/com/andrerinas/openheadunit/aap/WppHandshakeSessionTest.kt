@@ -150,11 +150,12 @@ class WppHandshakeSessionTest {
     fun `a phone reporting it could not join fails fast and lets the poke resume`() {
         val s = settledSession()
 
-        val actions = s.on(msg(WppMessageType.CONNECT_STATUS, -1))
+        val actions = s.on(msg(WppMessageType.CONNECT_STATUS, -11))
 
         assertEquals(WppStage.FAILED, s.stage)
         assertEquals(2, actions.size)
         assertTrue(actions[0] is WppAction.Fail)
+        assertTrue((actions[0] as WppAction.Fail).wifiJoinFailed)
         assertEquals(WppAction.ResumePoke, actions[1])
     }
 
@@ -166,6 +167,7 @@ class WppHandshakeSessionTest {
 
         assertEquals(WppStage.FAILED, s.stage)
         assertTrue(actions[0] is WppAction.Fail)
+        assertTrue((actions[0] as WppAction.Fail).wifiJoinFailed)
         assertEquals(WppAction.ResumePoke, actions[1])
     }
 
@@ -258,6 +260,7 @@ class WppHandshakeSessionTest {
         assertEquals(WppStage.FAILED, s.stage)
         val fail = actions.single() as WppAction.Fail
         assertTrue("the phone said nothing at all", fail.phoneWasSilent)
+        assertFalse("a Bluetooth timeout must not refresh the hotspot", fail.wifiJoinFailed)
     }
 
     @Test
@@ -283,6 +286,7 @@ class WppHandshakeSessionTest {
 
         assertEquals(WppStage.FAILED, s.stage)
         assertTrue(fail.phoneWasSilent)
+        assertFalse("missing credentials are not a rejected WiFi join", fail.wifiJoinFailed)
     }
 
     @Test

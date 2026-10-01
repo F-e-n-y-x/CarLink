@@ -17,13 +17,11 @@ this is not Apple CarPlay.
 
 ![Android Auto with the current music card and a freely panned map, without a destination](site/assets/projection-music.png)
 
-## What’s new in 0.3.10
+## What’s new in 0.3.11
 
-- Completed English, Simplified Chinese, Arabic, Russian and Spanish coverage, including home, connection setup, diagnostics and audio settings.
-- Arabic right-to-left layout support and Simplified Chinese display/theme options.
-- On Android 13+, Android Settings and the in-app language picker now stay synchronized; older Android keeps the saved language choice.
-- Language selection survives settings export/import and resets correctly to System default.
-- Automatic translation-coverage and format checks help prevent regressions.
+- Connects when you turn on the car hotspot after opening DiAuto, without restarting the app.
+- Waits for the hotspot network to be ready instead of using the car’s wired or modem connection details.
+- Refreshes hotspot connection details after a failed phone join, and waits for a manually selected hotspot interface.
 
 ## Features
 

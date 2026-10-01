@@ -85,7 +85,11 @@ sealed class WppAction {
      * head unit whose Bluetooth stack drops our writes, not of a phone-side problem. It is what
      * the handshake backoff counts.
      */
-    data class Fail(val reason: String, val phoneWasSilent: Boolean) : WppAction()
+    data class Fail(
+        val reason: String,
+        val phoneWasSilent: Boolean,
+        val wifiJoinFailed: Boolean = false
+    ) : WppAction()
     /** Restart the wake poke. Only ever emitted once the phone has given up on this handoff. */
     object ResumePoke : WppAction()
 }
@@ -264,7 +268,7 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
             if (isFailureStatus(event.status)) {
                 // The phone has stopped trying, so nothing is left to disturb: this and the
                 // settle timeout are the only places where restarting the poke is safe.
-                fail("phone reported join failure (type ${event.type}, status=${event.status})") +
+                fail("phone reported join failure (type ${event.type}, status=${event.status})", wifiJoinFailed = true) +
                     WppAction.ResumePoke
             } else if (event.type == WppMessageType.CONNECT_STATUS) {
                 extendSettle()
@@ -314,9 +318,9 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
         return listOf(WppAction.ExtendSettle)
     }
 
-    private fun fail(reason: String): List<WppAction> {
+    private fun fail(reason: String, wifiJoinFailed: Boolean = false): List<WppAction> {
         stage = WppStage.FAILED
-        return listOf(WppAction.Fail(reason, phoneWasSilent = messagesReceived == 0))
+        return listOf(WppAction.Fail(reason, phoneWasSilent = messagesReceived == 0, wifiJoinFailed = wifiJoinFailed))
     }
 
     /**

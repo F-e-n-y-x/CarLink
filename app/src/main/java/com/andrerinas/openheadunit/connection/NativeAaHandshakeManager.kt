@@ -1034,6 +1034,13 @@ class NativeAaHandshakeManager(
                     }
                     is WppAction.Fail -> {
                         AppLog.w("NativeAA: Handshake failed — ${action.reason}.")
+                        if (action.wifiJoinFailed && transport == NativeTransport.HOTSPOT) {
+                            ifOwner(socket) {
+                                // Refresh before ResumePoke, so the next handshake cannot reuse
+                                // an IP/BSSID selected while the car hotspot was still coming up.
+                                context.refreshHotspotCredentialsAfterJoinFailure()
+                            }
+                        }
                         // Measured against a current Gearhead: it joins with a WifiNetworkSpecifier,
                         // which matches SSID *and* BSSID under a full ff:ff:ff:ff:ff:ff mask, and
                         // refuses credentials carrying no BSSID outright. So on this route a join

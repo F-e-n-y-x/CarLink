@@ -1,3 +1,12 @@
+# DiAuto 0.3.11 — 2026-10-01
+
+- Recover when the built-in car hotspot is enabled after DiAuto opens, without restarting the app.
+- Exclude wired, modem and BYD bridge interfaces from automatic hotspot selection while the real access point is still starting.
+- Refresh cached hotspot credentials after a phone-reported join failure before retrying.
+- Wait for an explicitly selected hotspot interface instead of falling back to another network.
+- Prevent cancelled or superseded credential resolvers from publishing or invalidating newer results.
+- Owner confirmed that the hotspot recovery test build worked before authorizing this release.
+
 # DiAuto 0.3.10 — 2026-09-29
 
 - Completed English, Simplified Chinese, Arabic, Russian and Spanish coverage, including home, connection setup, diagnostics and audio settings.
