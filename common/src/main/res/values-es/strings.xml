@@ -447,4 +447,13 @@
     <string name="video_play">Reproducir</string>
     <string name="video_pause">Pausa</string>
     <string name="video_cannot_play">Este vídeo no se puede reproducir en la pantalla del coche. El vídeo protegido, como Apple TV+, necesita un receptor con licencia.</string>
+    <string name="navigation_widget_label">Navegación de CarPlay</string>
+    <string name="navigation_widget_description">Próximo giro, distancia, llegada y canción de CarPlay</string>
+    <string name="widget_not_connected">CarPlay no está conectado</string>
+    <string name="widget_no_route">Sin ruta</string>
+    <string name="widget_distance_meters">%1$d m</string>
+    <string name="widget_distance_km_decimal">%1$.1f km</string>
+    <string name="widget_distance_km">%1$d km</string>
+    <string name="widget_minutes">%1$d min</string>
+    <string name="widget_hours_minutes">%1$d h %2$02d min</string>
 </resources>
