@@ -37,13 +37,35 @@ class MapEmbedService : Service() {
     private val messenger = Messenger(Handler(Looper.getMainLooper()) { handle(it); true })
     private val embeds = HashMap<IBinder, Embed>()
     private var nextId = 0
+    private var destroyed = false
+    private var stopObservingSharing: (() -> Unit)? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        stopObservingSharing = AirPlayPersistence.observeLauncherMapSharing(this) { enabled ->
+            if (!enabled) {
+                if (Looper.myLooper() == main.looper) revokeSharing()
+                else main.post { revokeSharing() }
+            }
+        }
+    }
 
     override fun onBind(intent: Intent): IBinder = messenger.binder
 
     override fun onDestroy() {
+        destroyed = true
+        stopObservingSharing?.invoke()
+        stopObservingSharing = null
         embeds.values.toList().forEach { it.release() }
         embeds.clear()
         super.onDestroy()
+    }
+
+    private fun revokeSharing() {
+        if (destroyed) return
+        val attached = embeds.values.toList()
+        embeds.clear()
+        attached.forEach { it.sharingDisabled() }
     }
 
     private fun handle(message: Message) {
@@ -114,6 +136,7 @@ class MapEmbedService : Service() {
         height: Int,
     ) {
         private val host = SurfaceControlViewHost(context, display, hostToken)
+        private var released = false
         private var surface: Surface? = null
         private val waiting = TextView(context).apply {
             text = context.getString(R.string.cluster_waiting_for_map)
@@ -124,6 +147,7 @@ class MapEmbedService : Service() {
         private val video = TextureView(context).apply {
             surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                 override fun onSurfaceTextureAvailable(texture: SurfaceTexture, w: Int, h: Int) {
+                    if (released) return
                     cropToFill(this@apply, w, h)
                     surface = Surface(texture).also { MapMirrors.set(key, it) }
                 }
@@ -163,13 +187,20 @@ class MapEmbedService : Service() {
         }
 
         fun resize(width: Int, height: Int) {
-            if (width > 0 && height > 0) host.relayout(width, height)
+            if (!released && width > 0 && height > 0) host.relayout(width, height)
         }
 
         fun release() {
+            if (released) return
+            released = true
             MapMirrors.removeStreamListener(streamListener)
             MapMirrors.set(key, null)
             host.release()
+        }
+
+        fun sharingDisabled() {
+            release()
+            send(client, MSG_ERROR, Bundle().apply { putString(KEY_ERROR, ERROR_DISABLED) })
         }
     }
 
