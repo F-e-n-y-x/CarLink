@@ -34,6 +34,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
@@ -122,6 +123,23 @@ class DiPlayActivity : ComponentActivity() {
     }
     override fun onSaveInstanceState(outState: Bundle) { outState.putString("page", page); outState.putBoolean("pending_car_hotspot", pendingCarHotspotSetup); super.onSaveInstanceState(outState) }
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
+    private fun openOverlayPermission() {
+        val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+        if (runCatching { startActivity(intent) }.isFailure) {
+            android.widget.Toast.makeText(this, R.string.center_map_no_permission_screen, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        CenterMapOverlay.onDiPlayScreenShown()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isFinishing && !isChangingConfigurations) CenterMapOverlay.scheduleShow()
+    }
+
     override fun onResume() {
         super.onResume()
         if (Build.VERSION.SDK_INT < 33 && AppLocale.preference(this) != languagePreferenceAtCreate) {
@@ -309,6 +327,23 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap()
                 }
+                toggle(card, getString(R.string.center_map_card), getString(R.string.center_map_card_description),
+                    AirPlayPersistence.loadCenterMapOverlay(this)) {
+                    AirPlayPersistence.saveCenterMapOverlay(this, it)
+                    if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
+                }
+                toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
+                    AirPlayPersistence.loadLauncherMapSharing(this)) {
+                    AirPlayPersistence.saveLauncherMapSharing(this, it)
+                }
+                if (AirPlayPersistence.loadCenterMapOverlay(this)) {
+                    val overlay = CenterMapOverlay.permitted(this)
+                    card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
+                        else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
+                    val usage = HomeScreenMonitor.hasAccess(this)
+                    card.addView(label(if (usage) getString(R.string.center_map_usage_allowed)
+                        else getString(R.string.center_map_usage_missing, packageName), 14, if (usage) MUTED else WARNING))
+                }
                 if (DiLink51ClusterLayout.supported()) {
                     val automatic = DiLink51ClusterLayout.automatic(this)
                     toggle(card, getString(R.string.follow_instrument_theme_and_map_card),
@@ -413,11 +448,19 @@ class DiPlayActivity : ComponentActivity() {
                 if (it) checkAdbAccess(mayAsk = true)
                 if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
             }
+            toggle(card, getString(R.string.cluster_song),
+                getString(R.string.cluster_song_description),
+                BydOutputSettings.clusterSong(this)) {
+                BydOutputSettings.setClusterSong(this, it)
+                if (it) checkAdbAccess(mayAsk = true)
+                BydNavigationOutputs.clusterSongChanged(it)
+            }
             adbStatus = label("", 14, MUTED).also { status ->
                 card.addView(status)
             }
             if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this) ||
-                BydOutputSettings.wheelSpeedToIphone(this) || BydOutputSettings.videoWhileParked(this))
+                BydOutputSettings.wheelSpeedToIphone(this) || BydOutputSettings.videoWhileParked(this) ||
+                BydOutputSettings.clusterSong(this))
                 checkAdbAccess(mayAsk = false)
             card.addView(button(getString(R.string.check_adb_access), false) { checkAdbAccess(mayAsk = true) }, matchButton(10, 56))
             card.addView(button(getString(R.string.apply_and_reconnect), false) {

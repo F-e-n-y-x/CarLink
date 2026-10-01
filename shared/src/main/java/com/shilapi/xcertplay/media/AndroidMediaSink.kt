@@ -156,6 +156,11 @@ class AndroidMediaSink(
     private val videoRecoveryHandlers = ConcurrentHashMap<Int, () -> Unit>()
     private val videoDiagnosticHandlers = ConcurrentHashMap<Int, (String) -> Unit>()
     private val recoveryPending = AtomicBoolean(false)
+    // Extra decoders draw the same stream on other surfaces, such as the centre card.
+    private val mirrorLock = Any()
+    private val mirrorSurfaces = HashMap<Pair<Int, String>, Surface>()
+    private val mirrorDecoders = HashMap<Pair<Int, String>, VideoDecoder>()
+    private val lastVideoConfig = ConcurrentHashMap<Int, Pair<VideoCodec, ByteArray>>()
     private val recoveryExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "carplay-video-recovery").apply { isDaemon = true }
     }
@@ -188,6 +193,30 @@ class AndroidMediaSink(
         if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurface(null)
     }
 
+    /**
+     * Also decodes stream [type] onto [surface] with its own decoder, one per [key], which
+     * starts at the next keyframe it asks for; null stops it. The stream's own surface is not affected.
+     */
+    fun setMirrorSurface(type: Int, key: String, surface: Surface?) {
+        val id = type to key
+        synchronized(mirrorLock) {
+            mirrorDecoders.remove(id)?.close()
+            if (surface == null) {
+                mirrorSurfaces.remove(id)
+                return
+            }
+            mirrorSurfaces[id] = surface
+        }
+        lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
+    }
+
+    private fun mirrorDecoders(type: Int): List<VideoDecoder> = synchronized(mirrorLock) {
+        if (mirrorSurfaces.isEmpty()) return emptyList()
+        mirrorSurfaces.filterKeys { it.first == type }.map { (id, surface) ->
+            mirrorDecoders.getOrPut(id) { newVideoDecoder(type, surface, " stream=$type mirror=${id.second}") }
+        }
+    }
+
     fun setScreenStreamActiveChangedListener(listener: ((Int, Boolean) -> Unit)?) {
         synchronized(screenStateLock) {
             screenStreamActiveChanged = listener
@@ -201,11 +230,14 @@ class AndroidMediaSink(
 
     override fun onVideoConfig(type: Int, codecData: ByteArray) {
         val codec = pendingVideoCodec[type] ?: VideoCodec.H264
+        lastVideoConfig[type] = codec to codecData
         videoDecoder(type).configure(codec, codecData)
+        mirrorDecoders(type).forEach { it.configure(codec, codecData) }
     }
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray) {
         videoDecoder(type).submit(naluBytes)
+        mirrorDecoders(type).forEach { it.submit(naluBytes) }
     }
 
     override fun onScreenStreamActive(type: Int, active: Boolean) {
@@ -213,6 +245,10 @@ class AndroidMediaSink(
             videoRecoveryHandlers.remove(type)
             videoDiagnosticHandlers.remove(type)
             videoDecoders.remove(type)?.close()
+            synchronized(mirrorLock) {
+                mirrorDecoders.keys.filter { it.first == type }.forEach { mirrorDecoders.remove(it)?.close() }
+            }
+            lastVideoConfig.remove(type)
             pendingVideoCodec.remove(type)
         }
         synchronized(screenStateLock) {
@@ -261,6 +297,11 @@ class AndroidMediaSink(
         }
         videoDecoders.values.forEach(VideoDecoder::close)
         videoDecoders.clear()
+        synchronized(mirrorLock) {
+            mirrorDecoders.values.forEach(VideoDecoder::close)
+            mirrorDecoders.clear()
+            mirrorSurfaces.clear()
+        }
         videoRecoveryHandlers.clear()
         videoDiagnosticHandlers.clear()
         recoveryExecutor.shutdownNow()
@@ -273,17 +314,18 @@ class AndroidMediaSink(
     }
 
     private fun videoDecoder(type: Int): VideoDecoder =
-        videoDecoders.computeIfAbsent(type) {
-            VideoDecoder(
-                type,
-                surfaces[type] ?: defaultSurface,
-                videoWidth,
-                videoHeight,
-                preferSoftwareHevcDecoder,
-                requestKeyFrame = { requestVideoRecovery(type) },
-                report = { videoDiagnosticHandlers[type]?.invoke(it) },
-            )
-        }
+        videoDecoders.computeIfAbsent(type) { newVideoDecoder(type, surfaces[type] ?: defaultSurface) }
+
+    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null) = VideoDecoder(
+        type,
+        surface,
+        videoWidth,
+        videoHeight,
+        preferSoftwareHevcDecoder,
+        requestKeyFrame = { requestVideoRecovery(type) },
+        report = { videoDiagnosticHandlers[type]?.invoke(it) },
+        statsLabel = statsLabel,
+    )
 
     @Synchronized
     private fun audioRenderer(id: AudioStreamId, format: AudioFormat): AudioRenderer {
@@ -313,6 +355,7 @@ private class VideoDecoder(
     private val preferSoftwareHevcDecoder: Boolean,
     private val requestKeyFrame: () -> Unit,
     private val report: (String) -> Unit,
+    statsLabel: String? = null,
 ) : Closeable {
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
@@ -325,7 +368,7 @@ private class VideoDecoder(
     private val referenceChain = VideoReferenceChain()
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
-    private val stats = VideoStats(if (streamType == 110) "" else " stream=$streamType")
+    private val stats = VideoStats(statsLabel ?: if (streamType == 110) "" else " stream=$streamType")
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {

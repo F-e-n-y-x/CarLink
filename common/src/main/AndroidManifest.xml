@@ -8,8 +8,17 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Optional: the dashboard map as a card over the home screen. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Optional, owner-enabled Usage Access for the verified DiLink 5.1 cluster profile. -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <!-- The centre card also follows whichever launcher is the default home. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
     <application>
         <activity android:name="com.shilapi.xcertplay.DiPlayActivity"
             android:exported="true" android:launchMode="singleTop"
@@ -56,6 +65,29 @@
             android:exported="false"
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.Xcertplay" />
+
+        <!-- CarPlay navigation widget, for launchers that host standard widgets. -->
+        <receiver
+            android:name="com.shilapi.xcertplay.NavigationWidget"
+            android:exported="false"
+            android:label="@string/navigation_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/navigation_widget_info" />
+        </receiver>
+
+        <!-- The live dashboard map for launchers that embed it (docs/LAUNCHER_INTEGRATION.md). -->
+        <service
+            android:name="com.shilapi.xcertplay.MapEmbedService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.shihab.diplay.action.EMBED_MAP" />
+            </intent-filter>
+        </service>
 
         <receiver
             android:name="com.shilapi.xcertplay.BootReceiver"
