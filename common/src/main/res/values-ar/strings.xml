@@ -447,4 +447,13 @@
     <string name="video_play">تشغيل</string>
     <string name="video_pause">إيقاف مؤقت</string>
     <string name="video_cannot_play">لا يمكن تشغيل هذا الفيديو على شاشة السيارة. الفيديو المحمي، مثل Apple TV+، يحتاج إلى مستقبل مرخّص.</string>
+    <string name="navigation_widget_label">تنقل CarPlay</string>
+    <string name="navigation_widget_description">المنعطف التالي والمسافة ووقت الوصول والأغنية من CarPlay</string>
+    <string name="widget_not_connected">CarPlay غير متصل</string>
+    <string name="widget_no_route">لا يوجد مسار</string>
+    <string name="widget_distance_meters">%1$d م</string>
+    <string name="widget_distance_km_decimal">%1$.1f كم</string>
+    <string name="widget_distance_km">%1$d كم</string>
+    <string name="widget_minutes">%1$d دقيقة</string>
+    <string name="widget_hours_minutes">%1$d س %2$02d د</string>
 </resources>

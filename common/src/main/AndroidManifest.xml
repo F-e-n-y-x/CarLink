@@ -57,6 +57,19 @@
             android:screenOrientation="fullSensor"
             android:theme="@style/Theme.Xcertplay" />
 
+        <!-- CarPlay navigation widget, for launchers that host standard widgets. -->
+        <receiver
+            android:name="com.shilapi.xcertplay.NavigationWidget"
+            android:exported="false"
+            android:label="@string/navigation_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/navigation_widget_info" />
+        </receiver>
+
         <receiver
             android:name="com.shilapi.xcertplay.BootReceiver"
             android:enabled="true"

@@ -458,4 +458,13 @@
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>
     <string name="video_cannot_play">此视频无法在车机屏幕上播放。受保护的视频（例如 Apple TV+）需要获得授权的接收器。</string>
+    <string name="navigation_widget_label">CarPlay 导航</string>
+    <string name="navigation_widget_description">来自 CarPlay 的下一个转弯、距离、到达时间和歌曲</string>
+    <string name="widget_not_connected">CarPlay 未连接</string>
+    <string name="widget_no_route">无路线</string>
+    <string name="widget_distance_meters">%1$d 米</string>
+    <string name="widget_distance_km_decimal">%1$.1f 公里</string>
+    <string name="widget_distance_km">%1$d 公里</string>
+    <string name="widget_minutes">%1$d 分钟</string>
+    <string name="widget_hours_minutes">%1$d 小时 %2$02d 分钟</string>
 </resources>
