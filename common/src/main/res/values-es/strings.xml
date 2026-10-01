@@ -463,4 +463,6 @@
     <string name="center_map_usage_allowed">Acceso a datos de uso: permitido, la tarjeta solo aparece en la pantalla de inicio</string>
     <string name="center_map_usage_missing">Acceso a datos de uso: no permitido, así que la tarjeta aparece sobre todas las aplicaciones. Por ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
     <string name="center_map_no_permission_screen">Esta unidad principal no tiene pantalla de ajustes para este permiso. Permítelo por ADB.</string>
+    <string name="launcher_map_sharing">Compartir el mapa en vivo con otros launchers</string>
+    <string name="launcher_map_sharing_description">Los launchers compatibles con DiPlay pueden mostrar el mapa en vivo del panel de instrumentos en su propia pantalla de inicio. Desactivado por defecto, porque entonces cualquier aplicación de la unidad principal podría pedir el mapa. Consulta docs/LAUNCHER_INTEGRATION.md.</string>
 </resources>

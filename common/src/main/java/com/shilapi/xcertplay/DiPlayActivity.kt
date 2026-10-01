@@ -332,6 +332,10 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.saveCenterMapOverlay(this, it)
                     if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
                 }
+                toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
+                    AirPlayPersistence.loadLauncherMapSharing(this)) {
+                    AirPlayPersistence.saveLauncherMapSharing(this, it)
+                }
                 if (AirPlayPersistence.loadCenterMapOverlay(this)) {
                     val overlay = CenterMapOverlay.permitted(this)
                     card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)

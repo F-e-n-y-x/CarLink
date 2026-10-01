@@ -278,9 +278,12 @@ class CarPlayHostActivity : ComponentActivity() {
     private var detectedCluster = ClusterActivityState.Snapshot(null, false)
     // Keep one surface per layer alive, including while its map card is hidden.
     private val clusterLayers = mutableMapOf<Boolean, ClusterMapPresentation>()
-    // Copies of stream 111 outside the dashboard, such as the centre card, each get their own decoder.
+    // Copies of stream 111 outside the dashboard (centre card, launcher maps) each get their own decoder.
     private val mirrorSink: (String, Surface?) -> Unit = { key, surface -> sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, surface) }
-    private val mirrorsChanged: () -> Unit = { updateClusterMapShown() }
+    private val mirrorsChanged: () -> Unit = {
+        updateClusterMapShown()
+        if (MapMirrors.launcherShowsMap) CenterMapOverlay.hide()
+    }
     // With Usage Access the card shows only over a home screen; null = not known (no monitor).
     private var homeMonitor: HomeScreenMonitor? = null
     private var homeScreenVisible: Boolean? = null
@@ -772,6 +775,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun showCenterMap() {
         if (isDestroyed || shuttingDown.get() || sink == null) return
         if (!AirPlayPersistence.loadCenterMapOverlay(this) || !AirPlayPersistence.loadClusterMapEnabled(this)) return
+        if (MapMirrors.launcherShowsMap) return // the launcher has the map on its own screen
         // Without the stream the card would stay black; it follows once the stream starts.
         if (SCREEN_TYPE_ALT !in activeScreenStreamTypes) return
         if (!CenterMapOverlay.permitted(this)) {

@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * The surfaces that show a copy of the dashboard map (CarPlay stream 111) outside the dashboard,
- * such as the centre card ([CARD]). The CarPlay screen hands them to its media sink, now and after
+ * such as the centre card ([CARD]) and maps embedded by launchers ("launcher:<n>"). The CarPlay screen hands them to its media sink, now and after
  * every reconnect. Main thread.
  */
 internal object MapMirrors {
@@ -47,6 +47,9 @@ internal object MapMirrors {
     }
 
     val any: Boolean get() = surfaces.isNotEmpty()
+
+    /** Whether a launcher shows the map (see [MapEmbedService]), so the centre card is not needed. */
+    val launcherShowsMap: Boolean get() = surfaces.keys.any { it != CARD }
 
     fun setStreamActive(active: Boolean) {
         main.post {

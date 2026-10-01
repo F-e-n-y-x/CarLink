@@ -474,4 +474,6 @@
     <string name="center_map_usage_allowed">使用情况访问权限：已允许，卡片只在主屏幕上显示</string>
     <string name="center_map_usage_missing">使用情况访问权限：未允许，因此卡片会显示在所有应用上层。通过 ADB：adb shell appops set %1$s GET_USAGE_STATS allow</string>
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
+    <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
+    <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
 </resources>
