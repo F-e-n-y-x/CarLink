@@ -148,13 +148,16 @@ class MainActivity : Activity() {
                 show(streamText(message.data.getBoolean(KEY_STREAM_ACTIVE)))
             }
             MSG_STREAM_STATE -> show(streamText(message.data.getBoolean(KEY_STREAM_ACTIVE)))
-            MSG_ERROR -> show(
+            MSG_ERROR -> {
+                attached = false
+                show(
                 when (message.data.getString(KEY_ERROR)) {
                     ERROR_DISABLED -> "Turn on \"Share the live map with other launchers\" in DiPlay"
                     ERROR_UNSUPPORTED -> "This head unit is too old (Android 11 or newer is needed)"
                     else -> "DiPlay could not show the map: ${message.data.getString(KEY_ERROR)}"
                 },
-            )
+                )
+            }
         }
     }
 
