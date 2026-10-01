@@ -456,4 +456,11 @@
     <string name="widget_distance_km">%1$d كم</string>
     <string name="widget_minutes">%1$d دقيقة</string>
     <string name="widget_hours_minutes">%1$d س %2$02d د</string>
+    <string name="center_map_card">خريطة لوحة العدادات على الشاشة الوسطى</string>
+    <string name="center_map_card_description">أثناء عمل DiPlay في الخلفية، تظهر خريطة لوحة العدادات أيضًا كبطاقة على الشاشة الرئيسية: شاشة BYD الرئيسية أو الشاشة الرئيسية للخريطة أو المشغّل الافتراضي لديك. اضغط على البطاقة لفتح CarPlay، واسحبها لنقلها، وقرّب إصبعين أو باعدهما لتغيير حجمها. تحتفظ لوحة العدادات بخريطتها. يتطلب إذن الظهور فوق التطبيقات الأخرى.</string>
+    <string name="center_map_overlay_allowed">الظهور فوق التطبيقات الأخرى: مسموح</string>
+    <string name="center_map_overlay_missing">الظهور فوق التطبيقات الأخرى: غير مسموح. اسمح به من إعدادات التطبيق أو عبر ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+    <string name="center_map_usage_allowed">الوصول إلى بيانات الاستخدام: مسموح، تظهر البطاقة على الشاشة الرئيسية فقط</string>
+    <string name="center_map_usage_missing">الوصول إلى بيانات الاستخدام: غير مسموح، لذلك تظهر البطاقة فوق كل التطبيقات. عبر ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="center_map_no_permission_screen">لا توجد في وحدة القيادة شاشة إعدادات لهذا الإذن. اسمح به عبر ADB.</string>
 </resources>

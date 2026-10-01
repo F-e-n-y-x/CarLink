@@ -456,4 +456,11 @@
     <string name="widget_distance_km">%1$d km</string>
     <string name="widget_minutes">%1$d min</string>
     <string name="widget_hours_minutes">%1$d h %2$02d min</string>
+    <string name="center_map_card">Mapa del panel de instrumentos en la pantalla central</string>
+    <string name="center_map_card_description">Mientras DiPlay está en segundo plano, el mapa del panel de instrumentos también aparece como una tarjeta en la pantalla de inicio: el inicio de BYD, el inicio con mapa o tu launcher predeterminado. Toca la tarjeta para abrir CarPlay, arrástrala para moverla y pellízcala para cambiar su tamaño. El panel de instrumentos conserva su mapa. Requiere permiso para mostrarse sobre otras aplicaciones.</string>
+    <string name="center_map_overlay_allowed">Mostrar sobre otras aplicaciones: permitido</string>
+    <string name="center_map_overlay_missing">Mostrar sobre otras aplicaciones: no permitido. Permítelo en los ajustes de la aplicación o por ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+    <string name="center_map_usage_allowed">Acceso a datos de uso: permitido, la tarjeta solo aparece en la pantalla de inicio</string>
+    <string name="center_map_usage_missing">Acceso a datos de uso: no permitido, así que la tarjeta aparece sobre todas las aplicaciones. Por ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="center_map_no_permission_screen">Esta unidad principal no tiene pantalla de ajustes para este permiso. Permítelo por ADB.</string>
 </resources>
