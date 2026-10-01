@@ -148,6 +148,36 @@ The map is 8:3. If your view has another shape, DiPlay fills it and crops the ed
 - If DiPlay restarts, your `ServiceConnection` is disconnected and reconnected; attach again then.
 - The protocol is new. Handle `ERROR` and a missing or older DiPlay gracefully.
 
+## DiPlay Home (sample launcher)
+
+[`samples/home`](../samples/home/src/main/java/com/diplay/home/HomeActivity.kt) is a small launcher built on the public APIs above. It shows:
+
+- the embedded live map, with a clock above it and buttons for Apps, CarPlay and BYD home below;
+- a column of any Android widgets, including **CarPlay navigation**;
+- a full app list.
+
+It runs without system privileges. BYD's home stays installed, and the **BYD home** button opens it.
+
+- **Widgets.** A launcher needs the owner's consent to bind widgets. BYD head units have no consent screen, so allow it once over ADB:
+
+  ```bash
+  adb shell appwidget grantbind --package com.diplay.home --user 0
+  ```
+
+- **Making it the home screen.** Pick it as the default home app, or over ADB:
+
+  ```bash
+  adb shell cmd package set-home-activity com.diplay.home/.HomeActivity
+  ```
+
+- **Going back to BYD's home:**
+
+  ```bash
+  adb shell cmd package set-home-activity com.android.launcher3/.home.MainActivity
+  ```
+
+  BYD's map-mode button also returns to BYD's home, because BYD's own home list contains only BYD launchers.
+
 ## Troubleshooting
 
 | Problem | Check |
