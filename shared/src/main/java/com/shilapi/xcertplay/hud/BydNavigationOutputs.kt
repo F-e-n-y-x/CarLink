@@ -49,9 +49,14 @@ object BydNavigationOutputs {
             cluster.start { BydClusterBridge.initialize(app) }
         }
         BydClusterMapPause.initialize(app)
+        BydClusterSong.attach(app)
     }
 
     internal fun onFrame(frame: Iap2Frame) {
+        if (frame.messageId == ClusterSongState.NOW_PLAYING_UPDATE) {
+            BydClusterSong.onFrame(frame)
+            return
+        }
         if (frame.messageId != BydHudRouteState.ROUTE_GUIDANCE_UPDATE &&
             frame.messageId != BydHudRouteState.ROUTE_GUIDANCE_MANEUVER_UPDATE) return
         val owned = frame // Iap2Frame is immutable and defensively copies its payload.
@@ -62,6 +67,9 @@ object BydNavigationOutputs {
         }
     }
 
+    /** The dashboard song setting changed; applies at once. */
+    fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
+
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
-    fun endNow() { standalone.clear(); hud.clear(); cluster.clear() }
+    fun endNow() { standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end() }
 }

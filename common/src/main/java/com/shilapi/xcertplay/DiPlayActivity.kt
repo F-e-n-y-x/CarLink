@@ -34,6 +34,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.hud.BydAdbAccess
+import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
@@ -413,11 +414,19 @@ class DiPlayActivity : ComponentActivity() {
                 if (it) checkAdbAccess(mayAsk = true)
                 if (CarPlayBackgroundSession.hasSession()) connect(AirPlayPersistence.loadWirelessEnabled(this))
             }
+            toggle(card, getString(R.string.cluster_song),
+                getString(R.string.cluster_song_description),
+                BydOutputSettings.clusterSong(this)) {
+                BydOutputSettings.setClusterSong(this, it)
+                if (it) checkAdbAccess(mayAsk = true)
+                BydNavigationOutputs.clusterSongChanged(it)
+            }
             adbStatus = label("", 14, MUTED).also { status ->
                 card.addView(status)
             }
             if (BydOutputSettings.clusterStreamPause(this) || BydOutputSettings.batteryToIphone(this) ||
-                BydOutputSettings.wheelSpeedToIphone(this) || BydOutputSettings.videoWhileParked(this))
+                BydOutputSettings.wheelSpeedToIphone(this) || BydOutputSettings.videoWhileParked(this) ||
+                BydOutputSettings.clusterSong(this))
                 checkAdbAccess(mayAsk = false)
             card.addView(button(getString(R.string.check_adb_access), false) { checkAdbAccess(mayAsk = true) }, matchButton(10, 56))
             card.addView(button(getString(R.string.apply_and_reconnect), false) {
