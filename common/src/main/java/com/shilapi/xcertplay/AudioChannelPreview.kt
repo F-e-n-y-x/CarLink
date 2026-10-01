@@ -26,7 +26,7 @@ internal class AudioChannelPreview(private val onUnavailable: (Int) -> Unit) : C
 
     fun play(channel: Int, navigation: Boolean) {
         if (closed) return
-        require(channel in 0..10)
+        require(channel in AirPlayPersistence.AUDIO_CHANNELS)
         val request = generation.incrementAndGet()
         pending?.cancel(true)
         activeTrack.get()?.let { runCatching { it.stop() } }
@@ -34,33 +34,38 @@ internal class AudioChannelPreview(private val onUnavailable: (Int) -> Unit) : C
             var track: AudioTrack? = null
             try {
                 if (closed || generation.get() != request) return@submit
-                val attributes = if (channel == 0) {
-                    AudioAttributes.Builder()
-                        .setUsage(if (navigation) AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
-                            else AudioAttributes.USAGE_MEDIA)
-                        .setContentType(if (navigation) AudioAttributes.CONTENT_TYPE_SPEECH
-                            else AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                } else {
-                    AudioAttributes.Builder().setLegacyStreamType(channel).build()
-                }
                 val pcm = tone()
                 val minimum = AudioTrack.getMinBufferSize(
                     SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
                 )
                 check(minimum > 0) { "No PCM output buffer is available" }
-                val built = AudioTrack.Builder()
-                    .setAudioAttributes(attributes)
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setSampleRate(SAMPLE_RATE)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build(),
-                    )
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .setBufferSizeInBytes(maxOf(minimum, SAMPLE_RATE / 10 * 2))
-                    .build()
+                val bufferBytes = maxOf(minimum, SAMPLE_RATE / 10 * 2)
+                val built = if (channel == 0) {
+                    AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(if (navigation) AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
+                                    else AudioAttributes.USAGE_MEDIA)
+                                .setContentType(if (navigation) AudioAttributes.CONTENT_TYPE_SPEECH
+                                    else AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build(),
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(SAMPLE_RATE)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build(),
+                        )
+                        .setTransferMode(AudioTrack.MODE_STREAM)
+                        .setBufferSizeInBytes(bufferBytes)
+                        .build()
+                } else {
+                    // 与实际播放保持一致，交由车机处理厂商扩展 streamType。
+                    @Suppress("DEPRECATION")
+                    AudioTrack(channel, SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT, bufferBytes, AudioTrack.MODE_STREAM)
+                }
                 track = built
                 check(built.state == AudioTrack.STATE_INITIALIZED) { "Audio output did not initialize" }
                 if (closed || generation.get() != request) return@submit
