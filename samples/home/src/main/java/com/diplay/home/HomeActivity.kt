@@ -21,13 +21,15 @@ import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 
 /**
  * DiPlay Home: the live CarPlay map, any Android widgets and the app list on one screen. An
  * ordinary app, so it can be the home screen without BYD's system privileges; BYD's own home
  * stays installed and one button away.
  */
-class HomeActivity : Activity() {
+class HomeActivity : ComponentActivity() {
     private lateinit var mapPanel: DiPlayMapPanel
     private lateinit var board: WidgetBoard
     private lateinit var appsOverlay: View
@@ -85,6 +87,15 @@ class HomeActivity : Activity() {
             addView(appsOverlay, FrameLayout.LayoutParams(-1, -1))
         })
         board.restore()
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    appsOverlay.visibility == View.VISIBLE -> showApps(false)
+                    board.editing -> setEditing(false)
+                    // Home has nowhere to go back to.
+                }
+            }
+        })
     }
 
     override fun onStart() {
@@ -110,15 +121,6 @@ class HomeActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         if (!board.onActivityResult(requestCode, resultCode)) super.onActivityResult(requestCode, resultCode, data)
-    }
-
-    @Deprecated("Back is handled here")
-    override fun onBackPressed() {
-        when {
-            appsOverlay.visibility == View.VISIBLE -> showApps(false)
-            board.editing -> setEditing(false)
-            // Home has nowhere to go back to.
-        }
     }
 
     private fun setEditing(editing: Boolean) {

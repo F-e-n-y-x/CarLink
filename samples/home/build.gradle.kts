@@ -21,4 +21,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+dependencies {
+    implementation(libs.androidx.activity)
+    testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.17")
+}
+
+tasks.withType<Test>().configureEach {
+    // Robolectric's API 36 shared-memory implementation needs this JDK interface.
+    jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
 }
