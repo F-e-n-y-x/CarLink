@@ -20,6 +20,8 @@ import java.io.File
 
 /** SharedPreferences persistence for the accessory identity and paired controllers. */
 object AirPlayPersistence {
+    /** 0 uses usage-based routing; 1–20 select stream types supported by the head unit. */
+    val AUDIO_CHANNELS = 0..20
     private const val PREFS = "xcertplay_airplay"
     private const val KEY_IDENT_PRIVATE = "identity_private"
     private const val KEY_IDENT_PUBLIC = "identity_public"
@@ -161,22 +163,24 @@ object AirPlayPersistence {
     fun loadMediaAudioChannel(context: Context): Int =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getInt(KEY_MEDIA_AUDIO_CHANNEL, 0)
-            .takeIf { it in 0..10 } ?: 0
+            .takeIf { it in AUDIO_CHANNELS } ?: 0
 
     fun saveMediaAudioChannel(context: Context, channel: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_MEDIA_AUDIO_CHANNEL, channel.takeIf { it in 0..10 } ?: 0)
+            .putInt(KEY_MEDIA_AUDIO_CHANNEL, channel.takeIf { it in AUDIO_CHANNELS } ?: 0)
             .apply()
     }
 
-    fun loadNavigationAudioChannel(context: Context): Int =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_NAVIGATION_AUDIO_CHANNEL, 0)
-            .takeIf { it in 0..10 } ?: 0
+    fun loadNavigationAudioChannel(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // Inherit the legacy value only when the new key is absent; preserve fresh-install and explicit 0 defaults.
+        return prefs.getInt(KEY_NAVIGATION_AUDIO_CHANNEL, prefs.getInt(KEY_NAVIGATION_STREAM_TYPE, 0))
+            .takeIf { it in AUDIO_CHANNELS } ?: 0
+    }
 
     fun saveNavigationAudioChannel(context: Context, channel: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_NAVIGATION_AUDIO_CHANNEL, channel.takeIf { it in 0..10 } ?: 0)
+            .putInt(KEY_NAVIGATION_AUDIO_CHANNEL, channel.takeIf { it in AUDIO_CHANNELS } ?: 0)
             .apply()
     }
 
@@ -469,6 +473,16 @@ object AirPlayPersistence {
 
     fun saveLauncherMapSharing(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_LAUNCHER_MAP_SHARING, enabled).apply()
+    }
+
+    /** Observe consent changes for already attached launcher maps; call the returned function to unregister. */
+    internal fun observeLauncherMapSharing(context: Context, changed: (Boolean) -> Unit): () -> Unit {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_LAUNCHER_MAP_SHARING) changed(loadLauncherMapSharing(context))
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
     fun saveCenterMapOverlay(context: Context, enabled: Boolean) {

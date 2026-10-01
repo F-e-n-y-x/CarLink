@@ -32,7 +32,12 @@ object CarPlayGlance {
     /** Called with each new snapshot, on the thread that changed it. */
     @Volatile var listener: ((Snapshot) -> Unit)? = null
 
-    @Synchronized fun snapshot(): Snapshot = last
+    /** Refresh time-dependent guidance even when no new metadata frame has arrived. */
+    fun snapshot(): Snapshot {
+        val (changed, current) = synchronized(this) { publishLocked() to last }
+        changed?.let { listener?.invoke(it) }
+        return current
+    }
 
     fun onFrame(frame: Iap2Frame) {
         val changed = synchronized(this) {

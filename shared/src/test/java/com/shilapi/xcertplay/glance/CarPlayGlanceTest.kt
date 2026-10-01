@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.glance
 
 import com.shilapi.xcertplay.iap2.body.Iap2BodyBuilder
 import com.shilapi.xcertplay.iap2.message.Iap2Messages
+import com.shilapi.xcertplay.hud.BydHudRouteState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -60,6 +61,59 @@ class CarPlayGlanceTest {
 
         CarPlayGlance.setConnected(false)
         assertEquals(CarPlayGlance.Snapshot(), CarPlayGlance.snapshot())
+    }
+
+    @Test
+    fun expiredGuidanceClearsWithoutAnotherFrameAndNotifiesTheWidget() {
+        withRouteClock { advance ->
+            CarPlayGlance.setConnected(true)
+            CarPlayGlance.onFrame(frame(0x5202) { u16(1, 1); u8(3, 2) })
+            CarPlayGlance.onFrame(frame(0x5201) { u8(1, 1); u16List(0x0d, listOf(1)) })
+            assertEquals(2, CarPlayGlance.snapshot().maneuverType)
+            val seen = mutableListOf<CarPlayGlance.Snapshot>()
+            CarPlayGlance.listener = { seen += it }
+            advance(30_000_000_000L)
+            assertNull(CarPlayGlance.snapshot().maneuverType)
+            assertNull(seen.single().maneuverType)
+            assertTrue(CarPlayGlance.snapshot().connected)
+        }
+    }
+
+    @Test
+    fun aPersistentlyEmptyManeuverListExpiresAfterTheGracePeriod() {
+        withRouteClock { advance ->
+            CarPlayGlance.setConnected(true)
+            CarPlayGlance.onFrame(frame(0x5202) { u16(1, 1); u8(3, 2) })
+            CarPlayGlance.onFrame(frame(0x5201) { u8(1, 1); u16List(0x0d, listOf(1)) })
+            CarPlayGlance.onFrame(frame(0x5201) { u16List(0x0d, emptyList()) })
+            advance(2_000_000_000L)
+            assertEquals(2, CarPlayGlance.snapshot().maneuverType)
+            advance(1_000_000_000L)
+            assertNull(CarPlayGlance.snapshot().maneuverType)
+        }
+    }
+
+    @Test
+    fun anEmptySongTitleClearsTheWidgetSong() {
+        CarPlayGlance.setConnected(true)
+        CarPlayGlance.onFrame(frame(0x5001) { group(0) { string(1, "Previous song") } })
+        CarPlayGlance.onFrame(frame(0x5001) { group(0) { string(1, "") } })
+        assertNull(CarPlayGlance.snapshot().song)
+    }
+
+    // Inject the route parser's monotonic clock rather than waiting 30 seconds in each test.
+    private fun withRouteClock(test: ((Long) -> Unit) -> Unit) {
+        val route = CarPlayGlance.javaClass.getDeclaredField("route").apply { isAccessible = true }
+            .get(CarPlayGlance) as BydHudRouteState
+        val clock = route.javaClass.getDeclaredField("nanoTime").apply { isAccessible = true }
+        val original = clock.get(route)
+        var now = 1_000_000_000L
+        try {
+            clock.set(route, { now })
+            test { now += it }
+        } finally {
+            clock.set(route, original)
+        }
     }
 
     @Test
