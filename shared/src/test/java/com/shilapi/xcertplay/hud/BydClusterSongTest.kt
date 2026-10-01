@@ -38,6 +38,20 @@ class BydClusterSongTest {
     }
 
     @Test
+    fun clearedTitlesForgetThePreviousSongUntilANewTitleArrives() {
+        val state = ClusterSongState()
+        state.accept(update { group(0) { string(1, "Previous song"); string(12, "Artist") } })
+        state.accept(update { group(0) { string(1, "") } })
+        assertNull(state.current())
+        state.accept(update { group(1) { u8(0, 1) } })
+        assertNull(state.current())
+        assertEquals(ClusterSong("Next song", true),
+            state.accept(update { group(0) { string(1, "Next song") } }))
+        state.accept(update { group(0) { string(1, "  ") } })
+        assertNull(state.current())
+    }
+
+    @Test
     fun textFitsTheDashboard() {
         assertNull(ClusterSongState.text("  ", "Artist"))
         assertEquals("Title", ClusterSongState.text(" Title ", ""))

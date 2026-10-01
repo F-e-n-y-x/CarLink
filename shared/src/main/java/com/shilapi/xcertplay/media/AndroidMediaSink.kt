@@ -888,7 +888,7 @@ private class AudioRenderer(
         )
     }
 
-    /** 0 keeps usage routing; 1-10 selects an Android legacy stream ID. */
+    /** 0 uses usage-based routing; 1–20 attempt legacy stream types supported by the head unit. */
     private fun channelOverride(channel: AudioChannel): Int = when (channel) {
         AudioChannel.MEDIA -> mediaChannel
         AudioChannel.NAVIGATION -> navigationChannel
