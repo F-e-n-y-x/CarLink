@@ -605,8 +605,9 @@ class DiPlayActivity : ComponentActivity() {
         val preview = AudioChannelPreview { channel ->
             toast(getString(R.string.contrib_audio_home_channel_preview_unavailable, channel))
         }
-        val labels = (0..10).map(Int::toString).toTypedArray()
-        var selection = current.coerceIn(0, 10)
+        val channels = AirPlayPersistence.AUDIO_CHANNELS
+        val labels = channels.map(Int::toString).toTypedArray()
+        var selection = current.coerceIn(channels.first, channels.last)
         AlertDialog.Builder(this).setTitle(title)
             .setSingleChoiceItems(labels, selection) { _, which ->
                 selection = which
