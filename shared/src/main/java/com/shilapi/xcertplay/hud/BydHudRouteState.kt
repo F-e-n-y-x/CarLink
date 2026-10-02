@@ -27,7 +27,11 @@ internal enum class BydHudRouteChange {
 }
 
 /** Decodes the iAP2 route-guidance subset needed by the BYD windshield HUD and cluster. */
-internal class BydHudRouteState(private val nanoTime: () -> Long = System::nanoTime) {
+internal class BydHudRouteState(
+    private val nanoTime: () -> Long = System::nanoTime,
+    private val staleRouteNs: Long = STALE_ROUTE_NS,
+    private val emptyListHideNs: Long = EMPTY_LIST_HIDE_NS,
+) {
     private data class Maneuver(val type: Int, val drivingSide: Int, val afterRoad: String)
 
     private val maneuvers = mutableMapOf<Int, Maneuver>()
@@ -89,9 +93,9 @@ internal class BydHudRouteState(private val nanoTime: () -> Long = System::nanoT
     private fun activeManeuver(): Maneuver? {
         if (!routeActive || activeIndex < 0) return null
         val updated = lastRouteUpdateNs ?: return null
-        if (nanoTime() - updated >= STALE_ROUTE_NS) return null
+        if (nanoTime() - updated >= staleRouteNs) return null
         val emptySince = emptyListSinceNs
-        if (emptySince != null && nanoTime() - emptySince >= EMPTY_LIST_HIDE_NS) return null
+        if (emptySince != null && nanoTime() - emptySince >= emptyListHideNs) return null
         return maneuvers[activeIndex]
     }
 
@@ -201,7 +205,7 @@ internal class BydHudRouteState(private val nanoTime: () -> Long = System::nanoT
         const val ROUTE_GUIDANCE_UPDATE = 0x5201
         const val ROUTE_GUIDANCE_MANEUVER_UPDATE = 0x5202
         private const val TLV_HEADER_BYTES = 4
-        private const val STALE_ROUTE_NS = 120_000_000_000L
-        private const val EMPTY_LIST_HIDE_NS = 8_000_000_000L
+        private const val STALE_ROUTE_NS = 30_000_000_000L
+        private const val EMPTY_LIST_HIDE_NS = 3_000_000_000L
     }
 }

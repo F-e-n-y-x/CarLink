@@ -15,7 +15,10 @@ object BydNavigationOutputs {
     @Volatile private var useStandalone = false
     @Volatile private var overlayListener: ((ClusterTurnGuidance?) -> Unit)? = null
     private val overlayLock = Any()
-    private val overlayRoute = BydHudRouteState()
+    private val overlayRoute = BydHudRouteState(
+        staleRouteNs = 120_000_000_000L,
+        emptyListHideNs = 8_000_000_000L,
+    )
     private val standalone = NavigationOutputWorker("diplay-standalone-output", BydStandaloneNavigationBridge::clear)
     private val hud = NavigationOutputWorker("diplay-hud-output", BydHudBridge::clear)
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
