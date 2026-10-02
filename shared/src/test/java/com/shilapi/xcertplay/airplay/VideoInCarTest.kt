@@ -79,7 +79,9 @@ class VideoInCarTest {
         assertNull(VideoInCar.parseItem(app))
         assertEquals(VideoInCar.Item("A1", "mainm3u8://example/index.m3u8", 0), VideoInCar.parseItem(app, iphoneLoadsAppSchemes = true))
 
-        for (url in listOf("file:///sdcard/v.mp4", "content://media/1", "skd://key", "not a url")) {
+        for (url in listOf("file:///sdcard/v.mp4", "content://media/1", "asset:///v.mp4",
+            "rawresource:///123", "android.resource://app/raw/video", "skd://key", "not a url",
+            "/sdcard/v.mp4", "https", "FILE:///sdcard/v.mp4")) {
             assertNull(url, VideoInCar.parseItem(mapOf("item" to mapOf("Content-Location" to url)), iphoneLoadsAppSchemes = true))
         }
     }

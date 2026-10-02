@@ -42,8 +42,15 @@ object VideoInCar {
     /** A URL scheme an app could serve through its resource loader. */
     private val APP_SCHEME = Regex("[a-z][a-z0-9+.-]*")
 
-    /** Schemes that are not an app's own: local files, and FairPlay keys (need a licensed receiver). */
-    private val NOT_APP_SCHEMES = setOf("file", "content", "skd")
+    /** Android local resources and FairPlay keys must never be opened as remote video. */
+    private val NOT_APP_SCHEMES = setOf("file", "content", "asset", "rawresource", "android.resource", "skd")
+
+    /** Shared policy for queue items, playlist children and iPhone loader redirects. */
+    fun isPlayableUrl(url: String, iphoneLoadsAppSchemes: Boolean = false): Boolean {
+        val scheme = url.substringBefore(':', missingDelimiterValue = "").lowercase()
+        return scheme == "http" || scheme == "https" ||
+            (iphoneLoadsAppSchemes && APP_SCHEME.matches(scheme) && scheme !in NOT_APP_SCHEMES)
+    }
 
     /** The legacy AirPlay feature bits plus [ADDITIONAL_FEATURE_BITS], as base64 of the little-endian bit set. */
     fun featuresEx(legacyFeatures: Long): String {
@@ -82,9 +89,7 @@ object VideoInCar {
     fun parseItem(message: Map<String, Any?>, iphoneLoadsAppSchemes: Boolean = false): Item? {
         val item = message["item"] as? Map<*, *> ?: return null
         val url = item["Content-Location"] as? String ?: return null
-        val scheme = url.substringBefore(':').lowercase()
-        val appScheme = iphoneLoadsAppSchemes && APP_SCHEME.matches(scheme) && scheme !in NOT_APP_SCHEMES
-        if (scheme != "http" && scheme != "https" && !appScheme) return null
+        if (!isPlayableUrl(url, iphoneLoadsAppSchemes)) return null
         val startSeconds = (item["Start-Position-Seconds"] as? Number)?.toDouble()
             ?: (item["Start-Position"] as? Map<*, *>)?.let(::seconds)
         val startMillis = startSeconds?.let { (it * 1000).toLong().coerceIn(0, Int.MAX_VALUE.toLong()).toInt() } ?: 0
