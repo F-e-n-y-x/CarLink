@@ -65,6 +65,7 @@ object AirPlayPersistence {
     private const val KEY_CLUSTER_CONTENT = "cluster_content"
     private const val KEY_CLUSTER_MARKER_X = "cluster_marker_horizontal_step"
     private const val KEY_CLUSTER_MARKER_Y = "cluster_marker_vertical_step"
+    private const val KEY_CENTER_MAP_FOLLOWS_DASHBOARD = "center_map_follows_dashboard"
     private const val KEY_WIDTH_PHYSICAL_MM = "display_width_physical_mm"
     private const val KEY_PHYSICAL_SIZE_BASIS = "display_physical_size_basis"
     private const val KEY_MAX_DETECTED_WIDTH = "display_max_detected_width"
@@ -496,6 +497,15 @@ object AirPlayPersistence {
 
     fun saveClusterContent(context: Context, content: CarPlayClusterDisplay.Content) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CLUSTER_CONTENT, content.name).apply()
+    }
+
+    fun loadCenterMapFollowsDashboard(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_CENTER_MAP_FOLLOWS_DASHBOARD, true)
+
+    fun saveCenterMapFollowsDashboard(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_CENTER_MAP_FOLLOWS_DASHBOARD, enabled).apply()
     }
 
     fun loadClusterMapScalePercent(context: Context): Int = CarPlayClusterDisplay.STREAM_SCALE_PERCENT.let { default ->
