@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * iOS 27 video in car (see [VideoInCar]). The iPhone hands the car a media URL (insertPlayQueueItem)
- * and drives it (setRate, seek, stop); the car plays it in [CarPlayVideoActivity], which opens when the
- * iPhone sends requestUI "videoplayback:" and only while the car is in P.
+ * and drives it (setRate, seek, stop); the car plays it in [CarPlayVideoActivity], which opens as soon
+ * as the iPhone starts the item (or sends requestUI "videoplayback:") and only while the car is in P.
  */
 internal object CarPlayVideo : CarPlayVideoListener {
     private const val TAG = "DiPlay-Video"
@@ -136,6 +136,9 @@ internal object CarPlayVideo : CarPlayVideoListener {
             }
             "setRate" -> {
                 playing = ((message["rate"] as? Number)?.toDouble() ?: 0.0) > 0.0
+                // The iPhone starts the item at once, as Apple's receiver plays it straight
+                // away, so open the player now instead of waiting for Now Playing's video button.
+                if (playing && activity == null) show()
                 activity?.applyRate()
             }
             "seek" -> {
