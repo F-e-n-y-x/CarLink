@@ -797,6 +797,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun showCenterMap() {
         if (isDestroyed || shuttingDown.get() || sink == null) return
         if (!AirPlayPersistence.loadCenterMapOverlay(this) || !AirPlayPersistence.loadClusterMapEnabled(this)) return
+        if (!AirPlayPersistence.loadCenterMapFollowsDashboard(this)) return
         if (MapMirrors.launcherShowsMap) return // the launcher has the map on its own screen
         // Without the stream the card would stay black; it follows once the stream starts.
         if (SCREEN_TYPE_ALT !in activeScreenStreamTypes) return

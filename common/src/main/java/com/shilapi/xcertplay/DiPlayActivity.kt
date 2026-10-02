@@ -331,6 +331,13 @@ class DiPlayActivity : ComponentActivity() {
                     AirPlayPersistence.loadCenterMapOverlay(this)) {
                     AirPlayPersistence.saveCenterMapOverlay(this, it)
                     if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
+                    render()
+                }
+                if (AirPlayPersistence.loadCenterMapOverlay(this)) {
+                    toggle(card, getString(R.string.center_map_follows_dashboard), getString(R.string.center_map_follows_dashboard_description),
+                        AirPlayPersistence.loadCenterMapFollowsDashboard(this)) {
+                        AirPlayPersistence.saveCenterMapFollowsDashboard(this, it)
+                    }
                 }
                 toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
                     AirPlayPersistence.loadLauncherMapSharing(this)) {
@@ -373,6 +380,7 @@ class DiPlayActivity : ComponentActivity() {
                     val sizes = CarPlayClusterDisplay.scalePresets
                     val contents = CarPlayClusterDisplay.Content.entries
                     val content = AirPlayPersistence.loadClusterContent(this)
+                    val turnCard = content == CarPlayClusterDisplay.Content.TURN_CARD
                     choice(card, getString(R.string.dashboard_shows), listOf(
                         getString(R.string.dashboard_content_map),
                         getString(R.string.dashboard_content_turn_card),
@@ -381,8 +389,6 @@ class DiPlayActivity : ComponentActivity() {
                         AirPlayPersistence.saveClusterContent(this, contents[it])
                         render()
                     }
-                    // Both contents share the same safe area and position controls.
-                    val turnCard = content == CarPlayClusterDisplay.Content.TURN_CARD
                     choice(card, getString(if (turnCard) R.string.turn_card_size else R.string.cluster_map_size),
                         listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {

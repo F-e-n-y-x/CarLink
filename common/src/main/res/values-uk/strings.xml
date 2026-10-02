@@ -457,4 +457,24 @@
     <string name="video_play">Відтворити</string>
     <string name="video_pause">Пауза</string>
     <string name="video_cannot_play">Це відео не можна відтворити на екрані автомобіля. Для захищеного відео, зокрема Apple TV+, потрібен ліцензований приймач.</string>
+    <string name="center_map_card">Карта приборки на центральному екрані</string>
+    <string name="center_map_card_description">Поки DiPlay працює у фоні, карта приборки також показується карткою на головному екрані: BYD, домашній екран із картою або ваш типовий лаунчер. Торкніться картки, щоб відкрити CarPlay, перетягніть її, щоб перемістити, і розведіть двома пальцями, щоб змінити розмір. Карта на приборці залишається. Потрібен дозвіл на показ поверх інших застосунків.</string>
+    <string name="center_map_no_permission_screen">На цьому головному пристрої немає екрана налаштувань для цього дозволу. Надайте його через ADB.</string>
+    <string name="center_map_overlay_allowed">Показ поверх інших застосунків: дозволено</string>
+    <string name="center_map_overlay_missing">Показ поверх інших застосунків: не дозволено. Дозвольте його в налаштуваннях застосунку або через ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
+    <string name="center_map_usage_allowed">Доступ до даних використання: дозволено, картка показується лише на головному екрані</string>
+    <string name="center_map_usage_missing">Доступ до даних використання: не дозволено, тому картка показується поверх усіх застосунків. Через ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
+    <string name="cluster_song">Пісня на приборці · потрібен ADB</string>
+    <string name="cluster_song_description">Назва й виконавець пісні з CarPlay показуються в музичній картці на приборці, разом із відтворенням і паузою. Картка показується як джерело BYD «Інше», бо приборка не малює власне джерело CarPlay. Застосовується одразу. Потрібен ADB через мережу на головному пристрої.</string>
+    <string name="launcher_map_sharing">Ділитися живою картою з іншими лаунчерами</string>
+    <string name="launcher_map_sharing_description">Лаунчери з підтримкою DiPlay можуть показувати живу карту приборки на своєму головному екрані. Типово вимкнено, бо тоді карту зможе запитати будь-який застосунок на головному пристрої. Див. docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="navigation_widget_description">Наступний поворот, відстань, прибуття й пісня з CarPlay</string>
+    <string name="navigation_widget_label">Навігація CarPlay</string>
+    <string name="widget_distance_km">%1$d км</string>
+    <string name="widget_distance_km_decimal">%1$.1f км</string>
+    <string name="widget_distance_meters">%1$d м</string>
+    <string name="widget_hours_minutes">%1$d год %2$02d хв</string>
+    <string name="widget_minutes">%1$d хв</string>
+    <string name="widget_no_route">Немає маршруту</string>
+    <string name="widget_not_connected">CarPlay не підключено</string>
 </resources>

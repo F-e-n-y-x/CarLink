@@ -1,8 +1,11 @@
 package com.shilapi.xcertplay
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.media.MediaMetadata
 import android.view.KeyEvent
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
+import com.shilapi.xcertplay.media.CarPlayNowPlaying
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,6 +46,31 @@ class CarPlayMediaCallbackTest {
         callback.onMediaButtonEvent(button(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_NEXT, 0)))
 
         assertEquals(listOf(CarPlayMediaButton.NEXT), sent)
+    }
+
+    @Test
+    fun nowPlayingFieldsBecomeAndroidMediaMetadata() {
+        val artwork = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+        val metadata = CarPlayMediaKeys.androidMetadata(
+            CarPlayNowPlaying(
+                title = "Dreams",
+                album = "Rumours",
+                artist = "Fleetwood Mac",
+                sourceApp = "Music",
+                durationMillis = 257_000,
+            ),
+            artwork,
+        )
+
+        assertEquals("Dreams", metadata.getString(MediaMetadata.METADATA_KEY_TITLE))
+        assertEquals("Dreams", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE))
+        assertEquals("Fleetwood Mac", metadata.getString(MediaMetadata.METADATA_KEY_ARTIST))
+        assertEquals("Fleetwood Mac", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE))
+        assertEquals("Rumours", metadata.getString(MediaMetadata.METADATA_KEY_ALBUM))
+        assertEquals("Music", metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_DESCRIPTION))
+        assertEquals(257_000, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION))
+        assertEquals(artwork, metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART))
+        assertEquals(artwork, metadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON))
     }
 
     private fun press(keyCode: Int, repeat: Int = 0) {

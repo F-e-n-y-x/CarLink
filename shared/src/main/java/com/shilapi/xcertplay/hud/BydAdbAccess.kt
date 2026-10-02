@@ -33,8 +33,7 @@ object BydAdbAccess {
     /** Read and publish the same battery data that the settings page reports as ready. */
     internal fun readStatus(context: Context, shell: (String) -> String?): Status {
         val mode = BydClusterNaviMode.parseRead(shell(BydClusterNaviMode.READ_COMMAND))
-        val battery = BydBattery.read(shell)
-        battery?.let { BydBatteryStatus.accept(context, it) }
+        val battery = BydBatteryStatus.read(context) { BydBattery.read(shell) }
         return Status(State.READY, mode, mode?.showsMap != false, battery?.percent, battery?.rangeKm)
     }
 }
