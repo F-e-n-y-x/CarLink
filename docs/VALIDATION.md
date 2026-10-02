@@ -1,3 +1,12 @@
+# DiPlay 0.2.9 — 2026-10-02
+
+- 420 unit tests passed: 109 common, 307 shared, and 4 Home sample tests, with zero failures, errors or skipped tests.
+- Mobile release lint and the production-signed release build passed; lint warnings remain.
+- Package `com.shihab.diplay`, version `0.2.9`, version code `28`. Signing certificate matches the published 0.2.8 APK.
+- Ten floating-map gesture tests include stable initial contact, both size limits, pointer changes, persistence, and enlarging a reopened minimum-sized card.
+- Public-tree and source-archive scans exclude runtime identities, signing keys, and build output. Runtime authentication assets in the APK match the explicitly selected local inputs; the Android signing key is excluded.
+- The test variant was installed on DiLink 5.1 and user feedback drove the floating-map fixes. The production APK has not had a separate on-car test. Broader vehicle checks remain documented in [release notes](RELEASE-NOTES-0.2.9.md).
+
 # Restored 0.1.0 release — 2026-09-25
 
 - Built from the current public source with explicitly selected external authentication assets and the existing local Android signing key.
