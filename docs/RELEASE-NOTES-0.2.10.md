@@ -71,6 +71,24 @@ The APK is `com.shihab.diplay`, version code **29**, signed with the same certif
 
 No new on-car validation was performed for this release. Previous hardware tests and automated regression coverage do not establish compatibility on every head unit. See [validation details](VALIDATION.md).
 
+## Fresh reports needed for unresolved issues
+
+Several reports remain under investigation, including:
+
+- Bluetooth/wireless startup and connection timeouts (#98, #134, #137, #142).
+- Connection drops and USB reconnects after rotation (#119, #141).
+- Wi-Fi Direct audio stutter and packet loss (#131).
+- Microphone, phone-call, voice-message and Siri input problems (#103, #115, #117, #138).
+- Automatic startup problems (#118, #127) and CarPlay display-size behavior (#92).
+
+If your problem still occurs, we need a **fresh reproduction and diagnostic report from 0.2.10** to continue the investigation:
+
+1. Update to 0.2.10 and reproduce the problem, keeping the report from the first connection attempt through the failure. For an auto-start problem, reboot the head unit, then open DiPlay manually to export the report.
+2. Open **Settings → Diagnostics → Save diagnostic report** after the failure.
+3. Attach the exported `.txt` report to your existing issue. Include the head-unit model, Android/firmware version, iPhone/iOS version, connection mode, the action that triggered the failure and its approximate time so we can match it to the logs.
+
+The new diagnostics help identify the failing stage. Earlier reports do not contain all of these new fields, so please share a new report even if you already supplied logs from an older version.
+
 ## Compatibility and remaining reports
 
 Android 9 remains the minimum supported Android version. This release does not add Android 7/8 support or establish wireless support for HarmonyOS and other unverified Bluetooth firmware. Existing Wi-Fi Direct packet-loss, device-specific microphone and reconnect reports still require device logs and hardware investigation. Targeted fixes are not a claim that every connection issue is resolved.
