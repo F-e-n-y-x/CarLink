@@ -1046,6 +1046,11 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("--- Last display negotiation (timestamps distinguish it from current settings) ---")
                     appendLine(DisplayDiagnosticSnapshot.report(appContext))
                     appendLine()
+                    appendLine("--- Last received boot and app-launch result ---")
+                    appendLine(StartupDiagnosticSnapshot.report(appContext))
+                    appendLine("Startup settings: openAfterBoot=${AirPlayPersistence.loadAutoStartOnBoot(appContext)} " +
+                        "connectWhenOpened=${DiPlayPreferences.autoConnect(appContext)}")
+                    appendLine()
                     for (name in SessionLogFile.REPORT_NAMES) {
                         val file = File(appContext.filesDir, "logs/$name")
                         if (file.isFile) {
