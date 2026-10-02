@@ -34,6 +34,7 @@ internal object CenterMapOverlay {
     private const val RELEASE_DELAY_MILLIS = 1_000L
     private const val WIDTH_FRACTION = 0.36
     private const val MIN_WIDTH_FRACTION = 0.25
+    private const val MIN_PINCH_REFERENCE_DP = 64f
 
     private val main = Handler(Looper.getMainLooper())
     private var root: View? = null
@@ -137,13 +138,16 @@ internal object CenterMapOverlay {
         var firstPointer = -1
         var secondPointer = -1
         var initialSpan = 0f
-        var initialWidth = 0
+        var previousSpan = 0f
+        var pinchWidth = 0f
         var centerX = 0
         var centerY = 0
         var scaling = false
         // The car's ScaleGestureDetector minimum span is 32 mm, too large for a small
         // card. Use touch slop and the two fingers' distance instead, keeping its centre
-        // and aspect ratio. Pointer IDs keep additional fingers from changing the pair.
+        // and aspect ratio. A denominator floor prevents near-touching fingers from
+        // making small movements resize the whole card. It does not gate recognition.
+        val minPinchReference = MIN_PINCH_REFERENCE_DP * metrics.density
         fun beginPinch(event: MotionEvent, liftedIndex: Int = -1) {
             val indices = (0 until event.pointerCount).filter { it != liftedIndex }
             firstPointer = -1
@@ -154,8 +158,11 @@ internal object CenterMapOverlay {
             val second = indices[1]
             firstPointer = event.getPointerId(first)
             secondPointer = event.getPointerId(second)
-            initialSpan = hypot(event.getX(first) - event.getX(second), event.getY(first) - event.getY(second))
-            initialWidth = params.width
+            // Wait for the first MOVE: initial pointer-down coordinates can still be
+            // settling. Merely putting a second finger down must not change the size.
+            initialSpan = 0f
+            previousSpan = 0f
+            pinchWidth = params.width.toFloat()
             centerX = params.x + params.width / 2
             centerY = params.y + params.height / 2
         }
@@ -180,11 +187,19 @@ internal object CenterMapOverlay {
                 MotionEvent.ACTION_MOVE -> if (pinched) {
                     val first = event.findPointerIndex(firstPointer)
                     val second = event.findPointerIndex(secondPointer)
-                    if (first >= 0 && second >= 0 && initialSpan > 0f) {
+                    if (first >= 0 && second >= 0) {
                         val span = hypot(event.getX(first) - event.getX(second), event.getY(first) - event.getY(second))
-                        if (scaling || abs(span - initialSpan) > slop) {
+                        if (initialSpan == 0f) {
+                            initialSpan = span
+                            previousSpan = span
+                        } else if (scaling || abs(span - initialSpan) > slop) {
                             scaling = true
-                            params.width = (initialWidth * span / initialSpan).toInt().coerceIn(minWidth, maxWidth)
+                            val factor = 1f + (span - previousSpan) / maxOf(previousSpan, minPinchReference)
+                            // Rebase at every sample, including at a size limit. Reversing
+                            // direction then responds immediately, without a dead zone.
+                            pinchWidth = (pinchWidth * factor).coerceIn(minWidth.toFloat(), maxWidth.toFloat())
+                            previousSpan = span
+                            params.width = pinchWidth.toInt()
                             params.height = (params.width / aspect).toInt()
                             params.x = (centerX - params.width / 2).coerceIn(0, (screenWidth - params.width).coerceAtLeast(0))
                             params.y = (centerY - params.height / 2).coerceIn(0, (screenHeight - params.height).coerceAtLeast(0))

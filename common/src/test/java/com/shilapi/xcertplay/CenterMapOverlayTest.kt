@@ -43,20 +43,22 @@ class CenterMapOverlayTest {
             ViewConfiguration.get(context).scaledMinimumScalingSpan > 60)
         touch(MotionEvent.ACTION_DOWN, 0 to 300f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 300f, 1 to 330f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 300f, 1 to 330f)
         touch(MotionEvent.ACTION_MOVE, 0 to 285f, 1 to 345f)
-        assertEquals(1280, params.width)
-        assertEquals(480, params.height)
+        assertEquals(840, params.width)
+        assertEquals(315, params.height)
         assertEquals(820, params.x + params.width / 2)
         assertEquals(420, params.y + params.height / 2)
         touch(MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 285f, 1 to 345f)
         touch(MotionEvent.ACTION_UP, 0 to 285f)
         assertEquals(0, taps)
-        assertEquals(1280, context.getSharedPreferences("diplay_center_map", Context.MODE_PRIVATE).getInt("width", 0))
+        assertEquals(840, context.getSharedPreferences("diplay_center_map", Context.MODE_PRIVATE).getInt("width", 0))
     }
 
     @Test fun pinchRespectsSizeLimitsAndKeepsCardOnScreen() {
         touch(MotionEvent.ACTION_DOWN, 0 to 200f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 200f, 1 to 320f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 200f, 1 to 320f)
         touch(MotionEvent.ACTION_MOVE, 0 to 245f, 1 to 275f)
         val screen = context.resources.displayMetrics
         assertEquals((screen.widthPixels * 0.25).toInt(), params.width)
@@ -69,13 +71,14 @@ class CenterMapOverlayTest {
     @Test fun remainingFingerAfterPinchCannotDragOrTap() {
         touch(MotionEvent.ACTION_DOWN, 7 to 300f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 7 to 300f, 11 to 330f)
+        touch(MotionEvent.ACTION_MOVE, 7 to 300f, 11 to 330f)
         touch(MotionEvent.ACTION_MOVE, 7 to 285f, 11 to 345f)
         touch(MotionEvent.ACTION_POINTER_UP, 7 to 285f, 11 to 345f)
         val x = params.x
         touch(MotionEvent.ACTION_MOVE, 11 to 500f)
         touch(MotionEvent.ACTION_UP, 11 to 500f)
         assertEquals(x, params.x)
-        assertEquals(1280, params.width)
+        assertEquals(840, params.width)
         assertEquals(0, taps)
     }
 
@@ -94,14 +97,16 @@ class CenterMapOverlayTest {
     @Test fun extraFingerDoesNotChangeScaleAndReplacingAFingerStartsFromTheCurrentSize() {
         touch(MotionEvent.ACTION_DOWN, 7 to 300f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 7 to 300f, 11 to 330f)
+        touch(MotionEvent.ACTION_MOVE, 7 to 300f, 11 to 330f)
         touch(MotionEvent.ACTION_MOVE, 7 to 285f, 11 to 345f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (2 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 7 to 285f, 11 to 345f, 2 to 500f)
         touch(MotionEvent.ACTION_MOVE, 7 to 285f, 11 to 345f, 2 to 900f)
-        assertEquals(1280, params.width)
+        assertEquals(840, params.width)
         touch(MotionEvent.ACTION_POINTER_UP, 7 to 285f, 11 to 345f, 2 to 900f)
-        assertEquals(1280, params.width)
-        touch(MotionEvent.ACTION_MOVE, 11 to 345f, 2 to 622.5f)
-        assertEquals(640, params.width)
+        assertEquals(840, params.width)
+        touch(MotionEvent.ACTION_MOVE, 11 to 345f, 2 to 900f)
+        touch(MotionEvent.ACTION_MOVE, 11 to 345f, 2 to 761.25f)
+        assertEquals(630, params.width)
         assertEquals(0, taps)
     }
 
@@ -109,10 +114,69 @@ class CenterMapOverlayTest {
         val jitter = ViewConfiguration.get(context).scaledTouchSlop / 2f
         touch(MotionEvent.ACTION_DOWN, 0 to 300f)
         touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 300f, 1 to 330f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 300f, 1 to 330f)
         touch(MotionEvent.ACTION_MOVE, 0 to 300f, 1 to 330f + jitter)
         touch(MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 300f, 1 to 330f + jitter)
         touch(MotionEvent.ACTION_UP, 0 to 300f)
         assertEquals(640, params.width)
+        assertEquals(0, taps)
+    }
+
+    @Test fun placingSecondFingerWaitsForStableCoordinatesBeforeResizing() {
+        touch(MotionEvent.ACTION_DOWN, 0 to 200f)
+        touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 200f, 1 to 500f)
+        assertEquals(640, params.width)
+        // The first MOVE can correct the initial contact coordinates on the head unit.
+        touch(MotionEvent.ACTION_MOVE, 0 to 285f, 1 to 345f)
+        assertEquals("Settling the second contact must not shrink the card", 640, params.width)
+        touch(MotionEvent.ACTION_MOVE, 0 to 270f, 1 to 360f)
+        assertTrue("Subsequent deliberate spreading must enlarge it", params.width > 640)
+    }
+
+    @Test fun spreadingImmediatelyGrowsFromMinimumWithoutLiftingFingers() {
+        touch(MotionEvent.ACTION_DOWN, 0 to 200f)
+        touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 200f, 1 to 400f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 200f, 1 to 400f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 275f, 1 to 325f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 295f, 1 to 305f)
+        val minimum = (context.resources.displayMetrics.widthPixels * 0.25).toInt()
+        assertEquals(minimum, params.width)
+        touch(MotionEvent.ACTION_MOVE, 0 to 290f, 1 to 310f)
+        assertTrue("Reversing at the minimum must immediately increase the size", params.width > minimum)
+    }
+
+    @Test fun squeezingImmediatelyShrinksFromMaximumWithoutLiftingFingers() {
+        touch(MotionEvent.ACTION_DOWN, 0 to 200f)
+        touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 200f, 1 to 240f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 200f, 1 to 240f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 0f, 1 to 1000f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 0f, 1 to 1200f)
+        val maximum = params.width
+        touch(MotionEvent.ACTION_MOVE, 0 to 50f, 1 to 1150f)
+        assertTrue("Reversing at the maximum must immediately decrease the size", params.width < maximum)
+    }
+
+    @Test fun aSavedMinimumSizeCanBeEnlargedWithAFreshSmallPinch() {
+        touch(MotionEvent.ACTION_DOWN, 0 to 200f)
+        touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 200f, 1 to 400f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 200f, 1 to 400f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 275f, 1 to 325f)
+        touch(MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 275f, 1 to 325f)
+        touch(MotionEvent.ACTION_UP, 0 to 275f)
+        val minimum = params.width
+        CenterMapOverlay.hide()
+        assertTrue(CenterMapOverlay.show(context, 8.0 / 3.0, {}, { taps++ }))
+        card = CenterMapOverlay.javaClass.getDeclaredField("root").apply { isAccessible = true }
+            .get(CenterMapOverlay) as View
+        card.layout(0, 0, params.width, params.height)
+        assertEquals(minimum, params.width)
+        touch(MotionEvent.ACTION_DOWN, 0 to 100f)
+        touch(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 0 to 100f, 1 to 150f)
+        touch(MotionEvent.ACTION_MOVE, 0 to 100f, 1 to 150f)
+        assertEquals(minimum, params.width)
+        val spread = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+        touch(MotionEvent.ACTION_MOVE, 0 to 100f - spread, 1 to 150f + spread)
+        assertTrue("A reopened minimum-sized card must still enlarge", params.width > minimum)
         assertEquals(0, taps)
     }
 
