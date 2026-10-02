@@ -51,9 +51,10 @@ class CarPlayClusterDisplayTest {
         val card = CarPlayClusterDisplay.config(1920, 720, content = CarPlayClusterDisplay.Content.TURN_CARD)
 
         assertEquals("maps:/car/instrumentcluster/instructioncard", card.initialUrl)
-        // The three contents the iPhone lists in altScreenURLs.
+        val mapWithCard = CarPlayClusterDisplay.config(1920, 720, content = CarPlayClusterDisplay.Content.INSTRUMENTS)
+        assertEquals("maps:/car/instrumentcluster/map", mapWithCard.initialUrl)
         assertEquals(
-            listOf("maps:/car/instrumentcluster/map", "maps:/car/instrumentcluster/instructioncard", "maps:/car/instrumentcluster"),
+            listOf("maps:/car/instrumentcluster/map", "maps:/car/instrumentcluster/instructioncard", "maps:/car/instrumentcluster/map"),
             CarPlayClusterDisplay.Content.entries.map { it.url },
         )
     }

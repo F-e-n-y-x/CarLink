@@ -201,7 +201,7 @@ internal class BydHudRouteState(private val nanoTime: () -> Long = System::nanoT
         const val ROUTE_GUIDANCE_UPDATE = 0x5201
         const val ROUTE_GUIDANCE_MANEUVER_UPDATE = 0x5202
         private const val TLV_HEADER_BYTES = 4
-        private const val STALE_ROUTE_NS = 30_000_000_000L
-        private const val EMPTY_LIST_HIDE_NS = 3_000_000_000L
+        private const val STALE_ROUTE_NS = 120_000_000_000L
+        private const val EMPTY_LIST_HIDE_NS = 8_000_000_000L
     }
 }
