@@ -3069,7 +3069,11 @@ class CarPlayHostActivity : ComponentActivity() {
             },
             mediaBufferMillis = AirPlayPersistence.loadMediaBufferMillis(this),
             onAudioDiagnostic = { message ->
-                diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
+                if (message.startsWith("Microphone: ")) {
+                    AsyncDiagnosticLog.append(diagnosticLog, message)
+                } else {
+                    diagnosticLog?.append(formattedLogLine(message, System.currentTimeMillis()))
+                }
             },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
         )
@@ -3084,6 +3088,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun createSessionListener(controllerGeneration: Int): AirPlaySessionListener =
         object : AirPlaySessionListener {
+            private val diagnosticLog = sessionLog
+
             override fun onSessionActive(session: AirPlaySession) {
                 runOnUiThread {
                     if (controllerGeneration != restartGeneration) {
@@ -3128,7 +3134,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 if (DiagnosticRedactor.redact(message) == null) return
                 if (message.startsWith(CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX + " ")) {
                     // Retain old-controller teardown evidence without accepting its UI/session state.
-                    appendFileLog(message)
+                    AsyncDiagnosticLog.append(diagnosticLog, message)
                     return
                 }
                 runOnUiThread {
@@ -3492,11 +3498,13 @@ class CarPlayHostActivity : ComponentActivity() {
         controller = null
         sink = null
         sessionDisplay = null
+        val diagnosticLog = sessionLog
         teardownExecutor.execute {
             val started = System.nanoTime()
             oldController?.close()
             val completed = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
-            appendFileLog(
+            AsyncDiagnosticLog.append(
+                diagnosticLog,
                 "${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} generation=$generation " +
                     "restart teardownWaitCompleted=$completed " +
                     "elapsedMs=${((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(0)}",

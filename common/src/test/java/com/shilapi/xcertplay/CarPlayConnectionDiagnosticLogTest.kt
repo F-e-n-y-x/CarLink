@@ -30,6 +30,7 @@ class CarPlayConnectionDiagnosticLogTest {
     }
 
     @After fun cleanup() {
+        assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
         activity.javaClass.getDeclaredField("sessionLog").apply { isAccessible = true }
             .get(activity).let { (it as Closeable).close() }
         for (field in listOf("teardownExecutor", "airPlayCommandExecutor")) {
@@ -41,6 +42,7 @@ class CarPlayConnectionDiagnosticLogTest {
     @Test fun oldTeardownEvidenceSurvivesWithoutAcceptingOtherOldControllerLogs() {
         listener.onDebugLog("${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} attempt=1 phase=CONTROL teardown end elapsedMs=117 executorTerminated=true")
         listener.onDebugLog("old controller ordinary state")
+        assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
         assertTrue(log.contains("teardown end elapsedMs=117"))
         assertFalse(log.contains("old controller ordinary state"))
         assertEquals(2, activity.javaClass.getDeclaredField("restartGeneration").apply { isAccessible = true }.get(activity))
@@ -48,6 +50,7 @@ class CarPlayConnectionDiagnosticLogTest {
 
     @Test fun theDiagnosticPrefixDoesNotBypassCredentialRedaction() {
         listener.onDebugLog("${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} attempt=1 token=private-token")
+        assertTrue(AsyncDiagnosticLog.awaitIdle(2_000))
         assertFalse(log.contains("private-token"))
     }
 }
