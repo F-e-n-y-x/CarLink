@@ -29,4 +29,61 @@ class CarPlayPlaybackStatusTest {
         status.accept(update { group(1) { u8(0, 1) } })
         assertEquals(false, status.clear())
     }
+
+    @Test
+    fun retainsIncrementalNowPlayingMetadata() {
+        val status = CarPlayPlaybackStatus()
+
+        assertEquals(
+            CarPlayNowPlaying(
+                title = "Dreams",
+                album = "Rumours",
+                artist = "Fleetwood Mac",
+                durationMillis = 257_000,
+            ),
+            status.acceptUpdate(update {
+                group(0) {
+                    string(1, "Dreams")
+                    u32(4, 257_000)
+                    string(6, "Rumours")
+                    string(12, "Fleetwood Mac")
+                }
+            }),
+        )
+        assertEquals(
+            CarPlayNowPlaying(
+                title = "Dreams",
+                album = "Rumours",
+                artist = "Fleetwood Mac",
+                sourceApp = "Music",
+                durationMillis = 257_000,
+                elapsedMillis = 12_500,
+                playing = true,
+            ),
+            status.acceptUpdate(update {
+                group(1) {
+                    u8(0, 1)
+                    u32(1, 12_500)
+                    string(7, "Music")
+                }
+            }),
+        )
+    }
+
+    @Test
+    fun emptyStringsClearFieldsAndArtworkIdIsRetained() {
+        val status = CarPlayPlaybackStatus()
+        status.acceptUpdate(update { group(0) { string(1, "Song") } })
+
+        val updated = status.acceptUpdate(update {
+            group(0) {
+                string(1, "")
+                u8(26, 0x81)
+            }
+        })
+
+        assertNull(updated?.title)
+        assertEquals(0x81, updated?.artworkTransferId)
+        assertEquals(CarPlayNowPlaying(), status.clearAll())
+    }
 }
