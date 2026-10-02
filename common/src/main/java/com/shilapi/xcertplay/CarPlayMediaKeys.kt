@@ -19,6 +19,7 @@ import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.media.CarPlayNowPlaying
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import java.util.concurrent.Executors
+import java.util.concurrent.Executor
 
 /**
  * Steering-wheel and other hardware media buttons for CarPlay.
@@ -34,9 +35,16 @@ internal object CarPlayMediaKeys {
         PlaybackState.ACTION_PLAY_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SKIP_TO_PREVIOUS
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val artworkExecutor = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "diplay-now-playing-artwork").apply { isDaemon = true }
-    }
+    private val artworkQueue = NowPlayingArtworkQueue(
+        worker = Executors.newSingleThreadExecutor { task ->
+            Thread(task, "diplay-now-playing-artwork").apply { isDaemon = true }
+        },
+        main = Executor { mainHandler.post(it) },
+        decode = ::decodeArtwork,
+        publish = ::onArtworkDecoded,
+        discard = Bitmap::recycle,
+    )
+    private var artworkOwner: Any? = null
     private var controller: CarPlayController? = null
     private var session: MediaSession? = null
     private var focusRequest: AudioFocusRequest? = null
@@ -50,7 +58,10 @@ internal object CarPlayMediaKeys {
 
     @Synchronized
     fun attach(context: Context, next: CarPlayController) {
-        if (controller !== next) releaseLocked()
+        if (controller !== next) {
+            releaseLocked()
+            artworkOwner = artworkQueue.newSession()
+        }
         appContext = context.applicationContext
         controller = next
         next.playbackListener = { playing -> onIphonePlaying(next, playing) }
@@ -101,21 +112,24 @@ internal object CarPlayMediaKeys {
         }
     }
 
+    @Synchronized
     private fun onArtworkChanged(expected: CarPlayController, id: Int, bytes: ByteArray) {
-        artworkExecutor.execute {
-            val decoded = decodeArtwork(bytes)
-            mainHandler.post {
-                synchronized(this) {
-                    if (controller !== expected) return@synchronized
-                    artworkCache.remove(id)
-                    artworkCache[id] = decoded
-                    while (artworkCache.size > MAX_CACHED_ARTWORK) artworkCache.remove(artworkCache.keys.first())
-                    if (nowPlaying.artworkTransferId == id) {
-                        artwork = decoded
-                        session?.setMetadata(androidMetadata(nowPlaying, artwork))
-                    }
-                }
-            }
+        if (controller !== expected) return
+        artworkOwner?.let { artworkQueue.submit(it, id, bytes) }
+    }
+
+    @Synchronized
+    private fun onArtworkDecoded(expected: Any, id: Int, decoded: Bitmap?) {
+        if (artworkOwner !== expected) {
+            decoded?.recycle()
+            return
+        }
+        artworkCache.remove(id)
+        artworkCache[id] = decoded
+        while (artworkCache.size > MAX_CACHED_ARTWORK) artworkCache.remove(artworkCache.keys.first())
+        if (nowPlaying.artworkTransferId == id) {
+            artwork = decoded
+            session?.setMetadata(androidMetadata(nowPlaying, artwork))
         }
     }
 
@@ -165,6 +179,8 @@ internal object CarPlayMediaKeys {
     }
 
     private fun releaseLocked() {
+        artworkOwner = null
+        artworkQueue.clear()
         session?.let {
             it.isActive = false
             it.release()
