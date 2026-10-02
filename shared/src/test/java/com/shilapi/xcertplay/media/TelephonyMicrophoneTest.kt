@@ -10,6 +10,7 @@ import com.shilapi.xcertplay.airplay.AudioStreamId
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
 import java.net.InetAddress
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
@@ -94,6 +95,47 @@ class TelephonyMicrophoneTest {
         val record = awaitCapture()
         assertEquals(AudioManager.MODE_NORMAL, manager.mode)
         assertEquals(MediaRecorder.AudioSource.VOICE_RECOGNITION, record.audioSource)
+        assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
+    }
+
+    @Test fun microphoneMetadataAndFinalCountersReachTheAudioDiagnosticCallback() {
+        sink.close()
+        val diagnostics = CopyOnWriteArrayList<String>()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add)
+        sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
+        awaitCapture()
+        sink.onMicrophoneStopped(speechRecognition)
+        val microphone = diagnostics.filter { it.startsWith("Microphone:") }
+        assertTrue(microphone.any { it.startsWith("Microphone: start type=speechrecognition source=VOICE_RECOGNITION codec=LPCM") })
+        assertTrue(microphone.any { it.contains("Microphone: stats") && it.endsWith("ended=true") })
+        assertFalse(microphone.joinToString("\n").contains("port="))
+        assertFalse(microphone.joinToString("\n").contains("head="))
+    }
+
+    @Test fun diagnosticCallbackFailureDoesNotStopSpeechRecognitionCapture() {
+        sink.close()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = { throw IllegalStateException("diagnostic callback failed") })
+        sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
+        val record = awaitCapture()
+        assertEquals(AudioRecord.RECORDSTATE_RECORDING, record.recordingState)
+        assertEquals(MediaRecorder.AudioSource.VOICE_RECOGNITION, record.audioSource)
+        assertEquals(AudioManager.MODE_NORMAL, manager.mode)
+        sink.onMicrophoneStopped(speechRecognition)
+        assertEquals(AudioRecord.STATE_UNINITIALIZED, record.state)
+    }
+
+    @Test fun diagnosticCallbackFailureDoesNotStopCallCaptureOrChangeModeRestoration() {
+        sink.close()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = { throw IllegalStateException("diagnostic callback failed") })
+        manager.mode = AudioManager.MODE_RINGTONE
+        sink.onMicrophoneStarted(telephony, config("telephony"))
+        val record = awaitCapture()
+        assertEquals(AudioRecord.RECORDSTATE_RECORDING, record.recordingState)
+        assertEquals(MediaRecorder.AudioSource.VOICE_COMMUNICATION, record.audioSource)
+        assertEquals(AudioManager.MODE_IN_COMMUNICATION, manager.mode)
+        assertEquals(2, ShadowAudioEffect.getAudioEffects().size)
+        sink.onMicrophoneStopped(telephony)
+        assertEquals(AudioManager.MODE_RINGTONE, manager.mode)
         assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
     }
 
