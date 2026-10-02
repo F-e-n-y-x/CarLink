@@ -74,6 +74,17 @@ class VideoInCarTest {
     }
 
     @Test
+    fun appSchemesOnlyWhenTheIphoneLoadsThem() {
+        val app = mapOf("item" to mapOf("uuid" to "A1", "Content-Location" to "mainm3u8://example/index.m3u8"))
+        assertNull(VideoInCar.parseItem(app))
+        assertEquals(VideoInCar.Item("A1", "mainm3u8://example/index.m3u8", 0), VideoInCar.parseItem(app, iphoneLoadsAppSchemes = true))
+
+        for (url in listOf("file:///sdcard/v.mp4", "content://media/1", "skd://key", "not a url")) {
+            assertNull(url, VideoInCar.parseItem(mapOf("item" to mapOf("Content-Location" to url)), iphoneLoadsAppSchemes = true))
+        }
+    }
+
+    @Test
     fun seekTargetIsACmTime() {
         assertEquals(90_000, VideoInCar.seekMillis(mapOf("time" to mapOf("value" to 90L, "timescale" to 1L))))
         assertNull(VideoInCar.seekMillis(mapOf("time" to mapOf("value" to 90L, "timescale" to 0L))))
