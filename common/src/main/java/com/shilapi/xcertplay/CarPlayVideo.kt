@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 internal object CarPlayVideo : CarPlayVideoListener {
     private const val TAG = "DiPlay-Video"
-    private const val SKIP_MILLIS = 10_000
+    const val SKIP_MILLIS = 10_000
     private const val URL_TIMEOUT_SECONDS = 10L
 
     private val main = Handler(Looper.getMainLooper())

@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -12,7 +13,9 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.annotation.OptIn
 import androidx.core.view.WindowCompat
@@ -33,10 +36,13 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.shilapi.xcertplay.airplay.VideoInCar
 import com.shilapi.xcertplay.host.R
+import java.util.Locale
+import androidx.media3.ui.R as Media3R
 
 /**
  * The car's own player for iOS 27 video in car (see [CarPlayVideo]). Full screen over CarPlay, which
- * stays connected underneath; a tap shows Back to CarPlay and play/pause for a few seconds.
+ * stays connected underneath; a tap shows Back to CarPlay, play/pause, 10 s back and forward and the
+ * time bar for a few seconds.
  *
  * Media3 ExoPlayer parses media in the app: the head unit's own MP4 parser aborted on progressive
  * Safari video on a DiLink 5.0 Tang. URLs the car cannot load (an app's own scheme, app-served AES-128
@@ -48,11 +54,24 @@ class CarPlayVideoActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var player: ExoPlayer
     private lateinit var controls: View
-    private lateinit var playPause: TextView
+    private lateinit var playPause: ImageView
+    private lateinit var position: TextView
+    private lateinit var length: TextView
+    private lateinit var timeBar: SeekBar
+    private var scrubbing = false
     private var loadedUrl: String? = null
     private var prepared = false
     private var encryptionLogged = false
-    private val hideControls = Runnable { controls.visibility = View.GONE }
+    private val hideControls = Runnable {
+        controls.visibility = View.GONE
+        main.removeCallbacks(tick)
+    }
+    private val tick = object : Runnable {
+        override fun run() {
+            updateTime()
+            main.postDelayed(this, TICK_MILLIS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,8 +113,7 @@ class CarPlayVideoActivity : Activity() {
         setContentView(FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER))
-            addView(controls, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START)
-                .apply { setMargins(dp(24), dp(24), dp(24), dp(24)) })
+            addView(controls, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         })
         view.setOnClickListener { showControls() }
         CarPlayVideo.activity = this
@@ -104,8 +122,8 @@ class CarPlayVideoActivity : Activity() {
     }
 
     private fun controlBar(): View {
-        fun pill(text: String, onClick: () -> Unit) = TextView(this).apply {
-            this.text = text
+        val back = TextView(this).apply {
+            text = "‹  " + getString(R.string.video_back_to_carplay)
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
             gravity = Gravity.CENTER
@@ -113,27 +131,120 @@ class CarPlayVideoActivity : Activity() {
             minWidth = dp(64)
             setPadding(dp(24), 0, dp(24), 0)
             background = GradientDrawable().apply { cornerRadius = dp(32).toFloat(); setColor(0xB3000000.toInt()) }
+            setOnClickListener { finish() }
+        }
+        fun round(icon: Int, label: String, onClick: () -> Unit) = ImageView(this).apply {
+            setImageResource(icon)
+            setColorFilter(Color.WHITE)
+            contentDescription = label
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x80000000.toInt()) }
             setOnClickListener { onClick(); showControls() }
         }
-        playPause = pill("") { CarPlayVideo.setPlaying(!CarPlayVideo.playing) }
-        return LinearLayout(this).apply {
+        playPause = round(Media3R.drawable.exo_icon_play, "") { CarPlayVideo.setPlaying(!CarPlayVideo.playing) }
+        val buttons = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            addView(pill("‹  " + getString(R.string.video_back_to_carplay)) { finish() })
-            addView(playPause, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(16) })
+            gravity = Gravity.CENTER
+            addView(round(Media3R.drawable.exo_icon_rewind, getString(Media3R.string.exo_controls_rewind_description)) { skip(-CarPlayVideo.SKIP_MILLIS) },
+                LinearLayout.LayoutParams(dp(80), dp(80)))
+            addView(playPause, LinearLayout.LayoutParams(dp(96), dp(96)).apply { marginStart = dp(48); marginEnd = dp(48) })
+            addView(round(Media3R.drawable.exo_icon_fastforward, getString(Media3R.string.exo_controls_fastforward_description)) { skip(CarPlayVideo.SKIP_MILLIS) },
+                LinearLayout.LayoutParams(dp(80), dp(80)))
+        }
+        fun timeText() = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            fontFeatureSettings = "tnum"
+        }
+        position = timeText()
+        length = timeText()
+        timeBar = SeekBar(this).apply {
+            progressTintList = ColorStateList.valueOf(Color.WHITE)
+            thumbTintList = ColorStateList.valueOf(Color.WHITE)
+            secondaryProgressTintList = ColorStateList.valueOf(0x80FFFFFF.toInt())
+            progressBackgroundTintList = ColorStateList.valueOf(0x4DFFFFFF)
+            minimumHeight = dp(48)
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                    if (fromUser) position.text = time(progress.toLong())
+                }
+
+                override fun onStartTrackingTouch(bar: SeekBar) {
+                    scrubbing = true
+                    main.removeCallbacks(hideControls)
+                }
+
+                override fun onStopTrackingTouch(bar: SeekBar) {
+                    scrubbing = false
+                    if (prepared) player.seekTo(bar.progress.toLong())
+                    showControls()
+                }
+            })
+        }
+        val timeRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(position)
+            addView(timeBar, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(length)
+        }
+        val bottom = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(32), dp(48), dp(32), dp(24))
+            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0))
+            addView(buttons)
+            addView(timeRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(16) })
+        }
+        return FrameLayout(this).apply {
+            addView(back, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START)
+                .apply { setMargins(dp(24), dp(24), dp(24), dp(24)) })
+            addView(bottom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+            // A tap on the picture while the controls show hides them again.
+            setOnClickListener { hideControls.run() }
         }
     }
 
     private fun showControls() {
         updatePlayPause()
+        updateTime()
         controls.visibility = View.VISIBLE
+        main.removeCallbacks(tick)
+        main.postDelayed(tick, TICK_MILLIS)
         main.removeCallbacks(hideControls)
-        main.postDelayed(hideControls, CONTROLS_MILLIS)
+        if (!scrubbing) main.postDelayed(hideControls, CONTROLS_MILLIS)
     }
 
     private fun updatePlayPause() {
         val playing = CarPlayVideo.playing
-        playPause.text = if (playing) "❚❚" else "▶"
+        playPause.setImageResource(if (playing) Media3R.drawable.exo_icon_pause else Media3R.drawable.exo_icon_play)
         playPause.contentDescription = getString(if (playing) R.string.video_pause else R.string.video_play)
+    }
+
+    /** The time bar: position, buffered part and length; no bar while the length is unknown (live). */
+    private fun updateTime() {
+        val total = player.duration.takeIf { prepared && it != C.TIME_UNSET && it > 0 }
+        timeBar.isEnabled = total != null
+        timeBar.visibility = if (total != null) View.VISIBLE else View.INVISIBLE
+        length.text = total?.let(::time) ?: ""
+        if (total == null) {
+            position.text = if (prepared) time(player.currentPosition) else ""
+            return
+        }
+        timeBar.max = total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        timeBar.secondaryProgress = player.bufferedPosition.coerceIn(0, total).toInt()
+        if (!scrubbing) {
+            timeBar.progress = player.currentPosition.coerceIn(0, total).toInt()
+            position.text = time(player.currentPosition)
+        }
+    }
+
+    private fun time(millis: Long): String {
+        val seconds = (millis / 1000).coerceAtLeast(0)
+        return if (seconds >= 3600) String.format(Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+        else String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60)
     }
 
     fun state(): VideoInCar.PlayerState {
@@ -201,6 +312,7 @@ class CarPlayVideoActivity : Activity() {
 
     override fun onDestroy() {
         main.removeCallbacks(hideControls)
+        main.removeCallbacks(tick)
         if (CarPlayVideo.activity === this) {
             CarPlayVideo.activity = null
             CarPlayVideo.onPlayerClosed(if (prepared) player.currentPosition.toInt() else null)
@@ -213,6 +325,7 @@ class CarPlayVideoActivity : Activity() {
 
     private companion object {
         const val TAG = "DiPlay-Video"
-        const val CONTROLS_MILLIS = 4_000L
+        const val CONTROLS_MILLIS = 5_000L
+        const val TICK_MILLIS = 500L
     }
 }
