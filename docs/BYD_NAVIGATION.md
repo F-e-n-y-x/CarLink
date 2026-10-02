@@ -66,14 +66,24 @@ DiPlay declares the electric vehicle only when it already has a battery reading 
 
 "Charging connectors" picks what the iPhone is told the car can plug into: CCS2 and Type 2 (Europe, the default), GB/T DC and AC (China), or CCS1 and J1772 (North America). Pick the one that matches the car's charging inlet.
 
-The values come from the adb shell (apps need a BYD signature for them), read every 30 s while the iPhone asks:
+The values come from the adb shell (apps need a BYD signature for them), read every 30 s while the iPhone asks. Every sample first runs `getprop ro.car.protocol`, through the same authorized ADB connection. Both the settings check and the background reader select addresses from this property; there is no manual protocol setting or Android-version heuristic. Empty, unreadable or unsupported protocol values produce no battery reading, without falling back to CANFD.
+
+For `CANFD`, the existing addresses are:
 
 - charge: statistic device 1014, `0x4A505038` (`STATISTIC_ELEC_PERCENTAGE`), float percent — `service call autoservice 7 i32 1014 i32 1246777400`;
 - range: 1014, `0x4A50203E` (`STATISTIC_ELEC_DRIVING_RANGE` on this platform), km — `service call autoservice 5 i32 1014 i32 1246765118`;
 - energy left: power device 1005, `882901008` (`POWER_BATTERY_REMAIN_ELECTRICITY`), float kWh;
 - charging: charging device 1009, `876609560` (BMS state, 1 = charging).
 
-Full charge and full range are scaled up from the current values. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.
+For `CAN`, the verified SDK addresses are:
+
+- charge: float percent — `service call autoservice 7 i32 1014 i32 1033543720`;
+- range: integer km — `service call autoservice 5 i32 1014 i32 1033203771`;
+- charging: BMS state, 1 = charging — `service call autoservice 5 i32 1009 i32 876611608`.
+
+An October 2, 2026 ADB capture from a head unit reporting `CAN` returned 51 %, 36 km and charging state 1. The separate integer SOC interface agreed at 51 %. Remaining energy is not verified on this protocol: the CANFD energy command returned zero. DiPlay therefore does not run it for CAN, keeps energy and capacity unknown, and omits the Wh parameters from vehicle updates while retaining SOC, range and charging state. iPhone/Apple Maps behavior without these Wh parameters still needs vehicle validation.
+
+Full charge is estimated only from known energy; full range is scaled up from the current range and SOC. A protocol change discards the previous capacity estimate, and a failed sample clears the cached reading and capacity. Settings and background samples are serialized so an older read cannot overwrite a newer protocol's data. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the CANFD car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.
 
 If CarPlay connected before the first battery reading was available, battery reporting stays off for that connection. In BYD navigation settings, **Check ADB access** now caches the reading it displays. **Apply and reconnect** checks and caches a valid reading before reconnecting; if ADB or the battery is unavailable, it keeps the current connection and shows the failure instead. Enabling battery reporting during an active session uses the same check-before-reconnect path. Returning after idle also requests an immediate background refresh rather than waiting for the next 30-second poll. The UI and iAP2 loop never wait for ADB.
 
