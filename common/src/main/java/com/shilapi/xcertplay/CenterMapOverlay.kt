@@ -12,7 +12,6 @@ import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -21,6 +20,7 @@ import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.widget.FrameLayout
 import kotlin.math.abs
+import kotlin.math.hypot
 
 /**
  * The dashboard map (CarPlay stream 111) as a floating card on the centre screen while DiPlay is in
@@ -134,36 +134,64 @@ internal object CenterMapOverlay {
         var startY = 0
         var dragging = false
         var pinched = false // a second finger came down: no tap or drag until all fingers are up
-        var pinchWidth = 0f
-        // Pinching keeps the card's centre and its 8:3 shape.
-        val pinch = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-                pinchWidth = params.width.toFloat()
-                return true
-            }
-
-            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                pinchWidth = (pinchWidth * detector.scaleFactor).coerceIn(minWidth.toFloat(), maxWidth.toFloat())
-                val centerX = params.x + params.width / 2
-                val centerY = params.y + params.height / 2
-                params.width = pinchWidth.toInt()
-                params.height = (pinchWidth / aspect).toInt()
-                params.x = (centerX - params.width / 2).coerceIn(0, (screenWidth - params.width).coerceAtLeast(0))
-                params.y = (centerY - params.height / 2).coerceIn(0, (screenHeight - params.height).coerceAtLeast(0))
-                root?.let { runCatching { windows.updateViewLayout(it, params) } }
-                return true
-            }
-        })
+        var firstPointer = -1
+        var secondPointer = -1
+        var initialSpan = 0f
+        var initialWidth = 0
+        var centerX = 0
+        var centerY = 0
+        var scaling = false
+        // The car's ScaleGestureDetector minimum span is 32 mm, too large for a small
+        // card. Use touch slop and the two fingers' distance instead, keeping its centre
+        // and aspect ratio. Pointer IDs keep additional fingers from changing the pair.
+        fun beginPinch(event: MotionEvent, liftedIndex: Int = -1) {
+            val indices = (0 until event.pointerCount).filter { it != liftedIndex }
+            firstPointer = -1
+            secondPointer = -1
+            scaling = false
+            if (indices.size < 2) return
+            val first = indices[0]
+            val second = indices[1]
+            firstPointer = event.getPointerId(first)
+            secondPointer = event.getPointerId(second)
+            initialSpan = hypot(event.getX(first) - event.getX(second), event.getY(first) - event.getY(second))
+            initialWidth = params.width
+            centerX = params.x + params.width / 2
+            centerY = params.y + params.height / 2
+        }
         card.setOnTouchListener { view, event ->
-            pinch.onTouchEvent(event)
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.rawX; downY = event.rawY; startX = params.x; startY = params.y
                     dragging = false
                     pinched = false
+                    firstPointer = -1
+                    secondPointer = -1
+                    scaling = false
                 }
-                MotionEvent.ACTION_POINTER_DOWN -> pinched = true
-                MotionEvent.ACTION_MOVE -> if (!pinched) {
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    pinched = true
+                    if (firstPointer == -1) beginPinch(event)
+                }
+                MotionEvent.ACTION_POINTER_UP -> {
+                    val lifted = event.getPointerId(event.actionIndex)
+                    if (lifted == firstPointer || lifted == secondPointer) beginPinch(event, event.actionIndex)
+                }
+                MotionEvent.ACTION_MOVE -> if (pinched) {
+                    val first = event.findPointerIndex(firstPointer)
+                    val second = event.findPointerIndex(secondPointer)
+                    if (first >= 0 && second >= 0 && initialSpan > 0f) {
+                        val span = hypot(event.getX(first) - event.getX(second), event.getY(first) - event.getY(second))
+                        if (scaling || abs(span - initialSpan) > slop) {
+                            scaling = true
+                            params.width = (initialWidth * span / initialSpan).toInt().coerceIn(minWidth, maxWidth)
+                            params.height = (params.width / aspect).toInt()
+                            params.x = (centerX - params.width / 2).coerceIn(0, (screenWidth - params.width).coerceAtLeast(0))
+                            params.y = (centerY - params.height / 2).coerceIn(0, (screenHeight - params.height).coerceAtLeast(0))
+                            runCatching { windows.updateViewLayout(view, params) }
+                        }
+                    }
+                } else {
                     val dx = event.rawX - downX
                     val dy = event.rawY - downY
                     if (dragging || abs(dx) > slop || abs(dy) > slop) {
