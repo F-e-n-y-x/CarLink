@@ -3,6 +3,9 @@ package com.shilapi.xcertplay.media
 import android.media.AudioFormat as AndroidAudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AudioEffect
+import android.media.audiofx.NoiseSuppressor
 import android.util.Log
 import com.shilapi.xcertplay.airplay.AudioCodecKind
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
@@ -28,6 +31,7 @@ internal class MicrophoneUplink(private val config: MicrophoneConfig) : Closeabl
     @Volatile private var recorder: AudioRecord? = null
     @Volatile private var socket: DatagramSocket? = null
     @Volatile private var opusEncoder: OpusEncoder? = null
+    @Volatile private var effects: List<AudioEffect> = emptyList()
     private var thread: Thread? = null
 
     fun start(): Boolean {
@@ -108,6 +112,7 @@ internal class MicrophoneUplink(private val config: MicrophoneConfig) : Closeabl
         socket = nextSocket
         opusEncoder = nextEncoder
         return try {
+            if (config.audioType == "telephony") effects = voiceEffects(nextRecorder.audioSessionId)
             nextRecorder.startRecording()
             thread = Thread({ capture(nextRecorder, nextSocket) }, "carplay-mic").apply {
                 isDaemon = true
@@ -124,6 +129,45 @@ internal class MicrophoneUplink(private val config: MicrophoneConfig) : Closeabl
             Log.e(TAG, "microphone recording failed", error)
             release()
             false
+        }
+    }
+
+    private fun voiceEffects(sessionId: Int): List<AudioEffect> = listOfNotNull(
+        enabledEffect("AEC") {
+            if (AcousticEchoCanceler.isAvailable()) AcousticEchoCanceler.create(sessionId) else null
+        },
+        enabledEffect("NS") {
+            if (NoiseSuppressor.isAvailable()) NoiseSuppressor.create(sessionId) else null
+        },
+    )
+
+    // Advertised effects may still fail to initialize on a vendor ROM. Keep recording without them.
+    private fun enabledEffect(name: String, create: () -> AudioEffect?): AudioEffect? {
+        var effect: AudioEffect? = null
+        try {
+            effect = create()
+            if (effect != null) {
+                val status = effect.setEnabled(true)
+                if (status == AudioEffect.SUCCESS && effect.enabled) {
+                    Log.i(TAG, "microphone effect=$name enabled=true")
+                    return effect
+                }
+                Log.w(TAG, "microphone effect=$name could not be enabled status=$status")
+            } else {
+                Log.i(TAG, "microphone effect=$name unavailable")
+            }
+        } catch (error: RuntimeException) {
+            Log.w(TAG, "microphone effect=$name unavailable; continuing without it", error)
+        }
+        effect?.let(::releaseEffect)
+        return null
+    }
+
+    private fun releaseEffect(effect: AudioEffect) {
+        try {
+            effect.release()
+        } catch (error: RuntimeException) {
+            Log.w(TAG, "microphone effect release failed", error)
         }
     }
 
@@ -235,6 +279,9 @@ internal class MicrophoneUplink(private val config: MicrophoneConfig) : Closeabl
     @Synchronized
     private fun release() {
         running.set(false)
+        val currentEffects = effects
+        effects = emptyList()
+        currentEffects.forEach(::releaseEffect)
         val currentRecorder = recorder
         recorder = null
         try {
