@@ -27,11 +27,7 @@ internal enum class BydHudRouteChange {
 }
 
 /** Decodes the iAP2 route-guidance subset needed by the BYD windshield HUD and cluster. */
-internal class BydHudRouteState(
-    private val nanoTime: () -> Long = System::nanoTime,
-    private val staleRouteNs: Long = STALE_ROUTE_NS,
-    private val emptyListHideNs: Long = EMPTY_LIST_HIDE_NS,
-) {
+internal class BydHudRouteState(private val nanoTime: () -> Long = System::nanoTime) {
     private data class Maneuver(val type: Int, val drivingSide: Int, val afterRoad: String)
 
     private val maneuvers = mutableMapOf<Int, Maneuver>()
@@ -93,9 +89,9 @@ internal class BydHudRouteState(
     private fun activeManeuver(): Maneuver? {
         if (!routeActive || activeIndex < 0) return null
         val updated = lastRouteUpdateNs ?: return null
-        if (nanoTime() - updated >= staleRouteNs) return null
+        if (nanoTime() - updated >= STALE_ROUTE_NS) return null
         val emptySince = emptyListSinceNs
-        if (emptySince != null && nanoTime() - emptySince >= emptyListHideNs) return null
+        if (emptySince != null && nanoTime() - emptySince >= EMPTY_LIST_HIDE_NS) return null
         return maneuvers[activeIndex]
     }
 

@@ -407,18 +407,6 @@
     <string name="turn_card_horizontal">Карточка поворота · по горизонтали</string>
     <string name="turn_card_vertical">Карточка поворота · по вертикали</string>
     <string name="reset_turn_card_to_centre">Вернуть карточку поворота в центр</string>
-    <string name="turn_card_overlay_size">Размер наложения карточки</string>
-    <string name="turn_card_overlay_horizontal">Карточка поворота · влево / вправо</string>
-    <string name="turn_card_overlay_vertical">Карточка поворота · вверх / вниз</string>
-    <string name="turn_card_overlay_small">Маленький</string>
-    <string name="turn_card_overlay_medium">Средний</string>
-    <string name="turn_card_overlay_large">Большой</string>
-    <string name="reset_turn_card_overlay">Сбросить положение карточки</string>
-    <string name="turn_card_overlay_note">DiPlay рисует эту карточку поверх карты. Перемещайте её по всей панели шагами 5 %. Изменения применяются без переподключения. Карточка остаётся и при движении прямо.</string>
-    <string name="turn_card_now">Сейчас</string>
-    <string name="turn_card_distance_m">%1$d м</string>
-    <string name="turn_card_distance_km">%1$.1f км</string>
-    <string name="turn_card_exit">Съезд %1$d</string>
     <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборной панели только в малой и полноэкранной навигации · нужен ADB</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay считывает режим навигации, выбранный кнопками на руле. В режимах «Выкл.» и «Включать при навигации» приборная панель показывает только стрелки, поэтому iPhone не передаёт карту; в режимах малого и полного экрана навигации передаёт — через секунду-две после переключения. Нужен ADB по сети на головном устройстве.</string>
     <string name="check_adb_access">Проверить доступ ADB</string>
@@ -470,6 +458,8 @@
     <string name="widget_hours_minutes">%1$d ч %2$02d мин</string>
     <string name="center_map_card">Карта приборной панели на центральном экране</string>
     <string name="center_map_card_description">Пока DiPlay в фоне, карта приборной панели также показывается карточкой на главном экране: главном экране BYD, в режиме карты или в вашем лаунчере по умолчанию. Нажмите на карточку, чтобы открыть CarPlay, перетащите её, чтобы переместить, и измените размер двумя пальцами. Приборная панель сохраняет свою карту. Нужно разрешение показывать поверх других приложений.</string>
+    <string name="center_map_follows_dashboard">Синхронизировать карту домашнего экрана с приборной панелью</string>
+    <string name="center_map_follows_dashboard_description">Вкл.: карточка на домашнем экране повторяет карту панели. Выкл.: карточка скрыта, карта только на приборной панели.</string>
     <string name="center_map_overlay_allowed">Поверх других приложений: разрешено</string>
     <string name="center_map_overlay_missing">Поверх других приложений: не разрешено. Разрешите в настройках приложения или через ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">Доступ к истории использования: разрешён, карточка показывается только на главном экране</string>

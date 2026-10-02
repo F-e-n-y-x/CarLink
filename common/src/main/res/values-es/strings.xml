@@ -407,18 +407,6 @@
     <string name="turn_card_horizontal">Tarjeta de giro · horizontal</string>
     <string name="turn_card_vertical">Tarjeta de giro · vertical</string>
     <string name="reset_turn_card_to_centre">Centrar la tarjeta de giro</string>
-    <string name="turn_card_overlay_size">Tamaño de la superposición</string>
-    <string name="turn_card_overlay_horizontal">Tarjeta de giro · izquierda / derecha</string>
-    <string name="turn_card_overlay_vertical">Tarjeta de giro · arriba / abajo</string>
-    <string name="turn_card_overlay_small">Pequeño</string>
-    <string name="turn_card_overlay_medium">Mediano</string>
-    <string name="turn_card_overlay_large">Grande</string>
-    <string name="reset_turn_card_overlay">Restablecer posición de la tarjeta</string>
-    <string name="turn_card_overlay_note">DiPlay dibuja esta tarjeta sobre el mapa. Muévela por todo el panel en pasos del 5 %. Los cambios se aplican sin reconectar. También se muestra al seguir de frente.</string>
-    <string name="turn_card_now">Ahora</string>
-    <string name="turn_card_distance_m">%1$d m</string>
-    <string name="turn_card_distance_km">%1$.1f km</string>
-    <string name="turn_card_exit">Salida %1$d</string>
     <string name="dashboard_map_only_in_small_and_full_navi">Mapa del panel solo en navegación en pantalla pequeña y completa · requiere ADB</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay lee el modo de navegación que eliges con el volante. En «Apagado» y «Activar con la navegación» el panel solo muestra flechas, así que el iPhone no envía el mapa; en navegación en pantalla pequeña y completa sí lo envía, uno o dos segundos después del cambio. Requiere ADB por red en la unidad principal.</string>
     <string name="check_adb_access">Comprobar acceso ADB</string>
@@ -470,6 +458,8 @@
     <string name="widget_hours_minutes">%1$d h %2$02d min</string>
     <string name="center_map_card">Mapa del panel de instrumentos en la pantalla central</string>
     <string name="center_map_card_description">Mientras DiPlay está en segundo plano, el mapa del panel de instrumentos también aparece como una tarjeta en la pantalla de inicio: el inicio de BYD, el inicio con mapa o tu launcher predeterminado. Toca la tarjeta para abrir CarPlay, arrástrala para moverla y pellízcala para cambiar su tamaño. El panel de instrumentos conserva su mapa. Requiere permiso para mostrarse sobre otras aplicaciones.</string>
+    <string name="center_map_follows_dashboard">Mantener el mapa de inicio sincronizado con el cuadro</string>
+    <string name="center_map_follows_dashboard_description">Activado: la tarjeta de inicio refleja el mapa del cuadro. Desactivado: la tarjeta se oculta y el mapa solo aparece en el cuadro.</string>
     <string name="center_map_overlay_allowed">Mostrar sobre otras aplicaciones: permitido</string>
     <string name="center_map_overlay_missing">Mostrar sobre otras aplicaciones: no permitido. Permítelo en los ajustes de la aplicación o por ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">Acceso a datos de uso: permitido, la tarjeta solo aparece en la pantalla de inicio</string>

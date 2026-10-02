@@ -407,18 +407,6 @@
     <string name="turn_card_horizontal">بطاقة الانعطاف · أفقيًا</string>
     <string name="turn_card_vertical">بطاقة الانعطاف · عموديًا</string>
     <string name="reset_turn_card_to_centre">إعادة بطاقة الانعطاف إلى الوسط</string>
-    <string name="turn_card_overlay_size">حجم طبقة بطاقة الانعطاف</string>
-    <string name="turn_card_overlay_horizontal">بطاقة الانعطاف · يسار / يمين</string>
-    <string name="turn_card_overlay_vertical">بطاقة الانعطاف · أعلى / أسفل</string>
-    <string name="turn_card_overlay_small">صغير</string>
-    <string name="turn_card_overlay_medium">متوسط</string>
-    <string name="turn_card_overlay_large">كبير</string>
-    <string name="reset_turn_card_overlay">إعادة موضع بطاقة الانعطاف</string>
-    <string name="turn_card_overlay_note">ترسم DiPlay هذه البطاقة فوق الخريطة. انقلها عبر لوحة العدادات بخطوات 5٪. تُطبَّق التغييرات دون إعادة الاتصال. تبقى ظاهرة أثناء السير مباشرة.</string>
-    <string name="turn_card_now">الآن</string>
-    <string name="turn_card_distance_m">%1$d م</string>
-    <string name="turn_card_distance_km">%1$.1f كم</string>
-    <string name="turn_card_exit">مخرج %1$d</string>
     <string name="dashboard_map_only_in_small_and_full_navi">خريطة لوحة العدادات فقط في عرض الملاحة المصغّر والكامل · يتطلب ADB</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">يقرأ DiPlay وضع الملاحة الذي تختاره من أزرار المقود. في وضعي «إيقاف» و«التشغيل عند الملاحة» تعرض لوحة العدادات الأسهم فقط، لذا لا يرسل iPhone الخريطة؛ أما في عرض الملاحة المصغّر والكامل فيرسلها خلال ثانية أو ثانيتين من التبديل. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="check_adb_access">التحقق من الوصول عبر ADB</string>
@@ -470,6 +458,8 @@
     <string name="widget_hours_minutes">%1$d س %2$02d د</string>
     <string name="center_map_card">خريطة لوحة العدادات على الشاشة الوسطى</string>
     <string name="center_map_card_description">أثناء عمل DiPlay في الخلفية، تظهر خريطة لوحة العدادات أيضًا كبطاقة على الشاشة الرئيسية: شاشة BYD الرئيسية أو الشاشة الرئيسية للخريطة أو المشغّل الافتراضي لديك. اضغط على البطاقة لفتح CarPlay، واسحبها لنقلها، وقرّب إصبعين أو باعدهما لتغيير حجمها. تحتفظ لوحة العدادات بخريطتها. يتطلب إذن الظهور فوق التطبيقات الأخرى.</string>
+    <string name="center_map_follows_dashboard">إبقاء خريطة الشاشة الرئيسية متزامنة مع لوحة العدادات</string>
+    <string name="center_map_follows_dashboard_description">تشغيل: بطاقة الشاشة الرئيسية تعكس خريطة لوحة العدادات. إيقاف: تُخفى البطاقة وتبقى الخريطة على لوحة العدادات فقط.</string>
     <string name="center_map_overlay_allowed">الظهور فوق التطبيقات الأخرى: مسموح</string>
     <string name="center_map_overlay_missing">الظهور فوق التطبيقات الأخرى: غير مسموح. اسمح به من إعدادات التطبيق أو عبر ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">الوصول إلى بيانات الاستخدام: مسموح، تظهر البطاقة على الشاشة الرئيسية فقط</string>
