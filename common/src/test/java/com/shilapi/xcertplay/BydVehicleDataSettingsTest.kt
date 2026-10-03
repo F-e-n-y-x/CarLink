@@ -19,6 +19,7 @@ import com.shilapi.xcertplay.hud.BydVehicleField
 import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.hud.BydVehicleProbeOutcome
 import com.shilapi.xcertplay.transport.VehicleGear
+import com.shilapi.xcertplay.transport.VehicleStatusProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -234,6 +235,88 @@ class BydVehicleDataSettingsTest {
         assertTrue(texts().any { it.text.toString().contains(activity.getString(R.string.vehicle_field_gear)) })
         texts().single { it.text == activity.getString(R.string.replace_saved_vehicle_data_anyway) }.performClick()
         assertFalse(BydVehicleFieldStore.load(context)!!.gearSupported)
+    }
+
+    @Test fun aDestroyedUserProbeCannotSaveOrPublishItsLateCandidate() {
+        val saved = preparePublishingProbe()
+        backend.onProbe = {
+            requireNotNull(controller).pause().stop().destroy()
+            controller = null
+        }
+
+        invokeProbe()
+        backend.run("diplay-byd13-probe")
+
+        assertEquals(1, backend.probeCalls)
+        assertEquals(saved, BydVehicleFieldStore.load(context))
+        assertEquals(25.0, publishedBatteryPercent(), 0.0)
+    }
+
+    @Test fun aModeChangeBeforeTheUserProbeReturnsKeepsThePreviousSnapshot() {
+        val saved = preparePublishingProbe()
+        backend.onProbe = { BydOutputSettings.setLegacyVehicleProbe(context, false) }
+
+        invokeProbe()
+        backend.run("diplay-byd13-probe")
+
+        assertEquals(1, backend.probeCalls)
+        assertFalse(BydOutputSettings.legacyVehicleProbe(context))
+        assertEquals(saved, BydVehicleFieldStore.load(context))
+        assertEquals(25.0, publishedBatteryPercent(), 0.0)
+        assertFalse(ReflectionHelpers.getField<Boolean>(activity, "vehicleProbeInProgress"))
+    }
+
+    @Test fun aPausedUserProbeStillSavesAndPublishesItsAcceptedCandidate() {
+        preparePublishingProbe()
+        backend.onProbe = { requireNotNull(controller).pause().stop() }
+
+        invokeProbe()
+        backend.run("diplay-byd13-probe")
+
+        assertEquals(backend.probeResult.capabilities, BydVehicleFieldStore.load(context))
+        assertEquals(90.0, publishedBatteryPercent(), 0.0)
+        requireNotNull(controller).destroy()
+        controller = null
+    }
+
+    @Test fun selectingDefaultAgainCannotBeOverriddenByALateLegacySelection() {
+        backend.checkStateResult = BydAdbAccess.State.READY
+        backend.probeResult = BydVehicleProbeOutcome(
+            BydAdbAccess.State.READY,
+            supportedCapabilities(BydVehicleFieldStore.firmwareKey()),
+        )
+        openSettings()
+        backend.onProbe = { selectLegacyMode(false) }
+
+        selectLegacyMode(true)
+        backend.run("diplay-byd13-probe")
+
+        assertFalse(BydOutputSettings.legacyVehicleProbe(context))
+        assertEquals(null, BydVehicleFieldStore.load(context))
+        assertFalse(ReflectionHelpers.getField<Boolean>(activity, "vehicleProbeInProgress"))
+    }
+
+    private fun preparePublishingProbe(): BydVehicleCapabilities {
+        val capabilities = supportedCapabilities(BydVehicleFieldStore.firmwareKey())
+        val saved = capabilities.copy(fields = capabilities.fields + (BydVehicleField.SOC to
+            capabilities.result(BydVehicleField.SOC).copy(value = 25.0)))
+        BydOutputSettings.setLegacyVehicleProbe(context, true)
+        BydVehicleFieldStore.save(context, saved)
+        backend.checkStateResult = BydAdbAccess.State.READY
+        backend.probeResult = BydVehicleProbeOutcome(
+            BydAdbAccess.State.READY,
+            saved.copy(fields = saved.fields + (BydVehicleField.SOC to
+                saved.result(BydVehicleField.SOC).copy(value = 90.0))),
+        )
+        openSettings()
+        return saved
+    }
+
+    private fun publishedBatteryPercent(): Double {
+        // Read the provider without starting its real ADB polling executor.
+        val provider = Class.forName("com.shilapi.xcertplay.hud.BydBatteryStatus")
+            .getField("INSTANCE").get(null) as VehicleStatusProvider
+        return requireNotNull(provider.snapshot()).batteryPercent
     }
 
     @Test fun aPassingValidationKeepsTheOfferToReplaceSavedData() {
@@ -678,6 +761,7 @@ class BydVehicleDataSettingsTest {
         /** Returned by the next probes before [probeResult]. */
         val queuedProbeResults = ArrayDeque<BydVehicleProbeOutcome>()
         var onCheck: (() -> Unit)? = null
+        var onProbe: (() -> Unit)? = null
         var checkCalls = 0
         var probeCalls = 0
         val tasks = mutableListOf<Pair<String, () -> Unit>>()
@@ -692,6 +776,7 @@ class BydVehicleDataSettingsTest {
 
         override fun probe(context: android.content.Context, persist: Boolean): BydVehicleProbeOutcome {
             probeCalls++
+            onProbe?.invoke()
             return queuedProbeResults.removeFirstOrNull() ?: probeResult
         }
 

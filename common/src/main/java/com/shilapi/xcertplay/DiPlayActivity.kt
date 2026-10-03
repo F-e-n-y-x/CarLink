@@ -81,7 +81,7 @@ class DiPlayActivity : ComponentActivity() {
     private var vehicleProbeInProgress = false
     private var vehicleProbeOutcome: BydVehicleProbeOutcome? = null
     private var adbCheckGeneration = 0
-    private var vehicleProbeGeneration = 0
+    @Volatile private var vehicleProbeGeneration = 0
     @Volatile private var vehicleValidationGeneration = 0
     private val vehicleOperationLock = Any()
     private var automaticVehicleValidationStarted = false
@@ -221,8 +221,10 @@ class DiPlayActivity : ComponentActivity() {
     override fun onDestroy() {
         handler.removeCallbacks(automaticVehicleValidation)
         adbCheckGeneration++
-        vehicleProbeGeneration++
-        synchronized(vehicleOperationLock) { vehicleValidationGeneration++ }
+        synchronized(vehicleOperationLock) {
+            vehicleProbeGeneration++
+            vehicleValidationGeneration++
+        }
         adbCheckInProgress = false
         vehicleProbeAuthorizationInProgress = false
         vehicleProbeInProgress = false
@@ -960,9 +962,15 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun selectVehicleDataMode(legacyMode: Boolean) {
+        // A stale mode dialog must also invalidate a probe when the Boolean stays the same.
+        synchronized(vehicleOperationLock) { vehicleProbeGeneration++ }
+        vehicleProbeAuthorizationInProgress = false
+        vehicleProbeInProgress = false
         if (!legacyMode) {
             cancelAutomaticVehicleValidationForUserOperation(resumeAfter = false)
-            BydOutputSettings.setLegacyVehicleProbe(this, false)
+            synchronized(vehicleOperationLock) {
+                BydOutputSettings.setLegacyVehicleProbe(this, false)
+            }
             vehicleProbeOutcome = null
             pendingVehicleReplacement = null
             pendingVehicleLostFields = emptySet()
@@ -977,7 +985,9 @@ class DiPlayActivity : ComponentActivity() {
             probeVehicleData(mayAsk = true, activateLegacyModeOnSuccess = true)
             return
         }
-        BydOutputSettings.setLegacyVehicleProbe(this, true)
+        synchronized(vehicleOperationLock) {
+            BydOutputSettings.setLegacyVehicleProbe(this, true)
+        }
         vehicleProbeOutcome = null
         pendingVehicleReplacement = null
         pendingVehicleLostFields = emptySet()
@@ -1174,6 +1184,7 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun probeVehicleData(mayAsk: Boolean, activateLegacyModeOnSuccess: Boolean) {
         if (vehicleProbeAuthorizationInProgress || vehicleProbeInProgress || adbCheckInProgress) return
+        val expectedLegacyMode = BydOutputSettings.legacyVehicleProbe(this)
         val expectedSnapshot = cancelAutomaticVehicleValidationForUserOperation(resumeAfter = false)
         val generation = ++vehicleProbeGeneration
         vehicleProbeAuthorizationInProgress = mayAsk
@@ -1213,10 +1224,18 @@ class DiPlayActivity : ComponentActivity() {
                         )
                         candidateCapabilities == null -> VehicleProbeAttempt(candidate)
                         else -> {
-                            val replacement = BydVehicleFieldStore.replaceAutomatically(
-                                app,
-                                expectedSnapshot,
-                                candidateCapabilities,
+                            // Invalidation must guard persistence/publication, not only the UI callback.
+                            val replacement = synchronized(vehicleOperationLock) {
+                                if (generation != vehicleProbeGeneration ||
+                                    BydOutputSettings.legacyVehicleProbe(app) != expectedLegacyMode) null
+                                else BydVehicleFieldStore.replaceAutomatically(
+                                    app,
+                                    expectedSnapshot,
+                                    candidateCapabilities,
+                                )
+                            } ?: return@runCatching VehicleProbeAttempt(
+                                outcome = BydVehicleProbeOutcome(candidate.access),
+                                snapshotChanged = true,
                             )
                             when {
                                 replacement.saved -> VehicleProbeAttempt(candidate)
