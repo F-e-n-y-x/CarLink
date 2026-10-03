@@ -259,6 +259,18 @@ class DiPlayActivity : ComponentActivity() {
     private fun settings(content: LinearLayout) {
         content.addView(label(getString(R.string.your_drive_your_way), 34, TEXT, true))
         content.addView(label(getString(R.string.apply_reconnects_carplay_for_size_resolution_music_buffer), 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
+        section(content, getString(R.string.carplay_controls), R.drawable.ic_dp_display) { card ->
+            val gestureFingers = listOf(2, 3, 4)
+            choice(card, getString(R.string.settings_gesture_fingers_label),
+                gestureFingers.map { getString(R.string.settings_gesture_fingers_option, it) },
+                gestureFingers.indexOf(AirPlayPersistence.loadSettingsGestureFingers(this)).coerceAtLeast(0),
+                reconnects = false) {
+                AirPlayPersistence.saveSettingsGestureFingers(this, gestureFingers[it])
+            }
+            card.addView(label(getString(R.string.settings_gesture_fingers_hint), 14, MUTED).apply {
+                setPadding(0, dp(10), 0, 0)
+            })
+        }
         section(content, getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
             card.addView(button(getString(R.string.open_connection_setup), false) { page = "connection"; render() }, matchButton(12, 60))

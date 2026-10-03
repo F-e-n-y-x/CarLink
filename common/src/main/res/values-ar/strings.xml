@@ -480,4 +480,10 @@
     <string name="turn_card_distance_m">%1$d م</string>
     <string name="turn_card_distance_km">%1$.1f كم</string>
     <string name="turn_card_exit">مخرج %1$d</string>
+    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح إعدادات DiPlay.</string>
+    <string name="carplay_controls">تحكم CarPlay</string>
+    <string name="settings_gesture_fingers">فتح الإعدادات · سحب بـ %1$d أصابع (انقر للتبديل)</string>
+    <string name="settings_gesture_fingers_label">فتح الإعدادات · عدد أصابع السحب لأسفل</string>
+    <string name="settings_gesture_fingers_option">%1$d أصابع</string>
+    <string name="settings_gesture_fingers_hint">اختر عددًا من الأصابع لا يستخدمه جهاز السيارة. تأخذ وحدة BYD السحب لأسفل بثلاثة أصابع للوحة التكييف.</string>
 </resources>

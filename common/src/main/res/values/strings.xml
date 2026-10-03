@@ -74,7 +74,7 @@
     <string name="safe_area_mapping_summary">Safe area: %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_android9_compat">The following settings are unavailable and hidden on Android 9 (API 28):\n• Wi-Fi P2P (5 GHz) — LocalOnlyHotspot is used instead.\n• HEVC software decoder — hardware decoding is used instead.</string>
     <string name="settings_mfi_address_hint">Address must start with http:// or https://. Token is optional and sent as an Authorization bearer token.</string>
-    <string name="app_name">DiPlay CN</string>
+    <string name="app_name">DiPlay</string>
     <string name="language_section_title">Language</string>
     <string name="language_app_language">App language</string>
     <string name="language_system_default">System default</string>
@@ -491,4 +491,10 @@
     <string name="center_map_no_permission_screen">This head unit has no settings screen for this permission. Allow it over ADB.</string>
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
+    <string name="carplay_controls">CarPlay controls</string>
+    <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
+    <string name="settings_gesture_fingers_label">Open settings · swipe-down fingers</string>
+    <string name="settings_gesture_fingers_option">%1$d fingers</string>
+    <string name="settings_gesture_fingers_hint">Pick a finger count your head unit does not already use. BYD takes three-finger swipe-down for its air-conditioning panel.</string>
 </resources>
