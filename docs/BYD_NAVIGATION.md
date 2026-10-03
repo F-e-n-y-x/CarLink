@@ -1,4 +1,4 @@
-# BYD navigation displays
+# BYD navigation displays and vehicle data
 
 Phone navigation arrows, next-turn distance and street names can appear on supported BYD displays. Ordinary operation requires no ADB, root, laptop or helper process. The map app must provide structured navigation metadata; compatibility is not guaranteed for every map app or version.
 
@@ -52,23 +52,65 @@ Only the four stock full-map, mini-map, Scenario and Simple activity events are 
 
 ### Dashboard map only in Small and Full navi (optional, needs ADB)
 
-The iPhone draws and streams the cluster map for the whole session, even while the cluster shows no projection: in Off and "Turn on by navi" the cluster draws arrows only (in "Turn on by navi" the stock map even removes its own cluster window). With "Dashboard map only in Small and Full navi · needs ADB" turned on, DiPlay reads the mode the driver picked on the wheel every second and, while it is Off or "Turn on by navi", sends `stopUI` for the alt screen (`{"type": "stopUI", "params": {"uuid": <alt screen UUID>}}`). When the driver picks Small or Full screen navi it sends `showUI` with the map URL (`{"uuid", "url": "maps:/car/instrumentcluster/map"}`) and `forceKeyFrame` for the same UUID. CarKit handles both as car-initiated commands (`_handleStopUIWithParameters:` / `_handleShowUIWithParameters:`); the stream stays up, so nothing reconnects.
+The iPhone draws and streams the cluster map for the whole session, even while the cluster shows no projection: in Off and "Turn on by navi" the cluster draws arrows only (in "Turn on by navi" the stock map even removes its own cluster window). With "Dashboard map only in Small and Full navi" turned on, DiPlay reads the mode the driver picked on the wheel every second and, while it is Off or "Turn on by navi", sends `stopUI` for the alt screen (`{"type": "stopUI", "params": {"uuid": <alt screen UUID>}}`). When the driver picks Small or Full screen navi it sends `showUI` with the map URL (`{"uuid", "url": "maps:/car/instrumentcluster/map"}`) and `forceKeyFrame` for the same UUID. CarKit handles both as car-initiated commands (`_handleStopUIWithParameters:` / `_handleShowUIWithParameters:`); the stream stays up, so nothing reconnects.
 
 Measured on the car: after `stopUI` the cluster stream carried no frames at all while the main screen went on as usual; after a switch on the wheel `showUI` went out about 0.6 s later and the map was back within a second. If the mode cannot be read (no ADB access), DiPlay keeps the map streaming as without the setting.
 
 Ordinary apps cannot read the mode: BYD's `INSTRUMENT_NAVI_TYPE` needs a BYD signature. The adb shell reads it through the `autoservice` binder (instrument device 1007, feature `0x40C03032`): `service call autoservice 5 i32 1007 i32 1086337074` → `Parcel(00000000 0000000N)`, N = 1 Off, 2 Turn on by navi, 3 Small screen navi, 4 Full screen navi. (The shell can also set it through `INSTRUMENT_NAVI_TYPE_SET`, `0x4C10A018`, with `service call autoservice 6 …`; DiPlay does not change the mode.)
 
-DiPlay runs the read through the head unit's own adbd on `127.0.0.1:5555` ("ADB over network" in developer options) with its own RSA key. The car asks once to allow that key; DiPlay offers the key only from the settings button "Check ADB access", never in the background, so the dialog cannot appear while driving. The TLS pairing flavour of wireless debugging is not supported.
+DiPlay runs the read through the head unit's own adbd on `127.0.0.1:5555` ("ADB over network" in developer options) with its own RSA key. The car asks once to allow that key; DiPlay offers it only after an explicit settings action, never during background validation or while driving. The TLS pairing flavour of wireless debugging is not supported.
+
+## ADB vehicle-data settings and firmware scope
+
+Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.
+**Default mode**, validated on DiLink 5.0 head units, uses the 0.2.10 CAN/CANFD battery selection and
+the established DiLink 5.0 speed/gear addresses. **Legacy head-unit detection**, tested on controller
+13 / DiLink 3.0, resolves and validates the current firmware's fields. Selecting legacy detection for
+the first time may offer DiPlay's ADB key and continues directly into the read-only probe. The probe
+opens its own connection, which needs the key saved with "Always allow"; a refusal right after
+approval is retried once, because adbd saves the key just after confirming it. A failed
+probe leaves the current mode unchanged. Changing the mode reconnects an active session only when a
+battery, wheel-speed or parked-video switch is on.
+
+In default mode, **Check ADB access** shows the battery, speed and gear it read, and marks a value an
+enabled switch needs but cannot read. Turning a switch on runs the same check; an active session
+reconnects only once every enabled switch's data is readable. Otherwise the current connection stays,
+and a later successful check applies the switch.
+
+The probe launches a one-shot `app_process` under the shell uid, reflects the running firmware's
+`BYDAutoFeatureIds` and `BYDAutoConstants`, and exits. It resolves only speed, gearbox, SOC, electric
+range, remaining battery energy and BMS state, then validates every candidate with read-only
+`autoservice` transactions 5/7. The first failed read ends the probe as incomplete. It makes no vehicle writes, starts no persistent helper and never
+enables ADB. A complete successful result is committed as the last-known-good field snapshot;
+`Build.FINGERPRINT` and `Build.DISPLAY` are retained only as diagnostic metadata. In legacy mode the
+vehicle-status, wheel-speed and parked-video capabilities stay inactive until their required fields
+pass the first probe.
+
+A successful probe, the selected mode and every exposed feature switch are loaded after returning from CarPlay,
+shifting gear, activity recreation, process restart and an in-place app update. ADB transport failure
+does not hide them. When ADB is READY but the saved fields are unreadable on two complete checks,
+DiPlay automatically probes again. Only a complete successful candidate replaces the old snapshot;
+failure keeps the old snapshot and exposes a manual retry. A complete candidate that no longer
+confirms a saved field is held: the page names those fields and offers **Replace saved vehicle data
+anyway**, which never overwrites a snapshot saved in the meantime.
+
+The existing **Dashboard song** switch needs ADB, not the navigation receiver. It stays in the BYD
+navigation card where that card is shown and otherwise appears once under Advanced vehicle data. It
+is not part of the legacy probe.
+
+The numeric feature IDs below are used in default mode. Legacy mode uses the saved probe addresses.
+Known controller-13 values are candidates only and must still return a plausible live reading before
+DiPlay accepts them.
 
 ## Car battery for the iPhone (optional, needs ADB)
 
-CarPlay's vehicle status lets the car tell the iPhone its charge and range; Apple Maps then warns about a low charge and offers chargers on the way. With "Car battery for the iPhone · needs ADB" turned on, DiPlay declares an electric vehicle in its iAP2 identification (VehicleInformation with engine type electric and the chosen charging connectors, VehicleStatus with range, range warning, charge and maximum range) and answers the iPhone's StartVehicleStatusUpdates (`0xA100`) with VehicleStatusUpdate (`0xA101`) every 30 s.
+CarPlay's vehicle status lets the car tell the iPhone its charge and range; Apple Maps then warns about a low charge and offers chargers on the way. With "Car battery for the iPhone" turned on, DiPlay declares an electric vehicle in its iAP2 identification (VehicleInformation with engine type electric and the chosen charging connectors, VehicleStatus with range, range warning, charge and maximum range) and answers the iPhone's StartVehicleStatusUpdates (`0xA100`) with VehicleStatusUpdate (`0xA101`) every 30 s.
 
-DiPlay declares the electric vehicle only when it already has a battery reading as the iPhone identifies the accessory. With ADB off or not approved, or on a car without these properties, the identification stays as without the switch, and the log says `iap2 no battery reading: not declaring an electric vehicle`. The battery is read when DiPlay opens and when CarPlay starts, without blocking the settings page or the iAP2 loop; "Check ADB access" shows whether the battery can be read.
+DiPlay declares the electric vehicle only when it already has a battery reading as the iPhone identifies the accessory. With ADB off or not approved, or on a car without these properties, the identification stays as without the switch, and the log says `iap2 no battery reading: not declaring an electric vehicle`. The controller-13 probe publishes the reading it validates before the switch can appear.
 
 "Charging connectors" picks what the iPhone is told the car can plug into: CCS2 and Type 2 (Europe, the default), GB/T DC and AC (China), or CCS1 and J1772 (North America). Pick the one that matches the car's charging inlet.
 
-The values come from the adb shell (apps need a BYD signature for them), read every 30 s while the iPhone asks. Every sample first runs `getprop ro.car.protocol`, through the same authorized ADB connection. Both the settings check and the background reader select addresses from this property; there is no manual protocol setting or Android-version heuristic. Empty, unreadable or unsupported protocol values produce no battery reading, without falling back to CANFD.
+The values come from the adb shell (apps need a BYD signature for them), read every 30 s while the iPhone asks. In default mode every sample first runs `getprop ro.car.protocol` and selects the CAN or CANFD addresses below. Legacy mode instead uses the addresses confirmed by its saved probe. Empty, unreadable or unsupported values produce no battery reading.
 
 For `CANFD`, the existing addresses are:
 
@@ -87,21 +129,23 @@ An October 2, 2026 ADB capture from a head unit reporting `CAN` returned 51 %, 3
 
 Full charge is estimated only from known energy; full range is scaled up from the current range and SOC. A protocol change discards the previous capacity estimate, and a failed sample clears the cached reading and capacity. Settings and background samples are serialized so an older read cannot overwrite a newer protocol's data. At or below "Low charge warning" (20 % by default) DiPlay sets the range warning. On the CANFD car above DiPlay read 25 %, 150 km and 25.1 kWh, and with the warning threshold at 30 % Apple Maps offered to find a charging station. The suggestion comes from Apple Maps and iOS; Google Maps did not react in testing.
 
-If CarPlay connected before the first battery reading was available, battery reporting stays off for that connection. In BYD navigation settings, **Check ADB access** now caches the reading it displays. **Apply and reconnect** checks and caches a valid reading before reconnecting; if ADB or the battery is unavailable, it keeps the current connection and shows the failure instead. Enabling battery reporting during an active session uses the same check-before-reconnect path. Returning after idle also requests an immediate background refresh rather than waiting for the next 30-second poll. The UI and iAP2 loop never wait for ADB.
+If CarPlay connected before the first battery reading was available, battery reporting stays off for that connection. Enabling the setting reconnects an active session once a default-mode ADB check reads the battery, or after a successful legacy probe; returning after idle requests an immediate background refresh rather than waiting for the next 30-second poll. The UI and iAP2 loop never wait for ADB.
+
+Vehicle-data mode, battery, wheel speed and parked-video settings have one owner under **Settings → Location → Advanced vehicle data**. The separate BYD ADB card controls optional car-hotspot startup. It does not expose another set of vehicle switches or override which fields the selected vehicle mode supports. Hotspot authorization and user vehicle checks/probes wait for one another; saved legacy validation resumes after a hotspot authorization finishes.
 
 ## Wheel speed for tunnels (optional, needs ADB)
 
-"Report location to iPhone" (Settings → Location) sends the head unit's position as `$GPGGA` + `$GPRMC` in iAP2 LocationInformation (`0xFFFB`). In a tunnel or car park there is no fix, and the iPhone has only its own motion sensors. "Wheel speed for tunnels · needs ADB" adds the car's speed and gear so the iPhone can keep the position moving:
+"Report location to iPhone" (Settings → Location) sends the head unit's position as `$GPGGA` + `$GPRMC` in iAP2 LocationInformation (`0xFFFB`). In a tunnel or car park there is no fix, and the iPhone has only its own motion sensors. "Wheel speed for tunnels" adds the car's speed and gear so the iPhone can keep the position moving:
 
 - DiPlay also sets VehicleSpeedData (id 20) in the LocationInformation identification component. It sends `$PASCD` only if the iPhone selects it (id 4) in StartLocationInformation (`0xFFFA`); the log shows the ids the iPhone asked for (`components=[…]`).
 - Every LocationInformation (about once a second) carries the samples since the previous one, even without a GPS fix: `$PASCD,<first sample, s since boot>,C,<P/R/N/D>,0,<n>,<offset s>,<speed m/s>,…*CS`. The layout copies a production head unit's log; what `C` and `0` stand for is not public.
-- Speed: device 1013, `-1807745016`, float km/h (BYD SDK speed), read four times a second over adb — `service call autoservice 7 i32 1013 i32 -1807745016`. Gear: device 1011, `555745336`, 1 P, 2 R, 3 N, 4 D, read once a second — `service call autoservice 5 i32 1011 i32 555745336`.
+- Speed: device 1013, `-1807745016`, float km/h (BYD SDK speed), read four times a second over adb — `service call autoservice 7 i32 1013 i32 -1807745016`. Gear: device 1011, `555745336`, 1 P, 2 R, 3 N, 4 D (5 and 6, M and S on older SDKs, also count as D), read once a second — `service call autoservice 5 i32 1011 i32 555745336`. Legacy mode reads both from the addresses its probe confirmed.
 
 Checked in the car at walking speed: the gear followed D, R and P (4, 2, 1), and the speed arrives in whole km/h. During wireless CarPlay the short-lived Bluetooth link now advertises neither Location nor Vehicle; the Wi-Fi iAP2 tunnel advertises the complete runtime data plane and sends `$GPGGA`, `$GPRMC` and requested `$PASCD` only after its own StartLocationInformation. Wired CarPlay advertises and sends the same data on its single USB iAP2 link. Whether the iPhone uses the speed for dead reckoning in a tunnel is still to be tested. Gyro and accelerometer (`$PAGCD`, `$PAACD`) are not sent because their layout is not public.
 
 ## Video while parked (optional, needs ADB)
 
-iOS 27 can play video on the CarPlay screen while the car is parked ("video in car"): the iPhone hands the head unit a media URL and drives playback, and the head unit plays it in its own player. With "Video while parked · needs ADB" turned on, DiPlay offers this and plays the video full screen over CarPlay. Video starts on the car screen as soon as it is sent to CarPlay on the iPhone, with no further step in Now Playing. A tap shows **Back to CarPlay**, play/pause, 10 s back and forward and a time bar that can be dragged to seek. The switch is off by default and reconnects CarPlay.
+iOS 27 can play video on the CarPlay screen while the car is parked ("video in car"): the iPhone hands the head unit a media URL and drives playback, and the head unit plays it in its own player. With "Video while parked" turned on, DiPlay offers this and plays the video full screen over CarPlay. Video starts on the car screen as soon as it is sent to CarPlay on the iPhone, with no further step in Now Playing. A tap shows **Back to CarPlay**, play/pause, 10 s back and forward and a time bar that can be dragged to seek. The switch is off by default and reconnects CarPlay.
 
 Video is allowed only while the gear reads P. DiPlay reads the gearbox once a second through the adb shell (gearbox device 1011, `service call autoservice 5 i32 1011 i32 555745336` → 1 P, 2 R, 3 N, 4 D) and tells the iPhone with `setVideoPlaybackAllowed`. The latest decision is retained until AirPlay SETUP has negotiated video playback and the encrypted event channel is ready, because those stages can complete after the first gear read on both Wi-Fi and USB. Leaving P closes the player and the iPhone goes on with audio only; so does a gear that cannot be read (no ADB access). The steering-wheel keys drive the car's player while it is open: play/pause toggles it and next/previous skip 10 s. They do not go to the iPhone, which ends the video session on a CarPlay play/pause.
 
