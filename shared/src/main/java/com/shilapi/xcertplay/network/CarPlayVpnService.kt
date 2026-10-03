@@ -86,13 +86,21 @@ class CarPlayVpnService : VpnService() {
             }
             require(hostMac.size == 6) { "hostMac must be 6 bytes" }
 
-            val tunFd = Builder()
+            val builder = Builder()
                 .addAddress(linkLocal, LINK_PREFIX)
                 .addRoute(LINK_LOCAL_ROUTE, LINK_PREFIX)
                 .setSession(SESSION_NAME)
                 .setMtu(TUN_MTU)
                 .setBlocking(true)
-                .establish()
+
+            runCatching {
+                builder.addAllowedApplication(packageName)
+                Log.i(TAG, "VpnService: restricted TUN interface to $packageName only")
+            }.onFailure { error ->
+                Log.w(TAG, "addAllowedApplication failed for $packageName", error)
+            }
+
+            val tunFd = builder.establish()
                 ?: throw IOException("VpnService.establish returned null")
             tun = tunFd
 
