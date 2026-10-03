@@ -9,7 +9,11 @@ internal data class P2pCreationRequest(val mode: P2pCreationMode, val frequencyM
 
 internal class P2pCreateRejected(val reason: Int, message: String) : IOException(message)
 
-/** Only an explicit rejection permits another request; a timeout may still create a group. */
+/** Raised only for a recognized framework defect before createGroup has been called. */
+internal class P2pConfigBuildCompatibilityFailure(cause: NoSuchMethodError) :
+    IOException("Wi-Fi P2P custom configuration unavailable on this Android 10 framework", cause)
+
+/** Only a rejection or recognized pre-create defect permits retry; timeout may still create a group. */
 internal object P2pStartupRecovery {
     fun rememberedFrequency(frequency: Int): P2pCreationRequest? = when {
         frequency in 2412..2462 && (frequency - 2412) % 5 == 0 ->
@@ -56,6 +60,16 @@ internal object P2pStartupRecovery {
                 try {
                     request(mode)
                     return mode
+                } catch (failure: P2pConfigBuildCompatibilityFailure) {
+                    if (mode.mode == P2pCreationMode.SYSTEM_DEFAULT) throw failure
+                    // No creation request was issued. Keep the existing foreign-group and
+                    // prerequisite interlock, then try the API 29 null-config overload once.
+                    beforeRetry()
+                    val systemDefault = P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)
+                    request(systemDefault)
+                    // Its generated credentials must be read from the real returned group.
+                    // A failed default request exits directly instead of reentering this plan.
+                    return systemDefault
                 } catch (failure: P2pCreateRejected) {
                     lastRejection = failure
                     when {

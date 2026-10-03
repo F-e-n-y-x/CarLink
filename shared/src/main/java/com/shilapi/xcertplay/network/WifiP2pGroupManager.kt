@@ -175,11 +175,13 @@ class WifiP2pGroupManager(
                     ensureStartActive(attempt)
                     if (remainingNanos(deadlineNanos) == 0L) throw IOException("Wi-Fi Direct startup timed out")
                     val config = if (selection.mode == P2pCreationMode.SYSTEM_DEFAULT) null else {
-                        val builder = WifiP2pConfig.Builder()
-                            .setNetworkName(credentials.ssid)
-                            .setPassphrase(credentials.passphrase)
-                        builder.setGroupOperatingFrequency(requireNotNull(selection.frequencyMHz))
-                        builder.build()
+                        P2pConfigBuildDiagnostics.build(Build.VERSION.SDK_INT, selection, diagnostic) {
+                            val builder = WifiP2pConfig.Builder()
+                                .setNetworkName(credentials.ssid)
+                                .setPassphrase(credentials.passphrase)
+                            builder.setGroupOperatingFrequency(requireNotNull(selection.frequencyMHz))
+                            builder.build()
+                        }
                     }
                     if (config != null && !ownership.edit().putString("owned_ssid", credentials.ssid).commit()) {
                         throw IOException("Could not record Wi-Fi P2P group ownership")
