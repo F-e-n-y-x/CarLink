@@ -32,6 +32,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.shilapi.xcertplay.adb.AdbKeys
+import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
@@ -345,13 +347,15 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
             toggle(card, getString(R.string.open_after_the_car_starts), getString(R.string.availability_depends_on_your_head_unit_s_startup_settings), AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
             val autoConfirmActive = UsbAutoConfirmService.isEnabled(this)
+            val autoHideActive = HomeScreenMonitor.hasAccess(this)
+            val allReady = autoConfirmActive && autoHideActive
             card.addView(
                 button(
-                    if (autoConfirmActive) getString(R.string.usb_auto_confirm_status_on)
-                    else getString(R.string.usb_auto_confirm_status_off),
-                    false,
+                    if (allReady) getString(R.string.btn_permissions_ready)
+                    else getString(R.string.btn_auto_apply_permissions),
+                    !allReady,
                 ) {
-                    UsbAutoConfirmService.openSettings(this)
+                    autoApplyPermissions()
                 },
                 matchButton(10, 60),
             )
@@ -440,6 +444,9 @@ class DiPlayActivity : ComponentActivity() {
                     val usage = HomeScreenMonitor.hasAccess(this)
                     card.addView(label(if (usage) getString(R.string.center_map_auto_hide_active)
                         else getString(R.string.center_map_auto_hide_needed), 14, if (usage) MUTED else WARNING))
+                    if (!usage) {
+                        card.addView(button(getString(R.string.btn_auto_apply_permissions), false) { autoApplyPermissions() }, matchButton(8, 54))
+                    }
                 }
                 if (clusterDisplay != null) {
                     if (DiLink51ClusterLayout.supported()) {
@@ -897,6 +904,122 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun autoApplyPermissions() {
+        val progressDialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.auto_grant_title))
+            .setMessage(getString(R.string.auto_grant_msg))
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+
+        Thread({
+            val adb = runCatching { LocalAdb(AdbKeys.load(applicationContext)) }.getOrNull()
+            if (adb == null) {
+                runOnUiThread {
+                    progressDialog.dismiss()
+                    showManualPermissionDialog(getString(R.string.adb_check_failed))
+                }
+                return@Thread
+            }
+
+            val access = adb.use { it.connect(mayAsk = true) }
+            runOnUiThread {
+                progressDialog.dismiss()
+                when (access) {
+                    LocalAdb.Access.READY -> {
+                        Thread({
+                            executeAdbGrants()
+                        }, "diplay-adb-grant").start()
+                    }
+                    LocalAdb.Access.NOT_APPROVED -> {
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.auto_grant_confirm_title))
+                            .setMessage(getString(R.string.auto_grant_confirm_msg))
+                            .setPositiveButton(getString(R.string.retry_auto_grant)) { _, _ -> autoApplyPermissions() }
+                            .setNegativeButton(getString(R.string.cancel), null)
+                            .show()
+                    }
+                    LocalAdb.Access.UNREACHABLE -> {
+                        showManualPermissionDialog(getString(R.string.manual_grant_reason_adboff))
+                    }
+                    LocalAdb.Access.UNSUPPORTED -> {
+                        showManualPermissionDialog(getString(R.string.adb_pairing_only))
+                    }
+                }
+            }
+        }, "diplay-auto-permission").start()
+    }
+
+    private fun executeAdbGrants() {
+        val success = runCatching {
+            LocalAdb(AdbKeys.load(applicationContext)).use { adb ->
+                if (adb.connect(mayAsk = false) != LocalAdb.Access.READY) return@use false
+                val pkg = packageName
+                val serviceName = "$pkg/com.shilapi.xcertplay.UsbAutoConfirmService"
+                val existing = adb.shell("settings get secure enabled_accessibility_services")?.trim() ?: ""
+                val newServices = if (existing.isEmpty() || existing == "null") {
+                    serviceName
+                } else if (!existing.split(":").contains(serviceName)) {
+                    "$existing:$serviceName"
+                } else {
+                    existing
+                }
+                adb.shell("settings put secure enabled_accessibility_services $newServices")
+                adb.shell("settings put secure accessibility_enabled 1")
+                adb.shell("appops set $pkg GET_USAGE_STATS allow")
+                adb.shell("appops set $pkg SYSTEM_ALERT_WINDOW allow")
+                true
+            }
+        }.getOrDefault(false)
+
+        runOnUiThread {
+            if (success && (UsbAutoConfirmService.isEnabled(this) || HomeScreenMonitor.hasAccess(this))) {
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.auto_grant_success_title))
+                    .setMessage(getString(R.string.auto_grant_success_msg))
+                    .setPositiveButton(getString(R.string.close)) { _, _ -> render() }
+                    .show()
+            } else {
+                showManualPermissionDialog(getString(R.string.manual_grant_reason_adboff))
+            }
+        }
+    }
+
+    private fun showManualPermissionDialog(reason: String) {
+        val body = column().apply { setPadding(dp(20), dp(10), dp(20), dp(10)) }
+        body.addView(label(reason, 15, MUTED).apply { setPadding(0, 0, 0, dp(12)) })
+
+        val autoConfirmOn = UsbAutoConfirmService.isEnabled(this)
+        body.addView(button(if (autoConfirmOn) getString(R.string.usb_auto_confirm_status_on) else getString(R.string.btn_open_accessibility_setting), false) {
+            UsbAutoConfirmService.openSettings(this)
+        }, matchButton(0, 56))
+
+        val overlayOn = CenterMapOverlay.permitted(this)
+        body.addView(button(if (overlayOn) getString(R.string.center_map_overlay_allowed) else getString(R.string.btn_open_overlay_setting), false) {
+            openOverlayPermission()
+        }, matchButton(10, 56))
+
+        val adbCmd = "adb shell settings put secure enabled_accessibility_services $packageName/com.shilapi.xcertplay.UsbAutoConfirmService && adb shell settings put secure accessibility_enabled 1 && adb shell appops set $packageName GET_USAGE_STATS allow"
+        body.addView(label(getString(R.string.manual_grant_cmd_hint), 14, MUTED).apply { setPadding(0, dp(12), 0, dp(6)) })
+        body.addView(label(adbCmd, 13, TEXT).apply {
+            typeface = Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setBackgroundColor(0x22FFFFFF)
+        })
+        body.addView(button(getString(R.string.copy_command), false) {
+            getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
+                android.content.ClipData.newPlainText("DiPlay ADB Command", adbCmd)
+            )
+            toast(getString(R.string.copied_to_the_car_clipboard_run_the_command_on_your_comput))
+        }, matchButton(8, 50))
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.permissions_and_connection_help))
+            .setView(ScrollView(this).apply { addView(body) })
+            .setPositiveButton(getString(R.string.close)) { _, _ -> render() }
+            .show()
     }
 
     // The car's approval dialog for DiPlay's ADB key opens only from here, never while driving.

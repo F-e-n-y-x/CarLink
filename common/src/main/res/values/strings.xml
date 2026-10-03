@@ -486,4 +486,17 @@
     <string name="usb_auto_confirm_status_off">Enable USB Dialog Auto-Confirm (Hands-free)</string>
     <string name="center_map_auto_hide_active">Auto-hide when leaving home screen: Active</string>
     <string name="center_map_auto_hide_needed">Auto-hide when leaving home screen: Not active. Enable accessibility service or grant Usage Access.</string>
+    <string name="btn_auto_apply_permissions">Apply for Accessibility &amp; ADB Permissions</string>
+    <string name="btn_permissions_ready">Accessibility &amp; Auto-Hide: All Active ✓</string>
+    <string name="auto_grant_title">Configuring Permissions via Local ADB...</string>
+    <string name="auto_grant_msg">Attempting to grant Accessibility and Usage Access via Local ADB. If a system prompt appears, please tap Allow.</string>
+    <string name="auto_grant_success_title">Auto-Grant Succeeded!</string>
+    <string name="auto_grant_success_msg">Successfully configured:\n✓ Accessibility Service (USB auto-confirm)\n✓ Foreground Sensing (Auto-hide floating map when leaving home)\n✓ System Alert Window</string>
+    <string name="auto_grant_confirm_title">Please Confirm ADB on Screen</string>
+    <string name="auto_grant_confirm_msg">The car screen has shown the \"Allow USB debugging?\" prompt.\n\nPlease check \"Always allow\" and tap OK, then tap this button again to complete setup!</string>
+    <string name="retry_auto_grant">Retry Auto-Grant</string>
+    <string name="manual_grant_reason_adboff">Local ADB (port 5555) is not active on this head unit.\nYou can enable Accessibility manually in system settings, or enable ADB over network.</string>
+    <string name="btn_open_accessibility_setting">Open System Accessibility Settings</string>
+    <string name="btn_open_overlay_setting">Open System Overlay Settings</string>
+    <string name="manual_grant_cmd_hint">Or run this ADB command from your computer:</string>
 </resources>
