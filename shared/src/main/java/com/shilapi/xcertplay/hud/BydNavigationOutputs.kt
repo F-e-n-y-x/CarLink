@@ -9,7 +9,7 @@ object BydNavigationOutputs {
     fun onAppOpened(context: Context) {
         if (BydStandaloneHudOutput.available(context)) start(context)
         // Read the battery early, so a reading is ready when CarPlay identifies (see batteryStatus).
-        if (BydOutputSettings.batteryToIphone(context)) BydBatteryStatus.start(context)
+        if (BydOutputSettings.batteryToIphoneActive(context)) BydBatteryStatus.start(context)
     }
     fun setDiagnosticHold(hold: Boolean) { BydStandaloneHudOutput.syntheticHold = hold }
     @Volatile private var useStandalone = false

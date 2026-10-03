@@ -21,7 +21,7 @@ internal data class BydBatteryReading(
     val rangeKm: Int,
     val remainingKwh: Double?,
     val charging: Boolean,
-    val protocol: BydBatteryProtocol,
+    val protocol: BydBatteryProtocol? = null,
 )
 
 /**
@@ -48,6 +48,38 @@ internal object BydBattery {
         } else null
         val bms = BydParcel.value(shell("service call autoservice 5 i32 1009 i32 ${protocol.chargingStateId}"))
         return BydBatteryReading(percent, range, remaining, bms == BMS_CHARGING, protocol)
+    }
+
+    fun read(context: Context, shell: (String) -> String?): BydBatteryReading? {
+        if (!BydOutputSettings.legacyVehicleProbe(context)) return read(shell)
+        val cached = BydVehicleFieldStore.load(context)
+            ?: return null
+        val bmsAddress = cached.result(BydVehicleField.BMS_STATE).address
+        val remainingAddress = cached.result(BydVehicleField.REMAINING_KWH).address
+        return readDetected(
+            cached.result(BydVehicleField.SOC).address?.command() ?: return null,
+            cached.result(BydVehicleField.RANGE).address?.command() ?: return null,
+            remainingAddress?.command(),
+            bmsAddress?.command(),
+            shell = shell,
+        )
+    }
+
+    private fun readDetected(
+        percentCommand: String,
+        rangeCommand: String,
+        remainingCommand: String?,
+        bmsCommand: String?,
+        shell: (String) -> String?,
+    ): BydBatteryReading? {
+        val percent = BydParcel.value(shell(percentCommand))?.let(::float)?.takeIf { it in 0.0..100.0 } ?: return null
+        val range = BydParcel.value(shell(rangeCommand))?.takeIf { it in 0..3000 } ?: return null
+        val measured = if (remainingCommand == null) null else {
+            BydParcel.value(shell(remainingCommand))?.let(::float)?.takeIf { it in 0.0..300.0 }
+                ?: return null
+        }
+        val bms = bmsCommand?.let { BydParcel.value(shell(it)) }
+        return BydBatteryReading(percent, range, measured, bms == BMS_CHARGING)
     }
 
     /**
@@ -92,7 +124,7 @@ internal object BydBatteryStatus : VehicleStatusProvider {
     private val cache = BydBatteryCache(::now)
     private val readLock = Any()
     @Volatile internal var readBattery: (Context) -> BydBatteryReading? = { app ->
-        BydBattery.read { shell.run(app, it) }
+        BydBattery.read(app) { shell.run(app, it) }
     }
     private val executor = Executors.newSingleThreadScheduledExecutor { runnable ->
         Thread(runnable, "diplay-battery").apply { isDaemon = true }

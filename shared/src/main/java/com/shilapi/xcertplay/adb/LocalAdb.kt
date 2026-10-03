@@ -57,10 +57,15 @@ class LocalAdb(
     }
 
     /** Runs [command] in adbd's shell and returns its output, or null if the link failed. */
+    fun shell(command: String): String? = shell(command, READ_TIMEOUT_MS)
+
+    /** Same as [shell], with a larger bounded read window for a one-shot slow command. */
     @Synchronized
-    fun shell(command: String): String? {
+    fun shell(command: String, readTimeoutMillis: Int): String? {
         if (socket?.isClosed != false && connect(mayAsk = false) != Access.READY) return null
         return try {
+            require(readTimeoutMillis in 1..MAX_COMMAND_TIMEOUT_MS)
+            socket?.soTimeout = readTimeoutMillis
             val local = nextStreamId++
             send(AdbPacket(AdbPacket.OPEN, local, 0, "shell:$command\u0000".toByteArray()))
             var remote = 0
@@ -83,7 +88,7 @@ class LocalAdb(
                         send(AdbPacket(AdbPacket.CLSE, packet.arg1, packet.arg0, ByteArray(0)))
                 }
             }
-            text.toString().trim()
+            text.toString().trim().also { socket?.soTimeout = READ_TIMEOUT_MS }
         } catch (_: IOException) {
             closeQuietly()
             null
@@ -155,5 +160,6 @@ class LocalAdb(
         const val READ_TIMEOUT_MS = 5_000
         const val APPROVAL_TIMEOUT_MS = 60_000
         const val APPROVAL_RECHECK_MS = 1_000
+        const val MAX_COMMAND_TIMEOUT_MS = 30_000
     }
 }
