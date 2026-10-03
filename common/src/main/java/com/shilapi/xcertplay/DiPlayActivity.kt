@@ -400,7 +400,11 @@ class DiPlayActivity : ComponentActivity() {
                 bydVehicleAdvancedExpanded = !bydVehicleAdvancedExpanded
                 render()
             }, matchButton(12, 56))
-            if (bydVehicleAdvancedExpanded) advancedVehicleData(card)
+            if (bydVehicleAdvancedExpanded) {
+                advancedVehicleData(card)
+                // Dashboard song needs ADB, not the navigation receiver; show it here when that card is hidden.
+                if (!BydOutputSettings.navigationAvailable(this)) clusterSongSwitch(card)
+            }
         }
         if (BydOutputSettings.navigationAvailable(this)) section(content, getString(R.string.byd_navigation), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
@@ -504,14 +508,7 @@ class DiPlayActivity : ComponentActivity() {
                     }
                 }
             }
-            // Keep the 0.2.9 Dashboard song setting in the BYD navigation card.
-            toggle(card, getString(R.string.cluster_song),
-                getString(R.string.cluster_song_description),
-                BydOutputSettings.clusterSong(this)) {
-                BydOutputSettings.setClusterSong(this, it)
-                if (it) checkAdbState(mayAsk = true)
-                BydNavigationOutputs.clusterSongChanged(it)
-            }
+            clusterSongSwitch(card)
         }
         section(content, getString(R.string.permissions_and_connection_help), R.drawable.ic_dp_permissions) { card ->
             card.addView(label(getString(R.string.nearby_devices_connects_your_iphone_microphone_enables_sir), 16, MUTED))
@@ -824,6 +821,17 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
+    private fun clusterSongSwitch(card: LinearLayout) {
+        toggle(card, getString(R.string.cluster_song),
+            getString(R.string.cluster_song_description),
+            BydOutputSettings.clusterSong(this)) {
+            BydOutputSettings.setClusterSong(this, it)
+            if (it) checkAdbState(mayAsk = true)
+            BydNavigationOutputs.clusterSongChanged(it)
+        }
     }
 
     private fun advancedVehicleData(card: LinearLayout) {

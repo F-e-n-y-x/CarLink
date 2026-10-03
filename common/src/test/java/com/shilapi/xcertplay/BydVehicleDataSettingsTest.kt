@@ -144,6 +144,17 @@ class BydVehicleDataSettingsTest {
         assertEquals(1, switches().count { it.contentDescription == activity.getString(R.string.cluster_song) })
     }
 
+    @Test fun withoutBydNavigationTheClusterSongSwitchIsUnderAdvancedVehicleData() {
+        openSettings()
+        assertFalse(texts().any { it.text == activity.getString(R.string.byd_navigation) })
+        assertFalse(switches().any { it.contentDescription == activity.getString(R.string.cluster_song) })
+
+        texts().single { it.text == activity.getString(R.string.advanced_vehicle_data) }.performClick()
+        vehicleSwitch(R.string.cluster_song).performClick()
+
+        assertTrue(BydOutputSettings.clusterSong(context))
+    }
+
     @Test fun scheduledValidationCannotLeaveAUserProbeStuck() {
         BydVehicleFieldStore.save(context, supportedCapabilities(BydVehicleFieldStore.firmwareKey()))
         backend.checkStateResult = BydAdbAccess.State.READY

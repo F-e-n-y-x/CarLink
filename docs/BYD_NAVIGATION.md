@@ -94,8 +94,9 @@ failure keeps the old snapshot and exposes a manual retry. A complete candidate 
 confirms a saved field is held: the page names those fields and offers **Replace saved vehicle data
 anyway**, which never overwrites a snapshot saved in the meantime.
 
-The existing **Dashboard song** switch remains in the BYD navigation card. It is not part of the
-legacy probe and is not duplicated under Advanced vehicle data.
+The existing **Dashboard song** switch needs ADB, not the navigation receiver. It stays in the BYD
+navigation card where that card is shown and otherwise appears once under Advanced vehicle data. It
+is not part of the legacy probe.
 
 The numeric feature IDs below are used in default mode. Legacy mode uses the saved probe addresses.
 Known controller-13 values are candidates only and must still return a plausible live reading before
