@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
+import android.os.SystemClock
 import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
@@ -349,6 +350,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var menuOpen = false
     private var latestStage = "Preparing CarPlay"
     private var darkMode = false
+    private val themeDiagnostics = ThemeModeDiagnostics()
     private var lastConfiguration: Configuration? = null
     private var activeAirPlaySession: AirPlaySession? = null
     private val activeScreenStreamTypes = mutableSetOf<Int>()
@@ -379,7 +381,7 @@ class CarPlayHostActivity : ComponentActivity() {
     // without delivering onConfigurationChanged, so poll while the activity is visible.
     private val pollConfiguration = object : Runnable {
         override fun run() {
-            refreshConfiguration()
+            refreshConfiguration(source = ThemeModeDiagnostics.Source.POLL)
             mainHandler.postDelayed(this, CONFIGURATION_POLL_INTERVAL_MILLIS)
         }
     }
@@ -450,6 +452,7 @@ class CarPlayHostActivity : ComponentActivity() {
         initializeSessionLog()
         lastConfiguration = Configuration(resources.configuration)
         darkMode = nightModeOrNull(resources.configuration.uiMode) ?: false
+        logThemeState(ThemeModeDiagnostics.Source.CREATE, resources.configuration)
         advancedAudioChannelMappingSupported =
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
         airPlayIdentity = AirPlayPersistence.loadIdentity(this)
@@ -618,6 +621,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        logThemeState(ThemeModeDiagnostics.Source.START, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         mainHandler.post(pollConfiguration)
         CenterMapOverlay.onDiPlayScreenShown()
@@ -817,13 +821,14 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            refreshConfiguration()
+            refreshConfiguration(source = ThemeModeDiagnostics.Source.WINDOW_FOCUS)
             applyFullscreenMode()
         }
     }
 
     override fun onStop() {
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
+        logThemeState(ThemeModeDiagnostics.Source.STOP, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         super.onStop()
         if (!isFinishing && !isChangingConfigurations) CenterMapOverlay.scheduleShow()
@@ -878,7 +883,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        refreshConfiguration(newConfig)
+        refreshConfiguration(newConfig, ThemeModeDiagnostics.Source.CALLBACK)
         applyFullscreenMode()
         stageStatusView?.maxWidth = (resources.displayMetrics.widthPixels * 0.78f).toInt()
         scrollLogsToBottom()
@@ -3150,7 +3155,8 @@ class CarPlayHostActivity : ComponentActivity() {
                     activeAirPlaySession = session
                     CarPlayBackgroundSession.active = true
                     reconnectAttempts = 0
-                    syncAirPlayDarkMode()
+                    logThemeState(ThemeModeDiagnostics.Source.SESSION_ACTIVE, resources.configuration)
+                    syncAirPlayDarkMode(ThemeModeDiagnostics.Source.SESSION_ACTIVE)
                     if (menuOpen) return@runOnUiThread
                     appendLog("AirPlay session active")
                 }
@@ -3367,28 +3373,56 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
-    private fun refreshConfiguration(newConfig: Configuration = resources.configuration) {
-        if (lastConfiguration == newConfig) return
+    private fun refreshConfiguration(
+        newConfig: Configuration = resources.configuration,
+        source: ThemeModeDiagnostics.Source,
+    ) {
+        if (lastConfiguration == newConfig) {
+            logThemeState(source, newConfig)
+            return
+        }
         // resources.configuration is mutated in place, so keep a copy to compare against.
         lastConfiguration = Configuration(newConfig)
-        val night = nightModeOrNull(newConfig.uiMode) ?: return
-        if (night == darkMode) return
+        val night = nightModeOrNull(newConfig.uiMode)
+        if (night == null || night == darkMode) {
+            logThemeState(source, newConfig)
+            return
+        }
         darkMode = night
+        logThemeState(source, newConfig)
         appendLog("Head unit switched to ${if (night) "night" else "day"} mode")
-        syncAirPlayDarkMode()
+        syncAirPlayDarkMode(source)
     }
 
-    private fun syncAirPlayDarkMode() {
-        val session = activeAirPlaySession ?: return
+    private fun logThemeState(source: ThemeModeDiagnostics.Source, configuration: Configuration) {
+        themeDiagnostics.observe(
+            source, configuration.uiMode, darkMode, activeAirPlaySession != null, SystemClock.elapsedRealtime(),
+        )?.let(::appendLog)
+    }
+
+    private fun syncAirPlayDarkMode(source: ThemeModeDiagnostics.Source) {
+        val session = activeAirPlaySession
         val night = darkMode
+        if (session == null) {
+            appendLog("THEME_DIAGNOSTIC request source=${source.label} applied=${if (night) "dark" else "light"} sessionActive=false")
+            return
+        }
         airPlayCommandExecutor.execute {
             try {
                 val sent = session.setNightMode(night)
+                // A successful write does not prove the iPhone changed its appearance.
+                appendLog(
+                    "THEME_DIAGNOSTIC send source=${source.label} applied=${if (night) "dark" else "light"} commandWritten=$sent",
+                )
                 Log.i(
                     TAG,
                     "AirPlay dark mode=${if (night) "dark" else "light"} eventChannelReady=$sent",
                 )
             } catch (error: Throwable) {
+                val failureClass = error.javaClass.simpleName.take(64)
+                    .filter { it.isLetterOrDigit() || it == '_' || it == '$' }
+                    .ifEmpty { "unknown" }
+                appendLog("THEME_DIAGNOSTIC send source=${source.label} failureClass=$failureClass")
                 Log.w(TAG, "Could not send AirPlay dark mode update", error)
             }
         }

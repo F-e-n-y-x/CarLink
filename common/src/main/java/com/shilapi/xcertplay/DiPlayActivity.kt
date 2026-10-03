@@ -1341,6 +1341,9 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("Startup settings: openAfterBoot=${AirPlayPersistence.loadAutoStartOnBoot(appContext)} " +
                         "connectWhenOpened=${DiPlayPreferences.autoConnect(appContext)}")
                     appendLine()
+                    appendLine("--- Recent own-app process exits (Android 11+) ---")
+                    appendLine(ProcessExitDiagnostics.report(appContext))
+                    appendLine()
                     for (name in SessionLogFile.REPORT_NAMES) {
                         val file = File(appContext.filesDir, "logs/$name")
                         if (file.isFile) {
