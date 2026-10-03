@@ -26,8 +26,6 @@ class Iap2WirelessControlClient(
         timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
         locationProvider: Iap2LocationProvider? = null,
         vehicleStatusProvider: VehicleStatusProvider? = null,
-        locationRequest: Iap2LocationRequest? = null,
-        continueLocationRequest: Boolean = false,
         onReady: () -> Unit = {},
         onIncoming: (Iap2Frame) -> Unit = {},
         onProgress: (String) -> Unit = {},
@@ -70,9 +68,10 @@ class Iap2WirelessControlClient(
         var postTransportWiFiConfigurationsSent = 0
         var transportNotificationSeen = false
         var wirelessCarPlayAvailableSeen = false
-        val location = Iap2LocationReporter(locationProvider, onProgress, locationRequest, continueLocationRequest)
+        val location = Iap2LocationReporter(locationProvider, onProgress)
         val vehicleStatus = Iap2VehicleStatusReporter(vehicleStatusProvider, onProgress)
-        while (true) {
+        try {
+            while (true) {
                 val remaining = remainingMillis(deadlineNanos)
                 if (remaining == 0L) {
                     return Iap2WirelessControlResult(
@@ -218,6 +217,9 @@ class Iap2WirelessControlClient(
                         forwardedFrames++
                     }
                 }
+            }
+        } finally {
+            locationProvider?.stop()
         }
     }
 
