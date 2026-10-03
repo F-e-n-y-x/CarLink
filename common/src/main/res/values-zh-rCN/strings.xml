@@ -478,4 +478,12 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
+    <string name="usb_auto_confirm_label">DiPlay USB 弹窗自动确认</string>
+    <string name="usb_auto_confirm_desc">在插入 iPhone 时，自动勾选“默认情况下用于该 USB 设备”并点击确定。</string>
+    <string name="usb_auto_confirm_title">USB 弹窗自动确认</string>
+    <string name="usb_auto_confirm_summary">自动确认系统“要允许DiPlay访问iPhone吗”弹窗，免除手动点击。需要开启无障碍服务。</string>
+    <string name="usb_auto_confirm_status_on">USB 弹窗自动确认：已开启</string>
+    <string name="usb_auto_confirm_status_off">开启 USB 弹窗自动确认（免手动点击）</string>
+    <string name="center_map_auto_hide_active">离开桌面自动隐藏：已开启（无障碍服务 / 使用情况访问权限）</string>
+    <string name="center_map_auto_hide_needed">离开桌面自动隐藏：未开启。请开启“无障碍服务”或通过 ADB 授予“使用情况访问权限”。</string>
 </resources>

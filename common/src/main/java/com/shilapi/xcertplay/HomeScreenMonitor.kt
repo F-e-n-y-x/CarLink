@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit
 /**
  * Whether a home screen is in front (BYD's normal home, map home or MyCar, or whichever
  * launcher is the default home, such as a third-party car launcher), from the newest resumed
- * activity in the owner's Usage Access events. Overlays and panels are not activities, so they
- * leave the answer as it is.
+ * activity in the owner's Usage Access events or UsbAutoConfirmService accessibility events.
+ * Overlays and panels are not activities, so they leave the answer as it is.
  */
 internal class HomeScreenMonitor(context: Context, private val onChange: (Boolean) -> Unit) {
     private val context = context.applicationContext
@@ -27,26 +27,49 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
     private var newestPackage: String? = null
     @Volatile private var reported: Boolean? = null
     @Volatile private var homePackages = HOME_PACKAGES
+    @Volatile private var active = false
 
-    val running: Boolean get() = executor != null
+    val running: Boolean get() = active || executor != null
 
     /** Main thread. */
     fun start() {
-        if (executor != null) return
-        since = System.currentTimeMillis() - FIRST_LOOK_BACK_MILLIS
-        newestTime = 0L
-        newestPackage = null
+        if (running) return
+        active = true
         reported = null
-        homePackages = HOME_PACKAGES + listOfNotNull(defaultHome(context))
-        executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-home-monitor").apply { isDaemon = true } }
-            .also { it.scheduleWithFixedDelay(::poll, 0, POLL_MILLIS, TimeUnit.MILLISECONDS) }
+        homePackages = queryHomePackages(context)
+
+        // Real-time foreground tracking via AccessibilityService
+        if (UsbAutoConfirmService.isEnabled(context)) {
+            UsbAutoConfirmService.onForegroundPackageChanged = ::handleForegroundPackage
+            UsbAutoConfirmService.foregroundPackage?.let(::handleForegroundPackage)
+        }
+
+        // UsageStatsManager poller fallback
+        if (DiLink51ClusterMonitor.hasAccess(context)) {
+            since = System.currentTimeMillis() - FIRST_LOOK_BACK_MILLIS
+            newestTime = 0L
+            newestPackage = null
+            executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-home-monitor").apply { isDaemon = true } }
+                .also { it.scheduleWithFixedDelay(::poll, 0, POLL_MILLIS, TimeUnit.MILLISECONDS) }
+        }
     }
 
     /** Main thread. */
     fun stop() {
+        active = false
+        UsbAutoConfirmService.onForegroundPackageChanged = null
         executor?.shutdownNow()
         executor = null
         main.removeCallbacksAndMessages(null)
+    }
+
+    private fun handleForegroundPackage(pkg: String) {
+        if (!running) return
+        val visible = pkg in homePackages
+        if (visible != reported) {
+            reported = visible
+            main.post { if (running) onChange(visible) }
+        }
     }
 
     private fun poll() {
@@ -65,11 +88,8 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
         }
         // Overlap, because events can arrive a little late.
         since = (now - OVERLAP_MILLIS).coerceAtLeast(since)
-        val visible = newestPackage in homePackages
-        if (visible != reported) {
-            reported = visible
-            main.post { if (executor != null) onChange(visible) }
-        }
+        val currentPkg = newestPackage ?: return
+        handleForegroundPackage(currentPkg)
     }
 
     companion object {
@@ -80,7 +100,38 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
         // BYD's home list (Launcher3 HomeHelper): MyCar, the normal home, and the map home.
         val HOME_PACKAGES = setOf("com.android.launcher3", "com.byd.launchermap", "com.byd.naviauto", "com.byd.mycar")
 
-        fun hasAccess(context: Context): Boolean = DiLink51ClusterMonitor.hasAccess(context)
+        // Known third-party car launchers
+        val KNOWN_CAR_LAUNCHERS = setOf(
+            "com.king.dyzm",              // 迪友桌面
+            "com.king.diyou",
+            "com.byd.diyou",
+            "com.dudu.android.launcher",  // 嘟嘟桌面
+            "com.yecon.carsetting",
+            "com.tencent.autolauncher",   // 腾讯车联
+            "com.mx.launcher",            // 喵驾桌面
+            "com.aispeech.aios.adapter",  // 思必驰
+        )
+
+        fun hasAccess(context: Context): Boolean =
+            DiLink51ClusterMonitor.hasAccess(context) || UsbAutoConfirmService.isEnabled(context)
+
+        /** Query all launcher packages declared on the system. */
+        fun queryHomePackages(context: Context): Set<String> {
+            val set = (HOME_PACKAGES + KNOWN_CAR_LAUNCHERS).toMutableSet()
+            defaultHome(context)?.let { set.add(it) }
+            runCatching {
+                val pm = context.packageManager
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                val list = pm.queryIntentActivities(intent, 0)
+                for (info in list) {
+                    val pkg = info.activityInfo?.packageName
+                    if (!pkg.isNullOrEmpty() && pkg != "android" && pkg != context.packageName) {
+                        set.add(pkg)
+                    }
+                }
+            }
+            return set
+        }
 
         /** The launcher Android uses as home now, unless that is the chooser or DiPlay itself. */
         fun defaultHome(context: Context): String? = runCatching {

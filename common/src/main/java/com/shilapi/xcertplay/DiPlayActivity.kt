@@ -344,7 +344,23 @@ class DiPlayActivity : ComponentActivity() {
         section(content, getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
             toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
             toggle(card, getString(R.string.open_after_the_car_starts), getString(R.string.availability_depends_on_your_head_unit_s_startup_settings), AirPlayPersistence.loadAutoStartOnBoot(this)) { AirPlayPersistence.saveAutoStartOnBoot(this, it) }
-            card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
+            val autoConfirmActive = UsbAutoConfirmService.isEnabled(this)
+            card.addView(
+                button(
+                    if (autoConfirmActive) getString(R.string.usb_auto_confirm_status_on)
+                    else getString(R.string.usb_auto_confirm_status_off),
+                    false,
+                ) {
+                    UsbAutoConfirmService.openSettings(this)
+                },
+                matchButton(10, 60),
+            )
+            card.addView(
+                label(getString(R.string.usb_auto_confirm_summary), 14, MUTED).apply {
+                    setPadding(0, dp(6), 0, dp(10))
+                },
+            )
+            card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(6, 60))
         }
         section(content, getString(R.string.display_and_performance), R.drawable.ic_dp_display) { card ->
             carPlaySizeControl(card)
@@ -422,8 +438,8 @@ class DiPlayActivity : ComponentActivity() {
                     card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                         else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
                     val usage = HomeScreenMonitor.hasAccess(this)
-                    card.addView(label(if (usage) getString(R.string.center_map_usage_allowed)
-                        else getString(R.string.center_map_usage_missing, packageName), 14, if (usage) MUTED else WARNING))
+                    card.addView(label(if (usage) getString(R.string.center_map_auto_hide_active)
+                        else getString(R.string.center_map_auto_hide_needed), 14, if (usage) MUTED else WARNING))
                 }
                 if (clusterDisplay != null) {
                     if (DiLink51ClusterLayout.supported()) {
