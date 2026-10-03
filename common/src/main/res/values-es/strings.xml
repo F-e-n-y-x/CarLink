@@ -467,4 +467,10 @@
     <string name="center_map_no_permission_screen">Esta unidad principal no tiene pantalla de ajustes para este permiso. Permítelo por ADB.</string>
     <string name="launcher_map_sharing">Compartir el mapa en vivo con otros launchers</string>
     <string name="launcher_map_sharing_description">Los launchers compatibles con DiPlay pueden mostrar el mapa en vivo del panel de instrumentos en su propia pantalla de inicio. Desactivado por defecto, porque entonces cualquier aplicación de la unidad principal podría pedir el mapa. Consulta docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir los ajustes de DiPlay.</string>
+    <string name="carplay_controls">Controles de CarPlay</string>
+    <string name="settings_gesture_fingers">Abrir ajustes · deslizar con %1$d dedos (toca para cambiar)</string>
+    <string name="settings_gesture_fingers_label">Abrir ajustes · dedos del deslizamiento</string>
+    <string name="settings_gesture_fingers_option">%1$d dedos</string>
+    <string name="settings_gesture_fingers_hint">Elige un número de dedos que tu unidad no use ya. BYD reserva el deslizamiento con tres dedos para el panel del aire acondicionado.</string>
 </resources>

@@ -467,4 +467,10 @@
     <string name="center_map_no_permission_screen">На этом головном устройстве нет экрана настроек для этого разрешения. Разрешите его через ADB.</string>
     <string name="launcher_map_sharing">Делиться живой картой с другими лаунчерами</string>
     <string name="launcher_map_sharing_description">Лаунчеры с поддержкой DiPlay смогут показывать живую карту приборной панели на своём главном экране. Выключено по умолчанию, потому что тогда карту сможет запросить любое приложение на головном устройстве. Подробнее: docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть настройки DiPlay.</string>
+    <string name="carplay_controls">Управление CarPlay</string>
+    <string name="settings_gesture_fingers">Открыть настройки · свайп %1$d пальцами (нажмите для смены)</string>
+    <string name="settings_gesture_fingers_label">Открыть настройки · количество пальцев</string>
+    <string name="settings_gesture_fingers_option">%1$d пальцев</string>
+    <string name="settings_gesture_fingers_hint">Выберите число пальцев, не занятое головным устройством. BYD использует свайп тремя пальцами вниз для панели кондиционера.</string>
 </resources>
