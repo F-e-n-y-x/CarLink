@@ -23,6 +23,7 @@ import android.provider.Settings
 import android.util.Log
 import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayContact
+import com.shilapi.xcertplay.airplay.AirPlayKnobState
 import com.shilapi.xcertplay.airplay.AirPlayDeviceInfo
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.AirPlayMediaHandler
@@ -423,6 +424,18 @@ class CarPlayController(
         val session = activeSession ?: return false
         return try {
             touchExecutor.execute { session.sendTouch(contacts) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Sends a CarPlay knob/touchpad movement or button state through the AirPlay HID channel. */
+    fun sendKnob(state: AirPlayKnobState, momentary: Boolean = true): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute { session.sendKnob(state, momentary) }
             true
         } catch (_: Exception) {
             false
