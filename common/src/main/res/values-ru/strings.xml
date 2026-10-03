@@ -407,7 +407,7 @@
     <string name="turn_card_horizontal">Карточка поворота · по горизонтали</string>
     <string name="turn_card_vertical">Карточка поворота · по вертикали</string>
     <string name="reset_turn_card_to_centre">Вернуть карточку поворота в центр</string>
-    <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборной панели только в малой и полноэкранной навигации · нужен ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборной панели только в малой и полноэкранной навигации</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay считывает режим навигации, выбранный кнопками на руле. В режимах «Выкл.» и «Включать при навигации» приборная панель показывает только стрелки, поэтому iPhone не передаёт карту; в режимах малого и полного экрана навигации передаёт — через секунду-две после переключения. Нужен ADB по сети на головном устройстве.</string>
     <string name="check_adb_access">Проверить доступ ADB</string>
     <string name="adb_checking">Проверка доступа ADB…</string>
@@ -424,7 +424,7 @@
     <string name="navi_mode_small">Навигация на малом экране</string>
     <string name="navi_mode_full">Навигация на полном экране</string>
     <string name="navi_mode_unknown">неизвестный режим</string>
-    <string name="car_battery_for_the_iphone">Батарея машины для iPhone · нужен ADB</string>
+    <string name="car_battery_for_the_iphone">Батарея машины для iPhone</string>
     <string name="car_battery_for_the_iphone_description">DiPlay сообщает iPhone заряд и запас хода машины, чтобы Apple Карты предупреждали о низком заряде и предлагали зарядки по пути. iPhone узнаёт об электромобиле, только пока DiPlay может прочитать батарею. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
     <string name="charging_connectors">Разъёмы зарядки</string>
     <string name="connectors_ccs2_type2">CCS2 и Type 2 · Европа</string>
@@ -469,11 +469,11 @@
     <string name="vehicle_field_battery">Состояние батареи</string>
     <string name="vehicle_field_charging">Состояние зарядки</string>
     <string name="adb_battery_reconnect">Если CarPlay подключился до получения данных батареи, нажмите «Применить и переподключить», чтобы включить передачу данных батареи.</string>
-    <string name="wheel_speed_for_tunnels">Скорость колёс для тоннелей · нужен ADB</string>
+    <string name="wheel_speed_for_tunnels">Скорость колёс для тоннелей</string>
     <string name="wheel_speed_for_tunnels_description">Если включено «Передавать местоположение на iPhone», DiPlay также передаёт скорость колёс и передачу, чтобы Apple Карты продолжали вести вашу позицию в тоннелях и на парковках. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
-    <string name="video_while_parked">Видео на стоянке · нужен ADB</string>
+    <string name="video_while_parked">Видео на стоянке</string>
     <string name="video_while_parked_description">iOS 27: видео, которое вы отправляете в CarPlay с iPhone, показывается на экране машины, пока включён P. Плеер закрывается, когда вы выходите из P; без ADB видео выключено и iPhone играет только звук. Обычное видео по HTTPS (например, из Safari) работает; видео под защитой FairPlay, как Apple TV+, требует лицензированного приёмника и здесь не воспроизводится. Переподключает CarPlay. Нужен ADB по сети на головном устройстве.</string>
-    <string name="cluster_song">Песня на приборной панели · нужен ADB</string>
+    <string name="cluster_song">Песня на приборной панели</string>
     <string name="cluster_song_description">Название и исполнитель песни из CarPlay показываются в музыкальной карточке на приборной панели, вместе с воспроизведением и паузой. Карточка отображается как источник BYD «другое», потому что панель не рисует собственный источник CarPlay. Применяется сразу. Нужен ADB по сети на головном устройстве.</string>
     <string name="video_back_to_carplay">Назад в CarPlay</string>
     <string name="video_play">Воспроизвести</string>

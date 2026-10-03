@@ -52,7 +52,7 @@ Only the four stock full-map, mini-map, Scenario and Simple activity events are 
 
 ### Dashboard map only in Small and Full navi (optional, needs ADB)
 
-The iPhone draws and streams the cluster map for the whole session, even while the cluster shows no projection: in Off and "Turn on by navi" the cluster draws arrows only (in "Turn on by navi" the stock map even removes its own cluster window). With "Dashboard map only in Small and Full navi · needs ADB" turned on, DiPlay reads the mode the driver picked on the wheel every second and, while it is Off or "Turn on by navi", sends `stopUI` for the alt screen (`{"type": "stopUI", "params": {"uuid": <alt screen UUID>}}`). When the driver picks Small or Full screen navi it sends `showUI` with the map URL (`{"uuid", "url": "maps:/car/instrumentcluster/map"}`) and `forceKeyFrame` for the same UUID. CarKit handles both as car-initiated commands (`_handleStopUIWithParameters:` / `_handleShowUIWithParameters:`); the stream stays up, so nothing reconnects.
+The iPhone draws and streams the cluster map for the whole session, even while the cluster shows no projection: in Off and "Turn on by navi" the cluster draws arrows only (in "Turn on by navi" the stock map even removes its own cluster window). With "Dashboard map only in Small and Full navi" turned on, DiPlay reads the mode the driver picked on the wheel every second and, while it is Off or "Turn on by navi", sends `stopUI` for the alt screen (`{"type": "stopUI", "params": {"uuid": <alt screen UUID>}}`). When the driver picks Small or Full screen navi it sends `showUI` with the map URL (`{"uuid", "url": "maps:/car/instrumentcluster/map"}`) and `forceKeyFrame` for the same UUID. CarKit handles both as car-initiated commands (`_handleStopUIWithParameters:` / `_handleShowUIWithParameters:`); the stream stays up, so nothing reconnects.
 
 Measured on the car: after `stopUI` the cluster stream carried no frames at all while the main screen went on as usual; after a switch on the wheel `showUI` went out about 0.6 s later and the map was back within a second. If the mode cannot be read (no ADB access), DiPlay keeps the map streaming as without the setting.
 
@@ -104,7 +104,7 @@ DiPlay accepts them.
 
 ## Car battery for the iPhone (optional, needs ADB)
 
-CarPlay's vehicle status lets the car tell the iPhone its charge and range; Apple Maps then warns about a low charge and offers chargers on the way. With "Car battery for the iPhone · needs ADB" turned on, DiPlay declares an electric vehicle in its iAP2 identification (VehicleInformation with engine type electric and the chosen charging connectors, VehicleStatus with range, range warning, charge and maximum range) and answers the iPhone's StartVehicleStatusUpdates (`0xA100`) with VehicleStatusUpdate (`0xA101`) every 30 s.
+CarPlay's vehicle status lets the car tell the iPhone its charge and range; Apple Maps then warns about a low charge and offers chargers on the way. With "Car battery for the iPhone" turned on, DiPlay declares an electric vehicle in its iAP2 identification (VehicleInformation with engine type electric and the chosen charging connectors, VehicleStatus with range, range warning, charge and maximum range) and answers the iPhone's StartVehicleStatusUpdates (`0xA100`) with VehicleStatusUpdate (`0xA101`) every 30 s.
 
 DiPlay declares the electric vehicle only when it already has a battery reading as the iPhone identifies the accessory. With ADB off or not approved, or on a car without these properties, the identification stays as without the switch, and the log says `iap2 no battery reading: not declaring an electric vehicle`. The controller-13 probe publishes the reading it validates before the switch can appear.
 
@@ -133,7 +133,7 @@ If CarPlay connected before the first battery reading was available, battery rep
 
 ## Wheel speed for tunnels (optional, needs ADB)
 
-"Report location to iPhone" (Settings → Location) sends the head unit's position as `$GPGGA` + `$GPRMC` in iAP2 LocationInformation (`0xFFFB`). In a tunnel or car park there is no fix, and the iPhone has only its own motion sensors. "Wheel speed for tunnels · needs ADB" adds the car's speed and gear so the iPhone can keep the position moving:
+"Report location to iPhone" (Settings → Location) sends the head unit's position as `$GPGGA` + `$GPRMC` in iAP2 LocationInformation (`0xFFFB`). In a tunnel or car park there is no fix, and the iPhone has only its own motion sensors. "Wheel speed for tunnels" adds the car's speed and gear so the iPhone can keep the position moving:
 
 - DiPlay also sets VehicleSpeedData (id 20) in the LocationInformation identification component. It sends `$PASCD` only if the iPhone selects it (id 4) in StartLocationInformation (`0xFFFA`); the log shows the ids the iPhone asked for (`components=[…]`).
 - Every LocationInformation (about once a second) carries the samples since the previous one, even without a GPS fix: `$PASCD,<first sample, s since boot>,C,<P/R/N/D>,0,<n>,<offset s>,<speed m/s>,…*CS`. The layout copies a production head unit's log; what `C` and `0` stand for is not public.
@@ -143,7 +143,7 @@ Checked in the car at walking speed: the gear followed D, R and P (4, 2, 1), and
 
 ## Video while parked (optional, needs ADB)
 
-iOS 27 can play video on the CarPlay screen while the car is parked ("video in car"): the iPhone hands the head unit a media URL and drives playback, and the head unit plays it in its own player. With "Video while parked · needs ADB" turned on, DiPlay offers this and plays the video full screen over CarPlay. Video starts on the car screen as soon as it is sent to CarPlay on the iPhone, with no further step in Now Playing. A tap shows **Back to CarPlay**, play/pause, 10 s back and forward and a time bar that can be dragged to seek. The switch is off by default and reconnects CarPlay.
+iOS 27 can play video on the CarPlay screen while the car is parked ("video in car"): the iPhone hands the head unit a media URL and drives playback, and the head unit plays it in its own player. With "Video while parked" turned on, DiPlay offers this and plays the video full screen over CarPlay. Video starts on the car screen as soon as it is sent to CarPlay on the iPhone, with no further step in Now Playing. A tap shows **Back to CarPlay**, play/pause, 10 s back and forward and a time bar that can be dragged to seek. The switch is off by default and reconnects CarPlay.
 
 Video is allowed only while the gear reads P. DiPlay reads the gearbox once a second through the adb shell (gearbox device 1011, `service call autoservice 5 i32 1011 i32 555745336` → 1 P, 2 R, 3 N, 4 D) and tells the iPhone with `setVideoPlaybackAllowed`. Leaving P closes the player and the iPhone goes on with audio only; so does a gear that cannot be read (no ADB access). The steering-wheel keys drive the car's player while it is open: play/pause toggles it and next/previous skip 10 s. They do not go to the iPhone, which ends the video session on a CarPlay play/pause.
 

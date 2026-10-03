@@ -420,7 +420,7 @@
     <string name="turn_card_horizontal">Картка маневру · горизонтально</string>
     <string name="turn_card_vertical">Картка маневру · вертикально</string>
     <string name="reset_turn_card_to_centre">Повернути картку маневру до центру</string>
-    <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборці лише в малому й повноекранному режимах навігації · потрібен ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">Карта на приборці лише в малому й повноекранному режимах навігації</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay визначає режим навігації, вибраний на кермі. У режимах «Вимкнено» та «Вмикати під час навігації» приборка показує лише стрілки, тому iPhone не надсилає карту. У малому й повноекранному режимах навігації iPhone надсилає карту через одну-дві секунди після перемикання. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="check_adb_access">Перевірити доступ ADB</string>
     <string name="adb_checking">Перевірка доступу ADB…</string>
@@ -437,7 +437,7 @@
     <string name="navi_mode_small">Мала навігація</string>
     <string name="navi_mode_full">Повноекранна навігація</string>
     <string name="navi_mode_unknown">невідомий режим</string>
-    <string name="car_battery_for_the_iphone">Батарея автомобіля для iPhone · потрібен ADB</string>
+    <string name="car_battery_for_the_iphone">Батарея автомобіля для iPhone</string>
     <string name="car_battery_for_the_iphone_description">DiPlay повідомляє iPhone про заряд і запас ходу автомобіля, щоб Apple Maps могли попереджати про низький заряд і пропонувати зарядні станції на маршруті. iPhone отримує інформацію про електромобіль, лише поки DiPlay може зчитувати стан батареї. CarPlay перепідключиться. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="charging_connectors">Зарядні роз’єми</string>
     <string name="connectors_ccs2_type2">CCS2 і Type 2 · Європа</string>
@@ -482,9 +482,9 @@
     <string name="vehicle_field_battery">Стан батареї</string>
     <string name="vehicle_field_charging">Стан заряджання</string>
     <string name="adb_battery_reconnect">Якщо CarPlay підключився до того, як дані батареї стали доступними, виберіть «Застосувати й перепідключитися», щоб увімкнути передавання даних батареї.</string>
-    <string name="wheel_speed_for_tunnels">Швидкість коліс у тунелях · потрібен ADB</string>
+    <string name="wheel_speed_for_tunnels">Швидкість коліс у тунелях</string>
     <string name="wheel_speed_for_tunnels_description">Коли ввімкнено передавання геопозиції на iPhone, DiPlay також надсилає швидкість коліс і передачу автомобіля, щоб Apple Maps могли відстежувати рух у тунелях і паркінгах. CarPlay перепідключиться. Потрібен ADB через мережу на головному пристрої.</string>
-    <string name="video_while_parked">Відео під час стоянки · потрібен ADB</string>
+    <string name="video_while_parked">Відео під час стоянки</string>
     <string name="video_while_parked_description">iOS 27: відео, яке ви надсилаєте з iPhone до CarPlay, відтворюється на екрані автомобіля, коли вибрано передачу P. Плеєр закривається після виходу з P; без ADB відео вимкнено, а iPhone відтворює лише звук. Звичайне HTTPS-відео (наприклад, із Safari) працює; для відео, захищеного FairPlay, зокрема Apple TV+, потрібен ліцензований приймач, тому тут воно не відтворюється. CarPlay перепідключиться. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="video_back_to_carplay">Повернутися до CarPlay</string>
     <string name="video_play">Відтворити</string>
@@ -499,7 +499,7 @@
     <string name="center_map_overlay_missing">Показ поверх інших застосунків: не дозволено. Дозвольте його в налаштуваннях застосунку або через ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">Доступ до даних використання: дозволено, картка показується лише на головному екрані</string>
     <string name="center_map_usage_missing">Доступ до даних використання: не дозволено, тому картка показується поверх усіх застосунків. Через ADB: adb shell appops set %1$s GET_USAGE_STATS allow</string>
-    <string name="cluster_song">Пісня на приборці · потрібен ADB</string>
+    <string name="cluster_song">Пісня на приборці</string>
     <string name="cluster_song_description">Назва й виконавець пісні з CarPlay показуються в музичній картці на приборці, разом із відтворенням і паузою. Картка показується як джерело BYD «Інше», бо приборка не малює власне джерело CarPlay. Застосовується одразу. Потрібен ADB через мережу на головному пристрої.</string>
     <string name="launcher_map_sharing">Ділитися живою картою з іншими лаунчерами</string>
     <string name="launcher_map_sharing_description">Лаунчери з підтримкою DiPlay можуть показувати живу карту приборки на своєму головному екрані. Типово вимкнено, бо тоді карту зможе запитати будь-який застосунок на головному пристрої. Див. docs/LAUNCHER_INTEGRATION.md.</string>

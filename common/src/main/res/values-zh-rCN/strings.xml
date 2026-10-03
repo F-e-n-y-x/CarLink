@@ -418,7 +418,7 @@
     <string name="turn_card_horizontal">转向提示卡 · 水平位置</string>
     <string name="turn_card_vertical">转向提示卡 · 垂直位置</string>
     <string name="reset_turn_card_to_centre">将转向提示卡重置到中央</string>
-    <string name="dashboard_map_only_in_small_and_full_navi">仅在小屏或全屏导航时显示仪表盘地图 · 需要 ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">仅在小屏或全屏导航时显示仪表盘地图</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay 读取你在方向盘菜单中选择的导航模式。在“关闭”和“导航时开启”模式下仪表盘只显示箭头，因此 iPhone 不发送地图；在小屏导航和全屏导航模式下会发送，切换后一两秒内生效。需要在车机上开启网络 ADB。</string>
     <string name="check_adb_access">检查 ADB 访问</string>
     <string name="adb_checking">正在检查 ADB 访问…</string>
@@ -435,7 +435,7 @@
     <string name="navi_mode_small">小屏导航</string>
     <string name="navi_mode_full">全屏导航</string>
     <string name="navi_mode_unknown">未知模式</string>
-    <string name="car_battery_for_the_iphone">向 iPhone 提供车辆电量 · 需要 ADB</string>
+    <string name="car_battery_for_the_iphone">向 iPhone 提供车辆电量</string>
     <string name="car_battery_for_the_iphone_description">DiPlay 将车辆的电量和续航告诉 iPhone，Apple 地图即可在电量低时提醒并推荐沿途充电站。只有在 DiPlay 能读取电池信息时，才会向 iPhone 声明这是电动车。会重新连接 CarPlay。需要在车机上开启网络 ADB。</string>
     <string name="charging_connectors">充电接口</string>
     <string name="connectors_ccs2_type2">CCS2 和 Type 2 · 欧洲</string>
@@ -480,11 +480,11 @@
     <string name="vehicle_field_battery">电池状态</string>
     <string name="vehicle_field_charging">充电状态</string>
     <string name="adb_battery_reconnect">如果 CarPlay 在电池数据就绪前已连接，请使用“应用并重新连接”以启用电池数据上报。</string>
-    <string name="wheel_speed_for_tunnels">隧道中的车轮速度 · 需要 ADB</string>
+    <string name="wheel_speed_for_tunnels">隧道中的车轮速度</string>
     <string name="wheel_speed_for_tunnels_description">开启“向 iPhone 报告位置”后，DiPlay 还会发送车轮速度和挡位，让 Apple 地图在隧道和停车场里也能继续推算你的位置。会重新连接 CarPlay。需要在车机上开启网络 ADB。</string>
-    <string name="video_while_parked">驻车时播放视频 · 需要 ADB</string>
+    <string name="video_while_parked">驻车时播放视频</string>
     <string name="video_while_parked_description">iOS 27：在 iPhone 上投送到 CarPlay 的视频会在车辆处于 P 挡时在车机屏幕上播放。挂出 P 挡时播放器会关闭；没有 ADB 时视频保持关闭，iPhone 只播放声音。普通 HTTPS 视频（例如来自 Safari）可以播放；受 FairPlay 保护的视频（例如 Apple TV+）需要获得授权的接收器，在这里无法播放。会重新连接 CarPlay。需要车机开启网络 ADB。</string>
-    <string name="cluster_song">仪表盘显示歌曲 · 需要 ADB</string>
+    <string name="cluster_song">仪表盘显示歌曲</string>
     <string name="cluster_song_description">CarPlay 正在播放的歌曲名和歌手会显示在仪表盘的音乐卡片中，并同步播放和暂停状态。卡片以比亚迪的“其他”音源显示，因为仪表盘不会绘制 CarPlay 自身的音源。立即生效。需要车机开启网络 ADB。</string>
     <string name="video_back_to_carplay">返回 CarPlay</string>
     <string name="video_play">播放</string>

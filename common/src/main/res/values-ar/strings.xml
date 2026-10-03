@@ -407,7 +407,7 @@
     <string name="turn_card_horizontal">بطاقة الانعطاف · أفقيًا</string>
     <string name="turn_card_vertical">بطاقة الانعطاف · عموديًا</string>
     <string name="reset_turn_card_to_centre">إعادة بطاقة الانعطاف إلى الوسط</string>
-    <string name="dashboard_map_only_in_small_and_full_navi">خريطة لوحة العدادات فقط في عرض الملاحة المصغّر والكامل · يتطلب ADB</string>
+    <string name="dashboard_map_only_in_small_and_full_navi">خريطة لوحة العدادات فقط في عرض الملاحة المصغّر والكامل</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">يقرأ DiPlay وضع الملاحة الذي تختاره من أزرار المقود. في وضعي «إيقاف» و«التشغيل عند الملاحة» تعرض لوحة العدادات الأسهم فقط، لذا لا يرسل iPhone الخريطة؛ أما في عرض الملاحة المصغّر والكامل فيرسلها خلال ثانية أو ثانيتين من التبديل. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="check_adb_access">التحقق من الوصول عبر ADB</string>
     <string name="adb_checking">جارٍ التحقق من الوصول عبر ADB…</string>
@@ -424,7 +424,7 @@
     <string name="navi_mode_small">عرض الملاحة المصغّر</string>
     <string name="navi_mode_full">عرض الملاحة الكامل</string>
     <string name="navi_mode_unknown">وضع غير معروف</string>
-    <string name="car_battery_for_the_iphone">بطارية السيارة لـ iPhone · يتطلب ADB</string>
+    <string name="car_battery_for_the_iphone">بطارية السيارة لـ iPhone</string>
     <string name="car_battery_for_the_iphone_description">يُخبر DiPlay جهاز iPhone بشحن السيارة ومداها، فتنبّه «خرائط Apple» عند انخفاض الشحن وتقترح محطات شحن على الطريق. لا يُبلَّغ iPhone بأن السيارة كهربائية إلا عندما يستطيع DiPlay قراءة البطارية. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="charging_connectors">منافذ الشحن</string>
     <string name="connectors_ccs2_type2">CCS2 وType 2 · أوروبا</string>
@@ -469,11 +469,11 @@
     <string name="vehicle_field_battery">حالة البطارية</string>
     <string name="vehicle_field_charging">حالة الشحن</string>
     <string name="adb_battery_reconnect">إذا اتصل CarPlay قبل أن تصبح بيانات البطارية جاهزة، استخدم «تطبيق وإعادة الاتصال» لتفعيل إرسال بيانات البطارية.</string>
-    <string name="wheel_speed_for_tunnels">سرعة العجلات في الأنفاق · يتطلب ADB</string>
+    <string name="wheel_speed_for_tunnels">سرعة العجلات في الأنفاق</string>
     <string name="wheel_speed_for_tunnels_description">عند تشغيل «إرسال الموقع إلى iPhone»، يرسل DiPlay أيضًا سرعة عجلات السيارة وناقل الحركة، لتواصل «خرائط Apple» تحريك موقعك في الأنفاق ومواقف السيارات. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
-    <string name="video_while_parked">الفيديو أثناء التوقف · يتطلب ADB</string>
+    <string name="video_while_parked">الفيديو أثناء التوقف</string>
     <string name="video_while_parked_description">iOS 27: يُعرض الفيديو الذي ترسله إلى CarPlay من iPhone على شاشة السيارة ما دامت السيارة على وضع P. يُغلق المشغل عند الخروج من P؛ وبدون ADB يبقى الفيديو متوقفًا ويشغّل iPhone الصوت فقط. يعمل فيديو HTTPS العادي (مثل Safari)؛ أما الفيديو المحمي بـ FairPlay مثل Apple TV+ فيحتاج إلى مستقبل مرخّص ولا يعمل هنا. يعيد الاتصال بـ CarPlay. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
-    <string name="cluster_song">الأغنية على لوحة العدادات · يتطلب ADB</string>
+    <string name="cluster_song">الأغنية على لوحة العدادات</string>
     <string name="cluster_song_description">يظهر اسم أغنية CarPlay والفنان في بطاقة الموسيقى على لوحة العدادات، مع التشغيل والإيقاف المؤقت. تظهر البطاقة كمصدر الموسيقى «آخر» من BYD، لأن لوحة العدادات لا تعرض مصدر CarPlay الخاص. يُطبَّق فورًا. يتطلب ADB عبر الشبكة على وحدة القيادة.</string>
     <string name="video_back_to_carplay">العودة إلى CarPlay</string>
     <string name="video_play">تشغيل</string>
