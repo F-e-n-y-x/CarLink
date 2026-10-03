@@ -403,6 +403,7 @@
     <string name="dashboard_content_map">Mapa · predeterminado</string>
     <string name="dashboard_content_turn_card">Tarjeta de giro</string>
     <string name="dashboard_content_map_with_turn_card">Mapa con tarjeta de giro</string>
+    <string name="dashboard_content_map_with_custom_turn_card">Mapa con tarjeta de giro personalizada</string>
     <string name="turn_card_size">Tamaño de la tarjeta de giro</string>
     <string name="turn_card_horizontal">Tarjeta de giro · horizontal</string>
     <string name="turn_card_vertical">Tarjeta de giro · vertical</string>
@@ -467,4 +468,16 @@
     <string name="center_map_no_permission_screen">Esta unidad principal no tiene pantalla de ajustes para este permiso. Permítelo por ADB.</string>
     <string name="launcher_map_sharing">Compartir el mapa en vivo con otros launchers</string>
     <string name="launcher_map_sharing_description">Los launchers compatibles con DiPlay pueden mostrar el mapa en vivo del panel de instrumentos en su propia pantalla de inicio. Desactivado por defecto, porque entonces cualquier aplicación de la unidad principal podría pedir el mapa. Consulta docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="turn_card_overlay_size">Tamaño de la tarjeta personalizada</string>
+    <string name="turn_card_overlay_horizontal">Tarjeta personalizada · izquierda / derecha</string>
+    <string name="turn_card_overlay_vertical">Tarjeta personalizada · arriba / abajo</string>
+    <string name="turn_card_overlay_small">Pequeño</string>
+    <string name="turn_card_overlay_medium">Mediano</string>
+    <string name="turn_card_overlay_large">Grande</string>
+    <string name="reset_turn_card_overlay">Restablecer posición de la tarjeta personalizada</string>
+    <string name="turn_card_overlay_note">DiPlay dibuja esta tarjeta sobre el mapa y se mueve en pasos del 2 %. La tarjeta de cristal de iOS no se puede mover por sí sola. Los cambios son inmediatos y la tarjeta sigue visible al ir recto.</string>
+    <string name="turn_card_now">Ahora</string>
+    <string name="turn_card_distance_m">%1$d m</string>
+    <string name="turn_card_distance_km">%1$.1f km</string>
+    <string name="turn_card_exit">Salida %1$d</string>
 </resources>

@@ -13,6 +13,12 @@ object BydNavigationOutputs {
     }
     fun setDiagnosticHold(hold: Boolean) { BydStandaloneHudOutput.syntheticHold = hold }
     @Volatile private var useStandalone = false
+    @Volatile private var overlayListener: ((ClusterTurnGuidance?) -> Unit)? = null
+    private val overlayLock = Any()
+    private val overlayRoute = BydHudRouteState(
+        staleRouteNs = 120_000_000_000L,
+        emptyListHideNs = 8_000_000_000L,
+    )
     private val standalone = NavigationOutputWorker("diplay-standalone-output", BydStandaloneNavigationBridge::clear)
     private val hud = NavigationOutputWorker("diplay-hud-output", BydHudBridge::clear)
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
@@ -60,6 +66,7 @@ object BydNavigationOutputs {
         if (frame.messageId != BydHudRouteState.ROUTE_GUIDANCE_UPDATE &&
             frame.messageId != BydHudRouteState.ROUTE_GUIDANCE_MANEUVER_UPDATE) return
         val owned = frame // Iap2Frame is immutable and defensively copies its payload.
+        updateOverlay(owned)
         if (useStandalone) standalone.submit { BydStandaloneNavigationBridge.onFrame(owned) }
         else {
             hud.submit { BydHudBridge.onFrame(owned) }
@@ -67,9 +74,28 @@ object BydNavigationOutputs {
         }
     }
 
+    /** Live next-turn state for the dashboard overlay. Called from the iAP2 thread. */
+    fun setTurnOverlayListener(listener: ((ClusterTurnGuidance?) -> Unit)?) {
+        overlayListener = listener
+        listener?.invoke(currentOverlay())
+    }
+
+    private fun updateOverlay(frame: Iap2Frame) {
+        val change = synchronized(overlayLock) { overlayRoute.accept(frame.messageId, frame.payload) }
+        if (change != BydHudRouteChange.NONE) overlayListener?.invoke(currentOverlay())
+    }
+
+    private fun currentOverlay(): ClusterTurnGuidance? = synchronized(overlayLock) {
+        overlayRoute.currentApple()?.let { ClusterTurnGuidance.from(BydClusterFrame.from(it)) }
+    }
+
     /** The dashboard song setting changed; applies at once. */
     fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
 
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
-    fun endNow() { standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end() }
+    fun endNow() {
+        standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
+        synchronized(overlayLock) { overlayRoute.clear() }
+        overlayListener?.invoke(null)
+    }
 }
