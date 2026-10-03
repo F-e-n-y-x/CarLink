@@ -444,7 +444,7 @@ class DiPlayActivity : ComponentActivity() {
         section(content, getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),
                 getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th),
-                AirPlayPersistence.loadLocationReportingEnabled(this), ::onLocationReportingChanged)
+                AirPlayPersistence.loadLocationReportingEnabled(this), save = ::onLocationReportingChanged)
             card.addView(label(getString(R.string.location_reporting_reconnects), 14, MUTED))
             card.addView(button(getString(if (bydVehicleAdvancedExpanded)
                 R.string.hide_advanced_vehicle_data else R.string.advanced_vehicle_data), false) {
