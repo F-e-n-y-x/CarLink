@@ -351,6 +351,22 @@ class CarPlayHostActivity : ComponentActivity() {
     private var menuOpen = false
     private var latestStage = "Preparing CarPlay"
     private var darkMode = false
+    private var carPlayNightMode = CarPlayNightMode.SYSTEM
+    private var ambientLightThreshold = AmbientLightThreshold()
+    private var ambientDelaySeconds = 2
+    private var nightModeDiagnosticSource = ThemeModeDiagnostics.Source.CARPLAY_MODE
+    private val nightModeController by lazy {
+        CarPlayNightModeController(
+            light = AndroidAmbientLight(this),
+            scheduler = MainThreadNightModeScheduler(),
+            initialNight = darkMode,
+        ) { night ->
+            darkMode = night
+            appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
+            logThemeState(nightModeDiagnosticSource, resources.configuration)
+            syncAirPlayDarkMode(nightModeDiagnosticSource)
+        }
+    }
     private val themeDiagnostics = ThemeModeDiagnostics()
     private var lastConfiguration: Configuration? = null
     private var activeAirPlaySession: AirPlaySession? = null
@@ -452,7 +468,8 @@ class CarPlayHostActivity : ComponentActivity() {
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         initializeSessionLog()
         lastConfiguration = Configuration(resources.configuration)
-        darkMode = nightModeOrNull(resources.configuration.uiMode) ?: false
+        darkMode = savedInstanceState?.getBoolean("carplay_night_active")
+            ?: nightModeOrNull(resources.configuration.uiMode) ?: false
         logThemeState(ThemeModeDiagnostics.Source.CREATE, resources.configuration)
         advancedAudioChannelMappingSupported =
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
@@ -492,6 +509,15 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun loadPersistedSettings() {
+        carPlayNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
+        ambientLightThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
+        ambientDelaySeconds = AirPlayPersistence.loadAmbientDelaySeconds(this)
+        nightModeController.configure(
+            carPlayNightMode,
+            nightModeOrNull(resources.configuration.uiMode) ?: false,
+            ambientLightThreshold,
+            ambientDelaySeconds,
+        )
         displayScaleTenths = AirPlayPersistence.loadDisplayScaleTenths(this)
         // Size is now chosen only through CarPlaySize; ignore the canvas scale older builds stored.
         uiScalePercent = CarPlayUiScale.DEFAULT
@@ -632,6 +658,17 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        val savedNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
+        val savedThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
+        val savedDelay = AirPlayPersistence.loadAmbientDelaySeconds(this)
+        val systemNight = nightModeOrNull(resources.configuration.uiMode) ?: false
+        if (savedNightMode != carPlayNightMode || savedThreshold != ambientLightThreshold || savedDelay != ambientDelaySeconds) {
+            carPlayNightMode = savedNightMode
+            ambientLightThreshold = savedThreshold
+            ambientDelaySeconds = savedDelay
+            nightModeController.configure(carPlayNightMode, systemNight, ambientLightThreshold, ambientDelaySeconds)
+        }
+        nightModeController.resume(systemNight)
         val languagePreference = AppLocale.preference(this)
         if (Build.VERSION.SDK_INT < 33 && languagePreference != languagePreferenceAtCreate) {
             languagePreferenceAtCreate = languagePreference
@@ -839,6 +876,16 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("carplay_night_active", darkMode)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onPause() {
+        nightModeController.pause()
+        super.onPause()
+    }
+
     override fun onStop() {
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
         logThemeState(ThemeModeDiagnostics.Source.STOP, resources.configuration)
@@ -907,6 +954,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        nightModeController.pause()
         mainHandler.removeCallbacks(refreshTurnOverlay)
         AirPlayPersistence.overlaySettingsListener = null
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(null)
@@ -3405,15 +3453,13 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         // resources.configuration is mutated in place, so keep a copy to compare against.
         lastConfiguration = Configuration(newConfig)
-        val night = nightModeOrNull(newConfig.uiMode)
-        if (night == null || night == darkMode) {
-            logThemeState(source, newConfig)
-            return
+        nightModeDiagnosticSource = source
+        try {
+            nightModeOrNull(newConfig.uiMode)?.let { nightModeController.systemChanged(it) }
+        } finally {
+            nightModeDiagnosticSource = ThemeModeDiagnostics.Source.CARPLAY_MODE
         }
-        darkMode = night
         logThemeState(source, newConfig)
-        appendLog("Head unit switched to ${if (night) "night" else "day"} mode")
-        syncAirPlayDarkMode(source)
     }
 
     private fun logThemeState(source: ThemeModeDiagnostics.Source, configuration: Configuration) {
