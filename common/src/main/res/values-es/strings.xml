@@ -473,4 +473,14 @@
     <string name="settings_gesture_fingers_label">Abrir ajustes · dedos del deslizamiento</string>
     <string name="settings_gesture_fingers_option">%1$d dedos</string>
     <string name="settings_gesture_fingers_hint">Elige un número de dedos que tu unidad no use ya. BYD reserva el deslizamiento con tres dedos para el panel del aire acondicionado.</string>
+    <string name="auto_car_hotspot_title">Activar automáticamente el punto de acceso del coche</string>
+    <string name="auto_car_hotspot_description">Activa el punto de acceso guardado al abrir DiPlay. El interruptor solicita automáticamente los permisos necesarios mediante ADB; acepta el aviso en la pantalla del coche. Activa la apertura de DiPlay al arrancar para iniciarlo tras el encendido. Conserva el nombre y la contraseña y nunca apaga el punto de acceso.</string>
+    <string name="hotspot_control_missing">Falta el permiso de control del punto de acceso. Concédelo mediante ADB o actívalo en los ajustes del coche.</string>
+    <string name="hotspot_permission_granted">Permiso concedido.</string>
+    <string name="hotspot_permission_failed">No se ha concedido el permiso solicitado. Revisa los ajustes del coche e inténtalo de nuevo.</string>
+    <string name="hotspot_control_on">El punto de acceso del coche está activado.</string>
+    <string name="hotspot_control_unsupported">El firmware no admite el inicio automático del punto de acceso. Actívalo en los ajustes del coche.</string>
+    <string name="hotspot_control_timeout">Se agotó el tiempo de espera del punto de acceso. Actívalo en los ajustes del coche.</string>
+    <string name="hotspot_control_failed">No se pudo iniciar el punto de acceso. Actívalo en los ajustes del coche.</string>
+    <string name="byd_adb_features">Funciones BYD · requieren ADB</string>
 </resources>

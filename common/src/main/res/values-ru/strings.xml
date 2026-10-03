@@ -473,4 +473,14 @@
     <string name="settings_gesture_fingers_label">Открыть настройки · количество пальцев</string>
     <string name="settings_gesture_fingers_option">%1$d пальцев</string>
     <string name="settings_gesture_fingers_hint">Выберите число пальцев, не занятое головным устройством. BYD использует свайп тремя пальцами вниз для панели кондиционера.</string>
+    <string name="auto_car_hotspot_title">Автоматически включать точку доступа автомобиля</string>
+    <string name="auto_car_hotspot_description">Включает сохранённую точку доступа при открытии DiPlay. Переключатель автоматически запрашивает необходимые разрешения через ADB; подтвердите запрос на экране автомобиля. Для запуска после загрузки включите открытие DiPlay после запуска автомобиля. Имя и пароль сохраняются, точка доступа автоматически не выключается.</string>
+    <string name="hotspot_control_missing">Нет разрешения управления точкой доступа. Выдайте его через ADB или включите точку доступа в настройках автомобиля.</string>
+    <string name="hotspot_permission_granted">Разрешение предоставлено.</string>
+    <string name="hotspot_permission_failed">Запрошенное разрешение не выдано. Проверьте настройки автомобиля и повторите попытку.</string>
+    <string name="hotspot_control_on">Точка доступа автомобиля включена.</string>
+    <string name="hotspot_control_unsupported">Прошивка не поддерживает автоматическое включение точки доступа. Откройте настройки автомобиля.</string>
+    <string name="hotspot_control_timeout">Истекло время ожидания включения точки доступа. Откройте настройки автомобиля.</string>
+    <string name="hotspot_control_failed">Не удалось включить точку доступа. Откройте настройки автомобиля.</string>
+    <string name="byd_adb_features">Функции BYD · нужен ADB</string>
 </resources>

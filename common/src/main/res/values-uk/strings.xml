@@ -485,4 +485,14 @@
     <string name="settings_gesture_fingers_label">Відкрити налаштування · кількість пальців</string>
     <string name="settings_gesture_fingers_option">%1$d пальців</string>
     <string name="settings_gesture_fingers_hint">Виберіть кількість пальців, яку не використовує головний пристрій. BYD резервує свайп трьома пальцями вниз під панель кондиціонера.</string>
+    <string name="auto_car_hotspot_title">Автоматично вмикати точку доступу авто</string>
+    <string name="auto_car_hotspot_description">Вмикає збережену точку доступу під час відкриття DiPlay. Перемикач автоматично запитує потрібні дозволи через ADB; підтвердьте запит на екрані авто. Для запуску після завантаження ввімкніть відкриття DiPlay після запуску авто. Назва й пароль зберігаються, точка доступу автоматично не вимикається.</string>
+    <string name="hotspot_control_missing">Немає дозволу керування точкою доступу. Надайте його через ADB або ввімкніть точку доступу в налаштуваннях авто.</string>
+    <string name="hotspot_permission_granted">Дозвіл надано.</string>
+    <string name="hotspot_permission_failed">Запитаний дозвіл не надано. Перевірте налаштування авто та спробуйте ще раз.</string>
+    <string name="hotspot_control_on">Точку доступу авто ввімкнено.</string>
+    <string name="hotspot_control_unsupported">Прошивка не підтримує автоматичне ввімкнення точки доступу. Відкрийте налаштування авто.</string>
+    <string name="hotspot_control_timeout">Час очікування ввімкнення точки доступу минув. Відкрийте налаштування авто.</string>
+    <string name="hotspot_control_failed">Не вдалося ввімкнути точку доступу. Відкрийте налаштування авто.</string>
+    <string name="byd_adb_features">Функції BYD · потрібен ADB</string>
 </resources>
