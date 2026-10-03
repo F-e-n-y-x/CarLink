@@ -124,7 +124,9 @@ object BydOutputSettings {
 
     /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
     fun navigationAvailable(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service")
+        BydStandaloneHudOutput.available(context) ||
+            BydAmapAdapter.find { installed(context, it) } != null ||
+            installed(context, "com.ts.car.someip.service")
 
     /** Whether the head unit has a BYD navigation receiver or is a BYD head unit, so settings can show navigation/map options. */
     fun available(context: Context): Boolean =

@@ -12,6 +12,18 @@ Normal route end, disconnect, disabling navigation output and stale guidance tri
 
 Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in DiPlay it is enabled by default when available. Debug-only receivers/demos require Android's DUMP permission and are absent from release manifests. Development starter and vendor-access experiments are not part of the production navigation path.
 
+## DiLink 3.0 cluster guidance and map (experimental, needs ADB)
+
+DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/IP service and ship the stock AMap adapter as `com.example.amapservice` instead of `com.byd.amapservice`. DiPlay sends it the same navigation broadcasts. The cluster keeps its stock view until it is switched, so DiPlay also runs, through its adb shell, the calls the stock ClusterDebug app uses (`service call AutoContainer 2 i32 1000 i32 <command> s16 ""`):
+
+- While CarPlay guidance is active: 39, "simple navigation", for the native turn card.
+- While "CarPlay map on dashboard" shows its map window on the cluster: 17, "half-screen projection". The map window uses DiLink 3's projection display, `fission_bg_xdjaVirtualSurface` (1920x720, owned by `com.xdja.containerservice`). The map takes priority over the turn card.
+- When both end: 18, "projection off", only if DiPlay changed the mode.
+
+Approve DiPlay's ADB access once with "Check ADB access"; without it the broadcasts are still sent but the cluster keeps its stock view. The DiLink 5 "Dashboard map only in Small and Full navi" option does not apply: DiLink 3 does not report the wheel-menu mode.
+
+Basis: on a BYD Han EV (GCC, DiLink 3.0 / Android 10) the adapter runs as a system app and registers `AUTONAVI_STANDARD_BROADCAST_SEND`; earlier shell testing on that car showed native cluster guidance after command 39 and the stock view after command 18, and BYD DashCast showed ordinary apps on `fission_bg_xdjaVirtualSurface`. DiPlay's map window on that display and the half-screen geometry are not yet confirmed. A force-stopped DiPlay can leave the cluster switched until DiPlay next restores it.
+
 ## CarPlay map on the instrument cluster (experimental)
 
 DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No root or persistent helper is needed. The optional DiLink 5.1 automatic mode described below needs a one-time permission setup.

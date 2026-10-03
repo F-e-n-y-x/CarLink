@@ -65,7 +65,11 @@ internal object DiLink51ClusterLayout {
         return names.firstOrNull { it == BASE }
             ?: names.firstOrNull { it.contains(BASE) && it.endsWith("_0") }
             ?: names.firstOrNull { it.contains(BASE) }
+            ?: names.firstOrNull { it == DILINK3 }
     }
+
+    /** DiLink 3/4 cluster projection display (com.xdja.containerservice), shown while the cluster projects. */
+    const val DILINK3 = "fission_bg_xdjaVirtualSurface"
 
     fun plan(width: Int, height: Int, theme: Theme): Plan? {
         // The measured side-map bounds are x=1320..1920 on the 1920x720 cluster.
