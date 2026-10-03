@@ -154,8 +154,6 @@ object BydVehicleCapabilityProbe {
         val range = capabilities.result(BydVehicleField.RANGE).value?.toInt() ?: return
         val measured = capabilities.result(BydVehicleField.REMAINING_KWH).value
         val charging = capabilities.result(BydVehicleField.BMS_STATE).value?.toInt() == 1
-        BydBatteryStatus.read(context) {
-            BydBatteryReading(percent, range, measured, charging)
-        }
+        BydBatteryStatus.publishProbeReading(context, BydBatteryReading(percent, range, measured, charging))
     }
 }

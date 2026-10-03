@@ -123,6 +123,9 @@ internal object BydBatteryStatus : VehicleStatusProvider {
     private var started = false
     private val cache = BydBatteryCache(::now)
     private val readLock = Any()
+    // Never hold this short cache-publication lock while reading fields or waiting on ADB.
+    private val publicationLock = Any()
+    private var probePublicationGeneration = 0L
     @Volatile internal var readBattery: (Context) -> BydBatteryReading? = { app ->
         BydBattery.read(app) { shell.run(app, it) }
     }
@@ -159,12 +162,28 @@ internal object BydBatteryStatus : VehicleStatusProvider {
 
     /** Serialize both ADB readers without blocking snapshot() or the UI on shell I/O. */
     fun read(appContext: Context, reader: () -> BydBatteryReading?): BydBatteryReading? = synchronized(readLock) {
+        val generation = synchronized(publicationLock) { probePublicationGeneration }
         val reading = reader()
+        synchronized(publicationLock) {
+            // An accepted probe can publish while this shell read is in flight. Its newer reading
+            // must not be replaced by a poll that began with the previous field snapshot.
+            if (generation == probePublicationGeneration) acceptReading(appContext, reading)
+        }
+        reading
+    }
+
+    /** Already-read data from an accepted field-store snapshot; never waits for shell I/O. */
+    fun publishProbeReading(appContext: Context, reading: BydBatteryReading) = synchronized(publicationLock) {
+        probePublicationGeneration += 1
+        acceptReading(appContext, reading)
+    }
+
+    /** Caller holds [publicationLock]; neither the field store nor ADB is consulted here. */
+    private fun acceptReading(appContext: Context, reading: BydBatteryReading?) {
         context = appContext.applicationContext
         if (cache.accept(reading) && reading != null) {
             Log.i(TAG, "battery ${reading.percent} % range ${reading.rangeKm} km ${reading.remainingKwh} kWh charging=${reading.charging} protocol=${reading.protocol}")
         }
-        reading
     }
 
     private fun now() = SystemClock.elapsedRealtime()
