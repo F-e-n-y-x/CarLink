@@ -2,9 +2,23 @@
 
 Reviewed October 3, 2026, Asia/Muscat, against upstream `main` at `81a0767ac6eaaeec6c934d3270822bd0874a7493`. “Today” means October 3 in Muscat, starting October 2 at 20:00 UTC. GitHub snapshots, full PR diffs, available diagnostic reports, surrounding source, permissions, workflows and feature interactions were inspected.
 
-**Local fixes and review candidates are ready. No PR was pushed, merged, approved or commented on, and no release or vehicle installation was performed.** The primary checkout and existing unrelated worktrees were preserved. The source-only integration is on `review/safety-20261003`, with code through `0c2848c`. It includes the Android 9 fix, PRs 155/156/157/161/162/164, the PR 155 safety corrections and the source portion of closed PR 144. PRs 146 and 158 remain in separate review branches for the reasons below.
+**Local fixes and review candidates are ready. No PR was pushed, merged, approved or commented on, and no release or vehicle installation was performed.** The primary checkout and existing unrelated worktrees were preserved. The source-only integration is on `review/safety-20261003`. The initial reviewed candidate had code through `0c2848c`; the follow-up adds the diagnostics and narrowly scoped corrections described below. It includes the Android 9 fix, PRs 155/156/157/161/162/164, the PR 155 safety corrections and the source portion of closed PR 144. PRs 146 and 158 remain in separate review branches for the reasons below.
 
-The integrated candidate passes **635 tests, with one skipped and zero failures/errors**, all three app lint checks and all three debug builds. This is software validation; real head-unit, phone and vehicle behavior still needs the checks listed below.
+The initial integrated candidate passed **635 tests, with one skipped and zero failures/errors**, all three app lint checks and all three debug builds. The final follow-up candidate passes **688 tests, with one skipped and zero failures/errors**, all three lint checks (0 errors, 25 warnings) and all three debug builds. Updated validation is recorded below. This is software validation; real head-unit, phone and vehicle behavior still needs the checks listed below.
+
+## Complete issue audit and follow-up
+
+[The complete per-issue audit](ISSUE-AUDIT-2026-10-03.md) covers **99 reported non-PR issues**, all then-open issues, available comments and text reports. The published `v0.2.10` preview was the closure baseline. **Issues 27, 52 and 79 were closed as completed with explanatory comments**, after verifying current state/comments and released source evidence. The remaining 69 stay open; partial corrections, unsupported-platform requests and local changes do not establish a published resolution.
+
+Today’s review covers **13 PRs**, including newly reported PR 168. Follow-up code is committed through `ffc9306`. New changes on this same branch:
+
+- Add bounded startup timing, interface RX/drop/error and device-wide UDP buffer/error deltas using the existing observer. RTP statistics correlate sequence gaps with long reads. Optional reads are capped, unavailable/reset counters are explicit, and separate records fit the export redactor's limit.
+- Add audio format/attributes, decoder statistics and bounded audio/video failure-stage details. Remove raw first-media-payload hex logs. Release a created codec when configure/start fails, preserving its original failure.
+- Add Android theme callback/poll/heartbeat records and dark-mode command write outcome. Add up to three recent own-app numeric process-exit records on API 30+ during user-requested export, without descriptions, traces or state blobs.
+- Add the narrow issue 15 compatibility path: only the exact reported missing-method signature on API 29, originating in the framework P2P Builder before group creation, authorizes one guarded system-default attempt. Return the effective selection and read generated group credentials. Unrecognized linkage errors, permissions and timeouts do not enter this fallback. Published PR 73 already removes the app-side getter; the old report does not itself prove a firmware Builder defect. Keep issue 15 open for publication and a current-device retest.
+- Adapt only the VPN scope correction from newly reported PR 168. The wired TUN must allow DiPlay's actual runtime package before establishment. A failure aborts through existing attachment cleanup; it never falls back to an unrestricted VPN. This corrects a concrete source risk without importing the PR's unrelated UI, resize, manifest or signing changes.
+
+New diagnostics add no permissions, runtime dependencies, automatic uploads, payload recording or remote endpoints. They do not change codec quality, negotiated formats, frame-rate/color defaults, headlight detection or global Wi-Fi/power settings. The complete audit includes controlled next-capture steps for the unresolved reports.
 
 ## Confirmed problems and local fixes
 
@@ -26,6 +40,7 @@ PR 144 also adds an optional workflow that downloads the published 0.2.9 APK, ex
 
 | PR | Reviewed head | Decision and remaining validation |
 | --- | --- | --- |
+| [168 — VPN app scope](https://github.com/shihabal3amri/DiPlay/pull/168) | `f243de59cc64` | **Hold original revision.** Its allowlist failure is swallowed and establishment continues unrestricted. The complete diff also changes multiwindow/compact UI, aspect-ratio behavior, manifests/PiP, app labels and release signing; missing release keys silently fall back to debug signing. Only the own-package VPN restriction is adapted locally, with failure aborting through existing cleanup and boundary tests. Test wired CarPlay and other head-unit apps retaining normal network access. |
 | [164 — BYD ADB settings and automatic hotspot](https://github.com/shihabal3amri/DiPlay/pull/164) | `a871a6bb9799` | Included. Automatic hotspot startup defaults off and acts on the user's explicit setting. The new WRITE_SETTINGS grant/app-op is restricted to DiPlay's own package through the authorized local ADB path. Eligibility checks are silent and authorization retries are bounded. The code starts the existing hotspot without replacing its credentials or stopping it. Check supported firmware, denial/retry and startup behavior on a head unit. It overlaps PR 158's settings design. |
 | [162 — metadata publication](https://github.com/shihabal3amri/DiPlay/pull/162) | `875bc3070e8d` | Included. Position/playback updates continue, while MediaSession metadata and artwork are republished only for actual metadata/artwork changes. This removes repeated bitmap publication into system_server. The contributor reports a 40-minute Tang test; that physical test was not repeated here. Check long music sessions, artwork changes and OEM display updates. |
 | [161 — incremental artist retention](https://github.com/shihabal3amri/DiPlay/pull/161) | `06cfd49acb47` | Included. Omitted artist fields retain the existing artist; explicit clears remain clears. Focused cases cover incremental updates. |
@@ -61,9 +76,9 @@ Other newly reported or updated installation, Android 7/8 support, autostart, st
 
 ## Security and change boundaries
 
-No evidence of deliberate malicious additions was found in the reviewed source. The two credential-packaging workflows are concrete concerns and were kept out of the integration. The TV source-only correction also removes its secret provisioning path. This is a source review with automated checks, not a guarantee that software cannot contain an undiscovered defect.
+No evidence of deliberate malicious additions was found in the reviewed source. The two credential-packaging workflows are concrete concerns and were kept out of the integration. These assets are MFi accessory-authentication material, not the Android APK signing key: PR 146 restores them from repository secrets and PR 144 extracts them from an existing APK. Exclusion keeps ordinary source CI artifacts credential-free and avoids expanding distribution or secret-provisioning requirements. The source corrections still build and test. The TV source-only correction also removes its secret provisioning path. This is a source review with automated checks, not a guarantee that software cannot contain an undiscovered defect.
 
-The combined candidate adds no new application runtime dependency, downloaded native binary, telemetry/authentication destination or credential container. Its only new dependency beyond reviewed main is test-scoped Mockito from the rotation tests. PR 164's WRITE_SETTINGS permission supports its default-off hotspot feature. Its commands operate on fixed local endpoints and DiPlay's package; the legacy probe in isolated PR 158 uses fixed bounded service/reflection reads. These paths still require firmware-specific validation and authorized ADB.
+The combined candidate adds no new application runtime dependency, downloaded native binary, telemetry/authentication destination or credential container. Its only new dependency beyond reviewed main is test-scoped Mockito from the rotation tests. PR 168's unrelated debug-signing fallback was excluded; no release-signing configuration was changed. PR 164's WRITE_SETTINGS permission supports its default-off hotspot feature. Its commands operate on fixed local endpoints and DiPlay's package; the legacy probe in isolated PR 158 uses fixed bounded service/reflection reads. These paths still require firmware-specific validation and authorized ADB.
 
 `scripts/check_public_tree.py` passes. APK entry-name checks found no offline-MFi directory, runtime private-key/certificate files or credential containers in the three integrated builds or the two isolated corrected configurations. Credential contents were not printed. Raw reports stay in local diagnostics and are not added to the repository report commit.
 
@@ -79,20 +94,25 @@ The repository's full workflow was run locally with JDK 25 and the configured An
 
 | Configuration | Tests passed | Skipped | Failures/errors | Lint and builds |
 | --- | ---: | ---: | ---: | --- |
-| Final integration: Android 9 fix + six open PRs + source-only PR 144 | 635 | 1 | 0 | All three lint checks and debug builds pass; 0 lint errors, 25 warnings. |
+| Final follow-up: diagnostics + P2P compatibility recovery + failed-codec cleanup + scoped wired VPN | 688 | 1 | 0 | All three lint checks and debug builds pass; 0 lint errors, 25 warnings. |
+| Initial integration: Android 9 fix + six open PRs + source-only PR 144 | 635 | 1 | 0 | All three lint checks and debug builds pass; 0 lint errors, 25 warnings. |
 | Isolated corrected PR 158, updated with Android 9 fix | 583 | 1 | 0 | Full workflow passes. |
 | Isolated corrected PR 146, updated with main and Android 9 fix | 542 | 1 | 0 | Full workflow passes. |
 
 The skipped test is `AirPlayPortSelectorTest.fallsBackWhenAnotherListenerOwnsTheWildcardPort`: this Mac permits overlapping wildcard and specific-address listeners, so the test's host assumption is false. The skip is not a test failure or proof of Android port-collision behavior. Other port-selection cases run normally. Builds are source-only debug artifacts without a provisioned runtime identity or release signing material; they are not vehicle-ready releases.
 
+Follow-up tests cover counter bounds/resets/unavailable sources, report redaction, long-read/gap correlation, process-exit API gating, unchanged theme polling, exact P2P classification and composed one-attempt recovery. Real service attachment tests on API 28 and 33 cover VPN scoping rejection before establishment, consent/establishment failures, cleanup and subsequent wireless reuse. Their Android address/route parsing boundary is controlled because this host JVM lacks Android's numeric parser; these tests do not simulate OEM per-UID routing.
+
 Original-code reproduction evidence is retained: the unknown-turn test fails before the PR 155 correction; the rejected-probe battery test fails before the PR 158 correction; six display expectations fail before the PR 144 source adaptation. Their corrected tests pass. Focused API 28/29 and remote-input tests also pass.
 
 Local handoff branches and commits:
 
-- `review/safety-20261003`: integrated code through `0c2848c`; Android 9 fix `c70b2ec`, guidance corrections `b05e0f2`, rotation adaptation `0c2848c`.
+- `review/safety-20261003`: integrated code through `ffc9306`; Android 9 fix `c70b2ec`, guidance corrections `b05e0f2`, rotation adaptation `0c2848c`, wireless/P2P follow-up `8ad84f7`, media cleanup/diagnostics `28ae094`, theme/process-exit diagnostics `2a1ff69`, mandatory VPN scope `ffc9306`.
 - `review/pr158-safety-20261003`: probe correction `bc76616`, Android 9 fix `1f8bab9`; not combined with PR 164.
 - `review/pr146-safety-20261003`: workflow/input correction `7ea1a92`, main reconciliation and Android 9 fix `405df97`; not combined with the feature candidate.
 
-[Review evidence and individual patches](../../diagnostics/diplay-safety-review-20261003/) contain API snapshots, exact original diffs, regression results, full build logs, `validation-final.json`, the PR 158 conflict record and patches `api28-fix.patch`, `pr155-safety.patch`, `pr158-safety.patch`, `pr146-safety.patch` and `pr144-source-only.patch`. Original PR head metadata was rechecked before completion; no new revision of the eight open PRs was observed. Upstream main remained at the reviewed base.
+[Review evidence and individual patches](../../diagnostics/diplay-safety-review-20261003/) contain API snapshots, exact original diffs, regression results, full build logs, `validation-final.json`, `followup-validation-final.json`, the 99-issue audit and verified closure results, the PR 158 conflict record and patches `api28-fix.patch`, `pr155-safety.patch`, `pr158-safety.patch`, `pr146-safety.patch` and `pr144-source-only.patch`. Original PR head metadata was rechecked after the initial review; no new revision of those eight open PRs was observed. A later inventory check found PR 168, reviewed at the head recorded above. Upstream main was the reviewed base; no push, PR merge or release was performed.
 
 Before a release, test on real hardware with the car parked: Android 9 audio startup/fallback, wired and wireless reconnect, rapid rotation/camera restore and touch alignment, long music/artwork sessions, ADB denial/loss, known/non-P/unknown gear video gating, CAN/CANFD/legacy readings, hotspot startup and TV/head-unit HID input. Do not present these local build results as vehicle acceptance or close the unresolved log reports on their basis.
+
+Final completion check: the inventory still contains 99 non-PR issues, 69 open and 30 closed; no additional issue appeared. PR 168 remained at the reviewed head, and upstream main remained `81a0767`. Public-tree and APK entry checks pass. Raw reports were not committed. No code was pushed or merged and no release was published.
