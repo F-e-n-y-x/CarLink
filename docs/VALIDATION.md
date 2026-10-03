@@ -1,3 +1,11 @@
+# DiPlay 0.2.11 — release checkpoint pending, 2026-10-03
+
+- Release source starts from merged main `a83ded7`, including PR #175 and the reconciled safety/vehicle-data changes merged through PR #173. Version `0.2.11`, version code `30`, package `com.shihab.diplay`, minimum SDK `28`; Wi-Fi Direct still requires Android 10+.
+- Final post-version-bump unit-test totals, lint/debug build results and release lint/build results are pending. Earlier recorded integration and PR #175 checks are historical evidence for those revisions, not the final release result.
+- Signing-certificate continuity with 0.2.10, intended runtime identity provisioning, APK credential/entry audits, corresponding source-archive scan and release checksums are pending artifact verification. Android signing keys and accessory identities must remain outside Git and the source archive; source-only CI does not provision them.
+- No fresh 0.2.11 vehicle validation is claimed. Qin Plus startup, Wi-Fi Direct loss/stutter, Siri/microphone quality, iOS 15 connection and day/night firmware reports remain open for current-device evidence. Manual channel choice is not a confirmed stutter fix. Optional legacy data/hotspot, parked-video readiness, TV/knob inputs, turn-card placement, wired app-only VPN and geometry reconnect need device acceptance.
+- See [0.2.11 release notes](RELEASE-NOTES-0.2.11.md) for exact feature scope and how to export fresh reports. Replace this pending checkpoint with measured final results before publication.
+
 # DiPlay 0.2.10 — 2026-10-03
 
 - Final combined source workflow: 528 unit tests passed (384 shared, 140 common, 4 Home), zero failures/errors. One additional wildcard-bind test skips explicitly on macOS when its socket reuse semantics prevent the intended conflict; the ordinary port-conflict and socket-cleanup tests pass.

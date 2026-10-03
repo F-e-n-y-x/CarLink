@@ -4,11 +4,11 @@
 
 > **BYD support scope:** These projects focus on BYD cars. They may work on other brands, but other brands are unsupported and there are no plans to add support or fix brand-specific incompatibilities.
 
-[Download & website](https://shihabal3amri.github.io/DiPlay/) · [Release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.10) · [Report a problem](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
+[Download & website](https://shihabal3amri.github.io/DiPlay/) · [Release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.11) · [Report a problem](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
 
 ![DiPlay home](site/assets/home.png)
 
-## 0.2.10 — public preview
+## 0.2.11 — public preview
 
 Install on the **car**, not the iPhone. No jailbreak, dongle, Mac, account or authentication server is required for use. Core CarPlay does not require ADB; optional dashboard, battery, wheel-speed and parked-video features do. Your head unit must permit APK installation. Wireless supports Wi-Fi Direct or the car’s existing hotspot; Wi-Fi Direct requires Android 10+; the APK supports Android 9+ for wired use.
 
@@ -24,18 +24,21 @@ This is **not an Apple-certified product**. The APK bundles an experimental acce
 
 Earlier releases were tested on the development DiLink5.1 car: live windshield guidance and street names work, Car hotspot now starts CarPlay, and Wi-Fi Direct performance is substantially improved. Occasional audio cutouts remain and are deferred to a later update. The floating-map test build was installed on the development DiLink 5.1 car; feedback led to the pinch corrections in 0.2.9. Earlier wheel-speed and video contributions were tested on a BYD Tang with DiLink 5.0 and an iPhone 15 Pro on iOS 27; wheel-speed dead reckoning in tunnels remains unverified. Broader head-unit and iOS compatibility is not guaranteed. The HUD firmware scope and cleanup limits are documented in [BYD navigation](docs/BYD_NAVIGATION.md).
 
-## What’s new in 0.2.10
+## What’s new in 0.2.11
 
-- CarPlay song metadata, playback position and album artwork for compatible Android launchers and media displays.
-- Available-port selection when another service occupies AirPlay port 7000, with the selected port advertised to the iPhone.
-- Targeted USBMUX padding handling that preserves complete following frames, and USB startup without completed wireless-hotspot settings.
-- Wi-Fi Direct compatibility for unknown reported security types, bounded busy-channel retries and 5 GHz to 2.4 GHz fallback.
-- Available Android echo cancellation and noise suppression during CarPlay calls, with previous audio mode restored afterward.
-- BYD CAN/CANFD battery-protocol detection and a saved show/hide setting for the home-screen dashboard-map mirror.
-- Optional video while in P uses a new player with seeking and ten-second skip controls. URL validation and redirects protect local Android resources; protected video remains unsupported.
-- More Ukrainian translations and bounded Bluetooth, USB restart, boot and microphone diagnostics in exported reports.
+- **Preferred Wi-Fi Direct channel**: Auto remains the default; save a supported 2.4/5 GHz channel for the next connection. Rejected or mismatched manual channels report an error. Channel choice is not a confirmed stutter fix.
+- A custom dashboard turn card with size choices and position changes in 2% steps. Unknown maneuvers show no guessed arrow; expired guidance clears.
+- Two-, three- or four-finger settings swipes, keeping three as the default, plus Android TV/remote controls that preserve ordinary touch and knob behavior.
+- Opt-in read-only legacy vehicle-data detection under Location → Advanced vehicle data. Default DiLink 5.0 mode remains the default; only accepted fields/readings become runtime data. Stale-probe and battery-publication concurrency corrections are included.
+- Optional automatic startup of the existing car hotspot, off by default, with verified permissions limited to DiPlay's own package.
+- Wireless location/vehicle data on the runtime Wi-Fi link and parked-video availability delivered after SETUP/event-channel readiness. Non-P or unreadable gear still closes video.
+- Retain artists across partial song updates and publish media-session metadata/artwork only when changed; position/play state keep updating.
+- Android 9 audio API compatibility, failed-codec cleanup, settled-size/readiness checks after reconnect, an exact-error Android 10 P2P compatibility path in Auto mode, and a wired VPN restricted to DiPlay.
+- Bounded wireless/media/theme and own-app exit diagnostics, without audio/video/packet payload recording or automatic uploads.
 
-Optional video requires network ADB and a valid parked-gear reading. Battery, dashboard and call effects depend on firmware and Android support. See [0.2.10 release notes](docs/RELEASE-NOTES-0.2.10.md) for all ten contributions, regression fixes and validation limits. Existing device-specific wireless loss, microphone and reconnect reports still need hardware testing.
+Optional legacy vehicle data, battery, wheel speed and parked video require authorized network ADB and supported readings. Dashboard, hotspot and audio effects depend on firmware and Android support. See [0.2.11 release notes](docs/RELEASE-NOTES-0.2.11.md) and [validation](docs/VALIDATION.md) for review corrections and device-test limits. Qin Plus startup, Wi-Fi Direct stutter, Siri/microphone quality, iOS 15 connection and day/night firmware reports still need fresh hardware evidence.
+
+If a problem remains, reproduce it on **0.2.11**, then use **Settings → Diagnostics → Save diagnostic report**. Android 10+ saves to **Downloads/DiPlay**; Android 9 uses the document picker. Review the `.txt` file and attach it to your existing [issue](https://github.com/shihabal3amri/DiPlay/issues), including vehicle/firmware, phone/iOS, connection mode, steps and failure time. Reports are shared only when you choose; never post your hotspot password.
 
 ## Documentation
 
