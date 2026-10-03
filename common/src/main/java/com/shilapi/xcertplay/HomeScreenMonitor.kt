@@ -65,11 +65,22 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
 
     private fun handleForegroundPackage(pkg: String) {
         if (!running) return
-        val visible = pkg in homePackages
+        val visible = isHomePackage(pkg)
         if (visible != reported) {
             reported = visible
             main.post { if (running) onChange(visible) }
         }
+    }
+
+    private fun isHomePackage(pkg: String): Boolean {
+        if (pkg in homePackages) return true
+        val lower = pkg.lowercase()
+        return lower.contains("dydesktop") ||
+            lower.contains("diyou") ||
+            lower.contains("dyzm") ||
+            lower.contains("launcher") ||
+            lower.contains("desktop") ||
+            lower.contains("dudu.android")
     }
 
     private fun poll() {
@@ -102,10 +113,14 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
 
         // Known third-party car launchers
         val KNOWN_CAR_LAUNCHERS = setOf(
+            "com.smg.dydesktop",          // 迪友桌面 (常见主流包名)
+            "com.smg.dydesktop.pro",      // 迪友桌面 Pro
+            "com.dy.launcher",            // 迪友桌面 (部分渠道)
             "com.king.dyzm",              // 迪友桌面
             "com.king.diyou",
             "com.byd.diyou",
             "com.dudu.android.launcher",  // 嘟嘟桌面
+            "com.dudu.android.launcher.mini",
             "com.yecon.carsetting",
             "com.tencent.autolauncher",   // 腾讯车联
             "com.mx.launcher",            // 喵驾桌面
@@ -122,7 +137,8 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             runCatching {
                 val pm = context.packageManager
                 val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                val list = pm.queryIntentActivities(intent, 0)
+                val flags = if (android.os.Build.VERSION.SDK_INT >= 23) PackageManager.MATCH_ALL else 0
+                val list = pm.queryIntentActivities(intent, flags)
                 for (info in list) {
                     val pkg = info.activityInfo?.packageName
                     if (!pkg.isNullOrEmpty() && pkg != "android" && pkg != context.packageName) {

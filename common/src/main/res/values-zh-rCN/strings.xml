@@ -484,6 +484,8 @@
     <string name="usb_auto_confirm_summary">自动确认系统“要允许DiPlay访问iPhone吗”弹窗，免除手动点击。需要开启无障碍服务。</string>
     <string name="usb_auto_confirm_status_on">USB 弹窗自动确认：已开启</string>
     <string name="usb_auto_confirm_status_off">开启 USB 弹窗自动确认（免手动点击）</string>
+    <string name="center_map_auto_hide">离开桌面时自动隐藏卡片</string>
+    <string name="center_map_auto_hide_description">打开音乐、倒车影像、全屏设置等应用时自动隐藏悬浮窗，返回桌面时自动恢复</string>
     <string name="center_map_auto_hide_active">离开桌面自动隐藏：已开启（无障碍服务 / 使用情况访问权限）</string>
     <string name="center_map_auto_hide_needed">离开桌面自动隐藏：未开启。请开启“无障碍服务”或通过 ADB 授予“使用情况访问权限”。</string>
     <string name="btn_auto_apply_permissions">一键申请无障碍与 ADB 权限</string>

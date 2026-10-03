@@ -837,8 +837,8 @@ class CarPlayHostActivity : ComponentActivity() {
             appendLog("Centre map: no permission to draw over other apps")
             return
         }
-        // Without Usage Access the card shows over any app, as before.
-        if (HomeScreenMonitor.hasAccess(this)) {
+        // Without Usage Access or when auto-hide is disabled, the card shows over any app, as before.
+        if (AirPlayPersistence.loadCenterMapAutoHide(this) && HomeScreenMonitor.hasAccess(this)) {
             val monitor = homeMonitor ?: HomeScreenMonitor(this, ::onHomeScreenVisible).also { homeMonitor = it }
             if (!monitor.running) {
                 monitor.start() // its first answer shows the card

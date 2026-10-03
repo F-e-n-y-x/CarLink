@@ -432,6 +432,10 @@ class DiPlayActivity : ComponentActivity() {
                         AirPlayPersistence.loadCenterMapFollowsDashboard(this)) {
                         AirPlayPersistence.saveCenterMapFollowsDashboard(this, it)
                     }
+                    toggle(card, getString(R.string.center_map_auto_hide), getString(R.string.center_map_auto_hide_description),
+                        AirPlayPersistence.loadCenterMapAutoHide(this)) {
+                        AirPlayPersistence.saveCenterMapAutoHide(this, it)
+                    }
                 }
                 toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
                     AirPlayPersistence.loadLauncherMapSharing(this)) {

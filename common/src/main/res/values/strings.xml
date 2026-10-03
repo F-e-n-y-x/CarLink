@@ -484,6 +484,8 @@
     <string name="usb_auto_confirm_summary">Auto-confirms the system USB permission dialog without manual taps. Requires accessibility service.</string>
     <string name="usb_auto_confirm_status_on">USB Dialog Auto-Confirm: Enabled</string>
     <string name="usb_auto_confirm_status_off">Enable USB Dialog Auto-Confirm (Hands-free)</string>
+    <string name="center_map_auto_hide">Hide floating card over non-home apps</string>
+    <string name="center_map_auto_hide_description">Automatically hides the floating card in music players, reverse camera and settings, restoring it on the launcher</string>
     <string name="center_map_auto_hide_active">Auto-hide when leaving home screen: Active</string>
     <string name="center_map_auto_hide_needed">Auto-hide when leaving home screen: Not active. Enable accessibility service or grant Usage Access.</string>
     <string name="btn_auto_apply_permissions">Apply for Accessibility &amp; ADB Permissions</string>
