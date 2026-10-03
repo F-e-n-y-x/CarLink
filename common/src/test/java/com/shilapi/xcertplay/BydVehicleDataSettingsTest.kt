@@ -151,15 +151,23 @@ class BydVehicleDataSettingsTest {
         BydVehicleFieldStore.save(context, saved)
         BydOutputSettings.setLegacyVehicleProbe(context, true)
         backend.checkResult = readableStatus()
-        openSettings()
+        controller = Robolectric.buildActivity(
+            DiPlayActivity::class.java,
+            Intent(context, DiPlayActivity::class.java).putExtra("page", "settings"),
+        )
+        // setup() can drain the validation posted by onCreate; establish authorization first.
         ReflectionHelpers.setField(activity, "adbSwitchChangePending", true)
+        requireNotNull(controller).setup()
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(backend.tasks.none { it.first == "diplay-byd13-auto-validate" })
+        assertEquals(0, backend.checkCalls)
+        assertEquals(0, backend.probeCalls)
         assertTrue(ReflectionHelpers.getField<Boolean>(activity, "automaticVehicleValidationPending"))
 
         ReflectionHelpers.setField(activity, "adbSwitchChangePending", false)
         ReflectionHelpers.callInstanceMethod<Unit>(activity, "runPendingAutomaticVehicleValidation")
         shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, backend.tasks.count { it.first == "diplay-byd13-auto-validate" })
         backend.runAll("diplay-byd13-auto-validate")
         assertEquals(1, backend.checkCalls)
         assertEquals(0, backend.probeCalls)
