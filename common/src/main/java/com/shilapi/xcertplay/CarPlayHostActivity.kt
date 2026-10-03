@@ -47,6 +47,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -949,55 +950,132 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
         root.addView(gestureLayer, FrameLayout.LayoutParams(-1, -1))
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(32), dp(32), dp(32), dp(32))
+        // Measure the preparation content naturally, then fit it inside the safe viewport.
+        val viewport = object : FrameLayout(this) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+                getChildAt(0)?.measure(
+                    View.MeasureSpec.makeMeasureSpec((measuredWidth - paddingLeft - paddingRight).coerceAtLeast(0), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                )
+            }
+        }.apply {
             setBackgroundColor(Color.rgb(12, 17, 27))
             isClickable = true
         }
-        panel.addView(ImageView(this).apply {
-            setImageResource(R.drawable.ic_carplay); contentDescription = getString(R.string.carplay)
-        }, LinearLayout.LayoutParams(dp(88), dp(88)))
-        panel.addView(TextView(this).apply {
-            text = getString(R.string.diplay); textSize = 34f; setTextColor(Color.rgb(241, 245, 252))
-            gravity = Gravity.CENTER; setPadding(0, dp(18), 0, dp(14))
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_carplay)
+            contentDescription = getString(R.string.carplay)
+        }
+        panel.addView(icon, LinearLayout.LayoutParams(dp(88), dp(88)))
+        val title = TextView(this).apply {
+            text = getString(R.string.diplay)
+            setTextColor(Color.rgb(241, 245, 252))
+            gravity = Gravity.CENTER
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        })
+        }
+        panel.addView(title)
         val stage = TextView(this).apply {
-            text = getString(R.string.getting_carplay_ready); textSize = 22f; gravity = Gravity.CENTER
+            text = getString(R.string.getting_carplay_ready)
+            gravity = Gravity.CENTER
             setTextColor(Color.rgb(241, 245, 252))
         }
         panel.addView(stage)
-        panel.addView(TextView(this).apply {
+        val instructions = TextView(this).apply {
             text = if (wirelessEnabled) getString(R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow)
                 else getString(R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an)
-            textSize = 17f; gravity = Gravity.CENTER; setTextColor(Color.rgb(168, 182, 202))
-            setPadding(0, dp(14), 0, dp(24))
-        })
-        panel.addView(Button(this).apply {
-            text = getString(R.string.reset_carplay_wi_fi); isAllCaps = false; textSize = 18f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(168, 182, 202))
+        }
+        panel.addView(instructions)
+        val recovery = Button(this).apply {
+            text = getString(R.string.reset_carplay_wi_fi)
+            isAllCaps = false
             visibility = View.GONE
             setOnClickListener { showDiPlayHome("wireless-recovery") }
             wifiRecoveryButton = this
-        }, LinearLayout.LayoutParams(dp(300), dp(64)).apply { bottomMargin = dp(12) })
-        panel.addView(Button(this).apply {
-            text = getString(R.string.back_to_diplay); isAllCaps = false; textSize = 18f
+        }
+        panel.addView(recovery, LinearLayout.LayoutParams(dp(300), dp(64)).apply { bottomMargin = dp(12) })
+        val back = Button(this).apply {
+            text = getString(R.string.back_to_diplay)
+            isAllCaps = false
             setTextColor(Color.rgb(12, 17, 27))
-            background = GradientDrawable().apply { setColor(Color.rgb(166, 200, 255)); cornerRadius = dp(20).toFloat() }
+            background = GradientDrawable().apply {
+                setColor(Color.rgb(166, 200, 255))
+                cornerRadius = dp(20).toFloat()
+            }
             setOnClickListener { showDiPlayHome() }
-        }, LinearLayout.LayoutParams(dp(300), dp(64)))
+        }
+        panel.addView(back, LinearLayout.LayoutParams(dp(300), dp(64)))
         val gestureHint = TextView(this).apply {
             text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
-            textSize = 13f; gravity = Gravity.CENTER; setTextColor(Color.rgb(168, 182, 202)); setPadding(0, dp(20), 0, 0)
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(168, 182, 202))
         }
         panel.addView(gestureHint)
-        root.addView(panel, FrameLayout.LayoutParams(-1, -1))
+        viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
+        var preparationHeight = -1
+        fun updatePreparationLayout() {
+            val height = viewport.height - viewport.paddingTop - viewport.paddingBottom
+            if (height <= 0) return
+            // Interpolate within the short viewport range; keep regular screens at their existing size.
+            val fraction = ((height.toFloat() / resources.displayMetrics.density - 240f) / 240f).coerceIn(0f, 1f)
+            fun size(short: Float, regular: Float) = short + (regular - short) * fraction
+            fun spacing(short: Float, regular: Float) = dp(size(short, regular).toInt())
+            val availableWidth = viewport.width - viewport.paddingLeft - viewport.paddingRight - dp(48)
+            val buttonWidth = minOf(dp(300), availableWidth.coerceAtLeast(dp(48)))
+            for (button in listOf(back, recovery)) {
+                if (button.layoutParams.width != buttonWidth) {
+                    button.layoutParams = button.layoutParams.apply { width = buttonWidth }
+                }
+            }
+            if (preparationHeight == height) return
+            preparationHeight = height
+            panel.setPadding(dp(24), spacing(16f, 32f), dp(24), spacing(16f, 32f))
+            val iconSize = spacing(54f, 88f)
+            icon.layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
+            title.textSize = size(26f, 34f)
+            title.setPadding(0, spacing(8f, 18f), 0, spacing(6f, 14f))
+            stage.textSize = size(19f, 22f)
+            instructions.textSize = size(15f, 17f)
+            instructions.setPadding(0, spacing(8f, 14f), 0, spacing(12f, 24f))
+            for (button in listOf(back, recovery)) {
+                button.textSize = size(17f, 18f)
+                button.layoutParams = button.layoutParams.apply { this.height = spacing(50f, 64f) }
+            }
+            gestureHint.textSize = size(12.5f, 13f)
+            gestureHint.setPadding(0, spacing(10f, 20f), 0, 0)
+        }
+        fun fitPreparationContent() {
+            val availableHeight = viewport.height - viewport.paddingTop - viewport.paddingBottom
+            if (panel.height <= 0 || availableHeight <= 0) return
+            val landscape = viewport.width - viewport.paddingLeft - viewport.paddingRight > availableHeight
+            val scale = if (landscape) minOf(1f, availableHeight.toFloat() / panel.height) else 1f
+            panel.scaleX = scale
+            panel.scaleY = scale
+        }
+        panel.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitPreparationContent() }
+        viewport.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updatePreparationLayout()
+            fitPreparationContent()
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(viewport) { _, insets ->
+            val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            viewport.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+            viewport.post { updatePreparationLayout() }
+            insets
+        }
+        ViewCompat.requestApplyInsets(viewport)
         videoView = video
         gestureOverlay = gestureLayer
         settingsGestureHint = gestureHint
         stageStatusView = stage
-        connectionPanel = panel
+        connectionPanel = viewport
         updateDebugOverlays()
         return root
     }
