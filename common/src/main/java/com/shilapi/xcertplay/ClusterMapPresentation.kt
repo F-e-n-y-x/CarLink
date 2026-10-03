@@ -24,7 +24,9 @@ import android.view.View
 import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.TextView
+import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.hud.ClusterTurnGuidance
 
 /**
  * Shows CarPlay's instrument-cluster stream on a BYD cluster projection display.
@@ -40,6 +42,7 @@ internal class ClusterMapPresentation(
     private val onSurface: (Surface?) -> Unit,
 ) : Presentation(context, display) {
     private var waitingLabel: TextView? = null
+    private var turnCardView: ClusterTurnCardView? = null
     var outputSurface: Surface? = null
         private set
 
@@ -115,6 +118,8 @@ internal class ClusterMapPresentation(
             gravity = Gravity.CENTER
         }
         root.addView(waitingLabel, FrameLayout.LayoutParams(videoParams))
+        turnCardView = ClusterTurnCardView(context).apply { visibility = View.GONE }
+        root.addView(turnCardView, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
     }
 
@@ -129,6 +134,14 @@ internal class ClusterMapPresentation(
             val alpha = if (visible) 1f else 0f
             if (window.attributes.alpha != alpha) window.attributes = window.attributes.apply { this.alpha = alpha }
         }
+    }
+
+    fun setTurnCardOverlay(xPercent: Int, yPercent: Int, size: CarPlayClusterDisplay.OverlaySize) {
+        turnCardView?.setLayout(xPercent, yPercent, size)
+    }
+
+    fun setTurnCardGuidance(guidance: ClusterTurnGuidance?) {
+        turnCardView?.setGuidance(guidance)
     }
 
     companion object {

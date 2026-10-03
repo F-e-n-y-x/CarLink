@@ -403,6 +403,7 @@
     <string name="dashboard_content_map">Карта · по умолчанию</string>
     <string name="dashboard_content_turn_card">Карточка поворота</string>
     <string name="dashboard_content_map_with_turn_card">Карта с карточкой поворота</string>
+    <string name="dashboard_content_map_with_custom_turn_card">Карта с собственной карточкой поворота</string>
     <string name="turn_card_size">Размер карточки поворота</string>
     <string name="turn_card_horizontal">Карточка поворота · по горизонтали</string>
     <string name="turn_card_vertical">Карточка поворота · по вертикали</string>
@@ -467,6 +468,18 @@
     <string name="center_map_no_permission_screen">На этом головном устройстве нет экрана настроек для этого разрешения. Разрешите его через ADB.</string>
     <string name="launcher_map_sharing">Делиться живой картой с другими лаунчерами</string>
     <string name="launcher_map_sharing_description">Лаунчеры с поддержкой DiPlay смогут показывать живую карту приборной панели на своём главном экране. Выключено по умолчанию, потому что тогда карту сможет запросить любое приложение на головном устройстве. Подробнее: docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="turn_card_overlay_size">Размер собственной карточки</string>
+    <string name="turn_card_overlay_horizontal">Собственная карточка · влево / вправо</string>
+    <string name="turn_card_overlay_vertical">Собственная карточка · вверх / вниз</string>
+    <string name="turn_card_overlay_small">Маленькая</string>
+    <string name="turn_card_overlay_medium">Средняя</string>
+    <string name="turn_card_overlay_large">Большая</string>
+    <string name="reset_turn_card_overlay">Сбросить положение собственной карточки</string>
+    <string name="turn_card_overlay_note">DiPlay рисует эту карточку поверх карты; перемещение шагами 2 %. Стеклянную карточку iOS нельзя двигать отдельно. Изменения применяются сразу; карточка остаётся и при движении прямо.</string>
+    <string name="turn_card_now">Сейчас</string>
+    <string name="turn_card_distance_m">%1$d м</string>
+    <string name="turn_card_distance_km">%1$.1f км</string>
+    <string name="turn_card_exit">Съезд %1$d</string>
     <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть настройки DiPlay.</string>
     <string name="carplay_controls">Управление CarPlay</string>
     <string name="settings_gesture_fingers">Открыть настройки · свайп %1$d пальцами (нажмите для смены)</string>

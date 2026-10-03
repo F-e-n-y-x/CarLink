@@ -280,6 +280,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private var detectedCluster = ClusterActivityState.Snapshot(null, false)
     // Keep one surface per layer alive, including while its map card is hidden.
     private val clusterLayers = mutableMapOf<Boolean, ClusterMapPresentation>()
+    private var clusterTurnGuidance: com.shilapi.xcertplay.hud.ClusterTurnGuidance? = null
+    private val clusterTurnOverlayListener: (com.shilapi.xcertplay.hud.ClusterTurnGuidance?) -> Unit = { guidance ->
+        runOnUiThread {
+            clusterTurnGuidance = guidance
+            applyClusterTurnOverlay()
+        }
+    }
     // Copies of stream 111 outside the dashboard (centre card, launcher maps) each get their own decoder.
     private val mirrorSink: (String, Surface?) -> Unit = { key, surface -> sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, surface) }
     private val mirrorsChanged: () -> Unit = {
@@ -362,6 +369,12 @@ class CarPlayHostActivity : ComponentActivity() {
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
+    private val refreshTurnOverlay = object : Runnable {
+        override fun run() {
+            com.shilapi.xcertplay.hud.BydNavigationOutputs.refreshTurnOverlay()
+            mainHandler.postDelayed(this, 1_000L)
+        }
+    }
     // Some head units (e.g. BYD DiLink) update resources.configuration for day/night
     // without delivering onConfigurationChanged, so poll while the activity is visible.
     private val pollConfiguration = object : Runnable {
@@ -637,6 +650,10 @@ class CarPlayHostActivity : ComponentActivity() {
         gestureFingerCount = AirPlayPersistence.loadSettingsGestureFingers(this)
         settingsGestureHint?.text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
         ensureClusterPresentation()
+        AirPlayPersistence.overlaySettingsListener = { runOnUiThread { applyClusterTurnOverlay() } }
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(clusterTurnOverlayListener)
+        mainHandler.removeCallbacks(refreshTurnOverlay)
+        mainHandler.post(refreshTurnOverlay)
         maybeStartCarPlay()
         applyFullscreenMode()
     }
@@ -681,6 +698,7 @@ class CarPlayHostActivity : ComponentActivity() {
             clusterPresentation = presentation
             updateClusterMapShown()
             presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            applyClusterTurnOverlay()
             Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
             appendLog("Cluster map: presentation shown display=${display.displayId}")
         } catch (error: RuntimeException) {
@@ -724,6 +742,20 @@ class CarPlayHostActivity : ComponentActivity() {
         target.outputSurface?.let(::onClusterSurface)
         target.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
         target.setMapVisible(visible)
+        applyClusterTurnOverlay()
+    }
+
+    private fun applyClusterTurnOverlay() {
+        val overlay = CarPlayClusterDisplay.usesCustomTurnCard(AirPlayPersistence.loadClusterContent(this))
+        val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
+        for (presentation in presentations) {
+            presentation.setTurnCardOverlay(
+                AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
+                AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
+                AirPlayPersistence.loadClusterTurnCardOverlaySize(this),
+            )
+            presentation.setTurnCardGuidance(if (overlay) clusterTurnGuidance else null)
+        }
     }
 
     private fun dismissClusterPresentation() {
@@ -857,6 +889,9 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(refreshTurnOverlay)
+        AirPlayPersistence.overlaySettingsListener = null
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(null)
         clusterMonitor?.stop()
         mainHandler.removeCallbacks(hideIdleCenterMap)
         homeMonitor?.stop()
