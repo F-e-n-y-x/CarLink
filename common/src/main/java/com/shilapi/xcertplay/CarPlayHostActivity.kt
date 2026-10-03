@@ -661,7 +661,14 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.post(refreshTurnOverlay)
         maybeStartCarPlay()
         applyFullscreenMode()
+        videoView?.post {
+            val view = videoView ?: return@post
+            if (view.width > 0 && view.height > 0) {
+                scheduleDisplaySize(view.width, view.height)
+            }
+        }
     }
+
 
     // Experimental: the CarPlay instrument-cluster stream on the BYD cluster projection display.
     private fun effectiveClusterTheme(): DiLink51ClusterLayout.Theme =
@@ -3282,6 +3289,13 @@ class CarPlayHostActivity : ComponentActivity() {
             activeDisplaySize = DisplaySize(snapshot.width, snapshot.height)
         }
         videoView?.let { updateVideoLayout(it.width, it.height) }
+        videoView?.post {
+            val view = videoView ?: return@post
+            if (view.width > 0 && view.height > 0) {
+                scheduleDisplaySize(view.width, view.height)
+            }
+        }
+
         val generation = restartGeneration
         snapshot.controller.attachUi(
             createSessionListener(generation),
@@ -3479,9 +3493,14 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.postDelayed(applyDisplaySize, DISPLAY_CHANGE_DEBOUNCE_MILLIS)
     }
 
+    private fun isMultiWindowActive(): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode
+    }
+
+
     private fun applyDisplaySize(size: DisplaySize) {
         val display = sessionDisplay
-        val layoutChanged = displayLayoutChanged()
+        val layoutChanged = displayLayoutChanged(size)
         if (shuttingDown.get()) return
         if (size == activeDisplaySize && !layoutChanged) {
             // Teardown may have removed the session that made this same-size rotation pending.
@@ -3506,7 +3525,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     "${previous.width}x${previous.height} -> ${size.width}x${size.height}",
             )
             maybeStartCarPlay()
-        } else if (display != null && !layoutChanged &&
+        } else if (display != null && !layoutChanged && !isMultiWindowActive() &&
             size.width <= display.windowWidth && size.height <= display.windowHeight) {
             // Keep camera shrink/restore cycles within the original window connected. If the
             // session started in a camera window, growth beyond it needs a full-size canvas.
@@ -3525,12 +3544,20 @@ class CarPlayHostActivity : ComponentActivity() {
     @Suppress("DEPRECATION")
     private fun displayRotation(): Int = videoView?.display?.rotation ?: windowManager.defaultDisplay.rotation
 
-    private fun displayLayoutChanged(): Boolean {
+    private fun displayLayoutChanged(newSize: DisplaySize? = activeDisplaySize): Boolean {
         val display = sessionDisplay ?: return false
-        // A narrow window can become taller than it is wide without the screen rotating.
-        return display.rotation != displayRotation() ||
-            display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar
+        if (display.rotation != displayRotation()) return true
+        if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) return true
+        if (isMultiWindowActive() && newSize != null && newSize.width > 0 && newSize.height > 0) {
+            val baseAspect = display.width.toDouble() / display.height
+            val currentAspect = newSize.width.toDouble() / newSize.height
+            val aspectDiff = kotlin.math.abs(currentAspect / baseAspect - 1.0)
+            if (aspectDiff > 0.08) return true
+        }
+        return false
     }
+
+
 
     private fun contentRect(viewWidth: Int, viewHeight: Int): CarPlayVideoLayout {
         val display = sessionDisplay ?: return CarPlayVideoLayout(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
