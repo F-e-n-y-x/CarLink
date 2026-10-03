@@ -1,10 +1,10 @@
 # PR 158 and PR 164 integration rationale
 
-## Current preflight and publication context
+## Validated publication context
 
-The current combined candidate is `merge/reviewed-safety-20261003`, with integration compile corrections through `96cac13` over candidate `8776153`. It includes the corrected PR 158 head `1f8bab9`, accepted-probe publication guard `bc76616`, PR 164's reconciled hotspot settings, the other reviewed feature changes and local diagnostics. The combined full workflow stopped at two integration compile mismatches; corrections are committed and await fresh full validation. No final test count or completed preflight result is claimed here. Investigation of callbacks from a destroyed user probe remains pending and must not be treated as resolved by this document.
+The combined candidate `3aacba4` on `merge/reviewed-safety-20261003` includes corrected PR 158 head `f6e1838`, accepted-probe publication guard `bc76616`, PR 164's reconciled hotspot settings, the other reviewed feature changes and local diagnostics. The complete workflow passed: **761 tests passed, one host-specific skip, zero failures/errors; three app lint checks and debug builds passed with zero lint errors and 25 warnings.** Source/APK credential checks and locale checks also passed.
 
-Under the user's publication authorization, PRs 155, 156, 157, 161, 162 and 168 have been merged on GitHub. Corrected contributor heads were pushed for PR 146 (`4f9f0dc`), PR 155 (`7cd60eb`) and PR 158 (`1f8bab9`). PR 155's corrected head passed GitHub CI before its native squash merge `b4056c5`; PRs 146 and 158 remain unmerged at this checkpoint. PR 169 is held, PR 170 is deferred at the user's request, and PRs 171/172 are outside the reviewed batch. TV knob X/Y keep their original absolute semantics and its source-only workflow contains no credential provisioning. Physical vehicle acceptance remains outstanding.
+PRs 146, 155, 156, 157, 161, 162 and 168 have merged at this pre-integration checkpoint. The remaining PR 158/164 histories are retained in the integration candidate. The contributor received only the scoped PR 158 corrections, including stale-result rejection and nonblocking accepted-battery publication. PR 164's fork does not permit maintainer edits. PR 169 is held, PR 170 is deferred at the user's request, and PRs 171/172 are outside this batch. Physical vehicle acceptance remains outstanding.
 
 The rationale below originated in an **earlier isolated preflight snapshot** merging corrected PR 158 into safety branch `bb6dd37`. That candidate's first parent included other reviewed PRs and diagnostics, so it was deliberately not pushed to the contributor's PR. Its conflict-resolution rationale is retained and reused in the current combined candidate; the contributor received the narrow corrected head instead.
 
@@ -18,6 +18,14 @@ The merged render function must not increment `adbCheckGeneration`: PR 158 rende
 
 Hotspot permission work and user vehicle ADB work do not start alongside one another. Controls disable while the other user operation is pending, and method guards also reject stale callbacks. Automatic saved-field validation is paused for explicit hotspot permission work and resumes after completion. No new permission, arbitrary command, firmware write or vehicle-data field was introduced by this reconciliation.
 
+## Probe and battery concurrency corrections
+
+User-probe persistence checks its volatile generation and captured vehicle-data mode under `vehicleOperationLock`. Destruction and explicit mode selections invalidate that generation under the same lock; selecting the same mode also cancels a superseded selection. Pausing alone does not invalidate an intentional accepted save.
+
+The field store retains atomic snapshot acceptance, including lost-field and expected-snapshot guards. Accepted battery samples no longer acquire the battery shell-reader lock while holding the store monitor. A separate short publication gate serializes cache writes without field-store or shell work inside it. Its generation fence prevents a reader started before the accepted publication from overwriting the newer sample. Default-mode and rejected candidates still do not publish.
+
+The nine new deterministic tests reproduce six failures on source `1f8bab9`, with three positive controls passing. All pass in the final combined workflow. Controlled battery workers release and terminate within bounded waits, even against the failing implementation. The hotspot-wait regression initializes authorization before Activity setup and verifies zero reads while blocked and exactly one resumed validation; it preserves its saved-snapshot assertions.
+
 ## Other conflict resolutions
 
 - Resource files retain both feature sets and all diagnostic/settings-gesture/turn-card strings. For the two conflicting dashboard-map labels, PR 158's shorter label wins; the explanatory ADB requirement remains in the description. XML parsing and duplicate-name checks cover all six locales.
@@ -30,6 +38,6 @@ Hotspot permission work and user vehicle ADB work do not start alongside one ano
 
 PR 158 feature sources: `BydVehicleSettingsBackend`, `Byd13CatalogProbeMain`, `BydVehicleCapabilityProbe`, `BydVehicleFields`, mode-aware `BydOutputSettings`, supporting ADB/battery/parked-state/wheel-speed reads, their tests, the four host active-setting calls, vehicle/location UI and localized resources. Guard `bc76616` still publishes battery data only after a snapshot is persisted/accepted and only in the selected legacy mode; held candidates stay outside runtime data.
 
-Integration-specific edits: `DiPlayActivity`, `BydAdbSettingsUiTest`, `BydSettingsReconnectTest`, `CarHotspotSwitchTest`, two additional cases in `BydVehicleDataSettingsTest`, the conflict resolutions in resources/`LocalAdb`/navigation/testing documents, and this rationale. Existing PR 164 grant/setup/controller/network sources and the safety parent's diagnostic sources are unchanged.
+Integration-specific edits: `DiPlayActivity`, `BydAdbSettingsUiTest`, `BydSettingsReconnectTest`, `CarHotspotSwitchTest`, the hotspot and stale-probe cases in `BydVehicleDataSettingsTest`, the conflict resolutions in resources/`LocalAdb`/navigation/testing documents, and this rationale. Existing PR 164 grant/setup/controller/network sources and the safety parent's diagnostic sources are unchanged.
 
 At the earlier isolated-preflight checkpoint, static checks completed: no unresolved markers, all localized strings parsed with no duplicate names, `git diff --check`, and `scripts/check_public_tree.py`. No Gradle run or GitHub mutation had occurred in that isolated worktree, and its new/updated tests were then unexecuted. Those statements are historical, not the current workflow/publication status above. No APK download, new binary, credential import, minSDK change, PR 169 or PR 170 source change was introduced by this reconciliation. Hardware acceptance remains necessary for supported head units, ADB denial/loss, mode changes, accepted/rejected legacy fields and actual hotspot startup.
