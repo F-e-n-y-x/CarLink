@@ -34,6 +34,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydOutputSettings
@@ -432,15 +433,48 @@ class DiPlayActivity : ComponentActivity() {
                     val sizes = CarPlayClusterDisplay.scalePresets
                     val contents = CarPlayClusterDisplay.Content.entries
                     val content = AirPlayPersistence.loadClusterContent(this)
-                    val turnCard = content == CarPlayClusterDisplay.Content.TURN_CARD
+                    val customCard = CarPlayClusterDisplay.usesCustomTurnCard(content)
+                    val officialCardOnly = content == CarPlayClusterDisplay.Content.TURN_CARD
                     choice(card, getString(R.string.dashboard_shows), listOf(
                         getString(R.string.dashboard_content_map),
                         getString(R.string.dashboard_content_turn_card),
                         getString(R.string.dashboard_content_map_with_turn_card),
-                    ), contents.indexOf(content)) {
-                        AirPlayPersistence.saveClusterContent(this, contents[it])
+                        getString(R.string.dashboard_content_map_with_custom_turn_card),
+                    ), contents.indexOf(content).coerceAtLeast(0), reconnects = false) {
+                        val next = contents[it]
+                        AirPlayPersistence.saveClusterContent(this, next)
                         render()
+                        if (content.url != next.url) reconnectForClusterMap()
                     }
+                    if (customCard) {
+                        val overlaySizes = CarPlayClusterDisplay.OverlaySize.entries
+                        choice(card, getString(R.string.turn_card_overlay_size), listOf(
+                            getString(R.string.turn_card_overlay_small),
+                            getString(R.string.turn_card_overlay_medium),
+                            getString(R.string.turn_card_overlay_large),
+                        ), overlaySizes.indexOf(AirPlayPersistence.loadClusterTurnCardOverlaySize(this)).coerceAtLeast(0), reconnects = false) {
+                            AirPlayPersistence.saveClusterTurnCardOverlaySize(this, overlaySizes[it])
+                        }
+                        card.addView(overlaySliderRow(
+                            getString(R.string.turn_card_overlay_horizontal),
+                            ClusterTurnCardOverlay.xPercents,
+                            AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
+                        ) { it -> overlayOffsetLabel(it, getString(R.string.marker_left), getString(R.string.marker_right), 50) }
+                            .also { it.onSave = { v -> AirPlayPersistence.saveClusterTurnCardOverlayXPercent(this, v) } })
+                        card.addView(overlaySliderRow(
+                            getString(R.string.turn_card_overlay_vertical),
+                            ClusterTurnCardOverlay.yPercents,
+                            AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
+                        ) { it -> overlayOffsetLabel(it, getString(R.string.marker_up), getString(R.string.marker_down), 40) }
+                            .also { it.onSave = { v -> AirPlayPersistence.saveClusterTurnCardOverlayYPercent(this, v) } })
+                        card.addView(button(getString(R.string.reset_turn_card_overlay), false) {
+                            AirPlayPersistence.saveClusterTurnCardOverlayXPercent(this, ClusterTurnCardOverlay.DEFAULT_X_PERCENT)
+                            AirPlayPersistence.saveClusterTurnCardOverlayYPercent(this, ClusterTurnCardOverlay.DEFAULT_Y_PERCENT)
+                            render()
+                        }, matchButton(10, 56))
+                        card.addView(label(getString(R.string.turn_card_overlay_note), 14, MUTED))
+                    }
+                    val turnCard = officialCardOnly
                     choice(card, getString(if (turnCard) R.string.turn_card_size else R.string.cluster_map_size),
                         listOf(getString(R.string.cluster_size_standard), getString(R.string.cluster_size_larger), getString(R.string.cluster_size_largest)),
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
@@ -934,6 +968,54 @@ class DiPlayActivity : ComponentActivity() {
         step == 0 -> getString(R.string.marker_centre_default)
         step < 0 -> "$negative ${-step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
         else -> "$positive ${step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
+    }
+
+    /** A 2%-step slider row for overlay placement; every step saves, so the card moves live. */
+    private fun overlaySliderRow(title: String, values: List<Int>, current: Int, describe: (Int) -> String): OverlaySliderRow =
+        OverlaySliderRow(this, title, values, current, describe)
+
+    private inner class OverlaySliderRow(
+        context: android.content.Context,
+        title: String,
+        private val steps: List<Int>,
+        current: Int,
+        private val describe: (Int) -> String,
+    ) : LinearLayout(context) {
+        var onSave: (Int) -> Unit = {}
+        val slider: SeekBar
+
+        init {
+            orientation = VERTICAL
+            val valueView = label(describe(current), 16, ACCENT, true)
+            val head = row().apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(12), 0, 0) }
+            head.addView(label(title, 16, TEXT, true), LinearLayout.LayoutParams(0, -2, 1f))
+            head.addView(valueView)
+            addView(head)
+            slider = SeekBar(context).apply {
+                max = steps.lastIndex
+                progress = steps.indexOf(current).coerceIn(steps.indices)
+                minHeight = dp(44)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        val value = steps[progress.coerceIn(steps.indices)]
+                        valueView.text = describe(value)
+                        if (fromUser) onSave(value)
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                })
+            }
+            addView(slider, LinearLayout.LayoutParams(-1, dp(44)))
+        }
+    }
+
+    private fun overlayOffsetLabel(percent: Int, negative: String, positive: String, centre: Int): String {
+        val delta = percent - centre
+        return when {
+            delta == 0 -> getString(R.string.marker_centre_default)
+            delta < 0 -> "$negative ${-delta} %"
+            else -> "$positive $delta %"
+        }
     }
 
     private fun showClusterAccessSetup() {

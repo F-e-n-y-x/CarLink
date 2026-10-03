@@ -403,6 +403,7 @@
     <string name="dashboard_content_map">Mapa · predeterminado</string>
     <string name="dashboard_content_turn_card">Tarjeta de giro</string>
     <string name="dashboard_content_map_with_turn_card">Mapa con tarjeta de giro</string>
+    <string name="dashboard_content_map_with_custom_turn_card">Mapa con tarjeta de giro personalizada</string>
     <string name="turn_card_size">Tamaño de la tarjeta de giro</string>
     <string name="turn_card_horizontal">Tarjeta de giro · horizontal</string>
     <string name="turn_card_vertical">Tarjeta de giro · vertical</string>
@@ -483,4 +484,16 @@
     <string name="hotspot_control_timeout">Se agotó el tiempo de espera del punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="hotspot_control_failed">No se pudo iniciar el punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="byd_adb_features">Funciones BYD · requieren ADB</string>
+    <string name="turn_card_overlay_size">Tamaño de la tarjeta personalizada</string>
+    <string name="turn_card_overlay_horizontal">Tarjeta personalizada · izquierda / derecha</string>
+    <string name="turn_card_overlay_vertical">Tarjeta personalizada · arriba / abajo</string>
+    <string name="turn_card_overlay_small">Pequeño</string>
+    <string name="turn_card_overlay_medium">Mediano</string>
+    <string name="turn_card_overlay_large">Grande</string>
+    <string name="reset_turn_card_overlay">Restablecer posición de la tarjeta personalizada</string>
+    <string name="turn_card_overlay_note">DiPlay dibuja esta tarjeta sobre el mapa y se mueve en pasos del 2 %. La tarjeta de cristal de iOS no se puede mover por sí sola. Los cambios son inmediatos y la tarjeta sigue visible al ir recto.</string>
+    <string name="turn_card_now">Ahora</string>
+    <string name="turn_card_distance_m">%1$d m</string>
+    <string name="turn_card_distance_km">%1$.1f km</string>
+    <string name="turn_card_exit">Salida %1$d</string>
 </resources>

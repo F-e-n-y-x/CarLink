@@ -403,6 +403,7 @@
     <string name="dashboard_content_map">الخريطة · الافتراضي</string>
     <string name="dashboard_content_turn_card">بطاقة الانعطاف</string>
     <string name="dashboard_content_map_with_turn_card">خريطة مع بطاقة الانعطاف</string>
+    <string name="dashboard_content_map_with_custom_turn_card">خريطة مع بطاقة انعطاف مخصصة</string>
     <string name="turn_card_size">حجم بطاقة الانعطاف</string>
     <string name="turn_card_horizontal">بطاقة الانعطاف · أفقيًا</string>
     <string name="turn_card_vertical">بطاقة الانعطاف · عموديًا</string>
@@ -483,4 +484,16 @@
     <string name="hotspot_control_timeout">انتهت مهلة انتظار تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="hotspot_control_failed">تعذر تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
+    <string name="turn_card_overlay_size">حجم بطاقة الانعطاف المخصصة</string>
+    <string name="turn_card_overlay_horizontal">بطاقة الانعطاف المخصصة · يسار / يمين</string>
+    <string name="turn_card_overlay_vertical">بطاقة الانعطاف المخصصة · أعلى / أسفل</string>
+    <string name="turn_card_overlay_small">صغير</string>
+    <string name="turn_card_overlay_medium">متوسط</string>
+    <string name="turn_card_overlay_large">كبير</string>
+    <string name="reset_turn_card_overlay">إعادة موضع البطاقة المخصصة</string>
+    <string name="turn_card_overlay_note">ترسم DiPlay هذه البطاقة فوق الخريطة وتُحرَّك بخطوات 2٪. بطاقة iOS الزجاجية لا يمكن تحريكها وحدها. التغييرات فورية، والبطاقة تبقى أثناء السير مباشرة.</string>
+    <string name="turn_card_now">الآن</string>
+    <string name="turn_card_distance_m">%1$d م</string>
+    <string name="turn_card_distance_km">%1$.1f كم</string>
+    <string name="turn_card_exit">مخرج %1$d</string>
 </resources>
