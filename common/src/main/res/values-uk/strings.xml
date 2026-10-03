@@ -479,4 +479,10 @@
     <string name="widget_minutes">%1$d хв</string>
     <string name="widget_no_route">Немає маршруту</string>
     <string name="widget_not_connected">CarPlay не підключено</string>
+    <string name="open_diplay_settings_hint">У CarPlay проведіть вниз %1$d пальцями, щоб відкрити налаштування DiPlay.</string>
+    <string name="carplay_controls">Керування CarPlay</string>
+    <string name="settings_gesture_fingers">Відкрити налаштування · свайп %1$d пальцями (торкніться, щоб змінити)</string>
+    <string name="settings_gesture_fingers_label">Відкрити налаштування · кількість пальців</string>
+    <string name="settings_gesture_fingers_option">%1$d пальців</string>
+    <string name="settings_gesture_fingers_hint">Виберіть кількість пальців, яку не використовує головний пристрій. BYD резервує свайп трьома пальцями вниз під панель кондиціонера.</string>
 </resources>

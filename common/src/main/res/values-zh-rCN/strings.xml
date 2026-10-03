@@ -478,4 +478,10 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
+    <string name="open_diplay_settings_hint">CarPlay 中用 %1$d 指下滑打开 DiPlay 设置。</string>
+    <string name="carplay_controls">CarPlay 操作</string>
+    <string name="settings_gesture_fingers">打开设置 · %1$d 指下滑（点按切换）</string>
+    <string name="settings_gesture_fingers_label">打开设置 · 下滑手指数</string>
+    <string name="settings_gesture_fingers_option">%1$d 指</string>
+    <string name="settings_gesture_fingers_hint">选择车机没有占用的手指数。比亚迪的三指下滑是空调面板，建议改用 2 指。</string>
 </resources>
