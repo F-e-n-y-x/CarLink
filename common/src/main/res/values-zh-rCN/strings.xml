@@ -511,4 +511,10 @@
     <string name="hotspot_control_timeout">等待车机热点开启超时，请在车机设置中开启。</string>
     <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
+    <string name="open_diplay_settings_hint">CarPlay 中用 %1$d 指下滑打开 DiPlay 设置。</string>
+    <string name="carplay_controls">CarPlay 操作</string>
+    <string name="settings_gesture_fingers">打开设置 · %1$d 指下滑（点按切换）</string>
+    <string name="settings_gesture_fingers_label">打开设置 · 下滑手指数</string>
+    <string name="settings_gesture_fingers_option">%1$d 指</string>
+    <string name="settings_gesture_fingers_hint">选择车机没有占用的手指数。比亚迪的三指下滑是空调面板，建议改用 2 指。</string>
 </resources>

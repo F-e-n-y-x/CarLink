@@ -477,4 +477,10 @@
     <string name="hotspot_control_timeout">Se agotó el tiempo de espera del punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="hotspot_control_failed">No se pudo iniciar el punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="byd_adb_features">Funciones BYD · requieren ADB</string>
+    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir los ajustes de DiPlay.</string>
+    <string name="carplay_controls">Controles de CarPlay</string>
+    <string name="settings_gesture_fingers">Abrir ajustes · deslizar con %1$d dedos (toca para cambiar)</string>
+    <string name="settings_gesture_fingers_label">Abrir ajustes · dedos del deslizamiento</string>
+    <string name="settings_gesture_fingers_option">%1$d dedos</string>
+    <string name="settings_gesture_fingers_hint">Elige un número de dedos que tu unidad no use ya. BYD reserva el deslizamiento con tres dedos para el panel del aire acondicionado.</string>
 </resources>

@@ -99,14 +99,20 @@ internal object CarPlayMediaKeys {
         mainHandler.post {
             synchronized(this) {
                 if (controller !== expected) return@synchronized
+                val previousArtwork = artwork
                 if (nowPlaying.artworkTransferId != update.artworkTransferId) {
                     artwork = update.artworkTransferId?.let { id ->
                         if (artworkCache.containsKey(id)) artworkCache[id] else null
                     }
                 }
                 if (nowPlaying.elapsedMillis != update.elapsedMillis) elapsedUpdatedAt = SystemClock.elapsedRealtime()
+                val metadataChanged = metadataChanged(nowPlaying, update) || artwork !== previousArtwork
                 nowPlaying = update
-                session?.setMetadata(androidMetadata(update, artwork))
+                // The iPhone repeats NowPlayingUpdate about twice a second for the position alone.
+                // Republishing the metadata each time sent a copy of the artwork through system_server
+                // to every media listener, and on a DiLink 5.0 Tang that exhausted memory within
+                // minutes. The position goes in the playback state.
+                if (metadataChanged) session?.setMetadata(androidMetadata(update, artwork))
                 publishPlaybackStateLocked()
             }
         }
@@ -228,6 +234,10 @@ internal object CarPlayMediaKeys {
     }
 
     private val callback = CarPlayMediaCallback(::send)
+
+    /** Whether [next] changes what the media session's metadata shows; position and play state do not. */
+    internal fun metadataChanged(previous: CarPlayNowPlaying, next: CarPlayNowPlaying): Boolean =
+        previous.copy(elapsedMillis = null, playing = false) != next.copy(elapsedMillis = null, playing = false)
 
     internal fun androidMetadata(info: CarPlayNowPlaying, artwork: Bitmap? = null): MediaMetadata =
         MediaMetadata.Builder().apply {

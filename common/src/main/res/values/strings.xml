@@ -511,4 +511,10 @@
     <string name="hotspot_control_timeout">Timed out waiting for the car hotspot. Open the hotspot in car settings.</string>
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
+    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
+    <string name="carplay_controls">CarPlay controls</string>
+    <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
+    <string name="settings_gesture_fingers_label">Open settings · swipe-down fingers</string>
+    <string name="settings_gesture_fingers_option">%1$d fingers</string>
+    <string name="settings_gesture_fingers_hint">Pick a finger count your head unit does not already use. BYD takes three-finger swipe-down for its air-conditioning panel.</string>
 </resources>

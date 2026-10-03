@@ -477,4 +477,10 @@
     <string name="hotspot_control_timeout">انتهت مهلة انتظار تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="hotspot_control_failed">تعذر تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
+    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح إعدادات DiPlay.</string>
+    <string name="carplay_controls">تحكم CarPlay</string>
+    <string name="settings_gesture_fingers">فتح الإعدادات · سحب بـ %1$d أصابع (انقر للتبديل)</string>
+    <string name="settings_gesture_fingers_label">فتح الإعدادات · عدد أصابع السحب لأسفل</string>
+    <string name="settings_gesture_fingers_option">%1$d أصابع</string>
+    <string name="settings_gesture_fingers_hint">اختر عددًا من الأصابع لا يستخدمه جهاز السيارة. تأخذ وحدة BYD السحب لأسفل بثلاثة أصابع للوحة التكييف.</string>
 </resources>
