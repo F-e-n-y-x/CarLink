@@ -545,4 +545,10 @@
     <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
+    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">向 iPhone 申请独立的 CarPlay 仪表/桌面地图流（Stream 111），供无液晶仪表车机的中控桌面悬浮卡片或第三方桌面内嵌使用。</string>
+    <string name="center_map_card_virtual_description">在中控屏桌面上显示标准 16:9 比例的浮动地图卡片，比例自然不再呈细长条状，支持随意拖拽与双指缩放。</string>
+    <string name="center_map_auto_hide">离开桌面时自动隐藏卡片</string>
+    <string name="center_map_auto_hide_description">打开音乐、倒车影像、全屏设置等应用时自动隐藏悬浮窗，返回桌面时自动恢复</string>
+    <string name="center_map_auto_hide_active">离开桌面自动隐藏：已开启（使用情况访问权限 / 无障碍服务）</string>
+    <string name="center_map_auto_hide_needed">离开桌面自动隐藏：未开启。请开启无障碍服务或通过 ADB 授予使用情况访问权限。</string>
 </resources>

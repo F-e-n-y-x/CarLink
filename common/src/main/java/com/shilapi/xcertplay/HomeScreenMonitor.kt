@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -14,8 +15,8 @@ import java.util.concurrent.TimeUnit
 /**
  * Whether a home screen is in front (BYD's normal home, map home or MyCar, or whichever
  * launcher is the default home, such as a third-party car launcher), from the newest resumed
- * activity in the owner's Usage Access events. Overlays and panels are not activities, so they
- * leave the answer as it is.
+ * activity in the owner's Usage Access events or Accessibility events.
+ * Overlays and panels are not activities, so they leave the answer as it is.
  */
 internal class HomeScreenMonitor(context: Context, private val onChange: (Boolean) -> Unit) {
     private val context = context.applicationContext
@@ -27,26 +28,60 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
     private var newestPackage: String? = null
     @Volatile private var reported: Boolean? = null
     @Volatile private var homePackages = HOME_PACKAGES
+    @Volatile private var active = false
 
-    val running: Boolean get() = executor != null
+    val running: Boolean get() = active || executor != null
 
     /** Main thread. */
     fun start() {
-        if (executor != null) return
-        since = System.currentTimeMillis() - FIRST_LOOK_BACK_MILLIS
-        newestTime = 0L
-        newestPackage = null
+        if (running) return
+        active = true
         reported = null
-        homePackages = HOME_PACKAGES + listOfNotNull(defaultHome(context))
-        executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-home-monitor").apply { isDaemon = true } }
-            .also { it.scheduleWithFixedDelay(::poll, 0, POLL_MILLIS, TimeUnit.MILLISECONDS) }
+        homePackages = queryHomePackages(context)
+
+        // Register for external foreground updates (e.g. from AccessibilityService)
+        foregroundListener = ::handleForegroundPackage
+
+        // UsageStatsManager poller fallback
+        if (DiLink51ClusterMonitor.hasAccess(context)) {
+            since = System.currentTimeMillis() - FIRST_LOOK_BACK_MILLIS
+            newestTime = 0L
+            newestPackage = null
+            executor = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-home-monitor").apply { isDaemon = true } }
+                .also { it.scheduleWithFixedDelay(::poll, 0, POLL_MILLIS, TimeUnit.MILLISECONDS) }
+        }
     }
 
     /** Main thread. */
     fun stop() {
+        active = false
+        if (foregroundListener === ::handleForegroundPackage) {
+            foregroundListener = null
+        }
         executor?.shutdownNow()
         executor = null
         main.removeCallbacksAndMessages(null)
+    }
+
+    private fun handleForegroundPackage(pkg: String) {
+        if (!running) return
+        if (pkg == context.packageName || pkg.startsWith("com.shilapi.xcertplay")) return
+        val visible = isHomePackage(pkg)
+        if (visible != reported) {
+            reported = visible
+            main.post { if (running) onChange(visible) }
+        }
+    }
+
+    private fun isHomePackage(pkg: String): Boolean {
+        if (pkg in homePackages) return true
+        val lower = pkg.lowercase()
+        return lower.contains("dydesktop") ||
+            lower.contains("diyou") ||
+            lower.contains("dyzm") ||
+            lower.contains("launcher") ||
+            lower.contains("desktop") ||
+            lower.contains("dudu.android")
     }
 
     private fun poll() {
@@ -59,17 +94,17 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             // MOVE_TO_FOREGROUND is ACTIVITY_RESUMED (API 29) under its older name.
             @Suppress("DEPRECATION")
             if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= newestTime) {
-                newestTime = event.timeStamp
-                newestPackage = event.packageName
+                val pkg = event.packageName
+                if (pkg != context.packageName && !pkg.startsWith("com.shilapi.xcertplay")) {
+                    newestTime = event.timeStamp
+                    newestPackage = pkg
+                }
             }
         }
         // Overlap, because events can arrive a little late.
         since = (now - OVERLAP_MILLIS).coerceAtLeast(since)
-        val visible = newestPackage in homePackages
-        if (visible != reported) {
-            reported = visible
-            main.post { if (executor != null) onChange(visible) }
-        }
+        val currentPkg = newestPackage ?: return
+        handleForegroundPackage(currentPkg)
     }
 
     companion object {
@@ -77,10 +112,58 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
         private const val OVERLAP_MILLIS = 2_000L
         private const val FIRST_LOOK_BACK_MILLIS = 10 * 60_000L
 
+        @Volatile private var foregroundListener: ((String) -> Unit)? = null
+
+        /** Notifies of a foreground package change from an accessibility or system service. */
+        fun notifyForegroundPackage(pkg: String) {
+            foregroundListener?.invoke(pkg)
+        }
+
         // BYD's home list (Launcher3 HomeHelper): MyCar, the normal home, and the map home.
         val HOME_PACKAGES = setOf("com.android.launcher3", "com.byd.launchermap", "com.byd.naviauto", "com.byd.mycar")
 
-        fun hasAccess(context: Context): Boolean = DiLink51ClusterMonitor.hasAccess(context)
+        // Known third-party car launchers
+        val KNOWN_CAR_LAUNCHERS = setOf(
+            "com.smg.dydesktop",          // 迪友桌面 (常见主流包名)
+            "com.smg.dydesktop.pro",      // 迪友桌面 Pro
+            "com.dy.launcher",            // 迪友桌面 (部分渠道)
+            "com.king.dyzm",              // 迪友桌面
+            "com.king.diyou",
+            "com.byd.diyou",
+            "com.dudu.android.launcher",  // 嘟嘟桌面
+            "com.dudu.android.launcher.mini",
+            "com.yecon.carsetting",
+            "com.tencent.autolauncher",   // 腾讯车联
+            "com.mx.launcher",            // 喵驾桌面
+            "com.aispeech.aios.adapter",  // 思必驰
+        )
+
+        fun hasAccess(context: Context): Boolean =
+            DiLink51ClusterMonitor.hasAccess(context) || isAccessibilityServiceEnabled(context)
+
+        private fun isAccessibilityServiceEnabled(context: Context): Boolean = runCatching {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+                ?.contains(context.packageName) == true
+        }.getOrDefault(false)
+
+        /** Query all launcher packages declared on the system. */
+        fun queryHomePackages(context: Context): Set<String> {
+            val set = (HOME_PACKAGES + KNOWN_CAR_LAUNCHERS).toMutableSet()
+            defaultHome(context)?.let { set.add(it) }
+            runCatching {
+                val pm = context.packageManager
+                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                val flags = if (android.os.Build.VERSION.SDK_INT >= 23) PackageManager.MATCH_ALL else 0
+                val list = pm.queryIntentActivities(intent, flags)
+                for (info in list) {
+                    val pkg = info.activityInfo?.packageName
+                    if (!pkg.isNullOrEmpty() && pkg != "android" && pkg != context.packageName) {
+                        set.add(pkg)
+                    }
+                }
+            }
+            return set
+        }
 
         /** The launcher Android uses as home now, unless that is the chooser or DiPlay itself. */
         fun defaultHome(context: Context): String? = runCatching {

@@ -545,4 +545,10 @@
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
+    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">Requests CarPlay secondary map stream (Stream 111) for center screen floating card and launcher widget embedding on head units without a digital instrument cluster screen.</string>
+    <string name="center_map_card_virtual_description">Shows a 16:9 floating map card on the center screen with natural proportions and pinch-to-zoom support.</string>
+    <string name="center_map_auto_hide">Hide floating card over non-home apps</string>
+    <string name="center_map_auto_hide_description">Automatically hides the floating card in music players, reverse camera and settings, restoring it on the launcher</string>
+    <string name="center_map_auto_hide_active">Auto-hide when leaving home screen: Active</string>
+    <string name="center_map_auto_hide_needed">Auto-hide when leaving home screen: Not active. Grant Usage Access via ADB or Accessibility service.</string>
 </resources>

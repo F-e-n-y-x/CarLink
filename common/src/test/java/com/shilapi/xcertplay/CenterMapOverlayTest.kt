@@ -180,6 +180,17 @@ class CenterMapOverlayTest {
         assertEquals(0, taps)
     }
 
+    @Test fun showWith16By9AspectProportionsHeightProperly() {
+        CenterMapOverlay.hide()
+        context.getSharedPreferences("diplay_center_map", Context.MODE_PRIVATE).edit()
+            .clear().putInt("width", 720).commit()
+        assertTrue(CenterMapOverlay.show(context, 16.0 / 9.0, {}, {}))
+        card = CenterMapOverlay.javaClass.getDeclaredField("root").apply { isAccessible = true }
+            .get(CenterMapOverlay) as View
+        assertEquals(720, params.width)
+        assertEquals(405, params.height)
+    }
+
     private fun touch(action: Int, vararg pointers: Pair<Int, Float>) {
         time += 16
         val properties = pointers.map { (id, _) -> MotionEvent.PointerProperties().apply {

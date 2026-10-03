@@ -170,6 +170,8 @@ class DiPlayActivity : ComponentActivity() {
         pendingCarHotspotSetup = savedInstanceState?.getBoolean("pending_car_hotspot") ?: false
         bydVehicleAdvancedExpanded = savedInstanceState?.getBoolean("byd_vehicle_advanced") ?: false
         page = savedInstanceState?.getString("page") ?: intent.getStringExtra("page") ?: "home"
+        val hasPhysicalCluster = ClusterMapPresentation.findDisplay(this) != null
+        MapMirrors.streamAspect = if (hasPhysicalCluster) MapMirrors.PHYSICAL_STREAM_ASPECT else MapMirrors.VIRTUAL_STREAM_ASPECT
         render()
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
@@ -464,14 +466,19 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
                 getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
-            if (ClusterMapPresentation.findDisplay(this) != null) {
-                toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
-                    getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c),
-                    AirPlayPersistence.loadClusterMapEnabled(this)) {
-                    AirPlayPersistence.saveClusterMapEnabled(this, it)
-                    reconnectForClusterMap()
-                }
-                toggle(card, getString(R.string.center_map_card), getString(R.string.center_map_card_description),
+            val clusterDisplay = ClusterMapPresentation.findDisplay(this)
+            val clusterMapEnabled = AirPlayPersistence.loadClusterMapEnabled(this)
+            toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
+                if (clusterDisplay != null) getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c)
+                else getString(R.string.shows_the_iphone_s_cluster_map_virtual_stream_description),
+                clusterMapEnabled) {
+                AirPlayPersistence.saveClusterMapEnabled(this, it)
+                reconnectForClusterMap()
+            }
+            if (clusterMapEnabled) {
+                toggle(card, getString(R.string.center_map_card),
+                    if (clusterDisplay != null) getString(R.string.center_map_card_description)
+                    else getString(R.string.center_map_card_virtual_description),
                     AirPlayPersistence.loadCenterMapOverlay(this)) {
                     AirPlayPersistence.saveCenterMapOverlay(this, it)
                     if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
@@ -481,6 +488,10 @@ class DiPlayActivity : ComponentActivity() {
                     toggle(card, getString(R.string.center_map_follows_dashboard), getString(R.string.center_map_follows_dashboard_description),
                         AirPlayPersistence.loadCenterMapFollowsDashboard(this)) {
                         AirPlayPersistence.saveCenterMapFollowsDashboard(this, it)
+                    }
+                    toggle(card, getString(R.string.center_map_auto_hide), getString(R.string.center_map_auto_hide_description),
+                        AirPlayPersistence.loadCenterMapAutoHide(this)) {
+                        AirPlayPersistence.saveCenterMapAutoHide(this, it)
                     }
                 }
                 toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
@@ -492,10 +503,11 @@ class DiPlayActivity : ComponentActivity() {
                     card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                         else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))
                     val usage = HomeScreenMonitor.hasAccess(this)
-                    card.addView(label(if (usage) getString(R.string.center_map_usage_allowed)
-                        else getString(R.string.center_map_usage_missing, packageName), 14, if (usage) MUTED else WARNING))
+                    card.addView(label(if (usage) getString(R.string.center_map_auto_hide_active)
+                        else getString(R.string.center_map_auto_hide_needed), 14, if (usage) MUTED else WARNING))
                 }
-                if (DiLink51ClusterLayout.supported()) {
+                if (clusterDisplay != null) {
+                    if (DiLink51ClusterLayout.supported()) {
                     val automatic = DiLink51ClusterLayout.automatic(this)
                     toggle(card, getString(R.string.follow_instrument_theme_and_map_card),
                         getString(R.string.show_the_side_map_only_when_its_card_is_open_and_switch_to), automatic) {
@@ -594,6 +606,7 @@ class DiPlayActivity : ComponentActivity() {
                         if (it) checkAdbState(mayAsk = true)
                     }
                 }
+            }
             }
             clusterSongSwitch(card)
         }
