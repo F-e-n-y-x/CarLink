@@ -15,7 +15,10 @@ internal object CarPlayRemoteKeys {
     private const val WHEEL_STEP = 1
     private const val HELD_REPEAT_INTERVAL = 3
 
-    fun dispatch(event: KeyEvent, controller: CarPlayController?): Boolean {
+    fun dispatch(event: KeyEvent, controller: CarPlayController?): Boolean =
+        dispatchToKnob(event) { state, momentary -> controller?.sendKnob(state, momentary) == true }
+
+    internal fun dispatchToKnob(event: KeyEvent, sendKnob: (AirPlayKnobState, Boolean) -> Boolean): Boolean {
         val wheelDelta = when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_DPAD_LEFT,
@@ -31,7 +34,7 @@ internal object CarPlayRemoteKeys {
         }
 
         if (wheelDelta != null) {
-            return dispatchWheel(event, controller, wheelDelta)
+            return dispatchWheel(event, sendKnob, wheelDelta)
         }
 
         val button = when (event.keyCode) {
@@ -47,12 +50,12 @@ internal object CarPlayRemoteKeys {
             else -> return false
         }
 
-        return dispatchButton(event, controller, button)
+        return dispatchButton(event, sendKnob, button)
     }
 
     private fun dispatchWheel(
         event: KeyEvent,
-        controller: CarPlayController?,
+        sendKnob: (AirPlayKnobState, Boolean) -> Boolean,
         delta: Int,
     ): Boolean {
         return when (event.action) {
@@ -63,7 +66,7 @@ internal object CarPlayRemoteKeys {
                 if (!shouldSend) {
                     true
                 } else {
-                    controller?.sendKnob(AirPlayKnobState(wheel = delta)) == true
+                    sendKnob(AirPlayKnobState(wheel = delta), true)
                 }
             }
 
@@ -75,20 +78,20 @@ internal object CarPlayRemoteKeys {
 
     private fun dispatchButton(
         event: KeyEvent,
-        controller: CarPlayController?,
+        sendKnob: (AirPlayKnobState, Boolean) -> Boolean,
         button: Button,
     ): Boolean {
         return when (event.action) {
             KeyEvent.ACTION_DOWN -> {
                 if (event.repeatCount == 0) {
-                    controller?.sendKnob(button.state(down = true), momentary = false) == true
+                    sendKnob(button.state(down = true), false)
                 } else {
                     true
                 }
             }
 
             KeyEvent.ACTION_UP ->
-                controller?.sendKnob(AirPlayKnobState(), momentary = false) == true
+                sendKnob(AirPlayKnobState(), false)
 
             else -> false
         }
