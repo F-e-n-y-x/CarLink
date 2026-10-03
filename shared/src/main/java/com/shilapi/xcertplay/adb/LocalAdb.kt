@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay.adb
 
+import java.io.BufferedInputStream
 import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
@@ -41,7 +42,7 @@ class LocalAdb(
             opened.soTimeout = READ_TIMEOUT_MS
             opened.tcpNoDelay = true
             socket = opened
-            input = opened.getInputStream()
+            input = BufferedInputStream(opened.getInputStream())
             output = opened.getOutputStream()
             send(AdbPacket(AdbPacket.CNXN, AdbPacket.VERSION, AdbPacket.MAX_PAYLOAD, "host::\u0000".toByteArray()))
             handshake(mayAsk).also { if (it != Access.READY) closeQuietly() }
@@ -103,10 +104,34 @@ class LocalAdb(
         if (!mayAsk) return Access.NOT_APPROVED
         // adbd did not know the key: offer it, which opens the approval dialog on the car's screen.
         send(AdbPacket(AdbPacket.AUTH, AdbPacket.AUTH_PUBLIC_KEY, 0, AdbKeys.publicKeyMessage(key.public)))
-        socket?.soTimeout = APPROVAL_TIMEOUT_MS
-        packet = receive()
-        socket?.soTimeout = READ_TIMEOUT_MS
-        return if (packet.command == AdbPacket.CNXN) Access.READY else Access.NOT_APPROVED
+        return awaitApproval()
+    }
+
+    private fun awaitApproval(): Access {
+        val pendingInput = input ?: throw IOException("not connected")
+        val deadline = System.nanoTime() + APPROVAL_TIMEOUT_MS * 1_000_000L
+        socket?.soTimeout = APPROVAL_RECHECK_MS
+        try {
+            while (System.nanoTime() < deadline) {
+                // 保留超时前收到的半包，静默检查后仍可继续解析原连接的响应。
+                pendingInput.mark(AdbPacket.MAX_PAYLOAD + 24)
+                try {
+                    val packet = receive()
+                    return if (packet.command == AdbPacket.CNXN) Access.READY else Access.NOT_APPROVED
+                } catch (_: SocketTimeoutException) {
+                    pendingInput.reset()
+                    // 部分车机保存了授权密钥，却不唤醒原连接；只用已保存的密钥检查，不再弹窗。
+                    val approved = LocalAdb(key, host, port).use { it.connect(mayAsk = false) == Access.READY }
+                    if (approved) {
+                        closeQuietly()
+                        return connect(mayAsk = false)
+                    }
+                }
+            }
+            return Access.NOT_APPROVED
+        } finally {
+            socket?.soTimeout = READ_TIMEOUT_MS
+        }
     }
 
     private fun send(packet: AdbPacket) {
@@ -129,5 +154,6 @@ class LocalAdb(
         const val CONNECT_TIMEOUT_MS = 2_000
         const val READ_TIMEOUT_MS = 5_000
         const val APPROVAL_TIMEOUT_MS = 60_000
+        const val APPROVAL_RECHECK_MS = 1_000
     }
 }

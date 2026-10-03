@@ -467,4 +467,14 @@
     <string name="center_map_no_permission_screen">لا توجد في وحدة القيادة شاشة إعدادات لهذا الإذن. اسمح به عبر ADB.</string>
     <string name="launcher_map_sharing">مشاركة الخريطة المباشرة مع المشغّلات الأخرى</string>
     <string name="launcher_map_sharing_description">يمكن للمشغّلات التي تدعم DiPlay عرض خريطة لوحة العدادات المباشرة داخل شاشتها الرئيسية. معطّل افتراضيًا، لأن أي تطبيق على وحدة القيادة يمكنه عندها طلب الخريطة. راجع docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="auto_car_hotspot_title">تشغيل نقطة اتصال السيارة تلقائيًا</string>
+    <string name="auto_car_hotspot_description">يشغّل نقطة اتصال السيارة المحفوظة عند فتح DiPlay. عند تفعيل المفتاح تُطلب الأذونات اللازمة تلقائيًا عبر ADB؛ وافق على شاشة السيارة. فعّل فتح DiPlay بعد تشغيل السيارة للبدء عند الإقلاع. يبقى الاسم وكلمة المرور دون تغيير ولا تُطفأ نقطة الاتصال تلقائيًا.</string>
+    <string name="hotspot_control_missing">إذن التحكم بنقطة الاتصال غير متاح. امنحه عبر ADB أو شغّل نقطة الاتصال من إعدادات السيارة.</string>
+    <string name="hotspot_permission_granted">تم منح الإذن.</string>
+    <string name="hotspot_permission_failed">لم يتم منح الإذن المطلوب. راجع إعدادات السيارة وحاول مجددًا.</string>
+    <string name="hotspot_control_on">نقطة اتصال السيارة قيد التشغيل.</string>
+    <string name="hotspot_control_unsupported">النظام لا يدعم تشغيل نقطة الاتصال تلقائيًا. افتح إعدادات السيارة لتشغيلها.</string>
+    <string name="hotspot_control_timeout">انتهت مهلة انتظار تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
+    <string name="hotspot_control_failed">تعذر تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
+    <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
 </resources>

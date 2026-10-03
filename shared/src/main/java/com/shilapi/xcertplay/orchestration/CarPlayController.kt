@@ -1831,6 +1831,22 @@ open class CarPlayController(
         } else {
             config.wirelessHotspotMode
         }
+        if (com.shilapi.xcertplay.network.CarHotspotSettings.shouldEnable(
+                appContext, config.transport == CarPlayTransport.WIRELESS, hotspotMode,
+            )
+        ) {
+            val result = com.shilapi.xcertplay.network.CarHotspotTethering.enable(
+                appContext,
+                isCancelled = { isStaleWirelessRun(generation) ||
+                    !com.shilapi.xcertplay.network.CarHotspotSettings.enabled(appContext) },
+                log = ::debugLog,
+            )
+            val manualFallback = result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.UNSUPPORTED &&
+                com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext) == null
+            if (result != com.shilapi.xcertplay.network.CarHotspotTethering.Result.READY && !manualFallback) {
+                throw IOException("${result.diagnostic}. Open the car hotspot settings and connect again.")
+            }
+        }
         if (hotspotMode == WirelessHotspotMode.MANUAL &&
             com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext) == false
         ) {

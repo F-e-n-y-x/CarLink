@@ -501,4 +501,14 @@
     <string name="btn_open_accessibility_setting">前往系统设置开启【无障碍服务】</string>
     <string name="btn_open_overlay_setting">前往开启【显示在其他应用上层】</string>
     <string name="manual_grant_cmd_hint">或在电脑终端执行以下 ADB 命令一键授权：</string>
+    <string name="auto_car_hotspot_title">自动开启热点</string>
+    <string name="auto_car_hotspot_description">DiPlay 启动时开启车机热点。打开开关会自动通过 ADB 申请所需权限，请允许车机上的授权提示。配合“车辆启动后打开”可随开机启动。保留热点名称和密码，不会自动关闭热点。</string>
+    <string name="hotspot_control_missing">缺少热点控制权限。请通过 ADB 授权，或在车机设置中手动开启热点。</string>
+    <string name="hotspot_permission_granted">授权成功。</string>
+    <string name="hotspot_permission_failed">未获得所请求的权限。请检查车机设置后重试。</string>
+    <string name="hotspot_control_on">车机热点已开启。</string>
+    <string name="hotspot_control_unsupported">当前固件不支持自动开启热点，请在车机设置中开启。</string>
+    <string name="hotspot_control_timeout">等待车机热点开启超时，请在车机设置中开启。</string>
+    <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
+    <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
 </resources>
