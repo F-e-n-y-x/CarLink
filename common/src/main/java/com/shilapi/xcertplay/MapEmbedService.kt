@@ -233,11 +233,11 @@ class MapEmbedService : Service() {
         const val ERROR_UNSUPPORTED = "unsupported" // Android 10 or older
         const val ERROR_BAD_REQUEST = "bad_request"
 
-        /** Keeps the stream's 8:3 shape and fills the view, cutting the edges that do not fit. */
+        /** Keeps the stream's shape (8:3 or 16:9) and fills the view, cutting the edges that do not fit. */
         internal fun cropToFill(view: TextureView, width: Int, height: Int) {
             if (width <= 0 || height <= 0) return
             val viewAspect = width.toFloat() / height
-            val stream = MapMirrors.STREAM_ASPECT.toFloat()
+            val stream = MapMirrors.streamAspect.toFloat()
             val scaleX = if (viewAspect < stream) stream / viewAspect else 1f
             val scaleY = if (viewAspect > stream) viewAspect / stream else 1f
             view.setTransform(Matrix().apply { setScale(scaleX, scaleY, width / 2f, height / 2f) })

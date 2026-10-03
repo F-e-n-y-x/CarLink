@@ -13,8 +13,17 @@ import java.util.concurrent.CopyOnWriteArraySet
 internal object MapMirrors {
     const val CARD = "card"
 
-    /** The dashboard stream's shape (1920x720, sent scaled to 1600x600 by default). */
-    const val STREAM_ASPECT = 8.0 / 3
+    /** The physical dashboard stream's shape (1920x720, sent scaled to 1600x600 by default). */
+    const val PHYSICAL_STREAM_ASPECT = 8.0 / 3
+
+    /** The virtual dashboard stream's shape (1280x720, 16:9 for center screen cards/launchers). */
+    const val VIRTUAL_STREAM_ASPECT = 16.0 / 9
+
+    /** The current active aspect ratio for mirror surfaces and launcher embedding. */
+    var streamAspect: Double = PHYSICAL_STREAM_ASPECT
+
+    /** The active dashboard stream's shape (defaults to PHYSICAL_STREAM_ASPECT or VIRTUAL_STREAM_ASPECT). */
+    val STREAM_ASPECT: Double get() = streamAspect
 
     private val main = Handler(Looper.getMainLooper())
     private val surfaces = LinkedHashMap<String, Surface>()

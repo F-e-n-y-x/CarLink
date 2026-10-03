@@ -70,7 +70,18 @@ object BydOutputSettings {
 
     /** Whether the head unit has a BYD navigation receiver, so settings can hide a switch that cannot work. */
     fun available(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service")
+        BydStandaloneHudOutput.available(context) ||
+            installed(context, "com.byd.amapservice") ||
+            installed(context, "com.ts.car.someip.service") ||
+            installed(context, "com.byd.carsettings") ||
+            installed(context, "com.byd.appmgr") ||
+            installed(context, "com.byd.deviceinfo") ||
+            installed(context, "com.byd.service") ||
+            android.os.Build.FINGERPRINT.contains("BYD", ignoreCase = true) ||
+            android.os.Build.BRAND.contains("BYD", ignoreCase = true) ||
+            android.os.Build.MANUFACTURER.contains("BYD", ignoreCase = true) ||
+            android.os.Build.PRODUCT.contains("BYD", ignoreCase = true) ||
+            android.os.Build.DEVICE.contains("BYD", ignoreCase = true)
 
     private fun installed(context: Context, pkg: String): Boolean =
         runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess

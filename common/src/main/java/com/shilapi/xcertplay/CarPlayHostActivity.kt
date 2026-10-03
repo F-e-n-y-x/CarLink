@@ -423,6 +423,8 @@ class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
+        val hasPhysicalCluster = ClusterMapPresentation.findDisplay(this) != null
+        MapMirrors.streamAspect = if (hasPhysicalCluster) MapMirrors.PHYSICAL_STREAM_ASPECT else MapMirrors.VIRTUAL_STREAM_ASPECT
         languagePreferenceAtCreate = AppLocale.preference(this)
         if (intent.action == "android.hardware.usb.action.USB_DEVICE_ATTACHED") {
             AirPlayPersistence.saveWirelessEnabled(this, false)
@@ -754,24 +756,42 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
         val theme = effectiveClusterTheme()
-        val display = ClusterMapPresentation.findDisplay(this, theme) ?: return null
-        val size = ClusterMapPresentation.sizeOf(display)
-        if (size.x <= 0 || size.y <= 0) return null
-        if (DiLink51ClusterLayout.supported()) {
-            val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
-            return DiLink51ClusterLayout.streamConfig().also {
-                appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+        val display = ClusterMapPresentation.findDisplay(this, theme)
+        if (display != null) {
+            val size = ClusterMapPresentation.sizeOf(display)
+            if (size.x > 0 && size.y > 0) {
+                MapMirrors.streamAspect = MapMirrors.PHYSICAL_STREAM_ASPECT
+                if (DiLink51ClusterLayout.supported()) {
+                    val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme)
+                    if (plan != null) {
+                        return DiLink51ClusterLayout.streamConfig().also {
+                            appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+                        }
+                    }
+                }
+                return CarPlayClusterDisplay.config(
+                    size.x,
+                    size.y,
+                    AirPlayPersistence.loadClusterMapScalePercent(this),
+                    AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                    AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                    AirPlayPersistence.loadClusterContent(this),
+                ).also {
+                    appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
+                }
             }
         }
+        // Fallback for head units without physical cluster projection (e.g. BYD 665 / small cluster models):
+        // Provide standard virtual cluster stream (1280x720, 16:9 aspect) for CenterMapOverlay and MapEmbedService.
+        MapMirrors.streamAspect = MapMirrors.VIRTUAL_STREAM_ASPECT
         return CarPlayClusterDisplay.config(
-            size.x,
-            size.y,
-            AirPlayPersistence.loadClusterMapScalePercent(this),
-            AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
-            AirPlayPersistence.loadClusterMarkerVerticalStep(this),
-            AirPlayPersistence.loadClusterContent(this),
+            widthPixels = 1280,
+            heightPixels = 720,
+            scalePercent = 100,
+            content = AirPlayPersistence.loadClusterContent(this),
+            baseSafeArea = CarPlayClusterDisplay.VIRTUAL_SAFE_AREA_PERCENT,
         ).also {
-            appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
+            appendLog("Cluster map: requesting virtual ${it.widthPixels}x${it.heightPixels} (16:9) stream for launcher/center card")
         }
     }
 
@@ -825,7 +845,7 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         if (CenterMapOverlay.shown) return
-        val shown = CenterMapOverlay.show(applicationContext, MapMirrors.STREAM_ASPECT, ::onCenterMapSurface) {
+        val shown = CenterMapOverlay.show(applicationContext, MapMirrors.streamAspect, ::onCenterMapSurface) {
             startActivity(Intent(this, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
         appendLog("Centre map: card ${if (shown) "shown" else "failed"} streamActive=${SCREEN_TYPE_ALT in activeScreenStreamTypes}")
@@ -2844,10 +2864,13 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun createAirPlayConfig(size: DisplaySize): AirPlayConfig {
-        val physical = resolvePhysicalSize(size)
+        val safeWidth = (size.width / 2 * 2).coerceAtLeast(2)
+        val safeHeight = (size.height / 2 * 2).coerceAtLeast(2)
+        val alignedSize = DisplaySize(safeWidth, safeHeight)
+        val physical = resolvePhysicalSize(alignedSize)
         val baseDisplay = AirPlayDisplayConfig(
-            widthPixels = size.width,
-            heightPixels = size.height,
+            widthPixels = alignedSize.width,
+            heightPixels = alignedSize.height,
             widthPhysicalMm = physical.widthMm,
             heightPhysicalMm = physical.heightMm,
             fps = fps,
@@ -3427,11 +3450,13 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = sessionDisplay ?: return false
         if (display.rotation != displayRotation()) return true
         if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) return true
-        if (isMultiWindowActive() && newSize != null && newSize.width > 0 && newSize.height > 0) {
+        if (newSize != null && newSize.width > 0 && newSize.height > 0) {
             val baseAspect = display.width.toDouble() / display.height
             val currentAspect = newSize.width.toDouble() / newSize.height
             val aspectDiff = kotlin.math.abs(currentAspect / baseAspect - 1.0)
-            if (aspectDiff > 0.08) return true
+            if (aspectDiff > 0.08 && (AirPlayPersistence.loadAdaptPipResolution(this) || isMultiWindowActive())) {
+                return true
+            }
         }
         return false
     }
@@ -3549,7 +3574,7 @@ class CarPlayHostActivity : ComponentActivity() {
             runOnUiThread {
                 if (!shuttingDown.get() && generation == restartGeneration) {
                     handshakeResetInProgress = false
-                    startCarPlay(size)
+                    startCarPlay(activeDisplaySize ?: size)
                 }
             }
         }

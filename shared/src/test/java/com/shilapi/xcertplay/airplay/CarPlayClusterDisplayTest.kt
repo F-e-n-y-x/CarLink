@@ -104,4 +104,19 @@ class CarPlayClusterDisplayTest {
 
         assertTrue("centre x $centreX", centreX in 48.0..52.0)
     }
+
+    @Test
+    fun virtualCluster16By9UsesBalancedSafeArea() {
+        val config = CarPlayClusterDisplay.config(
+            widthPixels = 1280,
+            heightPixels = 720,
+            scalePercent = 100,
+            baseSafeArea = CarPlayClusterDisplay.VIRTUAL_SAFE_AREA_PERCENT,
+        )
+        assertEquals(1280, config.widthPixels)
+        assertEquals(720, config.heightPixels)
+        val safe = config.safeArea!!
+        assertEquals(safe.left, safe.right)
+        assertEquals(safe.top, safe.bottom)
+    }
 }

@@ -36,19 +36,19 @@ class LocalAdb(
         if (socket?.isClosed == false) return Access.READY
         return try {
             val address = InetSocketAddress(host, port)
-            val opened = Socket().apply {
-                connect(address, CONNECT_TIMEOUT_MS)
-                soTimeout = READ_TIMEOUT_MS
-                tcpNoDelay = true
-            }
+            val opened = Socket()
+            opened.connect(address, CONNECT_TIMEOUT_MS)
+            opened.soTimeout = READ_TIMEOUT_MS
+            opened.tcpNoDelay = true
             socket = opened
             input = opened.getInputStream()
             output = opened.getOutputStream()
             send(AdbPacket(AdbPacket.CNXN, AdbPacket.VERSION, AdbPacket.MAX_PAYLOAD, "host::\u0000".toByteArray()))
             handshake(mayAsk).also { if (it != Access.READY) closeQuietly() }
         } catch (_: SocketTimeoutException) {
+            val connected = socket != null
             closeQuietly()
-            if (mayAsk) Access.NOT_APPROVED else Access.UNREACHABLE
+            if (connected && mayAsk) Access.NOT_APPROVED else Access.UNREACHABLE
         } catch (_: IOException) {
             closeQuietly()
             Access.UNREACHABLE
