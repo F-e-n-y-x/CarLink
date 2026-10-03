@@ -74,7 +74,7 @@
     <string name="safe_area_mapping_summary">Safe area: %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_android9_compat">The following settings are unavailable and hidden on Android 9 (API 28):\n• Wi-Fi P2P (5 GHz) — LocalOnlyHotspot is used instead.\n• HEVC software decoder — hardware decoding is used instead.</string>
     <string name="settings_mfi_address_hint">Address must start with http:// or https://. Token is optional and sent as an Authorization bearer token.</string>
-    <string name="app_name">DiPlay CN</string>
+    <string name="app_name">DiPlay</string>
     <string name="language_section_title">Language</string>
     <string name="language_app_language">App language</string>
     <string name="language_system_default">System default</string>
