@@ -122,8 +122,8 @@ internal class AudioFocusCoordinator(
  */
 class AndroidMediaSink(
     surface: Surface? = null,
-    private val videoWidth: Int = 1280,
-    private val videoHeight: Int = 720,
+    @Volatile private var videoWidth: Int = 1280,
+    @Volatile private var videoHeight: Int = 720,
     private val preferSoftwareHevcDecoder: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     private val audioFocusEnabled: Boolean = false,
@@ -361,6 +361,19 @@ class AndroidMediaSink(
             microphoneUplinks.clear()
             restoreAudioMode(null)
         }
+    }
+
+    fun updateVideoDimensions(width: Int, height: Int) {
+        this.videoWidth = width
+        this.videoHeight = height
+        videoDecoders.values.forEach { runCatching { it.close() } }
+        videoDecoders.clear()
+        synchronized(mirrorLock) {
+            mirrorDecoders.values.forEach { runCatching { it.close() } }
+            mirrorDecoders.clear()
+        }
+        lastVideoConfig.clear()
+        pendingVideoCodec.clear()
     }
 
     private fun videoDecoder(type: Int): VideoDecoder =

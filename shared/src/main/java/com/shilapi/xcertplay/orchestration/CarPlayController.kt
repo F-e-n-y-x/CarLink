@@ -136,10 +136,10 @@ internal fun isWirelessHandoffInProgress(
  * All blocking USB/I2C work runs on one worker executor. Status callbacks are delivered on the
  * main thread. This class is the integration seam only and is not evidence of hardware operation.
  */
-class CarPlayController(
+open class CarPlayController(
     context: Context,
     private val config: CarPlayRuntimeConfig,
-    private val airPlayConfig: AirPlayConfig,
+    @Volatile private var airPlayConfig: AirPlayConfig,
     private val identity: AirPlayIdentity,
     private val pairings: PairingStore,
     listener: AirPlaySessionListener,
@@ -198,6 +198,7 @@ class CarPlayController(
     @Volatile private var mfiSession: MfiSession? = null
     @Volatile private var mux: Iap2UsbMuxHost? = null
     @Volatile private var csm: Iap2Session? = null
+    @Volatile private var currentNcmHostMac: ByteArray? = null
     @Volatile private var activeSession: AirPlaySession? = null
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
@@ -404,6 +405,52 @@ class CarPlayController(
         } else {
             startIphone()
         }
+    }
+
+    open fun canFastRestartStream(): Boolean {
+        return !closed &&
+            config.transport == CarPlayTransport.WIRED &&
+            vpnService?.isAttached() == true &&
+            csm != null &&
+            csm?.isClosed == false
+    }
+
+    /**
+     * Fast resolution/display reconnect for wired CarPlay:
+     * Keeps USB connection, MFi authentication, and NCM bridge alive, and only updates
+     * the AirPlay configuration and reconnects the AirPlay RTSP session.
+     */
+    open fun fastRestartAirPlayStream(newAirPlayConfig: AirPlayConfig): Boolean {
+        if (!canFastRestartStream()) return false
+        val currentCsm = csm ?: return false
+        val service = vpnService ?: return false
+        this.airPlayConfig = newAirPlayConfig
+        debugLog(
+            "initiating fast AirPlay stream restart at " +
+                "${newAirPlayConfig.main.widthPixels}x${newAirPlayConfig.main.heightPixels}",
+        )
+
+        val updated = service.updateAirPlayAttachment(newAirPlayConfig)
+        if (!updated) {
+            debugLog("failed to update vpnService AirPlay attachment")
+            return false
+        }
+
+        val ncmHostMac = currentNcmHostMac ?: config.hostMac
+        val endpoint = Iap2WiredCarPlayEndpoint(
+            ipv6Addresses = listOf(config.linkLocal),
+            airPlayPort = service.boundPort() ?: newAirPlayConfig.port,
+            publicKey = identity.publicKeyHex,
+            sourceVersion = newAirPlayConfig.sourceVersion,
+            deviceIdentifier = ncmHostMac.macString(),
+        )
+        try {
+            currentCsm.send(Iap2WiredControlClient.carPlayStartSession(endpoint))
+            debugLog("wired sent carPlayStartSession for fast stream restart")
+        } catch (error: Exception) {
+            debugLog("failed to send carPlayStartSession: ${error.message}")
+        }
+        return true
     }
 
     fun sendTouch(contacts: List<AirPlayContact>): Boolean {
@@ -1702,6 +1749,7 @@ class CarPlayController(
             debugLog("wired iAP2 CSM channel opened")
 
             val ncmHostMac = ncm.hostMac ?: config.hostMac
+            currentNcmHostMac = ncmHostMac
             debugLog("ncm using hostMac=${ncmHostMac.macString()}")
             if (!attachVpn(ncm, ncmHostMac)) {
                 throw IphoneUsbException.DeviceUnavailable("Could not attach the NCM/VPN AirPlay transport")
@@ -1746,6 +1794,7 @@ class CarPlayController(
             if (!ncmOwnedLocally) vpnService?.detach()
             fail(error)
         } finally {
+            currentNcmHostMac = null
             if (ncmOwnedLocally) ncm.close()
         }
     }

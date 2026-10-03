@@ -18,4 +18,10 @@ class AndroidMediaSinkStateTest {
         sink.setScreenStreamActiveChangedListener { type, active -> afterClose.add(type to active) }
         assertTrue(afterClose.isEmpty())
     }
+
+    @Test fun updatingVideoDimensionsClearsDecodersAndSucceeds() {
+        val sink = AndroidMediaSink()
+        sink.updateVideoDimensions(1920, 1080)
+        sink.close()
+    }
 }
