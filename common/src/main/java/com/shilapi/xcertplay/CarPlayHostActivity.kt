@@ -367,6 +367,12 @@ class CarPlayHostActivity : ComponentActivity() {
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
+    private val refreshTurnOverlay = object : Runnable {
+        override fun run() {
+            com.shilapi.xcertplay.hud.BydNavigationOutputs.refreshTurnOverlay()
+            mainHandler.postDelayed(this, 1_000L)
+        }
+    }
     // Some head units (e.g. BYD DiLink) update resources.configuration for day/night
     // without delivering onConfigurationChanged, so poll while the activity is visible.
     private val pollConfiguration = object : Runnable {
@@ -642,6 +648,8 @@ class CarPlayHostActivity : ComponentActivity() {
         ensureClusterPresentation()
         AirPlayPersistence.overlaySettingsListener = { runOnUiThread { applyClusterTurnOverlay() } }
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(clusterTurnOverlayListener)
+        mainHandler.removeCallbacks(refreshTurnOverlay)
+        mainHandler.post(refreshTurnOverlay)
         maybeStartCarPlay()
         applyFullscreenMode()
     }
@@ -877,6 +885,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        mainHandler.removeCallbacks(refreshTurnOverlay)
         AirPlayPersistence.overlaySettingsListener = null
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(null)
         clusterMonitor?.stop()

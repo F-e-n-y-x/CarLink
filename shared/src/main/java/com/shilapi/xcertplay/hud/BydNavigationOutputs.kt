@@ -15,6 +15,7 @@ object BydNavigationOutputs {
     @Volatile private var useStandalone = false
     @Volatile private var overlayListener: ((ClusterTurnGuidance?) -> Unit)? = null
     private val overlayLock = Any()
+    private var publishedOverlay: ClusterTurnGuidance? = null
     private val overlayRoute = BydHudRouteState(
         staleRouteNs = 120_000_000_000L,
         emptyListHideNs = 8_000_000_000L,
@@ -77,12 +78,25 @@ object BydNavigationOutputs {
     /** Live next-turn state for the dashboard overlay. Called from the iAP2 thread. */
     fun setTurnOverlayListener(listener: ((ClusterTurnGuidance?) -> Unit)?) {
         overlayListener = listener
-        listener?.invoke(currentOverlay())
+        val next = currentOverlay()
+        synchronized(overlayLock) { publishedOverlay = next }
+        listener?.invoke(next)
     }
 
     private fun updateOverlay(frame: Iap2Frame) {
         val change = synchronized(overlayLock) { overlayRoute.accept(frame.messageId, frame.payload) }
-        if (change != BydHudRouteChange.NONE) overlayListener?.invoke(currentOverlay())
+        if (change != BydHudRouteChange.NONE) refreshTurnOverlay()
+    }
+
+    /** Called every second while the presentation owner lives, even without incoming frames. */
+    fun refreshTurnOverlay() {
+        val next = synchronized(overlayLock) {
+            val current = currentOverlay()
+            if (current == publishedOverlay) return
+            publishedOverlay = current
+            current
+        }
+        overlayListener?.invoke(next)
     }
 
     private fun currentOverlay(): ClusterTurnGuidance? = synchronized(overlayLock) {
@@ -96,6 +110,6 @@ object BydNavigationOutputs {
     fun endNow() {
         standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
         synchronized(overlayLock) { overlayRoute.clear() }
-        overlayListener?.invoke(null)
+        refreshTurnOverlay()
     }
 }
