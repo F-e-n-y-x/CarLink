@@ -42,7 +42,6 @@ object BydVehicleCapabilityProbe {
         }
         val capabilities = batch.capabilities
         if (persist) BydVehicleFieldStore.save(context, capabilities)
-        publishBatteryReading(context, capabilities)
         return BydVehicleProbeOutcome(access, capabilities)
     }
 
@@ -148,7 +147,8 @@ object BydVehicleCapabilityProbe {
         }
     }
 
-    private fun publishBatteryReading(context: Context, capabilities: BydVehicleCapabilities) {
+    internal fun publishBatteryReading(context: Context, capabilities: BydVehicleCapabilities) {
+        if (!BydOutputSettings.legacyVehicleProbe(context)) return
         if (!capabilities.batterySupported) return
         val percent = capabilities.result(BydVehicleField.SOC).value ?: return
         val range = capabilities.result(BydVehicleField.RANGE).value?.toInt() ?: return

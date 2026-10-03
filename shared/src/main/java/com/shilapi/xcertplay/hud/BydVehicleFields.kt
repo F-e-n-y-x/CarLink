@@ -148,6 +148,8 @@ object BydVehicleFieldStore {
         }
         check(edit.commit()) { "Could not persist BYD vehicle field probe" }
         memory = capabilities
+        // A candidate held for losing fields or a changed snapshot is not runtime data.
+        BydVehicleCapabilityProbe.publishBatteryReading(context, capabilities)
     }
 
     /**
