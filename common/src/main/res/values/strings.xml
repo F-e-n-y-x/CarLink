@@ -469,6 +469,8 @@
     <string name="widget_hours_minutes">%1$d h %2$02d min</string>
     <string name="center_map_card">Dashboard map on the centre screen</string>
     <string name="center_map_card_description">While DiPlay is in the background, the dashboard map also shows as a card on the home screen: BYD home, map home or your default launcher. Tap the card to open CarPlay, drag it to move it, and pinch it to resize it. The dashboard keeps its map. Needs permission to draw over other apps.</string>
+    <string name="center_map_follows_dashboard">Keep the home-screen map in sync with the dashboard</string>
+    <string name="center_map_follows_dashboard_description">On: the home-screen card mirrors the dashboard map, so both show the same picture. Off: the home-screen card stays hidden, and the dashboard map is shown only on the instrument cluster.</string>
     <string name="center_map_overlay_allowed">Draw over other apps: allowed</string>
     <string name="center_map_overlay_missing">Draw over other apps: not allowed. Allow it in the app settings, or over ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">Usage Access: allowed, the card shows only on the home screen</string>

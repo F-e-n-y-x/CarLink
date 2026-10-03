@@ -458,6 +458,8 @@
     <string name="widget_hours_minutes">%1$d س %2$02d د</string>
     <string name="center_map_card">خريطة لوحة العدادات على الشاشة الوسطى</string>
     <string name="center_map_card_description">أثناء عمل DiPlay في الخلفية، تظهر خريطة لوحة العدادات أيضًا كبطاقة على الشاشة الرئيسية: شاشة BYD الرئيسية أو الشاشة الرئيسية للخريطة أو المشغّل الافتراضي لديك. اضغط على البطاقة لفتح CarPlay، واسحبها لنقلها، وقرّب إصبعين أو باعدهما لتغيير حجمها. تحتفظ لوحة العدادات بخريطتها. يتطلب إذن الظهور فوق التطبيقات الأخرى.</string>
+    <string name="center_map_follows_dashboard">إبقاء خريطة الشاشة الرئيسية متزامنة مع لوحة العدادات</string>
+    <string name="center_map_follows_dashboard_description">تشغيل: بطاقة الشاشة الرئيسية تعكس خريطة لوحة العدادات. إيقاف: تُخفى البطاقة وتبقى الخريطة على لوحة العدادات فقط.</string>
     <string name="center_map_overlay_allowed">الظهور فوق التطبيقات الأخرى: مسموح</string>
     <string name="center_map_overlay_missing">الظهور فوق التطبيقات الأخرى: غير مسموح. اسمح به من إعدادات التطبيق أو عبر ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
     <string name="center_map_usage_allowed">الوصول إلى بيانات الاستخدام: مسموح، تظهر البطاقة على الشاشة الرئيسية فقط</string>

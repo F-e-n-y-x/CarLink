@@ -1,3 +1,18 @@
+# DiPlay 0.2.10 — 2026-10-03
+
+- Publish CarPlay song metadata, position and artwork to Android media sessions; bound artwork queues and reject stale work across sessions (#82).
+- Preserve normal USBMUX frames while handling narrowly validated handshake padding (#114); let USB connect without saved wireless-hotspot credentials (#130).
+- Handle unknown reported Wi-Fi Direct security types, retry busy channels and allow bounded 5 GHz fallback (#121).
+- Select an available AirPlay port and advertise it over Bonjour and wired/wireless iAP2; close sockets on failed setup/notification (#143).
+- Enable available platform echo cancellation and noise suppression for calls, restoring the previous mode afterward (#116).
+- Detect BYD CAN/CANFD battery protocols and clear unsupported/stale readings (#123).
+- Add a saved show/hide setting for the home-screen dashboard-map mirror (#133).
+- Improve optional parked video with seeking and ten-second skip controls; validate media URLs and redirects (#129).
+- Extend Ukrainian translations, including the new map-mirror setting (#128 and release localization).
+- Add bounded anonymous Bluetooth/USB/boot and microphone capture/encode/send diagnostics to exported reports; omit audio and packet contents.
+
+See [0.2.10 release notes](docs/RELEASE-NOTES-0.2.10.md) for contributor credits, requirements and validation limits. Android 9 remains the minimum supported version.
+
 # DiPlay 0.2.9 — 2026-10-02
 
 - Follow BYD head-unit day/night changes while CarPlay is visible, including firmware that does not reliably deliver Android configuration callbacks.
