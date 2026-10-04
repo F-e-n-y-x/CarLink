@@ -2921,7 +2921,8 @@ class DiPlayActivity : ComponentActivity() {
     private fun rounded(color: Int, stroke: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat(); setStroke(dp(1), stroke) }
     private fun matchButton(top: Int = 0, height: Int = 68) = LinearLayout.LayoutParams(-1, dp(height)).apply { topMargin = dp(top) }
     private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, dp(height)) }
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     companion object {
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
