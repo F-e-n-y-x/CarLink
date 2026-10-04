@@ -51,7 +51,7 @@ internal class BydStandaloneHudOutput private constructor(context: Context) {
             runCatching {
                 val info = context.packageManager.getPackageInfo(TARGET.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
                 val receiver = context.packageManager.getReceiverInfo(TARGET, 0)
-                appendLine("receiver=${TARGET.flattenToString()} version=${info.longVersionCode} system=${info.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) != 0}")
+                appendLine("receiver=${TARGET.flattenToString()} version=${info.longVersionCode} system=${(info.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) ?: 0) != 0}")
                 appendLine("receiverEnabled=${receiver.enabled} exported=${receiver.exported} permission=${receiver.permission}")
                 info.signingInfo?.apkContentsSigners?.forEach { signer ->
                     appendLine("signerSha256=" + MessageDigest.getInstance("SHA-256").digest(signer.toByteArray())

@@ -37,7 +37,7 @@ class BydOptionalOutputSettingsTest {
         val info = PackageInfo().apply {
             packageName = "com.byd.clusterdebug"
             applicationInfo = ApplicationInfo().apply {
-                packageName = infoName()
+                packageName = "com.byd.clusterdebug"
                 flags = ApplicationInfo.FLAG_SYSTEM
             }
         }
@@ -46,5 +46,4 @@ class BydOptionalOutputSettingsTest {
         assertTrue(BydStandaloneHudOutput.diagnostics(knownApp).contains("standaloneHudAvailable=false"))
     }
 
-    private fun infoName() = "com.byd.clusterdebug"
 }

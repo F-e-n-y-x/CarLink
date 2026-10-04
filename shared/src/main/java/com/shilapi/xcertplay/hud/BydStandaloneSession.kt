@@ -23,7 +23,7 @@ internal class BydStandaloneSession(
 
     /**
      * Writes one plain line, such as the lyrics line CarPlay reports, with no maneuver records.
-     * Navigation owns its own records, so both can share the HUD without overwriting each other.
+     * Clear any previous maneuver/distance before entering text-only mode.
      */
     fun showText(text: String) {
         if (recovering || guidanceShowing) clear()

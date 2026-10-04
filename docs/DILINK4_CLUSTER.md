@@ -53,8 +53,7 @@ saved. Until an activity confirms the private display, the original virtual stre
 remains. If confirmation arrives after CarPlay starts, DiPlay reconnects once to
 request 1920×720 and covers the cluster during that transition. Turning off only
 the ADB option leaves the saved cluster-map enable preference intact.
-USB reconnection polling, colour controls and OEM song/L1 coordination are outside
-this change. Automated tests cannot establish visible placement on other cars.
+USB reconnection and colour controls retain the implementations already on main. Automated tests cannot establish visible placement on other cars.
 
 The direct `am start-activity --display … -f 0x18000000` approach follows the legacy
 platform-21 implementation published by 寒叙 (@Hanxu4131):
