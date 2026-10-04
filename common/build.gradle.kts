@@ -45,4 +45,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("org.mockito:mockito-core:5.20.0")
+    testImplementation(libs.jmdns)
 }

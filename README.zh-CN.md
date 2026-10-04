@@ -6,6 +6,8 @@
 
 [下载与中文网站](https://shihabal3amri.github.io/DiPlay/zh-Hans/) · [0.2.11 版本](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.11) · [完整说明](README.md) · [报告问题](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
 
+[现有 Wi-Fi / 同一局域网](docs/EXISTING_WIFI.md)让车机和 iPhone 保持连接外部路由器或随身 Wi-Fi。该新增模式已在 BYD DiLink 4.0 / Android 10 上通过全新安装实车验证；配置方法、构建要求与兼容性边界见指南。
+
 ## 0.2.11 — 公开预览版
 
 请安装在车机上，而非 iPhone。无需越狱、转接盒、账户或认证服务器。最低支持 Android 9；Wi-Fi Direct 需要 Android 10 或更高版本，也可使用车机内置热点或 USB。有线及无线 CarPlay 核心连接不要求 ADB，可选车辆数据等功能需要已授权的网络 ADB。

@@ -25,6 +25,7 @@ data class AirPlayDeviceInfo(
 
 /** Session lifecycle and command callbacks for the driver/UI layer. */
 interface AirPlaySessionListener {
+    fun onTcpAccepted(event: AirPlayTcpAccepted) {}
     fun onSessionActive(session: AirPlaySession) {}
     fun onSessionEnded(session: AirPlaySession) {}
     fun onVideoFrameRendered(session: AirPlaySession) {}
@@ -151,6 +152,21 @@ class AirPlaySession(
         return sendCommand(mapOf("type" to "showUI", "params" to mapOf("uuid" to uuid, "url" to url))) &&
             sendCommand(mapOf("type" to "forceKeyFrame", "params" to mapOf("uuid" to uuid)))
     }
+
+    /**
+     * Zooms CarPlay's dashboard map one step, as a car's own zoom controls do: the car command
+     * changeMapZoomLevel for the cluster screen's UUID. Seen with Apple Maps on a Tang: zoomDirection 0
+     * zooms in, 1 zooms out. Sent only while the cluster stream is up.
+     */
+    fun changeMapZoomLevel(zoomIn: Boolean): Boolean = clusterStream > 0 && sendCommand(
+        linkedMapOf(
+            "type" to "changeMapZoomLevel",
+            "params" to linkedMapOf(
+                "uuid" to AirPlayInfoPlist.ALT_UUID,
+                "zoomDirection" to if (zoomIn) ZOOM_DIRECTION_IN else ZOOM_DIRECTION_OUT,
+            ),
+        ),
+    )
 
     fun sendCommand(command: Map<String, Any?>): Boolean = synchronized(eventWriteLock) {
         sendCommandLocked(command)
@@ -784,6 +800,8 @@ class AirPlaySession(
         const val STREAM_TYPE_DATA = 130
 
         const val READ_CHUNK_BYTES = 16 * 1024
+        const val ZOOM_DIRECTION_IN = 0
+        const val ZOOM_DIRECTION_OUT = 1
         const val EVENT_READY_POLL_MILLIS = 25L
         const val NANOS_PER_MILLISECOND = 1_000_000L
     }
