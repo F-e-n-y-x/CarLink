@@ -491,6 +491,10 @@ class DiPlayActivity : ComponentActivity() {
         }
         bydAdbSettings(content)
         section(content, getString(R.string.display_and_performance), R.drawable.ic_dp_display) { card ->
+            card.addView(button(getString(R.string.picture_adjustments), false) {
+                startActivity(Intent(this, CarPlayHostActivity::class.java)
+                    .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
             choice(card, getString(R.string.resolution), listOf(getString(R.string.resolution_native), getString(R.string.s_80_lighter_load), getString(R.string.s_60_lightest_load)), listOf(10, 8, 6).indexOf(AirPlayPersistence.loadDisplayScaleTenths(this)).coerceAtLeast(0)) { AirPlayPersistence.saveDisplayScaleTenths(this, listOf(10, 8, 6)[it]) }
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
