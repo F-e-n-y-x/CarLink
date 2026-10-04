@@ -127,6 +127,20 @@ class CarPlayHostSettingsTest {
         assertEquals(activity.getString(R.string.settings_gesture_fingers, 3), gestureButton().text)
     }
 
+    @Test fun resumingWithTheMenuOpenPreservesUnsavedConnectionEdits() {
+        invoke("openSettingsMenu")
+        setField("wirelessHotspotMode", WirelessHotspotMode.MANUAL)
+        setField("manualHotspotSsid", "Draft hotspot")
+        setField("mfiTarget", MfiTarget.LOCAL)
+        activity.onResume()
+        assertEquals(WirelessHotspotMode.MANUAL, field("wirelessHotspotMode"))
+        assertEquals("Draft hotspot", field("manualHotspotSsid"))
+        assertEquals(MfiTarget.LOCAL, field("mfiTarget"))
+        invoke("cancelSettingsEdits")
+        assertEquals(WirelessHotspotMode.WIFI_P2P, field("wirelessHotspotMode"))
+        assertEquals(MfiTarget.USB_CH341, field("mfiTarget"))
+    }
+
     @Test fun savingPersistsSettingsAndRestartsOnce() {
         attachController()
         invoke("openSettingsMenu")
