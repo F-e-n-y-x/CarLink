@@ -13,6 +13,23 @@ default; Wi-Fi Direct and USB remain available. Previous Local hotspot
 selections switch to built-in hotspot. Check and save the car's real hotspot
 details before connecting.
 
+IN-SESSION SETTINGS AND AUTHENTICATION — DIPLAY
+In CarPlay, swipe down with the configured number of fingers (2, 3 or 4;
+default 3) to open the hidden settings menu. Opening or cancelling the menu
+keeps a healthy session connected. Save and reconnect applies the edits;
+Back or X discards them. A connection lost while the menu is open recovers
+on closing, unless Wi-Fi requires the existing manual reset action.
+
+The hidden menu offers Local offline and USB/CH341 authentication. Local is
+the default and requires a provisioned identity for the first connection.
+Selecting USB/CH341 and saving uses the configured CH341 bridge for this and
+subsequent connections, without installing or loading local identity files,
+even if they already exist. Allow Android's USB permission prompt. A missing
+bridge waits for hardware; it does not fall back to local authentication.
+Connecting the CH341 bridge does not change wireless CarPlay to wired mode.
+Switching back to Local validates the identity before saving; failure keeps
+the menu open and preserves the previously saved authentication choice.
+
 BUILT-IN HOTSPOT SETUP — BOTH APPS
 1. In the car's settings, turn on its built-in Wi-Fi hotspot. Select 5 GHz
    if available. Note the hotspot name and password exactly.
