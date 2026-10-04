@@ -6,10 +6,15 @@ data class ClusterTurnGuidance(
     val roundaboutExit: Int,
     val distanceMeters: Int,
     val road: String,
+    /** Route-level arrival/duration/distance for the info strip below the card. */
+    val arrivalEpochSeconds: Long? = null,
+    val remainingSeconds: Long? = null,
+    val remainingMeters: Long? = null,
 ) {
     companion object {
         internal fun from(frame: BydClusterFrame): ClusterTurnGuidance {
-            return ClusterTurnGuidance(frame.icon, frame.roundaboutExit, frame.distanceMeters, frame.road)
+            val icon = if (frame.icon == 0) 9 else frame.icon
+            return ClusterTurnGuidance(icon, frame.roundaboutExit, frame.distanceMeters, frame.road)
         }
     }
 }

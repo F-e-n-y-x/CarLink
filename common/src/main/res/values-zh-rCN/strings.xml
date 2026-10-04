@@ -424,6 +424,13 @@
     <string name="turn_card_vertical">转向提示卡 · 垂直位置</string>
     <string name="reset_turn_card_to_centre">将转向提示卡重置到中央</string>
     <string name="turn_card_overlay_size">自定义转向卡大小</string>
+    <string name="turn_card_overlay_opacity">自定义转向卡透明度</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">%1$s到达</string>
+    <string name="turn_card_info_duration_hm">%1$d小时%2$d分</string>
+    <string name="turn_card_info_duration_m">%1$d分</string>
+    <string name="turn_card_info_km">%1$.1f公里</string>
     <string name="turn_card_overlay_horizontal">自定义转向卡 · 左右</string>
     <string name="turn_card_overlay_vertical">自定义转向卡 · 上下</string>
     <string name="turn_card_overlay_small">小</string>

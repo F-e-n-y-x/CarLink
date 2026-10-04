@@ -99,6 +99,9 @@ object AirPlayPersistence {
     /** Applied by the CarPlay host so overlay position/size updates without reconnecting. */
     @Volatile var overlaySettingsListener: (() -> Unit)? = null
 
+    private const val KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE_PERCENT = "cluster_turn_card_overlay_size_percent"
+    private const val KEY_CLUSTER_TURN_CARD_OPACITY = "cluster_turn_card_opacity_percent"
+
     fun loadDisplayScaleTenths(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return CarPlayDisplayScale.sanitize(
@@ -542,15 +545,38 @@ object AirPlayPersistence {
             .putBoolean(KEY_CENTER_MAP_FOLLOWS_DASHBOARD, enabled).apply()
     }
 
-    fun loadClusterTurnCardOverlaySize(context: Context): CarPlayClusterDisplay.OverlaySize =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE, null)
-            ?.let { name -> CarPlayClusterDisplay.OverlaySize.entries.firstOrNull { it.name == name } }
-            ?: CarPlayClusterDisplay.OverlaySize.MEDIUM
+    fun loadClusterTurnCardOverlaySizePercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE_PERCENT)) {
+            return ClusterTurnCardOverlay.snap(
+                prefs.getInt(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE_PERCENT, ClusterTurnCardOverlay.DEFAULT_SIZE_PERCENT),
+                ClusterTurnCardOverlay.sizePercents,
+            )
+        }
+        return when (prefs.getString(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE, null)) {
+            "SMALL" -> 40
+            "LARGE" -> 70
+            else -> ClusterTurnCardOverlay.DEFAULT_SIZE_PERCENT
+        }
+    }
 
-    fun saveClusterTurnCardOverlaySize(context: Context, size: CarPlayClusterDisplay.OverlaySize) {
+    fun saveClusterTurnCardOverlaySizePercent(context: Context, percent: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE, size.name).apply()
+            .putInt(
+                KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE_PERCENT,
+                ClusterTurnCardOverlay.snap(percent, ClusterTurnCardOverlay.sizePercents),
+            ).apply()
+        overlaySettingsListener?.invoke()
+    }
+
+    fun loadClusterTurnCardOpacityPercent(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_CLUSTER_TURN_CARD_OPACITY, ClusterTurnCardOverlay.DEFAULT_OPACITY_PERCENT)
+            .coerceIn(20, 100)
+
+    fun saveClusterTurnCardOpacityPercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_TURN_CARD_OPACITY, percent.coerceIn(20, 100)).apply()
         overlaySettingsListener?.invoke()
     }
 

@@ -1,6 +1,5 @@
 package com.shilapi.xcertplay
 
-import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -23,16 +22,16 @@ class ClusterTurnCardPersistenceTest {
     @Test fun overlayDefaultsToRightOfCentre() {
         assertEquals(ClusterTurnCardOverlay.DEFAULT_X_PERCENT, AirPlayPersistence.loadClusterTurnCardOverlayXPercent(context))
         assertEquals(ClusterTurnCardOverlay.DEFAULT_Y_PERCENT, AirPlayPersistence.loadClusterTurnCardOverlayYPercent(context))
-        assertEquals(CarPlayClusterDisplay.OverlaySize.MEDIUM, AirPlayPersistence.loadClusterTurnCardOverlaySize(context))
+        assertEquals(55, AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(context))
     }
 
     @Test fun overlayOffsetsRoundTrip() {
         AirPlayPersistence.saveClusterTurnCardOverlayXPercent(context, 90)
         AirPlayPersistence.saveClusterTurnCardOverlayYPercent(context, 16)
-        AirPlayPersistence.saveClusterTurnCardOverlaySize(context, CarPlayClusterDisplay.OverlaySize.SMALL)
+        AirPlayPersistence.saveClusterTurnCardOverlaySizePercent(context, 35)
         assertEquals(90, AirPlayPersistence.loadClusterTurnCardOverlayXPercent(context))
         assertEquals(16, AirPlayPersistence.loadClusterTurnCardOverlayYPercent(context))
-        assertEquals(CarPlayClusterDisplay.OverlaySize.SMALL, AirPlayPersistence.loadClusterTurnCardOverlaySize(context))
+        assertEquals(35, AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(context))
     }
 
     @Test fun legacyLeftCentreRightMigrateToPercents() {
@@ -50,7 +49,7 @@ class ClusterTurnCardPersistenceTest {
         AirPlayPersistence.overlaySettingsListener = { noticed++ }
         AirPlayPersistence.saveClusterTurnCardOverlayXPercent(context, 20)
         AirPlayPersistence.saveClusterTurnCardOverlayYPercent(context, 50)
-        AirPlayPersistence.saveClusterTurnCardOverlaySize(context, CarPlayClusterDisplay.OverlaySize.LARGE)
+        AirPlayPersistence.saveClusterTurnCardOverlaySizePercent(context, 90)
         assertEquals(3, noticed)
     }
 }
