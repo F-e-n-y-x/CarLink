@@ -23,6 +23,8 @@ class WirelessHotspotInfo(
     val hostAddress: InetAddress?,
     val bandLabel: String,
     val backend: WirelessHotspotBackend,
+    /** Addresses on the selected interface that discovery and TCP must both serve. */
+    val hostAddresses: List<InetAddress> = listOfNotNull(hostAddress),
 ) {
     override fun toString(): String =
         "WirelessHotspotInfo(backend=${backend.label}, ssid='$ssid', " +

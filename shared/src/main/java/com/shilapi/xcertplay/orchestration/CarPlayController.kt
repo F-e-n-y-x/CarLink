@@ -1029,6 +1029,7 @@ class CarPlayController(
                     mfi = mfi,
                     listener = wirelessSessionListener(generation),
                     media = media,
+                    additionalBindAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
                 )
             ) {
                 CarPlayVpnService.AttachResult.Started -> Unit
@@ -1059,6 +1060,7 @@ class CarPlayController(
                 // or IPv6 while the listener/probe was bound to the AP's IPv4 address.
                 useInterfaceMdns = true,
                 onEvent = { event -> debugLog("wireless bonjour: ${event.diagnosticSummary()}") },
+                additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
             )
             bonjour = bonjourClient
             bonjourClient.start()

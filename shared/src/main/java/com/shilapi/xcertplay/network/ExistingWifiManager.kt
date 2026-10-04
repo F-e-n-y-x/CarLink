@@ -34,6 +34,8 @@ class ExistingWifiManager(
     @Volatile private var closed = false
     @Volatile private var selected: Network? = null
     @Volatile private var host: InetAddress? = null
+    @Volatile private var hosts: List<InetAddress> = emptyList()
+    private var interfaceIndex = 0
     @Volatile private var interfaceName: String? = null
     private var callbackRegistered = false
 
@@ -77,6 +79,7 @@ class ExistingWifiManager(
                 wirelessHostAddress(it.linkAddresses.map { link -> link.address }, iface.index)
             }
             if (network != null && name != null && address != null) {
+                val addresses = existingWifiHostAddresses(properties.linkAddresses.map { it.address }, iface!!.index)
                 val capabilities = connectivity.getNetworkCapabilities(network)
                 @Suppress("DEPRECATION")
                 val info = try {
@@ -97,6 +100,8 @@ class ExistingWifiManager(
                     check(!closed) { "ExistingWifiManager is closed" }
                     selected = network
                     host = address
+                    hosts = addresses
+                    interfaceIndex = iface.index
                     interfaceName = name
                     connectivity.registerNetworkCallback(NetworkRequest.Builder().clearCapabilities()
                         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
@@ -118,7 +123,7 @@ class ExistingWifiManager(
                         frequency < 2500 -> "2.4 GHz"
                         frequency < 5955 -> "5 GHz"
                         else -> "6 GHz"
-                    }, WirelessHotspotBackend.EXISTING_WIFI)
+                    }, WirelessHotspotBackend.EXISTING_WIFI, hostAddresses = addresses)
             }
             if ((System.nanoTime() - started) / 1_000_000 >= timeoutMillis) {
                 throw IOException("Existing Wi-Fi is not connected or has no usable address. Connect both devices to the same Wi-Fi in system settings")
@@ -129,7 +134,8 @@ class ExistingWifiManager(
     }
 
     private fun sameLink(properties: LinkProperties): Boolean =
-        properties.interfaceName == interfaceName && properties.linkAddresses.any { it.address == host }
+        properties.interfaceName == interfaceName && properties.linkAddresses.any { it.address == host } &&
+            existingWifiHostAddresses(properties.linkAddresses.map { it.address }, interfaceIndex).toSet() == hosts.toSet()
 
     private fun security(): Iap2WirelessSecurity =
         if (passphrase.isEmpty()) Iap2WirelessSecurity.NONE else Iap2WirelessSecurity.WPA_WPA2

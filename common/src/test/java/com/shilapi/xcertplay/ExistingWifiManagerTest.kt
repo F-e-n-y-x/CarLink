@@ -91,9 +91,22 @@ class ExistingWifiManagerTest {
     @Test fun preservesScopedLinkLocalPreferenceAndFallsBackToIpv4() {
         properties.setLinkAddresses(properties.linkAddresses + linkAddress("fe80::1234/64"))
         manager().use {
-            val address = start(it).hostAddress as Inet6Address
+            val result = start(it)
+            val address = result.hostAddress as Inet6Address
+            assertEquals(listOf("192.0.2.10", "fe80:0:0:0:0:0:0:1234"),
+                result.hostAddresses.map { host -> host.hostAddress!!.substringBefore('%') })
             assertTrue(address.isLinkLocalAddress)
             assertEquals(iface.index, address.scopeId)
+        }
+    }
+
+    @Test fun lossOfSecondaryIpv4RestartsEvenWhenPrimaryIpv6Remains() {
+        properties.setLinkAddresses(properties.linkAddresses + linkAddress("fe80::1234/64"))
+        manager().use {
+            start(it)
+            properties.setLinkAddresses(listOf(linkAddress("fe80::1234/64")))
+            callback.onLinkPropertiesChanged(network, properties)
+            assertEquals(1, changes)
         }
     }
 

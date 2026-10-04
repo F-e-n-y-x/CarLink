@@ -28,10 +28,16 @@ interface and addresses from `LinkProperties`, and observes its channel via `Wif
 It does not require Android’s INTERNET/VALIDATED capabilities or use the default network
 as a proxy for Wi-Fi. Multiple Wi-Fi networks are rejected rather than guessed.
 
-The existing address policy prefers an explicitly scoped link-local IPv6 address,
-falling back to the interface’s IPv4 address. AirPlay listening, interface mDNS, the
-Bonjour control probe, and the Bluetooth/iAP2 advertised endpoint all use this same
-address. Authentication, media, touch and the iAP2 handoff are reused unchanged. The
+The Bluetooth/iAP2 start endpoint retains an explicitly scoped link-local IPv6 address,
+falling back to the interface's IPv4 address. Existing Wi-Fi also retains that interface's
+usable IPv4 address for discovery and TCP: separate JmDNS registries publish and browse
+IPv4 and IPv6 multicast, and separate address-bound listeners share one AirPlay port.
+This does not depend on the platform's IPv6 wildcard being dual-stack. Bonjour probes
+use a source address of the peer's family on this same interface, applying the local
+interface scope to link-local IPv6 peers. The scope suffix stays local; iAP2 sends the
+unscoped literal as before. 0x5703 supplies Wi-Fi credentials; IP addresses are carried
+by 0x4301, whose link-local IPv6 preference is unchanged. Authentication, media, touch
+and the iAP2 handoff are reused unchanged. The
 router’s BSSID is deliberately not used as the receiver’s AirPlay device identity.
 Unknown channel data stays zero (auto); it is never invented from user preferences.
 
@@ -39,7 +45,7 @@ Related work: [upstream PR #22](https://github.com/shihabal3amri/DiPlay/pull/22)
 proposes external Wi-Fi as part of an Android 7 port. This change targets the current
 mainline network/discovery stack and does not import that port or its protocol changes.
 
-The manager observes network loss and removal of the selected interface/address. The
+The manager observes network loss and changes to either selected address or the interface. The
 controller tears down the old wireless stack and starts a new attempt; the manager
 unregisters its callback on close without disconnecting Wi-Fi. If the router is absent
 past the normal startup timeout, reconnect after restoring the network. DNS changes
