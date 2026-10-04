@@ -64,3 +64,11 @@ With the car parked, open **Settings → Location → Report location to iPhone*
 - Start a user vehicle check or probe, then try the hotspot switch before it finishes. A second authorization flow must not start. After the vehicle operation finishes, the hotspot switch becomes usable again.
 - Start hotspot authorization while Advanced vehicle data is expanded. Mode and vehicle choices must stay disabled until it completes; an automatic saved-field validation must resume afterwards without another authorization prompt.
 - During a pending battery preflight, let the hotspot eligibility check finish and redraw Settings. A valid vehicle result must still apply the requested reconnect once; an unreadable result or ADB failure must keep the existing connection.
+
+
+## Dashboard song only when it changes
+
+- Enable Dashboard song and Song only when it changes. A new title/artist appears for five seconds, then the card becomes blank/stopped. Pause/play and duplicate metadata must not reopen the card or extend its window.
+- During that window, turn off Song only when it changes. The song must remain visible after the old five-second deadline. Turn off Dashboard song instead; the old timer must not recreate a blank card. Disable/re-enable and change tracks quickly to confirm earlier timers cannot dismiss a newer song.
+- Show a wheel zoom/volume note while a song changes. The note must stay visible for its own duration, then restore the latest song if its five-second window is still active, or a blank card otherwise. A note from a disconnected session must not affect a new session.
+- On supported HUD firmware, confirm HUD title/lyrics continue to follow the actual phone metadata while the dashboard card is blank or showing a wheel note. The updated upstream blank-card behavior still needs a vehicle retest.
