@@ -40,4 +40,34 @@ internal object BydDiLink3ClusterMode {
 
     /** True when the binder call returned without an exception. */
     fun accepted(output: String?): Boolean = BydParcel.words(output).firstOrNull() == 0L
+
+    /**
+     * Creates the cluster projection display, fission_bg_xdjaVirtualSurface, which does not exist until
+     * the cluster first projects. As DashCast does: full projection, then 35 (Di4.0 mode) creates it; the
+     * display then stays after projection off restores the stock view.
+     */
+    val CREATE_DISPLAY = listOf(16, 35, 18).map { "service call AutoContainer 2 i32 1000 i32 $it s16 \"\"" }
+}
+
+/** The DiLink 3 adapter shows these preformatted strings, not the numeric distance and time extras. */
+internal object BydDiLink3GuidanceText {
+    fun distance(meters: Int): String? = when {
+        meters < 0 -> null
+        meters < 1000 -> "$meters m"
+        meters < 10_000 -> String.format(java.util.Locale.US, "%.1f km", meters / 1000.0)
+        else -> "${meters / 1000} km"
+    }
+
+    fun duration(seconds: Int): String? {
+        if (seconds < 0) return null
+        val minutes = (seconds + 59) / 60
+        return if (minutes < 60) "$minutes min" else "${minutes / 60} h ${minutes % 60} min"
+    }
+
+    fun arrival(nowMillis: Long, seconds: Int, zone: java.util.TimeZone, use24Hour: Boolean): String? {
+        if (seconds < 0) return null
+        val format = java.text.SimpleDateFormat(if (use24Hour) "HH:mm" else "h:mm", java.util.Locale.US)
+        format.timeZone = zone
+        return format.format(java.util.Date(nowMillis + seconds * 1000L))
+    }
 }

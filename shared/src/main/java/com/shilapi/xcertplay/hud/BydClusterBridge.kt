@@ -114,6 +114,7 @@ internal object BydClusterBridge {
             putExtra("NEXT_ROAD_NAME", frame.road)
             putExtra("ROUTE_REMAIN_DIS", frame.routeRemainingMeters)
             putExtra("ROUTE_REMAIN_TIME", frame.routeRemainingSeconds)
+            if (adapter?.needsSimpleNavigationMode == true) putDiLink3Text(this, frame)
         }
         if (broadcastLocked(intent)) {
             lastSent = frame
@@ -174,6 +175,56 @@ internal object BydClusterBridge {
             // Retry once ADB is approved; BydAdbShell throttles attempts. A refused call is not retried.
             if (output == null) synchronized(lock) { if (requestedMode == mode) requestedMode = null }
         }
+    }
+
+    private fun putDiLink3Text(intent: Intent, frame: BydClusterFrame) {
+        val text = BydDiLink3GuidanceText
+        text.distance(frame.distanceMeters)?.let { intent.putExtra("SEG_REMAIN_DIS_AUTO", it) }
+        text.distance(frame.routeRemainingMeters)?.let { intent.putExtra("ROUTE_REMAIN_DIS_AUTO", it) }
+        text.duration(frame.routeRemainingSeconds)?.let { intent.putExtra("ROUTE_REMAIN_TIME_AUTO", it) }
+        val use24Hour = context?.let { android.text.format.DateFormat.is24HourFormat(it) } ?: true
+        text.arrival(System.currentTimeMillis(), frame.routeRemainingSeconds, java.util.TimeZone.getDefault(), use24Hour)
+            ?.let { intent.putExtra("ETA_TEXT", it) }
+    }
+
+    /** DiLink 3 only: creates the cluster projection display in the background so the map window can find it. */
+    fun prepareProjectionDisplay(appContext: Context) {
+        if (BydAmapAdapter.find { installed(appContext, it) } != BydAmapAdapter.DILINK3) return
+        clusterModeExecutor.execute {
+            if (projectionDisplayPresent(appContext)) return@execute
+            for ((index, command) in BydDiLink3ClusterMode.CREATE_DISPLAY.withIndex()) {
+                if (index == BydDiLink3ClusterMode.CREATE_DISPLAY.lastIndex) {
+                    // Guidance or the map window may have chosen a mode meanwhile; reapply it instead.
+                    val chosen = synchronized(lock) { requestedMode }
+                    if (chosen != null) {
+                        clusterModeShell.run(appContext, chosen.command)
+                        break
+                    }
+                }
+                val output = clusterModeShell.run(appContext, command) ?: return@execute
+                if (!BydDiLink3ClusterMode.accepted(output)) {
+                    Log.w(TAG, "DiLink 3 cluster display step ${index + 1} refused")
+                    break
+                }
+                if (index < BydDiLink3ClusterMode.CREATE_DISPLAY.lastIndex) Thread.sleep(CREATE_DISPLAY_STEP_MILLIS)
+            }
+            Log.i(TAG, "DiLink 3 cluster display present=${projectionDisplayPresent(appContext)}")
+        }
+    }
+
+    private const val CREATE_DISPLAY_STEP_MILLIS = 3_000L
+
+    private fun projectionDisplayPresent(appContext: Context): Boolean =
+        appContext.getSystemService(android.hardware.display.DisplayManager::class.java)
+            ?.displays?.any { it.name == DILINK3_DISPLAY } == true
+
+    private const val DILINK3_DISPLAY = "fission_bg_xdjaVirtualSurface"
+
+    private fun installed(appContext: Context, packageName: String): Boolean = try {
+        appContext.packageManager.getPackageInfo(packageName, 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
     }
 
     // IS_BYD_MAP=true is required: the adapter drops foreign frames while it believes the stock map navigates.

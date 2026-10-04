@@ -14,7 +14,7 @@ Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in D
 
 ## DiLink 3.0 cluster guidance and map (experimental, needs ADB)
 
-DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/IP service and ship the stock AMap adapter as `com.example.amapservice` instead of `com.byd.amapservice`. DiPlay sends it the same navigation broadcasts. The cluster keeps its stock view until it is switched, so DiPlay also runs, through its adb shell, the calls the stock ClusterDebug app uses (`service call AutoContainer 2 i32 1000 i32 <command> s16 ""`):
+DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/IP service and ship the stock AMap adapter as `com.example.amapservice` instead of `com.byd.amapservice`. DiPlay sends it the same navigation broadcasts. That adapter shows preformatted text rather than the numeric extras, so DiPlay also sends `SEG_REMAIN_DIS_AUTO` ("250 m"), `ROUTE_REMAIN_DIS_AUTO` ("5.4 km"), `ROUTE_REMAIN_TIME_AUTO` ("10 min") and `ETA_TEXT` ("15:55"); without them the cluster shows -1. The cluster keeps its stock view until it is switched, so DiPlay also runs, through its adb shell, the calls the stock ClusterDebug app uses (`service call AutoContainer 2 i32 1000 i32 <command> s16 ""`):
 
 - While CarPlay guidance is active: 39, "simple navigation", for the native turn card.
 - While "CarPlay map on dashboard" shows its map window on the cluster: 17, "half-screen projection". The map window uses DiLink 3's projection display, `fission_bg_xdjaVirtualSurface` (1920x720, owned by `com.xdja.containerservice`). The map takes priority over the turn card.
@@ -22,7 +22,9 @@ DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/
 
 Approve DiPlay's ADB access once with "Check ADB access"; without it the broadcasts are still sent but the cluster keeps its stock view. The DiLink 5 "Dashboard map only in Small and Full navi" option does not apply: DiLink 3 does not report the wheel-menu mode.
 
-Basis: on a BYD Han EV (GCC, DiLink 3.0 / Android 10) the adapter runs as a system app and registers `AUTONAVI_STANDARD_BROADCAST_SEND`; earlier shell testing on that car showed native cluster guidance after command 39 and the stock view after command 18, and BYD DashCast showed ordinary apps on `fission_bg_xdjaVirtualSurface`. DiPlay's map window on that display and the half-screen geometry are not yet confirmed. A force-stopped DiPlay can leave the cluster switched until DiPlay next restores it.
+The projection display does not exist after the car starts until the cluster has projected once. When DiPlay opens with BYD navigation on and the display is missing, it runs 16 (projection on), 35 (Di4.0 mode, which creates the display) and 18, as BYD DashCast does; the cluster shows an empty projection area for about six seconds. The display then stays until the car restarts. A CarPlay session that started before the display existed asks the iPhone for the cluster map from the next connection; reopen DiPlay's settings to see "CarPlay map on dashboard".
+
+Basis: on a BYD Han EV (GCC, DiLink 3.0 / Android 10), over shell: 16 then 35 created `fission_bg_xdjaVirtualSurface` (display 1, 1920x720, `FLAG_PRESENTATION`, not private, owner `com.xdja.containerservice`), and an ordinary app launched there appeared in the cluster's projection area with speed and readouts still visible (17 and 16 looked the same); 18 restored the gauges and the display remained. A broadcast with these extras followed by 39 showed the turn arrow, road, distances and ETA on the cluster; the windshield HUD showed nothing. DiPlay's own map window there is not yet confirmed. A force-stopped DiPlay can leave the cluster switched until DiPlay next restores it.
 
 ## CarPlay map on the instrument cluster (experimental)
 

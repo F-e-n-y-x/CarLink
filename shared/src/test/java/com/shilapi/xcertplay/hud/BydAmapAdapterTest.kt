@@ -47,6 +47,30 @@ class BydAmapAdapterTest {
     }
 
     @Test
+    fun diLink3GuidanceTextIsReadableOnTheCluster() {
+        val text = BydDiLink3GuidanceText
+        assertEquals("250 m", text.distance(250))
+        assertEquals("5.4 km", text.distance(5400))
+        assertEquals("12 km", text.distance(12_345))
+        assertNull(text.distance(-1))
+        assertEquals("10 min", text.duration(600))
+        assertEquals("1 min", text.duration(1))
+        assertEquals("1 h 5 min", text.duration(3900))
+        assertNull(text.duration(-1))
+        val utc = java.util.TimeZone.getTimeZone("UTC")
+        assertEquals("15:55", text.arrival(15L * 3_600_000 + 45 * 60_000, 600, utc, use24Hour = true))
+        assertEquals("3:55", text.arrival(15L * 3_600_000 + 45 * 60_000, 600, utc, use24Hour = false))
+    }
+
+    @Test
+    fun displayIsCreatedAsDashCastDoesAndLeftInTheStockView() {
+        assertEquals(
+            listOf(16, 35, 18).map { "service call AutoContainer 2 i32 1000 i32 $it s16 \"\"" },
+            BydDiLink3ClusterMode.CREATE_DISPLAY,
+        )
+    }
+
+    @Test
     fun clusterModeAcceptsOnlyAnExceptionFreeReply() {
         assertTrue(BydDiLink3ClusterMode.accepted("Result: Parcel(00000000 00000000   '........')"))
         assertFalse(BydDiLink3ClusterMode.accepted("Result: Parcel(ffffffec 00000000 '........')"))
