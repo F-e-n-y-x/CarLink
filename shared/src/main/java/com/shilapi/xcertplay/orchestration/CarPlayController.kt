@@ -167,6 +167,7 @@ class CarPlayController(
         require(!config.locationReportingEnabled || locationProvider != null) {
             "A location provider is required when location reporting is enabled"
         }
+        WifiScanPause.restoreIfNeeded(context.applicationContext)
         BydNavigationOutputs.start(context.applicationContext)
         BydNavigationOutputs.setClusterStreamControl(::applyClusterUi)
     }
@@ -1037,7 +1038,7 @@ class CarPlayController(
             if (isStaleWirelessRun(generation)) {
                 return
             }
-            pauseWifiScans()
+            pauseWifiScans(hotspotInfo.backend)
             val startedHotspot = hotspot
             wirelessConnectionProof.begin(generation) {
                 if (!isStaleWirelessRun(generation)) startedHotspot?.onCarPlayConfirmed()
@@ -2032,8 +2033,8 @@ class CarPlayController(
         closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get()
 
     // Kept across reconnects within this controller: resuming between attempts would start a scan.
-    private fun pauseWifiScans() = synchronized(this) {
-        if (closed) return@synchronized
+    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(this) {
+        if (closed || !WifiScanPause.eligible(backend)) return@synchronized
         (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
     }
 

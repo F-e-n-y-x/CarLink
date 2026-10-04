@@ -1,8 +1,6 @@
 package com.shilapi.xcertplay.network
 
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import android.content.Context
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -19,42 +17,40 @@ class WifiScanPauseTest {
     private val context get() = RuntimeEnvironment.getApplication()
     private val ok = "Result: Parcel(00000000    '....')"
 
-    private fun pause(code: Int?, reply: String?, commands: MutableList<String>): Pair<WifiScanPause, java.util.concurrent.ExecutorService> {
-        val executor = Executors.newSingleThreadExecutor()
-        val pause = WifiScanPause(context, {}, { code }, { commands.add(it); reply }, executor)
-        return pause to executor
+    @Test
+    fun controllerCloseInvalidatesQueuedPausesAndReleasesItsOwnLeaseOnce() {
+        val acquisitions = mutableListOf<Pair<Any, () -> Boolean>>()
+        val releases = mutableListOf<Any>()
+        val control = object : WifiScanPauseControl {
+            override fun acquire(app: Context, owner: Any, current: () -> Boolean, log: (String) -> Unit) {
+                acquisitions.add(owner to current)
+            }
+
+            override fun release(app: Context, owner: Any, log: (String) -> Unit) {
+                releases.add(owner)
+            }
+        }
+        val pause = WifiScanPause(context, {}, control)
+        pause.pause()
+        pause.pause()
+        assertEquals(2, acquisitions.size)
+        assertEquals(acquisitions[0].first, acquisitions[1].first)
+        assertTrue(acquisitions.all { it.second() })
+        pause.close()
+        pause.close()
+        pause.pause()
+        assertEquals(2, acquisitions.size)
+        assertEquals(listOf(acquisitions[0].first), releases)
+        assertTrue(acquisitions.none { it.second() })
     }
 
     @Test
-    fun pausesOnceAndRestoresOnClose() {
-        val commands = CopyOnWriteArrayList<String>()
-        val (pause, executor) = pause(62, ok, commands)
-        pause.pause()
-        pause.pause()
-        pause.close()
-        pause.pause()
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
-        assertEquals(listOf("service call wifi 62 i32 0", "service call wifi 62 i32 1"), commands)
-    }
-
-    @Test
-    fun doesNothingWithoutTheTransactionCode() {
-        val commands = CopyOnWriteArrayList<String>()
-        val (pause, executor) = pause(null, ok, commands)
-        pause.pause()
-        pause.close()
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
-        assertTrue(commands.isEmpty())
-    }
-
-    @Test
-    fun doesNotRestoreScansItNeverPaused() {
-        val commands = CopyOnWriteArrayList<String>()
-        val (pause, executor) = pause(62, null, commands)
-        pause.pause()
-        pause.close()
-        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
-        assertEquals(listOf("service call wifi 62 i32 0"), commands)
+    fun onlyAndroid10HotspotBackendsAreEligibleSoSameLanKeepsStationScanning() {
+        for (backend in WirelessHotspotBackend.entries) {
+            assertEquals(backend != WirelessHotspotBackend.EXISTING_WIFI, WifiScanPause.eligible(backend, 29))
+            assertFalse(WifiScanPause.eligible(backend, 28))
+            assertFalse(WifiScanPause.eligible(backend, 30))
+        }
     }
 
     @Test

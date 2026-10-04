@@ -1,7 +1,7 @@
 # Unreleased
 
 - Save diagnostic reports privately in DiPlay when the head unit has no document picker or working Downloads provider, with explicit Share and selectable View report actions. This unblocks collecting logs for #135; its CarPlay startup failure still needs a device report.
-- Pause the head unit's automatic Wi-Fi network scans during wireless CarPlay when network ADB is authorized, and restore them when CarPlay ends. DiLink 3 scans every band every 10 s while its Wi-Fi client is disconnected, which caused stutter unless the car was joined to a hotspot. Android 10 only; the binder code is read from the firmware.
+- Pause the head unit's automatic Wi-Fi network scans during wireless hotspot/P2P CarPlay when network ADB is already authorized. Android 10 only; the binder code is read from the firmware. Same LAN keeps normal station scanning. Controller leases share one serial worker, and a durable recovery marker retries failed restores after teardown or app restart. A contributor reported periodic scan stutter on DiLink 3; the updated lifecycle still needs a vehicle retest.
 
 # DiPlay 0.2.11 — 2026-10-03
 

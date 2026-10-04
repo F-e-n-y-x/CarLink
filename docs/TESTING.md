@@ -2,6 +2,12 @@
 
 Use the [installation guide](INSTALL.md). With the car parked, verify wired and wireless connection, picture, touch and music. Test disconnect/reconnect, then settings Apply/Cancel. Save a diagnostic report after reproducing an issue.
 
+## Android 10 Wi-Fi scan recovery
+
+On a parked DiLink 3 head unit with network ADB already authorized, compare hotspot/P2P wireless CarPlay with the car's Wi-Fi client disconnected. Confirm that a supported framework reports `Wi-Fi connectivity scans paused=true` and check whether the contributor's periodic stutter is resolved. Close the session and confirm station scanning/reconnect returns. Trigger a full controller retry or replace the controller while the prior restore is delayed: an old cleanup must never enable scans after the replacement reports its pause.
+
+Temporarily make the authorized ADB connection unavailable during teardown, then restore access. Confirm cleanup retries while the app remains open, and confirm a subsequent session's pause survives any pending old retry. Interrupt the app after suppression, reopen it, and verify the recorded restore is recovered; a force-stop cannot restore until the app next runs. With **Same LAN / Existing Wi-Fi**, confirm no pause is reported and normal station reconnect/roaming still works. On Android versions other than 10, or without existing ADB approval, there must be no suppression or approval prompt. These hardware checks remain necessary after the automated ownership/recovery tests pass.
+
 ## Diagnostic export without a picker
 
 On an Android 9 emulator or head unit without a document picker, open **Settings → Diagnostics → Save diagnostic report**. Confirm that no picker is required and that the success dialog shows a TXT file under `Android/data/<package>/files/diagnostic-reports/`. Read that file and verify the app/device information and UTF-8 text. Use **View** and **Share** from the confirmation. Export twice and confirm that the reports have distinct file names and the earlier file is not overwritten. On Android 10+, normal exports should still use `Downloads/DiPlay`; **Choose save location** should still open a working picker, and cancelling it should not export anything. If external storage is unavailable, confirm that the private in-app fallback can still be viewed and shared. Do not disable system components on a car to simulate the missing-picker case; use an emulator for that simulation.
