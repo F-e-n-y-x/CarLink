@@ -144,7 +144,7 @@
     <string name="choose_iphone">Elegir iPhone</string>
     <string name="choose_location">Elegir ubicación</string>
     <string name="choose_save_location">Elegir lugar de guardado</string>
-    <string name="choose_where_to_save_your_report">Elige dónde guardar tu informe.\u0020</string>
+    <string name="choose_where_to_save_your_report">Elige dónde guardar el informe. Si no hay selector de archivos, DiPlay lo guarda en la aplicación.\u0020</string>
     <string name="choose_your_iphone">Elige tu iPhone</string>
     <string name="close">Cerrar</string>
     <string name="cluster_map_size">Tamaño del mapa del panel de instrumentos</string>
@@ -191,6 +191,8 @@
     <string name="follow_instrument_theme_and_map_card">Seguir el tema del cuadro y la tarjeta del mapa</string>
     <string name="frame_rate">Frecuencia de imágenes</string>
     <string name="full_screen">Pantalla completa</string>
+    <string name="adapt_pip_resolution">Adaptar resolución en multiventana</string>
+    <string name="adapt_pip_resolution_description">Vuelva a conectar CarPlay para adaptar la resolución al aspecto de multiventana o PiP. Déjelo desactivado para un escalado instantáneo por GPU sin demora.</string>
     <string name="fullscreen">Pantalla completa</string>
     <string name="getting_carplay_ready">Preparando CarPlay…</string>
     <string name="got_it">Entendido</string>
@@ -541,4 +543,7 @@
     <string name="hotspot_control_failed">No se pudo iniciar el punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="byd_adb_features">Funciones BYD · requieren ADB</string>
     <string name="location_reporting_reconnects">Cambiar este ajuste vuelve a conectar la sesión activa de CarPlay.</string>
+    <string name="diagnostic_report_saved_in_app">El informe se guardó de forma privada en DiPlay porque no había una ubicación pública disponible. Compártelo o míralo aquí. No se envía nada automáticamente.</string>
+    <string name="view_diagnostic_report">Ver informe</string>
+    <string name="diagnostic_report_copy_hint">Mantén pulsado el texto del informe para seleccionarlo y copiarlo. Puedes usar esta opción si no hay una aplicación para compartir.</string>
 </resources>
