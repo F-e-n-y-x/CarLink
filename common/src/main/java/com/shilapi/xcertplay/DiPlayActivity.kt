@@ -414,6 +414,14 @@ class DiPlayActivity : ComponentActivity() {
                 permissions = { listOf(CarHotspotSetup.Permission.BOOT_LAUNCH) }) {
                 AirPlayPersistence.saveAutoStartOnBoot(this, it)
             }
+            toggle(
+                card,
+                getString(R.string.usb_auto_confirm_title),
+                getString(R.string.usb_auto_confirm_subtitle),
+                UsbAutoConfirmService.isEnabled(this),
+            ) {
+                UsbAutoConfirmService.openSettings(this)
+            }
             card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
         bydAdbSettings(content)
