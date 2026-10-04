@@ -109,6 +109,14 @@ object AirPlayPersistence {
             .putInt("ambient_delay_seconds", seconds.coerceIn(0, 60)).apply()
     }
 
+    fun loadDisplayScalePercent(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt("display_scale_percent", loadDisplayScaleTenths(context) * 10).coerceIn(30, 100)
+
+    fun saveDisplayScalePercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("display_scale_percent", percent.coerceIn(30, 100)).apply()
+    }
     /** Applied by the CarPlay host so overlay position/size updates without reconnecting. */
     @Volatile var overlaySettingsListener: (() -> Unit)? = null
 

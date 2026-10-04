@@ -515,7 +515,9 @@ class DiPlayActivity : ComponentActivity() {
                 0..60, 2, R.string.ambient_delay_summary, { AirPlayPersistence.loadAmbientDelaySeconds(this) },
                 save = { AirPlayPersistence.saveAmbientDelaySeconds(this, it) })
             carPlaySizeControl(card)
-            choice(card, getString(R.string.resolution), listOf(getString(R.string.resolution_native), getString(R.string.s_80_lighter_load), getString(R.string.s_60_lightest_load)), listOf(10, 8, 6).indexOf(AirPlayPersistence.loadDisplayScaleTenths(this)).coerceAtLeast(0)) { AirPlayPersistence.saveDisplayScaleTenths(this, listOf(10, 8, 6)[it]) }
+            resolutionSettingControl(card, R.string.resolution, R.string.custom_resolution_hint,
+                30..100, 100, R.string.custom_resolution_summary, { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
+                save = { AirPlayPersistence.saveDisplayScalePercent(this, it) })
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
             choice(card, getString(R.string.music_buffer), listOf(getString(R.string.s_300_ms_default), getString(R.string.s_500_ms), getString(R.string.s_1000_ms_most_stable)),
                 bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
@@ -1994,6 +1996,84 @@ class DiPlayActivity : ComponentActivity() {
             .setNegativeButton(getString(R.string.cancel), null).show()
     }
 
+    private fun resolutionSettingControl(
+        parent: LinearLayout,
+        titleId: Int,
+        hintId: Int,
+        range: IntRange,
+        default: Int,
+        summaryId: Int,
+        load: () -> Int,
+        reconnects: Boolean = false,
+        save: (Int) -> Unit,
+    ) {
+        val title = getString(titleId)
+        fun summary() = getString(R.string.contrib_audio_home_choice_summary, title, getString(summaryId, load()))
+        val control = button(summary(), false) {}
+        control.setOnClickListener {
+            val fields = column().apply { setPadding(dp(24), dp(8), dp(24), dp(8)) }
+            val input = EditText(this).apply {
+                setSingleLine()
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                setText(load().toString())
+            }
+            fields.addView(input)
+            fields.addView(label(getString(hintId), 14, MUTED))
+            val dialog = AlertDialog.Builder(this).setTitle(title).setView(fields)
+                .setPositiveButton(getString(if (reconnects && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save), null)
+                .setNegativeButton(getString(R.string.cancel), null)
+                .setNeutralButton(getString(R.string.resolution_reset_defaults), null).create()
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val value = input.text.toString().trim().toIntOrNull()
+                    if (value == null || value !in range) {
+                        input.error = getString(R.string.resolution_number_error, range.first, range.last)
+                    } else {
+                        val changed = value != load()
+                        save(value)
+                        control.text = summary()
+                        dialog.dismiss()
+                        if (changed && reconnects && CarPlayBackgroundSession.hasSession()) {
+                            connect(AirPlayPersistence.loadWirelessEnabled(this))
+                        }
+                    }
+                }
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    input.setText(default.toString())
+                    input.error = null
+                }
+            }
+            showResolutionSettingsDialog(dialog, fields)
+        }
+        parent.addView(control, matchButton(0, 60))
+        parent.addView(space(12))
+    }
+
+    private fun showResolutionSettingsDialog(dialog: AlertDialog, fields: LinearLayout) {
+        dialog.show()
+        // AlertDialog replaces the custom view's parameters with MATCH_PARENT. Keep numeric
+        // content at its natural height, including on vendor dialog layouts with weighted panels.
+        fields.layoutParams = fields.layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
+        val decor = dialog.window?.decorView ?: return
+        var panel = fields.parent as? ViewGroup
+        while (panel != null && panel !== decor) {
+            val params = panel.layoutParams
+            if (params is LinearLayout.LayoutParams && params.weight > 0f) {
+                panel.layoutParams = params.apply {
+                    weight = 0f
+                    height = ViewGroup.LayoutParams.WRAP_CONTENT
+                }
+                break
+            }
+            panel = panel.parent as? ViewGroup
+        }
+        dialog.window?.let { window ->
+            window.setLayout(window.attributes.width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        // Run another traversal after the platform has finished its initial button measurement.
+        decor.post { if (dialog.isShowing) decor.requestLayout() }
+    }
+
     private fun nightDelaySettingControl(
         parent: LinearLayout,
         titleId: Int,
@@ -2294,7 +2374,7 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("CarPlay setup: ${if (setupError == null) "ready" else "authentication unavailable"}")
                     appendLine("Saved video preference (may differ from active session): ${if (AirPlayPersistence.loadHevcEnabled(appContext)) "HEVC" else "H.264"}; ${AirPlayPersistence.loadFps(appContext)} fps")
                     appendLine("CarPlay size: ${com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(appContext)).label}")
-                    appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScaleTenths(appContext) * 10}%")
+                    appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
                     appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
                     appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
                     appendLine()
