@@ -577,8 +577,20 @@
     <string name="wheel_zoom_mode_off">Los botones de volumen vuelven a controlar el volumen</string>
     <string name="wheel_zoom_note_zoom">Zoom del mapa</string>
     <string name="wheel_zoom_note_volume">Volumen</string>
+    <string name="wheel_joystick">Joystick de CarPlay en el volante</string>
+    <string name="wheel_joystick_description">El botón multimedia de BYD activa y desactiva un joystick para la pantalla central de CarPlay, como el mando giratorio de un coche. Mientras está activado, la rueda de volumen o ⏮ ⏭ mueven la selección, ⏯ selecciona y el botón personalizable vuelve atrás; esos botones dejan entonces de controlar la música y el volumen. Durante una llamada los botones sirven para la llamada. En algunos coches el volumen de la consola también mueve la selección.</string>
+    <string name="wheel_joystick_auto_off">El joystick se desactiva solo</string>
+    <string name="wheel_joystick_auto_off_description">Tras 15 segundos sin pulsar nada y al iniciar una ruta, los botones vuelven a controlar la música y el volumen.</string>
+    <string name="wheel_joystick_on">Joystick activado</string>
+    <string name="wheel_joystick_off">Joystick desactivado</string>
+    <string name="wheel_joystick_hint">Rueda de volumen o ⏮ ⏭: mover · ⏯: seleccionar · botón personalizable: atrás · botón multimedia: salir</string>
+    <string name="wheel_key_role_joystick">joystick</string>
+    <string name="wheel_key_role_previous">elemento anterior</string>
+    <string name="wheel_key_role_next">elemento siguiente</string>
+    <string name="wheel_key_role_select">seleccionar</string>
+    <string name="wheel_key_role_back">atrás</string>
     <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
-    <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
+    <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
 </resources>

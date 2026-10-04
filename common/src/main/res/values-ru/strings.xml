@@ -577,8 +577,20 @@
     <string name="wheel_zoom_mode_off">Кнопки громкости снова управляют звуком</string>
     <string name="wheel_zoom_note_zoom">Масштаб карты</string>
     <string name="wheel_zoom_note_volume">Громкость</string>
+    <string name="wheel_joystick">Джойстик CarPlay на руле</string>
+    <string name="wheel_joystick_description">Кнопка медиа BYD включает и выключает джойстик для центрального экрана CarPlay, как поворотный контроллер в автомобиле. Пока он включён, колесо громкости или ⏮ ⏭ перемещают выбор, ⏯ выбирает, а кастомная кнопка возвращает назад; музыкой и громкостью эти кнопки тогда не управляют. Во время звонка кнопки работают для звонка. На некоторых автомобилях выбор перемещает и громкость на консоли.</string>
+    <string name="wheel_joystick_auto_off">Джойстик выключается сам</string>
+    <string name="wheel_joystick_auto_off_description">Через 15 секунд без нажатий и когда начинается маршрут кнопки снова управляют музыкой и громкостью.</string>
+    <string name="wheel_joystick_on">Джойстик включён</string>
+    <string name="wheel_joystick_off">Джойстик выключен</string>
+    <string name="wheel_joystick_hint">Колесо громкости или ⏮ ⏭ — перемещение · ⏯ — выбрать · кастомная кнопка — назад · кнопка медиа — выключить</string>
+    <string name="wheel_key_role_joystick">джойстик</string>
+    <string name="wheel_key_role_previous">предыдущий пункт</string>
+    <string name="wheel_key_role_next">следующий пункт</string>
+    <string name="wheel_key_role_select">выбрать</string>
+    <string name="wheel_key_role_back">назад</string>
     <string name="wheel_key_service_label">Кнопки руля DiPlay</string>
-    <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели. Только получает нажатия кнопок и не читает экран.</string>
+    <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
 </resources>

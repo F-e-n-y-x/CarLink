@@ -577,8 +577,20 @@
     <string name="wheel_zoom_mode_off">أزرار الصوت تتحكم في الصوت مرة أخرى</string>
     <string name="wheel_zoom_note_zoom">تكبير الخريطة</string>
     <string name="wheel_zoom_note_volume">الصوت</string>
+    <string name="wheel_joystick">عصا تحكم CarPlay على المقود</string>
+    <string name="wheel_joystick_description">يشغّل زر الوسائط في BYD عصا تحكم لشاشة CarPlay الرئيسية ويوقفها، مثل مقبض التحكم الدوّار في السيارة. ما دامت مفعّلة، تحرّك عجلة الصوت أو ⏮ ⏭ التحديد، ويختار ⏯، ويعود الزر المخصّص إلى الخلف؛ ولا تتحكم هذه الأزرار حينها في الموسيقى أو الصوت. أثناء المكالمة تبقى الأزرار للمكالمة. في بعض السيارات يحرّك صوت لوحة التحكم الوسطى التحديد أيضًا.</string>
+    <string name="wheel_joystick_auto_off">عصا التحكم تتوقف تلقائيًا</string>
+    <string name="wheel_joystick_auto_off_description">بعد 15 ثانية دون ضغط، وعند بدء مسار، تعود الأزرار إلى التحكم في الموسيقى والصوت.</string>
+    <string name="wheel_joystick_on">عصا التحكم مفعّلة</string>
+    <string name="wheel_joystick_off">عصا التحكم متوقفة</string>
+    <string name="wheel_joystick_hint">عجلة الصوت أو ⏮ ⏭ للتحريك · ⏯ للاختيار · الزر المخصّص للرجوع · زر الوسائط للإيقاف</string>
+    <string name="wheel_key_role_joystick">عصا التحكم</string>
+    <string name="wheel_key_role_previous">العنصر السابق</string>
+    <string name="wheel_key_role_next">العنصر التالي</string>
+    <string name="wheel_key_role_select">اختيار</string>
+    <string name="wheel_key_role_back">رجوع</string>
     <string name="wheel_key_service_label">أزرار المقود في DiPlay</string>
-    <string name="wheel_key_service_description">تتيح لـ DiPlay استخدام أزرار المقود المختارة في إعداداته لتكبير خريطة CarPlay على لوحة العدادات. تستقبل ضغطات الأزرار فقط ولا تقرأ الشاشة.</string>
+    <string name="wheel_key_service_description">تتيح لـ DiPlay استخدام أزرار المقود المختارة في إعداداته لتكبير خريطة CarPlay على لوحة العدادات وللتنقل في شاشة CarPlay. تستقبل ضغطات الأزرار فقط ولا تقرأ الشاشة.</string>
     <string name="cluster_song_on_change">الأغنية عند تغيّرها فقط</string>
     <string name="cluster_song_on_change_description">تظهر الأغنية الجديدة على لوحة العدادات لمدة 5 ثوانٍ، ثم تُفرَّغ البطاقة. الإيقاف المؤقت والاستئناف لا يعرضانها مرة أخرى.</string>
 </resources>
