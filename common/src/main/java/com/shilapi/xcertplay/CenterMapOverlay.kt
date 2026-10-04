@@ -70,24 +70,27 @@ internal object CenterMapOverlay {
         onTap: () -> Unit,
     ): Boolean {
         if (root != null) return true
+        if (!aspect.isFinite() || aspect <= 0) return false
         if (!permitted(context)) return false
         val windows = context.getSystemService(WindowManager::class.java) ?: return false
         val metrics = context.resources.displayMetrics
         val screenWidth = metrics.widthPixels
         val screenHeight = metrics.heightPixels
         // The widest card that still fits the screen height; the stream itself is 1600x600.
-        val maxWidth = minOf(screenWidth, (screenHeight * aspect).toInt())
-        val minWidth = (screenWidth * MIN_WIDTH_FRACTION).toInt()
+        if (screenWidth <= 0 || screenHeight <= 0) return false
+        val maxWidth = minOf(screenWidth, (screenHeight * aspect).toInt()).coerceAtLeast(1)
+        val minWidth = (screenWidth * MIN_WIDTH_FRACTION).toInt().coerceIn(1, maxWidth)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val hasSavedAspect = prefs.contains(KEY_ASPECT)
         val savedAspect = if (hasSavedAspect) java.lang.Double.longBitsToDouble(prefs.getLong(KEY_ASPECT, 0L)) else aspect
         val initialWidth = if (hasSavedAspect && kotlin.math.abs(savedAspect - aspect) > 0.1) {
-            prefs.edit().putLong(KEY_ASPECT, java.lang.Double.doubleToRawLongBits(aspect)).apply()
             (screenWidth * WIDTH_FRACTION).toInt().coerceIn(minWidth, maxWidth)
         } else {
             prefs.getInt(KEY_WIDTH, (screenWidth * WIDTH_FRACTION).toInt()).coerceIn(minWidth, maxWidth)
         }
         val width = initialWidth
+        prefs.edit().putInt(KEY_WIDTH, width)
+            .putLong(KEY_ASPECT, java.lang.Double.doubleToRawLongBits(aspect)).apply()
         val height = (width / aspect).toInt()
         val radius = 24f * metrics.density / 2
         val params = WindowManager.LayoutParams(

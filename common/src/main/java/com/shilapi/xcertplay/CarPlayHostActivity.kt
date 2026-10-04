@@ -812,13 +812,11 @@ class CarPlayHostActivity : ComponentActivity() {
         if (display != null) {
             val size = ClusterMapPresentation.sizeOf(display)
             if (size.x > 0 && size.y > 0) {
-                MapMirrors.streamAspect = MapMirrors.PHYSICAL_STREAM_ASPECT
                 if (DiLink51ClusterLayout.supported()) {
-                    val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme)
-                    if (plan != null) {
-                        return DiLink51ClusterLayout.streamConfig().also {
-                            appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
-                        }
+                    val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
+                    return DiLink51ClusterLayout.streamConfig().also {
+                        MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
+                        appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
                     }
                 }
                 return CarPlayClusterDisplay.config(
@@ -829,11 +827,12 @@ class CarPlayHostActivity : ComponentActivity() {
                     AirPlayPersistence.loadClusterMarkerVerticalStep(this),
                     AirPlayPersistence.loadClusterContent(this),
                 ).also {
+                    MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
                     appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
                 }
             }
         }
-        // Fallback for head units without physical cluster projection (e.g. BYD 665 / small cluster models):
+        // Fallback for head units without physical cluster projection (e.g. DiLink 3.0/3.5 without digital cluster):
         // Provide standard virtual cluster stream (1280x720, 16:9 aspect) for CenterMapOverlay and MapEmbedService.
         MapMirrors.streamAspect = MapMirrors.VIRTUAL_STREAM_ASPECT
         return CarPlayClusterDisplay.config(
@@ -920,7 +919,11 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun onHomeScreenVisible(visible: Boolean) {
         homeScreenVisible = visible
         appendLog("Centre map: home screen ${if (visible) "in front" else "not in front"}")
-        if (!visible) CenterMapOverlay.hide() else if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
+        if (!AirPlayPersistence.loadCenterMapAutoHide(this)) {
+            homeMonitor?.stop()
+            if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
+        } else if (!visible) CenterMapOverlay.hide()
+        else if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
     }
 
     private fun onCenterMapSurface(surface: Surface?) {

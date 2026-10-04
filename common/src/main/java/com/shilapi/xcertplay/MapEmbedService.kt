@@ -164,6 +164,9 @@ class MapEmbedService : Service() {
                 }
             }
         }
+        private val aspectListener: () -> Unit = {
+            if (!released) cropToFill(video, video.width, video.height)
+        }
         private val streamListener: (Boolean) -> Unit = { active ->
             waiting.visibility = if (active) TextView.GONE else TextView.VISIBLE
             send(client, MSG_STREAM_STATE, Bundle().apply { putBoolean(KEY_STREAM_ACTIVE, active) })
@@ -183,6 +186,7 @@ class MapEmbedService : Service() {
         init {
             waiting.visibility = if (MapMirrors.streamActive) TextView.GONE else TextView.VISIBLE
             MapMirrors.addStreamListener(streamListener)
+            MapMirrors.addAspectListener(aspectListener)
             host.setView(root, width.coerceAtLeast(1), height.coerceAtLeast(1))
         }
 
@@ -194,6 +198,7 @@ class MapEmbedService : Service() {
             if (released) return
             released = true
             MapMirrors.removeStreamListener(streamListener)
+            MapMirrors.removeAspectListener(aspectListener)
             MapMirrors.set(key, null)
             host.release()
         }
