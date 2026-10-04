@@ -8,6 +8,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WirelessStartupDiagnosticsTest {
+    @Test fun detailedConfigurationSummariesKeepBootstrapCountersAccurate() {
+        WirelessStartupDiagnostics({ "" }, {}).use { diagnostics ->
+            diagnostics.controlProgress("iap2 authentication accepted")
+            diagnostics.controlProgress("iap2 tx=0x5703 accessory-wifi-configuration apHint=present channel=149 security=2")
+            diagnostics.controlProgress("iap2 tx=0x5703 post-transport accessory-wifi-configuration apHint=present channel=149 security=2")
+            diagnostics.controlProgress("iap2 tx=0x4301 carplay-start-session families=IPv6-linklocal port=7000 channel=149 security=2")
+            assertTrue(diagnostics.summary().contains("authenticated=true wifiConfigs=2 startRequests=1 tcpAccepted=0"))
+            assertTrue(diagnostics.summary().contains("waitingFor=WiFi_discovery_or_AirPlay_TCP"))
+        }
+    }
+
     @Test fun observerExportsSummaryAndAllFourSnapshotLinesSeparately() {
         val sampled = CountDownLatch(4)
         val logs = java.util.concurrent.CopyOnWriteArrayList<String>()

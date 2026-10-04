@@ -119,6 +119,9 @@ class DiagnosticRedactorTest {
             "Wi-Fi P2P create rejected code=0 reason=generic error",
             "Wi-Fi P2P ready mode=FIXED_2_GHZ band=2.4 GHz channel=6 frequencyMHz=2437",
             "Wi-Fi P2P channel requestedMHz=2437 actualMHz=2412 matched=false",
+            "iap2 tx=0x5703 accessory-wifi-configuration apHint=present channel=149 security=2",
+            "iap2 tx=0x4301 carplay-start-session families=IPv6-linklocal port=7000 channel=149 security=2",
+            "wireless snapshot mdnsBindings=IPv6:matched,IPv4:matched",
             "wireless hotspot backend=Wi-Fi P2P iface=p2p0 host=192.168.49.1 band=5 GHz channel=36 frequency=5180MHz",
         )
         for (line in lines) assertNotNull(line, DiagnosticRedactor.redact(line))

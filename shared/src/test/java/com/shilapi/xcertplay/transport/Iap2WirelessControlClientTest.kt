@@ -119,7 +119,24 @@ class Iap2WirelessControlClientTest {
         assertTrue(0x4300 in u16Values(parameters.single { it.id == 7 }.payload))
     }
 
-    private fun endpoint(): Iap2WirelessCarPlayEndpoint = Iap2WirelessCarPlayEndpoint(
+    @Test fun apHintIsEncodedOnlyInWifiConfigurationAndDoesNotChangeReceiverStartIdentity() {
+        val ap = byteArrayOf(0x02, 0x11, 0x22, 0x33, 0x44, 0x55)
+        val configured = endpoint(ap)
+        ap[0] = 0x04 // Input mutation must not change the endpoint snapshot.
+        val frame = Iap2WirelessControlClient.accessoryWiFiConfiguration(configured)
+        assertArrayEquals(byteArrayOf(0x02, 0x11, 0x22, 0x33, 0x44, 0x55), parameters(frame.payload).single { it.id == 0 }.payload)
+        assertArrayEquals(Iap2WirelessControlClient.carPlayStartSession(endpoint()).encodedFrame(),
+            Iap2WirelessControlClient.carPlayStartSession(configured).encodedFrame())
+        assertNull(parameters(Iap2WirelessControlClient.accessoryWiFiConfiguration(endpoint()).payload).firstOrNull { it.id == 0 })
+    }
+
+    @Test fun configurationDiagnosticsExposeOnlyPresenceAndEndpointFamily() {
+        val config = endpoint(byteArrayOf(0x02, 0x11, 0x22, 0x33, 0x44, 0x55))
+        assertEquals("apHint=present channel=36 security=3", Iap2WirelessControlClient.wifiConfigurationSummary(config))
+        assertEquals("families=IPv4 port=49152 channel=36 security=3", Iap2WirelessControlClient.startSessionSummary(config))
+    }
+
+    private fun endpoint(ap: ByteArray? = null): Iap2WirelessCarPlayEndpoint = Iap2WirelessCarPlayEndpoint(
         ssid = "LIVI",
         passphrase = "secret123",
         channel = 36,
@@ -129,6 +146,7 @@ class Iap2WirelessControlClientTest {
         deviceIdentifier = "dev-1",
         publicKey = "aabbcc",
         sourceVersion = "1.0",
+        accessPointBssid = ap,
     )
 
     private fun u16Values(bytes: ByteArray): List<Int> =

@@ -146,6 +146,7 @@ class CarPlayBonjour(
     private val localAdvertisedAddress = advertisedHostAddress()
     private val advertisedAddresses = (listOfNotNull(localAdvertisedAddress) + additionalAddresses).distinct()
     @Volatile private var publishedFamilies = "none"
+    @Volatile private var publishedBindings = "none"
     private val addedCount = AtomicInteger()
     private val resolvedCount = AtomicInteger()
     private val addressMismatchCount = AtomicInteger()
@@ -158,7 +159,7 @@ class CarPlayBonjour(
         "bonjourAdded=${addedCount.get()} bonjourResolved=${resolvedCount.get()} " +
             "bonjourAddressMismatch=${addressMismatchCount.get()} connectProbes=${probeCount.get()} " +
             "connectProbe2xx=${successfulProbeCount.get()} lastProbe=${lastProbe.get()} " +
-            "mdnsFamilies=$publishedFamilies"
+            "mdnsFamilies=$publishedFamilies mdnsBindings=$publishedBindings"
     private val multicastLock = (context.applicationContext ?: context)
         .getSystemService(WifiManager::class.java)
         .createMulticastLock("carplay-bonjour").apply { setReferenceCounted(false) }
@@ -267,9 +268,15 @@ class CarPlayBonjour(
                         "Interface mDNS requires a local advertised address"
                     }
                     // A JmDNS instance joins only its address family's multicast group.
+                    val bindings = mutableListOf<String>()
                     for (address in advertisedAddresses) {
                         val dns = JmDNS.create(address, "carplay-${config.deviceId.replace(":", "")}")
                         interfaceMdns.add(dns)
+                        val bound = runCatching { dns.getInterface() }.getOrNull()
+                        val matches = bound != null && bound.address.contentEquals(address.address) &&
+                            (address !is Inet6Address || (bound as? Inet6Address)?.scopeId == address.scopeId)
+                        bindings.add("${if (address is Inet4Address) "IPv4" else "IPv6"}:" +
+                            if (bound == null) "unknown" else if (matches) "matched" else "mismatch")
                         dns.addServiceListener("$CARPLAY_CONTROL_SERVICE_TYPE.local.", interfaceListener)
                         dns.registerService(ServiceInfo.create(
                             "$AIRPLAY_SERVICE_TYPE.local.", config.deviceName, config.port,
@@ -279,6 +286,7 @@ class CarPlayBonjour(
                     publishedFamilies = advertisedAddresses.joinToString(",") {
                         if (it is Inet4Address) "IPv4" else "IPv6"
                     }
+                    publishedBindings = bindings.joinToString(",")
                 } else {
                     registerAirPlay()
                     registrationRequested = true
@@ -308,6 +316,7 @@ class CarPlayBonjour(
                 interfaceMdns.forEach { dns -> runCatching { dns.close() } }
                 interfaceMdns.clear()
                 publishedFamilies = "none"
+                publishedBindings = "none"
                 if (multicastLock.isHeld) multicastLock.release()
                 throw error
             }
@@ -336,6 +345,7 @@ class CarPlayBonjour(
             dnsToClose = interfaceMdns.toList()
             interfaceMdns.clear()
             publishedFamilies = "none"
+            publishedBindings = "none"
             workerToJoin = worker
             worker = null
             workerToJoin?.interrupt()

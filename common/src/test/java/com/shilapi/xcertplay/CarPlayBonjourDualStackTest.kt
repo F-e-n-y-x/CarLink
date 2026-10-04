@@ -53,6 +53,8 @@ class CarPlayBonjourDualStackTest {
         setup()
         val v4 = mock(JmDNS::class.java)
         val v6 = mock(JmDNS::class.java)
+        `when`(v4.getInterface()).thenReturn(ipv4)
+        `when`(v6.getInterface()).thenReturn(ipv6)
         mockStatic(JmDNS::class.java).use { factory ->
             factory.`when`<JmDNS> { JmDNS.create(ipv6, "carplay-020000000002") }.thenReturn(v6)
             factory.`when`<JmDNS> { JmDNS.create(ipv4, "carplay-020000000002") }.thenReturn(v4)
@@ -60,6 +62,7 @@ class CarPlayBonjourDualStackTest {
                 additionalAddresses = listOf(ipv4))
             bonjour.start()
             assertTrue(bonjour.diagnosticSnapshot().contains("mdnsFamilies=IPv6,IPv4"))
+            assertTrue(bonjour.diagnosticSnapshot().contains("mdnsBindings=IPv6:matched,IPv4:matched"))
             listOf(v6, v4).forEach { dns ->
                 verify(dns).registerService(any(ServiceInfo::class.java))
                 verify(dns).addServiceListener(eq("_carplay-ctrl._tcp.local."), any(ServiceListener::class.java))

@@ -151,7 +151,7 @@ class Iap2WirelessControlClient(
                             } else {
                                 preTransportWiFiConfigurationsSent++
                             }
-                            onProgress("iap2 tx=0x5703 accessory-wifi-configuration")
+                            onProgress("iap2 tx=0x5703 accessory-wifi-configuration ${wifiConfigurationSummary(endpoint)}")
                         }
                     }
 
@@ -161,7 +161,7 @@ class Iap2WirelessControlClient(
                         send(carPlayStartSession(endpoint), deadlineNanos)
                         stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
                         carPlayStartSessionsSent++
-                        onProgress("iap2 tx=0x4301 carplay-start-session")
+                        onProgress("iap2 tx=0x4301 carplay-start-session ${startSessionSummary(endpoint)}")
                     }
 
                     WIRELESS_CARPLAY_UPDATE -> {
@@ -197,7 +197,7 @@ class Iap2WirelessControlClient(
                             wifiConfigurationsSent++
                             postTransportWiFiConfigurationsSent++
                             onProgress(
-                                "iap2 tx=0x5703 post-transport accessory-wifi-configuration",
+                                "iap2 tx=0x5703 post-transport accessory-wifi-configuration ${wifiConfigurationSummary(endpoint)}",
                             )
                         }
                     }
@@ -252,13 +252,14 @@ class Iap2WirelessControlClient(
             "iap2 availability decode=failed failureClass=${error.javaClass.simpleName}"
         }
 
-        /** Reference-compatible 0x5703 body. BSSID is omitted when the platform does not expose it. */
+        /** AP network identity is optional and must never replace the AirPlay receiver identity. */
         fun accessoryWiFiConfiguration(endpoint: Iap2WirelessCarPlayEndpoint): Iap2Frame =
             Iap2WirelessMessages.accessoryWiFiConfiguration(
                 ssid = endpoint.ssid,
                 passphrase = endpoint.passphrase,
                 channel = endpoint.channel,
                 securityType = endpoint.security.wireValue,
+                bssid = endpoint.accessPointBssid,
             )
 
         /** Wireless 0x4301 reply carrying the receiver address, port and pairing identity. */
@@ -276,6 +277,15 @@ class Iap2WirelessControlClient(
                 publicKey = endpoint.publicKey,
                 sourceVersion = endpoint.sourceVersion,
             )
+
+        internal fun wifiConfigurationSummary(endpoint: Iap2WirelessCarPlayEndpoint): String =
+            "apHint=${if (endpoint.accessPointBssid == null) "omitted" else "present"} " +
+                "channel=${endpoint.channel} security=${endpoint.security.wireValue}"
+
+        internal fun startSessionSummary(endpoint: Iap2WirelessCarPlayEndpoint): String =
+            "families=${endpoint.ipAddresses.joinToString(",") {
+                if (it.startsWith("fe80:", ignoreCase = true)) "IPv6-linklocal" else if (':' in it) "IPv6" else "IPv4"
+            }} port=${endpoint.airPlayPort} channel=${endpoint.channel} security=${endpoint.security.wireValue}"
 
         private fun later(
             current: Iap2WirelessControlStage,
@@ -323,10 +333,13 @@ class Iap2WirelessCarPlayEndpoint(
     val deviceIdentifier: String,
     val publicKey: String,
     val sourceVersion: String,
+    accessPointBssid: ByteArray? = null,
 ) {
     val ipAddresses: List<String> = ipAddresses.toList()
+    val accessPointBssid: ByteArray? = accessPointBssid?.copyOf()
 
     init {
+        require(accessPointBssid == null || accessPointBssid.size == 6) { "AP address must contain six bytes" }
         require(ssid.isNotBlank()) { "ssid is required and must not be blank" }
         require('\u0000' !in ssid) { "ssid must not contain U+0000" }
         require('\u0000' !in passphrase) { "passphrase must not contain U+0000" }

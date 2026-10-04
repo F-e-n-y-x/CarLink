@@ -1129,6 +1129,7 @@ class CarPlayController(
                 deviceIdentifier = deviceIdentifier,
                 publicKey = identity.publicKeyHex,
                 sourceVersion = airPlayConfig.sourceVersion,
+                accessPointBssid = hotspotInfo.accessPointBssid,
             )
             wirelessRuntimeIdentification = runtimeIdentification
             wirelessAirPlayEndpoint = endpoint

@@ -17,6 +17,10 @@ Internet access. SSID and password are stored separately from the car hotspot se
 Android does not expose saved Wi-Fi passwords to ordinary apps; manual entry supplies
 the iAP2 bootstrap credentials. A readable live SSID must match the entered name. If
 Android redacts the SSID, the entered name is authoritative; verify it in system settings.
+The manager also tries the station WifiInfo when the capabilities snapshot is redacted.
+Precise location permission and enabled system location can make SSID/BSSID readable;
+this validates Wi-Fi configuration independently of optional GPS reporting. When
+neither snapshot exposes the network name, diagnostics say `configCheck=manual_unverified`.
 This mode does not require location permission just to start wireless CarPlay. Optional
 location reporting still uses its existing permission flow.
 
@@ -39,6 +43,11 @@ unscoped literal as before. 0x5703 supplies Wi-Fi credentials; IP addresses are 
 by 0x4301, whose link-local IPv6 preference is unchanged. Authentication, media, touch
 and the iAP2 handoff are reused unchanged. The
 router’s BSSID is deliberately not used as the receiver’s AirPlay device identity.
+When readable, the current AP BSSID is sent separately as 0x5703 parameter 0, so the
+iPhone can identify the existing access point. Unknown/redacted, zero, multicast or
+malformed AP addresses are omitted; no address is invented from the receiver identity.
+On API 31+, observed open/secured mismatches and unsupported security types fail early;
+an SAE station connection can still be a WPA2/WPA3 mixed AP and does not prove WPA3-only.
 Unknown channel data stays zero (auto); it is never invented from user preferences.
 
 Related work: [upstream PR #22](https://github.com/shihabal3amri/DiPlay/pull/22) also

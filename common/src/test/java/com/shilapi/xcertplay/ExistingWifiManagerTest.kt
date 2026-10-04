@@ -9,6 +9,8 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
+import android.content.pm.PackageManager
 import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
@@ -55,6 +57,7 @@ class ExistingWifiManagerTest {
         `when`(info.ssid).thenReturn("\"Pocket Wi-Fi\"")
         `when`(info.frequency).thenReturn(5180)
         `when`(info.bssid).thenReturn("aa:bb:cc:dd:ee:ff")
+        if (Build.VERSION.SDK_INT >= 31) `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_PSK)
         doAnswer { callback = it.getArgument(1); null }.`when`(connectivity)
             .registerNetworkCallback(any(NetworkRequest::class.java), any(ConnectivityManager.NetworkCallback::class.java))
     }
@@ -69,6 +72,7 @@ class ExistingWifiManagerTest {
             assertEquals(Iap2WirelessSecurity.WPA_WPA2, result.security)
             assertEquals("pocket-password", result.passphrase)
             assertNull(result.bssid) // Router BSSID must never replace the receiver identity.
+            assertArrayEquals(byteArrayOf(0xaa.toByte(), 0xbb.toByte(), 0xcc.toByte(), 0xdd.toByte(), 0xee.toByte(), 0xff.toByte()), result.accessPointBssid)
             assertTrue(diagnostics.none { it.contains("pocket-password") })
             assertTrue(diagnostics.any { DiagnosticRedactor.redact(it)?.contains("Existing Wi-Fi attached") == true })
             verify(wifi).connectionInfo
@@ -108,6 +112,68 @@ class ExistingWifiManagerTest {
             callback.onLinkPropertiesChanged(network, properties)
             assertEquals(1, changes)
         }
+    }
+
+    @Test @Config(sdk = [33]) fun redactedCapabilitiesMustNotHideReadableStationIdentity() {
+        val redacted = mock(WifiInfo::class.java)
+        `when`(redacted.ssid).thenReturn(WifiManager.UNKNOWN_SSID)
+        val caps = capabilities(NetworkCapabilities.TRANSPORT_WIFI)
+        `when`(caps.transportInfo).thenReturn(redacted)
+        doReturn(caps).`when`(connectivity).getNetworkCapabilities(network)
+        manager().use {
+            val result = start(it)
+            assertNotNull(result.accessPointBssid)
+            val line = diagnostics.single { line -> line.contains("Existing Wi-Fi attached") }
+            val exported = DiagnosticRedactor.redact(line)!!
+            assertTrue(exported.contains("configCheck=verified"))
+            assertTrue(exported.contains("wifiInfoSource=station"))
+            assertTrue(exported.contains("apHint=present"))
+            assertFalse(exported.contains("Pocket Wi-Fi"))
+            assertFalse(exported.contains("pocket-password"))
+            assertFalse(exported.contains("aa:bb:cc:dd:ee:ff"))
+        }
+        `when`(info.ssid).thenReturn("\"Different network\"")
+        manager().use { assertThrows(IOException::class.java) { start(it) } }
+    }
+
+    @Test fun restrictedStationAndCapabilitiesKeepManualFallbackAndOmitPlaceholder() {
+        `when`(info.ssid).thenReturn(WifiManager.UNKNOWN_SSID)
+        `when`(info.bssid).thenReturn("02:00:00:00:00:00")
+        `when`(context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION))
+            .thenReturn(PackageManager.PERMISSION_DENIED)
+        manager().use {
+            assertNull(start(it).accessPointBssid)
+            val line = DiagnosticRedactor.redact(diagnostics.single { line -> line.contains("Existing Wi-Fi attached") })!!
+            assertTrue(line.contains("configCheck=manual_unverified"))
+            assertTrue(line.contains("apHint=omitted"))
+            assertTrue(line.contains("fineLocation=false"))
+        }
+    }
+
+    @Test fun invalidOrMulticastApAddressIsNeverAdvertised() {
+        for (address in listOf("invalid", "00:00:00:00:00:00", "ff:ff:ff:ff:ff:ff", "01:00:5e:00:00:fb")) {
+            `when`(info.bssid).thenReturn(address)
+            manager().use { assertNull(start(it).accessPointBssid) }
+        }
+    }
+
+    @Test @Config(sdk = [33]) fun modernStationFallbackWorksWithObservedWpa2() {
+        val redacted = mock(WifiInfo::class.java)
+        `when`(redacted.ssid).thenReturn(WifiManager.UNKNOWN_SSID)
+        val caps = capabilities(NetworkCapabilities.TRANSPORT_WIFI)
+        `when`(caps.transportInfo).thenReturn(redacted)
+        doReturn(caps).`when`(connectivity).getNetworkCapabilities(network)
+        manager().use { assertEquals(Iap2WirelessSecurity.WPA_WPA2, start(it).security) }
+    }
+
+    @Test @Config(sdk = [33]) fun rejectsObservedOpenSecuredAndEnterpriseConfigurationMismatch() {
+        `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_OPEN)
+        manager().use { assertThrows(IOException::class.java) { start(it) } }
+        manager("").use { assertEquals(Iap2WirelessSecurity.NONE, start(it).security) }
+        `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_PSK)
+        manager("").use { assertThrows(IOException::class.java) { start(it) } }
+        `when`(info.currentSecurityType).thenReturn(WifiInfo.SECURITY_TYPE_EAP)
+        manager().use { assertThrows(IOException::class.java) { start(it) } }
     }
 
     @Test fun redactedSsidAllowsManualConfigurationAndUnknownChannelStaysZero() {

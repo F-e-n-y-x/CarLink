@@ -1,6 +1,9 @@
 package com.shilapi.xcertplay.network
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
@@ -25,6 +28,7 @@ class ExistingWifiManager(
     private val onDiagnostic: (String) -> Unit = {},
     private val onNetworkChanged: () -> Unit = {},
 ) : WirelessHotspotManager {
+    private val appContext = context.applicationContext
     private val connectivity = context.applicationContext.getSystemService(ConnectivityManager::class.java)
         ?: throw IllegalStateException("ConnectivityManager is unavailable")
     private val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
@@ -81,21 +85,41 @@ class ExistingWifiManager(
             if (network != null && name != null && address != null) {
                 val addresses = existingWifiHostAddresses(properties.linkAddresses.map { it.address }, iface!!.index)
                 val capabilities = connectivity.getNetworkCapabilities(network)
+                val networkInfo = if (Build.VERSION.SDK_INT >= 31) capabilities?.transportInfo as? WifiInfo else null
+                // On-demand capabilities can redact SSID/BSSID even when the legacy station
+                // snapshot can supply them. A non-null redacted object must not hide that input.
                 @Suppress("DEPRECATION")
-                val info = try {
-                    if (Build.VERSION.SDK_INT >= 29) {
-                        capabilities?.transportInfo as? WifiInfo ?: wifi.connectionInfo
-                    } else wifi.connectionInfo
-                } catch (_: SecurityException) {
-                    null // Manual credentials still work when Android restricts WifiInfo.
-                }
-                val liveSsid = info?.ssid?.removeSurrounding("\"")
-                    ?.takeUnless { it == WifiManager.UNKNOWN_SSID || it.isEmpty() }
+                val stationInfo = try { wifi.connectionInfo } catch (_: SecurityException) { null }
+                val info = listOfNotNull(networkInfo, stationInfo).firstOrNull { readableSsid(it) != null }
+                    ?: networkInfo ?: stationInfo
+                val liveSsid = readableSsid(info)
                 if (liveSsid != null && liveSsid != ssid) {
                     throw IOException("Configured Wi-Fi does not match the connected network; check Wi-Fi settings and saved details")
                 }
                 val frequency = info?.frequency?.takeIf { it > 0 }
                 val channel = frequency?.let(::wifiFrequencyMhzToChannel) ?: 0
+                val apBssid = accessPointAddress(info?.bssid)
+                val observedSecurity = if (Build.VERSION.SDK_INT >= 31 && info != null) info.currentSecurityType else -1
+                if (Build.VERSION.SDK_INT >= 31) {
+                    when (observedSecurity) {
+                        WifiInfo.SECURITY_TYPE_OPEN -> if (passphrase.isNotEmpty()) {
+                            throw IOException("Connected Wi-Fi is open; clear the saved Wi-Fi password")
+                        }
+                        WifiInfo.SECURITY_TYPE_PSK, WifiInfo.SECURITY_TYPE_SAE -> if (passphrase.isEmpty()) {
+                            throw IOException("Connected Wi-Fi is secured; enter its WPA2 password")
+                        }
+                        WifiInfo.SECURITY_TYPE_UNKNOWN -> Unit
+                        else -> throw IOException("Existing Wi-Fi requires an open or WPA2-Personal network")
+                    }
+                }
+                val configCheck = if (liveSsid == null) "manual_unverified" else "verified"
+                val infoSource = when {
+                    info == null -> "unavailable"
+                    info === stationInfo -> "station"
+                    else -> "network"
+                }
+                val fineLocation = appContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                val locationEnabled = appContext.getSystemService(LocationManager::class.java)?.isLocationEnabled
                 synchronized(lock) {
                     check(!closed) { "ExistingWifiManager is closed" }
                     selected = network
@@ -115,7 +139,10 @@ class ExistingWifiManager(
                 }
                 onDiagnostic("Existing Wi-Fi attached iface=$name host=${address.hostAddress} " +
                     "networkNameReadable=${liveSsid != null} channel=$channel security=${security()} " +
-                    "receiverIdentity=saved")
+                    "receiverIdentity=saved configCheck=$configCheck wifiInfoSource=$infoSource " +
+                    "apHint=${if (apBssid == null) "omitted" else "present"} " +
+                    "fineLocation=$fineLocation locationEnabled=${locationEnabled ?: "unknown"} " +
+                    "observedSecurity=$observedSecurity")
                 return WirelessHotspotInfo(ssid, passphrase, security(), channel, frequency,
                     // The router's BSSID is not this receiver's AirPlay device identity.
                     null, name, address, when {
@@ -123,7 +150,7 @@ class ExistingWifiManager(
                         frequency < 2500 -> "2.4 GHz"
                         frequency < 5955 -> "5 GHz"
                         else -> "6 GHz"
-                    }, WirelessHotspotBackend.EXISTING_WIFI, hostAddresses = addresses)
+                    }, WirelessHotspotBackend.EXISTING_WIFI, hostAddresses = addresses, accessPointBssid = apBssid)
             }
             if ((System.nanoTime() - started) / 1_000_000 >= timeoutMillis) {
                 throw IOException("Existing Wi-Fi is not connected or has no usable address. Connect both devices to the same Wi-Fi in system settings")
@@ -139,6 +166,17 @@ class ExistingWifiManager(
 
     private fun security(): Iap2WirelessSecurity =
         if (passphrase.isEmpty()) Iap2WirelessSecurity.NONE else Iap2WirelessSecurity.WPA_WPA2
+
+    private fun readableSsid(info: WifiInfo?): String? = info?.ssid?.removeSurrounding("\"")
+        ?.takeUnless { it == WifiManager.UNKNOWN_SSID || it.isEmpty() }
+
+    private fun accessPointAddress(text: String?): ByteArray? {
+        if (text == null || !text.matches(Regex("(?i)[0-9a-f]{2}(:[0-9a-f]{2}){5}"))) return null
+        val bytes = text.split(':').map { it.toInt(16).toByte() }.toByteArray()
+        if (bytes.all { it == 0.toByte() } || bytes[0].toInt() and 1 != 0 ||
+            text.equals("02:00:00:00:00:00", ignoreCase = true)) return null
+        return bytes
+    }
 
     private fun invalidate(reason: String) {
         if (!closed && invalidated.compareAndSet(false, true)) {
