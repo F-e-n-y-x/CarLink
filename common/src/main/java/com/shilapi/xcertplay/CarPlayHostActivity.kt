@@ -1523,15 +1523,16 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         val seekBar = SeekBar(this).apply {
-            max = 100 - 30
-            progress = displayScalePercent - 30
+            max = CarPlayDisplayScale.MAX_PERCENT - CarPlayDisplayScale.MIN_PERCENT
+            progress = displayScalePercent - CarPlayDisplayScale.MIN_PERCENT
             splitTrack = false
             progressTintList = ColorStateList.valueOf(MENU_ACCENT)
             thumbTintList = ColorStateList.valueOf(MENU_ACCENT)
             setOnSeekBarChangeListener(
                 object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                        displayScalePercent = (30 + progress).coerceIn(30, 100)
+                        displayScalePercent = (CarPlayDisplayScale.MIN_PERCENT + progress)
+                            .coerceIn(CarPlayDisplayScale.MIN_PERCENT, CarPlayDisplayScale.MAX_PERCENT)
                         displayScaleTenths = CarPlayDisplayScale.sanitize((displayScalePercent + 5) / 10)
                         updateResolutionMenu()
                     }
@@ -1557,7 +1558,7 @@ class CarPlayHostActivity : ComponentActivity() {
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
         )
         range.addView(
-            menuText(getString(R.string.s_1_0x), 15f, MENU_SECONDARY),
+            menuText(getString(R.string.s_2_0x), 15f, MENU_SECONDARY),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,

@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.content.Context
+import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -20,6 +21,17 @@ class CustomResolutionPersistenceTest {
         AirPlayPersistence.saveDisplayScalePercent(context, 55)
         AirPlayPersistence.saveDisplayScaleTenths(context, 6)
         assertEquals(55, AirPlayPersistence.loadDisplayScalePercent(context))
+    }
+
+    @Test fun customPercentKeepsTheExtendedRange() {
+        AirPlayPersistence.saveDisplayScalePercent(context, 150)
+        assertEquals(150, AirPlayPersistence.loadDisplayScalePercent(context))
+        AirPlayPersistence.saveDisplayScalePercent(context, CarPlayDisplayScale.MAX_PERCENT)
+        assertEquals(CarPlayDisplayScale.MAX_PERCENT, AirPlayPersistence.loadDisplayScalePercent(context))
+        AirPlayPersistence.saveDisplayScalePercent(context, CarPlayDisplayScale.MAX_PERCENT + 60)
+        assertEquals(CarPlayDisplayScale.MAX_PERCENT, AirPlayPersistence.loadDisplayScalePercent(context))
+        AirPlayPersistence.saveDisplayScalePercent(context, 10)
+        assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(context))
     }
 
 }

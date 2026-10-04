@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
@@ -524,9 +525,13 @@ class DiPlayActivity : ComponentActivity() {
                     .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
             }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
-            resolutionSettingControl(card, R.string.resolution, R.string.custom_resolution_hint,
-                30..100, 100, R.string.custom_resolution_summary, { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
-                save = { AirPlayPersistence.saveDisplayScalePercent(this, it) })
+            resolutionSettingControl(
+                card, R.string.resolution, R.string.custom_resolution_hint,
+                CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT, 100,
+                R.string.custom_resolution_summary,
+                { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
+                save = { AirPlayPersistence.saveDisplayScalePercent(this, it) },
+            )
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
             choice(card, getString(R.string.music_buffer), listOf(getString(R.string.s_300_ms_default), getString(R.string.s_500_ms), getString(R.string.s_1000_ms_most_stable)),
                 bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
