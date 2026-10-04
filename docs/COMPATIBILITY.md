@@ -19,6 +19,7 @@ See [BYD navigation](BYD_NAVIGATION.md) for the exact verified firmware and life
 ## Known limitations
 
 - Some units stutter, particularly under higher video load. A 2.4 GHz link alone does not prove the cause: interference, firmware and decoder stalls can all contribute. Try Default icons, 30 fps and a lower resolution, then attach a report.
+- On a 2023 Han with GCC DiLink 3, wireless CarPlay stuttered whenever the car's Wi-Fi client was not joined to a network. The firmware scans every band every 10 s in that state, and each 3-6 s scan takes the radio off the CarPlay channel. With network ADB authorized, DiPlay pauses those scans for the session; without ADB, joining the car to a hotspot also slows them.
 - Some iOS/head-unit combinations do not visibly apply icon and text size. Reconnection is implemented; that does not guarantee the iPhone chooses the requested layout.
 - A radio that supports joining a 5 GHz network may still reject a 5 GHz Wi-Fi Direct group. The capability flag is diagnostic, not proof of group-owner support.
 - Automatic startup depends on the car's firmware and startup permissions.
