@@ -25,6 +25,16 @@ class WheelZoomKeysTest {
     }
 
     @Test
+    fun joystickKeysNeverZoom() {
+        val keys = WheelZoomKeys()
+        keys.press(Role.MODE)
+        for (role in listOf(Role.JOYSTICK, Role.PREVIOUS, Role.NEXT, Role.SELECT)) {
+            assertEquals(Action.PASS to Action.PASS, keys.press(role))
+        }
+        assertTrue(keys.zoomMode)
+    }
+
+    @Test
     fun otherKeysAlwaysPass() {
         val keys = WheelZoomKeys()
         keys.press(Role.MODE)

@@ -589,8 +589,20 @@
     <string name="wheel_zoom_mode_off">Кнопки гучності знову керують звуком</string>
     <string name="wheel_zoom_note_zoom">Масштаб карти</string>
     <string name="wheel_zoom_note_volume">Гучність</string>
+    <string name="wheel_joystick">Джойстик CarPlay на кермі</string>
+    <string name="wheel_joystick_description">Кнопка медіа BYD вмикає й вимикає джойстик для центрального екрана CarPlay, як крутилка в авто. Поки він увімкнений, колесо гучності або ⏮ ⏭ рухають вибір, ⏯ вибирає, а кастомна кнопка повертає назад; музикою й гучністю ці кнопки тоді не керують. Під час дзвінка кнопки працюють для дзвінка. На деяких авто вибір рухає й гучність на консолі.</string>
+    <string name="wheel_joystick_auto_off">Джойстик вимикається сам</string>
+    <string name="wheel_joystick_auto_off_description">Через 15 секунд без натискань і коли стартує маршрут кнопки знову керують музикою й гучністю.</string>
+    <string name="wheel_joystick_on">Джойстик увімкнено</string>
+    <string name="wheel_joystick_off">Джойстик вимкнено</string>
+    <string name="wheel_joystick_hint">Колесо гучності або ⏮ ⏭ — рух · ⏯ — вибрати · кастомна кнопка — назад · кнопка медіа — вимкнути</string>
+    <string name="wheel_key_role_joystick">джойстик</string>
+    <string name="wheel_key_role_previous">попередній пункт</string>
+    <string name="wheel_key_role_next">наступний пункт</string>
+    <string name="wheel_key_role_select">вибрати</string>
+    <string name="wheel_key_role_back">назад</string>
     <string name="wheel_key_service_label">Кнопки керма DiPlay</string>
-    <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці. Лише отримує натискання кнопок і не читає екран.</string>
+    <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці та для руху екраном CarPlay. Лише отримує натискання кнопок і не читає екран.</string>
     <string name="cluster_song_on_change">Пісня лише при зміні</string>
     <string name="cluster_song_on_change_description">Нова пісня видна на приборці 5 секунд, потім картка порожніє. Пауза й продовження її не показують.</string>
 </resources>

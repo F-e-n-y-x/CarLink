@@ -757,7 +757,7 @@ class DiPlayActivity : ComponentActivity() {
                                 if (it) checkAdbState(mayAsk = true)
                             }
                         }
-                        wheelMapZoomControls(card)
+                        wheelKeyControls(card)
                     }
                 }
             }
@@ -1339,15 +1339,21 @@ class DiPlayActivity : ComponentActivity() {
         dialog.show()
     }
 
-    /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
-    /** Steering-wheel keys for the dashboard map zoom: the switch, the key service and the keys. */
-    private fun wheelMapZoomControls(card: LinearLayout) {
+    /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
+    private fun wheelKeyControls(card: LinearLayout) {
         toggle(card, getString(R.string.wheel_map_zoom), getString(R.string.wheel_map_zoom_description),
             WheelZoomSettings.enabled(this)) {
             WheelZoomSettings.setEnabled(this, it)
             render()
         }
-        if (!WheelZoomSettings.enabled(this)) return
+        toggle(card, getString(R.string.wheel_joystick), getString(R.string.wheel_joystick_description),
+            WheelZoomSettings.joystick(this)) {
+            WheelZoomSettings.setJoystick(this, it)
+            render()
+        }
+        val zoom = WheelZoomSettings.enabled(this)
+        val joystick = WheelZoomSettings.joystick(this)
+        if (!zoom && !joystick) return
         val connected = WheelKeyService.connected()
         card.addView(label(getString(when {
             connected -> R.string.wheel_keys_service_on
@@ -1371,18 +1377,36 @@ class DiPlayActivity : ComponentActivity() {
                     .onFailure { toast(getString(R.string.wheel_keys_no_settings)) }
             }, matchButton(10, 56))
         }
-        val behaviours = WheelZoomSettings.Behaviour.entries
-        choice(card, getString(R.string.wheel_zoom_behaviour),
-            listOf(getString(R.string.wheel_zoom_behaviour_toggle), getString(R.string.wheel_zoom_behaviour_timed)),
-            behaviours.indexOf(WheelZoomSettings.behaviour(this)), reconnects = false) {
-            WheelZoomSettings.setBehaviour(this, behaviours[it])
+        if (zoom) {
+            val behaviours = WheelZoomSettings.Behaviour.entries
+            choice(card, getString(R.string.wheel_zoom_behaviour),
+                listOf(getString(R.string.wheel_zoom_behaviour_toggle), getString(R.string.wheel_zoom_behaviour_timed)),
+                behaviours.indexOf(WheelZoomSettings.behaviour(this)), reconnects = false) {
+                WheelZoomSettings.setBehaviour(this, behaviours[it])
+            }
+        }
+        if (joystick) {
+            toggle(card, getString(R.string.wheel_joystick_auto_off), getString(R.string.wheel_joystick_auto_off_description),
+                WheelZoomSettings.joystickAutoOff(this)) { WheelZoomSettings.setJoystickAutoOff(this, it) }
         }
         for (role in WheelZoomSettings.Role.entries) {
-            val name = getString(when (role) {
+            // A key can serve both: the mode key goes back in the joystick, the zoom keys move it.
+            val zoomName = when (role) {
                 WheelZoomSettings.Role.MODE -> R.string.wheel_key_role_mode
                 WheelZoomSettings.Role.ZOOM_IN -> R.string.wheel_key_role_zoom_in
                 WheelZoomSettings.Role.ZOOM_OUT -> R.string.wheel_key_role_zoom_out
-            })
+                else -> null
+            }.takeIf { zoom }
+            val joystickName = when (role) {
+                WheelZoomSettings.Role.MODE -> R.string.wheel_key_role_back
+                WheelZoomSettings.Role.ZOOM_IN, WheelZoomSettings.Role.PREVIOUS -> R.string.wheel_key_role_previous
+                WheelZoomSettings.Role.ZOOM_OUT, WheelZoomSettings.Role.NEXT -> R.string.wheel_key_role_next
+                WheelZoomSettings.Role.JOYSTICK -> R.string.wheel_key_role_joystick
+                WheelZoomSettings.Role.SELECT -> R.string.wheel_key_role_select
+            }.takeIf { joystick }
+            val names = listOfNotNull(zoomName, joystickName)
+            if (names.isEmpty()) continue
+            val name = names.joinToString(" · ") { getString(it) }
             lateinit var assign: android.widget.Button
             assign = button(getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()), false) {
                 val started = WheelKeyService.learn(role, cancelled = {
@@ -1397,6 +1421,7 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
 
+    /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
     private fun clusterSongSwitch(card: LinearLayout) {
         toggle(card, getString(R.string.cluster_song),
             getString(R.string.cluster_song_description),

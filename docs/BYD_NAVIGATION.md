@@ -79,6 +79,21 @@ On the Tang the console's volume control sends exactly the same codes, scan code
 
 BYD's settings have no accessibility page. The "Turn on the wheel key service · ADB" button adds DiPlay's service to `enabled_accessibility_services` through the head unit's own adbd (the car asks once to allow DiPlay's key) and keeps services already listed. The service only receives key events; it declares no window-content access.
 
+### CarPlay joystick on the steering wheel (optional)
+
+DiPlay already declares a rotary knob for CarPlay's main screen (HID `xcertplay Knob`). Checked with Apple Maps and lists on a Tang: only the knob's turn moves CarPlay's focus (the first turn opens the Maps side panel with search, pinned places and recents), select activates the focused item and back closes the screen; the knob's x/y nudges only pan a focused map, so the joystick does not use them.
+
+With **Settings → BYD navigation → CarPlay joystick on the wheel** turned on and the wheel key service running (see above):
+
+- BYD's media key (289, scan 89, normally opens BYD's media app) turns the joystick on and off; without a CarPlay session it keeps its BYD action;
+- while the joystick is on, previous/next (88 / 87) and the volume roller (291 / 292) turn the knob one step back or forward, play/pause (353, scan 505) selects and the custom key (305) goes back. With the joystick off the custom key switches the map zoom as before (if that setting is on); turning the joystick on ends zoom mode;
+- a toast shows the keys at a glance, and "Joystick on" / "Joystick off" shows briefly where the song shows on the dashboard;
+- "Joystick turns off by itself" (on by default) ends it 15 seconds after the last press and when a route starts, so the keys go back to music and volume; a new CarPlay session, or turning the setting off, ends it too;
+- during a call every key keeps its usual action;
+- every key can be reassigned in the settings by pressing it; a key assignment takes the next press before the joystick does.
+
+The wheel's dashboard-menu key would be the natural back key, but BYD takes it before the input filter (keycode 309, consumed while queueing), and even read from the input device the dashboard still opens its own menu on the same press. So the custom key goes back instead.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.
