@@ -123,7 +123,7 @@ class CarPlayHostSettingsTest {
         assertEquals(original, field("displayScaleTenths"))
         assertEquals(3, field("gestureFingerCount"))
         invoke("openSettingsMenu")
-        assertEquals(original * 10 - 30, resolutionSlider().progress)
+        assertEquals(original * 10 - CarPlayDisplayScale.MIN_PERCENT, resolutionSlider().progress)
         assertEquals(activity.getString(R.string.settings_gesture_fingers, 3), gestureButton().text)
     }
 
@@ -388,7 +388,7 @@ class CarPlayHostSettingsTest {
 
     private fun menu() = field("settingsMenu") as View
     private fun resolutionSlider() = views(menu()).filterIsInstance<SeekBar>()
-        .first { it.max == 70 }
+        .first { it.max == CarPlayDisplayScale.MAX_PERCENT - CarPlayDisplayScale.MIN_PERCENT }
     private fun gestureButton() = views(menu()).filterIsInstance<Button>()
         .first { it.text == activity.getString(R.string.settings_gesture_fingers, field("gestureFingerCount")) }
     private fun views(view: View): Sequence<View> = sequence {

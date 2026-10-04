@@ -3,6 +3,7 @@ import android.app.AlertDialog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.host.R
 import org.junit.Assert.*
 import org.junit.Test
@@ -26,7 +27,8 @@ class ResolutionDialogTest {
         val integer = DiPlayActivity::class.java.declaredMethods.first { it.name == "resolutionSettingControl" }
         integer.isAccessible = true
         integer.invoke(a, parent, R.string.resolution, R.string.custom_resolution_hint,
-            30..100, 100, R.string.custom_resolution_summary, { 56 }, false, { _: Int -> })
+            CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT, 100,
+            R.string.custom_resolution_summary, { 56 }, false, { _: Int -> })
         for (index in listOf(0)) {
             parent.getChildAt(index).performClick()
             val d = ShadowAlertDialog.getLatestAlertDialog()
