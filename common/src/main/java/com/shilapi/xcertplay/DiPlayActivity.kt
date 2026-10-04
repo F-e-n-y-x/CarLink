@@ -502,6 +502,10 @@ class DiPlayActivity : ComponentActivity() {
         bydAdbSettings(content)
         section(content, getString(R.string.display_and_performance), R.drawable.ic_dp_display) { card ->
             val nightModes = CarPlayNightMode.entries
+            val nightMode = AirPlayPersistence.loadCarPlayNightMode(this)
+            val ambientControls = column().apply {
+                visibility = if (nightMode == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
+            }
             choice(
                 card,
                 getString(R.string.carplay_night_mode),
@@ -511,19 +515,24 @@ class DiPlayActivity : ComponentActivity() {
                     getString(R.string.carplay_night_day),
                     getString(R.string.carplay_night_night),
                 ),
-                nightModes.indexOf(AirPlayPersistence.loadCarPlayNightMode(this)),
+                nightModes.indexOf(nightMode),
                 reconnects = false,
             ) { index ->
                 AirPlayPersistence.saveCarPlayNightMode(this, nightModes[index])
+                ambientControls.visibility = if (nightModes[index] == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
             }
             card.addView(label(getString(R.string.carplay_night_hint), 14, MUTED))
             card.addView(label(getString(R.string.carplay_night_time_note), 14, MUTED).apply {
                 setPadding(0, 0, 0, dp(18))
             })
-            ambientLightThresholdControl(card)
-            nightDelaySettingControl(card, R.string.ambient_delay_title, R.string.ambient_delay_hint,
+            ambientControls.addView(label(getString(R.string.carplay_night_ambient_hint), 14, MUTED).apply {
+                setPadding(0, 0, 0, dp(18))
+            })
+            ambientLightThresholdControl(ambientControls)
+            nightDelaySettingControl(ambientControls, R.string.ambient_delay_title, R.string.ambient_delay_hint,
                 0..60, 2, R.string.ambient_delay_summary, { AirPlayPersistence.loadAmbientDelaySeconds(this) },
                 save = { AirPlayPersistence.saveAmbientDelaySeconds(this, it) })
+            card.addView(ambientControls)
             card.addView(button(getString(R.string.picture_adjustments), false) {
                 startActivity(Intent(this, CarPlayHostActivity::class.java)
                     .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
