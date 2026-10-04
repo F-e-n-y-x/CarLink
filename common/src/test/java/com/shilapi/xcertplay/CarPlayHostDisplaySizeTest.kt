@@ -46,6 +46,7 @@ class CarPlayHostDisplaySizeTest {
 
     @Before fun setUp() {
         activity = Robolectric.buildActivity(CarPlayHostActivity::class.java).get()
+        AirPlayPersistence.saveAdaptPipResolution(activity, false)
         // Exercise host startup without launching vendor-service workers or real transports.
         controllerConstruction = mockConstruction(CarPlayController::class.java)
         (getField("teardownExecutor") as ExecutorService).shutdownNow()
@@ -89,6 +90,14 @@ class CarPlayHostDisplaySizeTest {
         assertSame(display, getField("sessionDisplay"))
         assertEquals(0, getField("restartGeneration"))
         assertEquals(1, keepLogs())
+    }
+
+    @Test fun aNarrowWindowWithAdaptPipResolutionTriggersReconnect() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession()
+        applySize(700, 990)
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
     }
 
     @Test fun connectingInANarrowWindowRebuildsWhenTheCameraCloses() {

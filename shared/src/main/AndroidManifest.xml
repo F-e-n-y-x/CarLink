@@ -25,6 +25,10 @@
         android:required="false" />
 
     <queries>
+        <package android:name="com.byd.carsettings" />
+        <package android:name="com.byd.appmgr" />
+        <package android:name="com.byd.deviceinfo" />
+        <package android:name="com.byd.service" />
         <intent>
             <action android:name="android.settings.WIFI_SETTINGS" />
         </intent>
