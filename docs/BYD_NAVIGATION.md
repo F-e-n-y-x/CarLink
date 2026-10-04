@@ -201,3 +201,10 @@ output even when navigation output has since been disabled. A new mode waits for
 that recovery. Android cannot guarantee restoration before force-stop; recovery
 runs after the app opens again. This journal does not change the stock-map package
 hold or the verified windshield HUD receiver checks.
+
+Before releasing DiLink 3 support, retest on the car: first display creation after
+boot, guidance-only mode, map priority over guidance, normal disconnect, temporary
+ADB loss during creation and shutdown, and reopening after an interrupted output.
+Confirm that gauges return after recovery and that existing DiLink 5 routing still
+wins on its supported hardware. Unit tests exercise the failure/recovery paths;
+the repaired branch still needs an end-to-end vehicle test.

@@ -144,6 +144,13 @@ class DiLink3ClusterModeSessionTest {
         assertTrue(state.apply(null))
     }
 
+    @Test fun aFailedFinalMapModeAlsoCompensatesPreparation() {
+        response = { if (it == projection.command) null else ok }
+        assertFalse(prepare(session(), current = { projection }))
+        assertEquals(BydDiLink3ClusterMode.CREATE_DISPLAY.take(2) + listOf(projection.command, stock.command), commands)
+        assertFalse(pending)
+    }
+
     @Test fun unrelatedDisplayAndAnUnusedOutputNeverChangeClusterMode() {
         val state = session()
         assertTrue(state.apply(null))

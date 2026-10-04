@@ -55,7 +55,13 @@ internal class DiLink3ClusterModeSession(
             // On failure restore STOCK even if a map request arrived during preparation. The next
             // queued request may retry that map, after compensation/recovery has completed.
             compensated = runCatching {
-                if (prepared && stillWanted()) apply(currentMode()) else restoreStock()
+                val mode = if (prepared && stillWanted()) currentMode() else null
+                if (mode == null) restoreStock()
+                else if (runCatching { apply(mode) }.getOrDefault(false)) true
+                else {
+                    prepared = false
+                    restoreStock()
+                }
             }.getOrDefault(false)
         }
         return prepared && compensated && displayPresent()
