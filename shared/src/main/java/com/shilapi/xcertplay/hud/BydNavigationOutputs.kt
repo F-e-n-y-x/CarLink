@@ -113,6 +113,9 @@ object BydNavigationOutputs {
     /** The dashboard song setting changed; applies at once. */
     fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
 
+    /** A short note where the song shows on the dashboard; needs the same ADB access as the song. */
+    fun dashboardNote(text: String, source: Int? = null) = BydClusterSong.note(text, source)
+
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
     fun endNow() {
         standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()

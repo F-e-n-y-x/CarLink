@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -122,6 +123,41 @@ class ClusterMapPresentationTest {
             assertTrue(report.contains("$id:${DiLink4ClusterDisplay.NAME}"))
             assertTrue(report.contains("selectedCluster=none"))
         } finally {
+            ShadowDisplayManager.removeDisplay(id)
+        }
+    }
+
+    @Test fun legacyHolderSurfaceIsReportedAsPhysicalOutputWithoutTakingItsOwnership() {
+        val id = display("fission_bg_XDJAScreenProjection")
+        val reported = mutableListOf<android.view.Surface?>()
+        val presentation = ClusterMapPresentation(context, manager.getDisplay(id)) { reported += it }
+        val surface = org.mockito.Mockito.mock(android.view.Surface::class.java)
+        val holder = org.mockito.Mockito.mock(android.view.SurfaceHolder::class.java)
+        org.mockito.Mockito.`when`(holder.surface).thenReturn(surface)
+        fun find(view: android.view.View): android.view.SurfaceView? {
+            if (view is android.view.SurfaceView) return view
+            if (view is android.view.ViewGroup) for (child in 0 until view.childCount) {
+                find(view.getChildAt(child))?.let { return it }
+            }
+            return null
+        }
+        try {
+            presentation.create()
+            val view = find(presentation.window!!.decorView) ?: error("Legacy route must use SurfaceView")
+            val callbacks = (view.holder as org.robolectric.shadows.ShadowSurfaceView.FakeSurfaceHolder).callbacks
+            callbacks.forEach { it.surfaceCreated(holder) }
+            assertSame(surface, presentation.outputSurface)
+            assertSame(surface, reported.last())
+            presentation.setMapVisible(false)
+            assertFalse(presentation.mapVisible)
+            presentation.setMapVisible(true)
+            assertTrue(presentation.mapVisible)
+            callbacks.forEach { it.surfaceDestroyed(holder) }
+            assertNull(presentation.outputSurface)
+            assertNull(reported.last())
+            org.mockito.Mockito.verify(surface, org.mockito.Mockito.never()).release()
+        } finally {
+            presentation.dismiss()
             ShadowDisplayManager.removeDisplay(id)
         }
     }

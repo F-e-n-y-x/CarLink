@@ -8,9 +8,10 @@ import com.shilapi.xcertplay.iap2.body.Iap2BodyReader
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
-/** What the dashboard's music card shows. */
-internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text)
+/** Dashboard song; [line] preserves title-only HUD text, [source] selects a note's music icon. */
+internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text, val source: Int? = null)
 
 /**
  * The CarPlay song for the dashboard, from iAP2 NowPlayingUpdate (0x5001): title (1) and artist (12)
@@ -99,10 +100,13 @@ internal object BydClusterSong {
     private const val STATE_STOPPED = 3
 
     private val shell = BydAdbShell(TAG)
-    private val writer = Executors.newSingleThreadExecutor { Thread(it, "diplay-cluster-song").apply { isDaemon = true } }
-    private val state = ClusterSongState() // guards wanted too
+    private const val NOTE_MILLIS = 3_000L
+
+    private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-cluster-song").apply { isDaemon = true } }
+    private val state = ClusterSongState() // guards wanted and note too
     @Volatile private var context: Context? = null
     private var wanted: ClusterSong? = null
+    private var note: Any? = null // the note on the card now, if any
     private var shown: ClusterSong? = null // writer thread
     private var firstLogged = false // writer thread
 
@@ -113,12 +117,11 @@ internal object BydClusterSong {
     /** NowPlayingUpdate frames; the song is followed even while the setting is off, so it can show at once. */
     fun onFrame(frame: Iap2Frame) {
         val app = context ?: return
-        val song = synchronized(state) {
+        synchronized(state) {
             val previous = state.current()
             state.accept(frame)
-            state.current().also { if (it == previous) return }
-        }
-        if (BydOutputSettings.clusterSong(app)) {
+            val song = state.current()
+            if (song == previous || !BydOutputSettings.clusterSong(app)) return
             if (song == null) stop(app) else show(app, song)
         }
     }
@@ -126,25 +129,62 @@ internal object BydClusterSong {
     /** The setting changed: show the current song now, or stop the card DiPlay set. */
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
-        if (enabled) synchronized(state) { state.current() }?.let { show(app, it) } else stop(app)
+        synchronized(state) {
+            val song = state.current().takeIf { enabled }
+            if (song == null) stop(app) else show(app, song)
+        }
     }
 
     /** The session ended: forget the song and stop the card DiPlay set. */
     fun end() {
         val app = context ?: return
-        synchronized(state) { state.clear() }
-        stop(app)
+        synchronized(state) {
+            state.clear()
+            stop(app)
+        }
     }
 
+    /**
+     * A short note in the dashboard's music card (for example the wheel zoom mode) for a few seconds,
+     * optionally with another source icon, then the song again or no card, as before. Uses the same adb
+     * shell as the song, so it shows only where that works.
+     */
+    fun note(text: String, source: Int? = null) {
+        val app = context ?: return
+        val token = Any()
+        val card = synchronized(state) {
+            note = token
+            ClusterSong(text, state.current()?.playing ?: true, source = source).also { wanted = it }
+        }
+        writer.execute { write(app, card) }
+        writer.schedule({ endNote(app, token) }, NOTE_MILLIS, TimeUnit.MILLISECONDS)
+    }
+
+    // Writer thread.
+    private fun endNote(app: Context, token: Any) {
+        val song = synchronized(state) {
+            if (note !== token) return
+            note = null
+            state.current().takeIf { BydOutputSettings.clusterSong(app) }.also { wanted = it }
+        }
+        if (song == null) clear(app) else write(app, song)
+    }
     fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {
-        synchronized(state) { wanted = song }
+        synchronized(state) {
+            // Song updates still advance the cache while a short wheel note has priority.
+            if (note != null) return
+            wanted = song
+        }
         writer.execute { write(app, song) }
     }
 
     private fun stop(app: Context) {
-        synchronized(state) { wanted = null }
+        synchronized(state) {
+            note = null
+            wanted = null
+        }
         writer.execute { clear(app) }
     }
 
@@ -153,7 +193,7 @@ internal object BydClusterSong {
         if (synchronized(state) { wanted } != song || song == shown) return
         val text = Base64.encodeToString(song.text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         val playing = if (song.playing) STATE_PLAYING else STATE_PAUSED
-        if (run(app, "$SOURCE_OTHERS $playing $text")) {
+        if (run(app, "${song.source ?: SOURCE_OTHERS} $playing $text")) {
             shown = song
             if (!firstLogged) {
                 firstLogged = true

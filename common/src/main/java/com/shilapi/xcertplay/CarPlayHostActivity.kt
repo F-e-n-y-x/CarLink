@@ -813,6 +813,7 @@ class CarPlayHostActivity : ComponentActivity() {
             if (clusterPresentation === presentation) {
                 clusterPresentation = null
                 com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+                updateClusterMapShown()
             }
         }
         try {
@@ -845,6 +846,7 @@ class CarPlayHostActivity : ComponentActivity() {
             presentation.setOnDismissListener {
                 if (clusterLayers[fullMap] === presentation) clusterLayers.remove(fullMap)
                 if (clusterPresentation === presentation) clusterPresentation = null
+                updateClusterMapShown()
             }
             try {
                 presentation.setMapVisible(false)
@@ -864,6 +866,7 @@ class CarPlayHostActivity : ComponentActivity() {
         target.outputSurface?.let(::onClusterSurface)
         target.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
         target.setMapVisible(visible)
+        updateClusterMapShown()
         applyClusterTurnOverlay()
     }
 
@@ -896,6 +899,7 @@ class CarPlayHostActivity : ComponentActivity() {
         clusterSurface = null
         presentations.forEach { runCatching { it.dismiss() } }
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(false)
+        controller?.setDashboardMapOutputVisible(false)
     }
 
     private fun onClusterSurface(surface: Surface?) {
@@ -1079,6 +1083,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun updateClusterMapShown() {
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
             (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && !MapMirrors.any)
+        // Wheel zoom needs a physical map; centre-screen copies must not suppress that eligibility.
+        val surface = clusterSurface?.takeIf { it.isValid }
+        val presentation = clusterPresentation
+        val presented = surface != null && presentation?.isShowing == true && presentation.mapVisible &&
+            presentation.outputSurface === surface
+        val direct = surface != null && adbClusterConfigured && ClusterActivityOutput.hasConfirmedRoute()
+        controller?.setDashboardMapOutputVisible(presented || direct)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -3579,7 +3590,10 @@ class CarPlayHostActivity : ComponentActivity() {
             return false
         }
         displayDiagnosticAttempt = DisplayDiagnosticSnapshot.currentAttempt(this)
+        adbClusterConfigured = AdbClusterRouter.enabled(this) && snapshot.controller.configuredClusterSize() ==
+            (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT)
         controller = snapshot.controller
+        updateClusterMapShown()
         sink = snapshot.sink
         sessionDisplay = snapshot.display
         MapMirrors.reapply()
@@ -3708,6 +3722,7 @@ class CarPlayHostActivity : ComponentActivity() {
             },
         )
         controller = next
+        updateClusterMapShown()
         CarPlayMediaKeys.attach(this, next)
         if (airPlayConfig.videoInCar) CarPlayVideo.attach(this, next)
         val display = CarPlaySessionDisplay(
