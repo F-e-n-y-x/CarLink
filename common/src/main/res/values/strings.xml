@@ -110,6 +110,9 @@
     <string name="auto_start_on_boot">Auto-start on boot</string>
     <string name="automatic_cluster_map_setup">Automatic cluster map setup</string>
     <string name="automatic_connection">Automatic connection</string>
+    <string name="usb_auto_confirm_title">Auto-confirm USB permission</string>
+    <string name="usb_auto_confirm_subtitle">Automatically accept the Android USB permission prompt when an iPhone is connected via cable (requires Accessibility Service)</string>
+    <string name="usb_auto_confirm_desc">Automatically checks Always allow and confirms the Android USB accessory prompt for CarPlay</string>
     <string name="automatic_map_enabled_open_the_cluster_map_card_or_select">Automatic map enabled. Open the cluster map card or select Map theme.</string>
     <string name="automatic_map_setup_adb">Automatic map setup · ADB</string>
     <string name="availability_depends_on_your_head_unit_s_startup_settings">Availability depends on your head unit’s startup settings.</string>
@@ -147,7 +150,7 @@
     <string name="choose_iphone">Choose iPhone</string>
     <string name="choose_location">Choose location</string>
     <string name="choose_save_location">Choose save location</string>
-    <string name="choose_where_to_save_your_report">Choose where to save your report.\u0020</string>
+    <string name="choose_where_to_save_your_report">Choose where to save your report. If the file picker is unavailable, DiPlay saves it in the app.\u0020</string>
     <string name="choose_your_iphone">Choose your iPhone</string>
     <string name="close">Close</string>
     <string name="cluster_map_size">Dashboard map size</string>
@@ -545,7 +548,7 @@
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
-    <string name="usb_auto_confirm_title">Auto-confirm USB permission</string>
-    <string name="usb_auto_confirm_subtitle">Automatically accept the Android USB permission prompt when an iPhone is connected via cable (requires Accessibility Service)</string>
-    <string name="usb_auto_confirm_desc">Automatically checks Always allow and confirms the Android USB accessory prompt for CarPlay</string>
+    <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
+    <string name="view_diagnostic_report">View report</string>
+    <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
 </resources>

@@ -17,98 +17,64 @@ import android.view.accessibility.AccessibilityNodeInfo
  */
 class UsbAutoConfirmService : AccessibilityService() {
 
-    private var lastClickTime = 0L
+    private var lastClickTime = -DEBOUNCE_MILLIS
+    private var usbWindowId: Int? = null
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            usbWindowId = if (isSystemUsbWindow(event.packageName?.toString(), event.className?.toString())) {
+                event.windowId
+            } else null
+        }
+        if (usbWindowId != event.windowId) return
         val now = SystemClock.uptimeMillis()
         if (now - lastClickTime < DEBOUNCE_MILLIS) return
-
         val root = runCatching { rootInActiveWindow }.getOrNull() ?: return
         try {
-            if (isUsbPermissionDialog(root)) {
-                checkAlwaysCheckbox(root)
-                if (clickConfirmButton(root)) {
-                    lastClickTime = now
-                    Log.i(TAG, "Successfully auto-confirmed USB permission dialog")
-                }
+            if (root.windowId != usbWindowId || root.packageName?.toString() !in SYSTEM_PACKAGES) return
+            val texts = mutableListOf<String>()
+            visit(root) { node ->
+                node.text?.toString()?.let(texts::add)
+                node.contentDescription?.toString()?.let(texts::add)
+                false
+            }
+            val appLabel = applicationInfo.loadLabel(packageManager).toString()
+            if (!isTargetPrompt(texts.joinToString(" "), appLabel)) return
+            // Only the system USB dialog's optional default checkbox may be changed.
+            visit(root) { node ->
+                node.isCheckable && !node.isChecked && node.isEnabled &&
+                    node.viewIdResourceName == "android:id/alwaysUse" &&
+                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            val confirmed = visit(root) { node ->
+                val label = node.text?.toString()?.trim()
+                node.isEnabled && node.isClickable &&
+                    (node.viewIdResourceName == "android:id/button1" || label in CONFIRM_LABELS) &&
+                    node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            if (confirmed) {
+                lastClickTime = now
+                Log.i(TAG, "Successfully auto-confirmed DiPlay USB permission dialog")
             }
         } finally {
-            runCatching { root.recycle() }
+            @Suppress("DEPRECATION")
+            root.recycle()
         }
     }
 
-    override fun onInterrupt() {}
+    override fun onInterrupt() { usbWindowId = null }
 
-    private fun isUsbPermissionDialog(root: AccessibilityNodeInfo): Boolean {
-        val texts = mutableListOf<String>()
-        collectAllText(root, texts)
-        val combined = texts.joinToString(" ")
-        val isTargetApp = combined.contains("DiPlay", ignoreCase = true) ||
-            combined.contains("CarPlay", ignoreCase = true)
-        val isUsbPrompt = combined.contains("iPhone", ignoreCase = true) ||
-            combined.contains("USB", ignoreCase = true) ||
-            combined.contains("访问") ||
-            combined.contains("access", ignoreCase = true)
-        return isTargetApp && isUsbPrompt
-    }
-
-    private fun collectAllText(node: AccessibilityNodeInfo, outList: MutableList<String>) {
-        node.text?.toString()?.let { outList.add(it) }
-        node.contentDescription?.toString()?.let { outList.add(it) }
+    private fun visit(node: AccessibilityNodeInfo, depth: Int = 0, action: (AccessibilityNodeInfo) -> Boolean): Boolean {
+        if (depth > 32) return false
+        if (action(node)) return true
         for (i in 0 until node.childCount) {
             val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
-            collectAllText(child, outList)
-            runCatching { child.recycle() }
-        }
-    }
-
-    private fun checkAlwaysCheckbox(node: AccessibilityNodeInfo): Boolean {
-        if (node.isCheckable && !node.isChecked) {
-            val text = (node.text?.toString() ?: "") + (node.contentDescription?.toString() ?: "")
-            if (text.contains("默认") || text.contains("一律") || text.contains("always", ignoreCase = true) || text.isEmpty()) {
-                node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                return true
-            }
-        }
-        for (i in 0 until node.childCount) {
-            val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
-            val checked = checkAlwaysCheckbox(child)
-            runCatching { child.recycle() }
-            if (checked) return true
-        }
-        return false
-    }
-
-    private fun clickConfirmButton(node: AccessibilityNodeInfo): Boolean {
-        // 1. Check standard Android Alert positive button ID
-        val button1Nodes = runCatching { node.findAccessibilityNodeInfosByViewId("android:id/button1") }.getOrNull()
-        if (!button1Nodes.isNullOrEmpty()) {
-            for (btn in button1Nodes) {
-                if (btn.isClickable) {
-                    btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    return true
-                }
-            }
-        }
-
-        // 2. Fall back to matching common positive button labels
-        val targets = listOf("确定", "允许", "OK", "Allow", "Confirm")
-        for (target in targets) {
-            val matches = runCatching { node.findAccessibilityNodeInfosByText(target) }.getOrNull()
-            if (!matches.isNullOrEmpty()) {
-                for (n in matches) {
-                    if (n.isClickable) {
-                        n.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        return true
-                    }
-                    val parent = n.parent
-                    if (parent != null && parent.isClickable) {
-                        parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                        return true
-                    }
-                }
+            try {
+                if (visit(child, depth + 1, action)) return true
+            } finally {
+                @Suppress("DEPRECATION")
+                child.recycle()
             }
         }
         return false
@@ -117,6 +83,21 @@ class UsbAutoConfirmService : AccessibilityService() {
     companion object {
         private const val TAG = "UsbAutoConfirm"
         private const val DEBOUNCE_MILLIS = 800L
+        private val SYSTEM_PACKAGES = setOf("com.android.systemui", "android")
+        private val USB_ACTIVITIES = setOf(
+            "com.android.systemui.usb.UsbPermissionActivity",
+            "com.android.systemui.usb.UsbConfirmActivity",
+        )
+        private val CONFIRM_LABELS = setOf("确定", "允许", "OK", "Allow", "Confirm")
+
+        internal fun isSystemUsbWindow(pkg: String?, className: String?): Boolean =
+            pkg in SYSTEM_PACKAGES && className in USB_ACTIVITIES
+
+        internal fun isTargetPrompt(text: String, appLabel: String): Boolean =
+            appLabel.isNotBlank() &&
+                Regex("(?<![\\p{L}\\p{N}_])${Regex.escape(appLabel)}(?![\\p{L}\\p{N}_])", RegexOption.IGNORE_CASE)
+                    .containsMatchIn(text) && text.contains("USB", ignoreCase = true)
+
 
         fun isEnabled(context: Context): Boolean {
             val enabledServices = Settings.Secure.getString(
