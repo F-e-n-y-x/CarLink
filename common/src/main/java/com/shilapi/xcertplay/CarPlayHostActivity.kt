@@ -298,6 +298,7 @@ class CarPlayHostActivity : ComponentActivity() {
     // With Usage Access the card shows only over a home screen; null = not known (no monitor).
     private var homeMonitor: HomeScreenMonitor? = null
     private var homeScreenVisible: Boolean? = null
+    private var isActivityStarted = false
     private val hideIdleCenterMap = Runnable {
         if (SCREEN_TYPE_ALT !in activeScreenStreamTypes) CenterMapOverlay.hide()
     }
@@ -635,6 +636,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        isActivityStarted = true
         logThemeState(ThemeModeDiagnostics.Source.START, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         mainHandler.post(pollConfiguration)
@@ -879,6 +881,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onStop() {
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
+        isActivityStarted = false
         logThemeState(ThemeModeDiagnostics.Source.STOP, resources.configuration)
         mainHandler.removeCallbacks(pollConfiguration)
         super.onStop()
@@ -887,7 +890,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     /** Shows the dashboard map as a card on the centre screen while DiPlay is in the background. */
     private fun showCenterMap() {
-        if (isDestroyed || shuttingDown.get() || sink == null) return
+        if (isDestroyed || shuttingDown.get() || sink == null || isActivityStarted) return
         if (!AirPlayPersistence.loadCenterMapOverlay(this) || !AirPlayPersistence.loadClusterMapEnabled(this)) return
         if (!AirPlayPersistence.loadCenterMapFollowsDashboard(this)) return
         if (MapMirrors.launcherShowsMap) return // the launcher has the map on its own screen
@@ -919,7 +922,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun onHomeScreenVisible(visible: Boolean) {
         homeScreenVisible = visible
         appendLog("Centre map: home screen ${if (visible) "in front" else "not in front"}")
-        if (!visible) CenterMapOverlay.hide() else if (!CenterMapOverlay.diPlayInFront()) showCenterMap()
+        if (!visible) CenterMapOverlay.hide() else if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
     }
 
     private fun onCenterMapSurface(surface: Surface?) {

@@ -65,6 +65,7 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
 
     private fun handleForegroundPackage(pkg: String) {
         if (!running) return
+        if (pkg == context.packageName || pkg.startsWith("com.shilapi.xcertplay")) return
         val visible = isHomePackage(pkg)
         if (visible != reported) {
             reported = visible
@@ -93,8 +94,11 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             // MOVE_TO_FOREGROUND is ACTIVITY_RESUMED (API 29) under its older name.
             @Suppress("DEPRECATION")
             if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= newestTime) {
-                newestTime = event.timeStamp
-                newestPackage = event.packageName
+                val pkg = event.packageName
+                if (pkg != null && pkg != context.packageName && !pkg.startsWith("com.shilapi.xcertplay")) {
+                    newestTime = event.timeStamp
+                    newestPackage = pkg
+                }
             }
         }
         // Overlap, because events can arrive a little late.

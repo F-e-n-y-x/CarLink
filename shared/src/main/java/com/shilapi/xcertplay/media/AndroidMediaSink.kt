@@ -163,7 +163,7 @@ class AndroidMediaSink(
     private val pendingVideoCodec = ConcurrentHashMap<Int, VideoCodec>()
     private val videoRecoveryHandlers = ConcurrentHashMap<Int, () -> Unit>()
     private val videoDiagnosticHandlers = ConcurrentHashMap<Int, (String) -> Unit>()
-    private val recoveryPending = AtomicBoolean(false)
+    private val recoveryPending = ConcurrentHashMap<Int, AtomicBoolean>()
     // Extra decoders draw the same stream on other surfaces, such as the centre card.
     private val mirrorLock = Any()
     private val mirrorSurfaces = HashMap<Pair<Int, String>, Surface>()
@@ -182,14 +182,15 @@ class AndroidMediaSink(
     }
 
     private fun requestVideoRecovery(type: Int) {
-        if (!recoveryPending.compareAndSet(false, true)) return
+        val pending = recoveryPending.computeIfAbsent(type) { AtomicBoolean(false) }
+        if (!pending.compareAndSet(false, true)) return
         try {
             recoveryExecutor.execute {
                 try { videoRecoveryHandlers[type]?.invoke() }
                 catch (error: Exception) { Log.w("xcertplay-usb", "Video keyframe request failed", error) }
-                finally { recoveryPending.set(false) }
+                finally { pending.set(false) }
             }
-        } catch (_: java.util.concurrent.RejectedExecutionException) { recoveryPending.set(false) }
+        } catch (_: java.util.concurrent.RejectedExecutionException) { pending.set(false) }
     }
 
     fun setSurface(type: Int, surface: Surface) {
@@ -215,7 +216,10 @@ class AndroidMediaSink(
             }
             mirrorSurfaces[id] = surface
         }
-        lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
+        lastVideoConfig[type]?.let { (codec, data) ->
+            mirrorDecoders(type).forEach { it.configure(codec, data) }
+            requestVideoRecovery(type)
+        }
     }
 
     private fun mirrorDecoders(type: Int): List<VideoDecoder> = synchronized(mirrorLock) {

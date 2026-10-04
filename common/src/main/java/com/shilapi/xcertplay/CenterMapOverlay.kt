@@ -114,7 +114,13 @@ internal object CenterMapOverlay {
                 }
 
                 override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, w: Int, h: Int) = Unit
-                override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
+                private var firstFrameLogged = false
+                override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {
+                    if (!firstFrameLogged) {
+                        firstFrameLogged = true
+                        Log.i(TAG, "card first video frame rendered")
+                    }
+                }
 
                 override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
                     // Stop the mirror first; its decoder stops on its own thread, so the old

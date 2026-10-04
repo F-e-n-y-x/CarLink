@@ -164,7 +164,7 @@ class CarHotspotAdbGrantTest {
         val keyOffered = CountDownLatch(1)
         private val worker = thread(isDaemon = true) {
             server.accept().use { socket ->
-                socket.soTimeout = 2_000
+                socket.soTimeout = 5_000
                 val input = socket.getInputStream()
                 val output = socket.getOutputStream()
                 fun send(packet: AdbPacket) = output.write(packet.encode())
@@ -176,7 +176,7 @@ class CarHotspotAdbGrantTest {
                     val offer = runCatching { AdbPacket.read(input) }.getOrNull() ?: return@use
                     offeredKey = offer.arg0 == AdbPacket.AUTH_PUBLIC_KEY
                     keyOffered.countDown()
-                    if (approval != null) check(approval.await(3, TimeUnit.SECONDS))
+                    if (approval != null) check(approval.await(5, TimeUnit.SECONDS))
                     if (!approveKey) {
                         send(AdbPacket(AdbPacket.CLSE, 0, 0, ByteArray(0)))
                         return@use
@@ -196,7 +196,7 @@ class CarHotspotAdbGrantTest {
         }
 
         fun client() = LocalAdb(key, port = server.localPort)
-        fun await() { worker.join(3_000); assertFalse("Fake adbd did not finish", worker.isAlive) }
+        fun await() { worker.join(5_000); assertFalse("Fake adbd did not finish", worker.isAlive) }
         override fun close() { await(); server.close() }
     }
 

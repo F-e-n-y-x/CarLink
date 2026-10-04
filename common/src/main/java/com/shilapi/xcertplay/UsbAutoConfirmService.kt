@@ -24,7 +24,12 @@ class UsbAutoConfirmService : AccessibilityService() {
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val pkg = event.packageName?.toString()
-            if (!pkg.isNullOrEmpty() && pkg != "android" && pkg != "com.android.systemui") {
+            if (!pkg.isNullOrEmpty() &&
+                pkg != "android" &&
+                pkg != "com.android.systemui" &&
+                pkg != packageName &&
+                !pkg.startsWith("com.shilapi.xcertplay")
+            ) {
                 foregroundPackage = pkg
                 onForegroundPackageChanged?.invoke(pkg)
             }
