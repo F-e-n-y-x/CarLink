@@ -80,7 +80,6 @@ internal object AdbClusterRouter {
                 appendLine("routeError=${error.javaClass.simpleName}: ${error.message}")
             }
         }
-        if (!success) com.shilapi.xcertplay.hud.BydOemClusterNavi.release(context, token)
         // A failed diagnostic write must not leave launchPending stuck forever.
         runCatching { File(context.filesDir, REPORT).writeText(text) }
         return Result(success, text)

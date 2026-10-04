@@ -579,6 +579,7 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.adb_cluster_activity_mode),
                 getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 AirPlayPersistence.saveAdbClusterEnabled(this, it)
+                ClusterActivityOutput.stopForSettings()
                 render()
                 reconnectForClusterMap()
             }
@@ -593,6 +594,7 @@ class DiPlayActivity : ComponentActivity() {
                 choice(card, getString(R.string.oem_cluster_map), holds.map { it.localizedLabel(this) },
                     holds.indexOf(BydOutputSettings.oemClusterHold(this))) { index ->
                     BydOutputSettings.setOemClusterHold(this, holds[index])
+                    ClusterActivityOutput.stopForSettings()
                     reconnectForClusterMap()
                 }
             }
