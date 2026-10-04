@@ -147,7 +147,7 @@
     <string name="choose_iphone">Choose iPhone</string>
     <string name="choose_location">Choose location</string>
     <string name="choose_save_location">Choose save location</string>
-    <string name="choose_where_to_save_your_report">Choose where to save your report.\u0020</string>
+    <string name="choose_where_to_save_your_report">Choose where to save your report. If the file picker is unavailable, DiPlay saves it in the app.\u0020</string>
     <string name="choose_your_iphone">Choose your iPhone</string>
     <string name="close">Close</string>
     <string name="cluster_map_size">Dashboard map size</string>
@@ -195,6 +195,8 @@
     <string name="follow_instrument_theme_and_map_card">Follow instrument theme and map card</string>
     <string name="frame_rate">Frame rate</string>
     <string name="full_screen">Full screen</string>
+    <string name="adapt_pip_resolution">Adapt multi-window resolution</string>
+    <string name="adapt_pip_resolution_description">Reconnect CarPlay to adapt stream resolution to multi-window or picture-in-picture aspect ratio. Leave disabled for instant 0ms GPU scaling.</string>
     <string name="fullscreen">Fullscreen</string>
     <string name="getting_carplay_ready">Getting CarPlay ready…</string>
     <string name="got_it">Got it</string>
@@ -545,6 +547,7 @@
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
-    <string name="adapt_pip_resolution">Adapt multi-window resolution</string>
-    <string name="adapt_pip_resolution_description">Reconnect CarPlay to adapt stream resolution to multi-window or picture-in-picture aspect ratio. Leave disabled for instant 0ms GPU scaling.</string>
+    <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
+    <string name="view_diagnostic_report">View report</string>
+    <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
 </resources>

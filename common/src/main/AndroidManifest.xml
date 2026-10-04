@@ -23,6 +23,15 @@
         </intent>
     </queries>
     <application>
+        <provider
+            android:name="com.shilapi.xcertplay.DiagnosticReportProvider"
+            android:authorities="${applicationId}.diagnostic-reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/diagnostic_report_paths" />
+        </provider>
         <activity android:name="com.shilapi.xcertplay.DiPlayActivity"
             android:exported="true" android:launchMode="singleTop"
             android:resizeableActivity="true"
