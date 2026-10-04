@@ -6,13 +6,13 @@
 
 [下载与中文网站](https://shihabal3amri.github.io/DiPlay/zh-Hans/) · [0.2.11 版本](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.11) · [完整说明](README.md) · [报告问题](https://github.com/shihabal3amri/DiPlay/issues/new/choose)
 
+[现有 Wi-Fi / 同一局域网](docs/EXISTING_WIFI.md)让车机和 iPhone 保持连接外部路由器或随身 Wi-Fi。该新增模式已在 BYD DiLink 4.0 / Android 10 上通过全新安装实车验证；配置方法、构建要求与兼容性边界见指南。
+
 ## 0.2.11 — 公开预览版
 
 请安装在车机上，而非 iPhone。无需越狱、转接盒、账户或认证服务器。最低支持 Android 9；Wi-Fi Direct 需要 Android 10 或更高版本，也可使用车机内置热点或 USB。有线及无线 CarPlay 核心连接不要求 ADB，可选车辆数据等功能需要已授权的网络 ADB。
 
 ### 0.2.11 新增与修正
-
-实验性源码功能：[现有 Wi-Fi / 同一局域网](docs/EXISTING_WIFI.md)让车机和 iPhone 保持连接外部路由器或随身 Wi-Fi。最终连接行为仍待真车验证；普通源码 APK 不含 CarPlay 认证身份，需要另行合法提供认证资产。
 
 - **Wi-Fi Direct 首选信道**：默认仍为自动，可保存支持的 2.4/5 GHz 信道，在下次连接生效。车机拒绝或使用了其他信道时会报错，请改回自动或换信道。此功能不代表卡顿问题已解决。
 - 在仪表地图上显示可移动的自定义转向卡片，支持大小选择及每次 2% 的位置调整，无需重连。未知转向不会显示猜测的箭头，过期指引会清除。

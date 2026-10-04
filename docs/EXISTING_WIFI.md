@@ -1,4 +1,4 @@
-# Existing Wi-Fi / Same LAN (experimental)
+# Existing Wi-Fi / Same LAN
 
 Connect the Android receiver and iPhone to the same third-party router or portable
 Wi-Fi in system settings. In DiPlay → Connection setup → Wireless, select
@@ -58,9 +58,13 @@ address scope and family selection, callback cleanup, settings persistence, dual
 publication/listening, port fallback, mode transitions and bootstrap encoding. Existing
 P2P and hotspot tests run alongside them.
 
-Same LAN has been reported working on BYD DiLink 4.0 / Android 10 with both the original
-single-address implementation and the later dual-family implementation. That supports
-the architecture; it does not establish compatibility with every receiver or router.
+The contributor reports a successful clean install of the final implementation on a
+2022 BYD Han DM-i with DiLink 4.0 / Android 10 (API 29), firmware
+21.1.21.2401160.1: the previous test app was uninstalled, the standalone test APK was
+installed and configured normally, and Same LAN entered CarPlay with no issues noticed
+during use. This validates that setup; it does not establish compatibility with every
+receiver, iOS version or router. Open and WPA2/WPA3 mixed networks have not been
+separately validated on hardware.
 For a device check, confirm that both devices keep the existing Wi-Fi connection,
 CarPlay starts, and the iPhone can use online services. For failures, save one diagnostic
 report with the attempt time and the iPhone’s actual Wi-Fi connection. An absence of
