@@ -21,13 +21,13 @@ body:
     id: transport
     attributes:
       label: Connection
-      options: [Wireless, USB, Both]
+      options: ['Wireless: built-in car hotspot', 'Wireless: Wi-Fi Direct', 'Wireless: Existing Wi-Fi / Same LAN', USB, Both, 'Other / unsure']
     validations: {required: true}
   - type: textarea
     id: reproduce
     attributes:
       label: What happened and how to reproduce it
-      description: 'Include expected behavior, steps, display settings and whether the car is also connected to a Wi-Fi network. For wireless, include the band/channel if the report shows it.'
+      description: 'Include expected behavior, steps, relevant settings and the approximate failure time. For wireless, include the backend, band/channel if shown, and whether the car is also connected to another Wi-Fi network. For Same LAN, include the router model and whether client isolation is enabled.'
     validations: {required: true}
   - type: textarea
     id: diagnostics

@@ -67,7 +67,7 @@ Export improvements make evidence available; they do not establish the underlyin
 
 ## Validation and release packaging
 
-Final measured results, package/signature checks and remaining hardware tests are recorded in [VALIDATION.md](VALIDATION.md). The intended release package is `com.shihab.diplay`, version **0.2.12**, version code **31**, minimum SDK **28** and target SDK **37**. Wi-Fi Direct requires Android 10+. Release assets include the production-signed APK, its corresponding tagged source archive, and SHA-256 checksums.
+Final measured results, package/signature checks and remaining hardware tests are recorded in [VALIDATION.md](VALIDATION.md). The release package is `com.shihab.diplay`, version **0.2.12**, version code **31**, minimum SDK **28** and target SDK **37**. Wi-Fi Direct requires Android 10+. Release assets include the production-signed APK, its corresponding tagged source archive, and SHA-256 checksums.
 
 The existing release signing certificate and explicitly selected runtime authentication inputs are preserved to support installing over 0.2.11. Android signing keys and runtime identities remain outside Git and the source archive. Source-only CI builds do not provision an identity. The APK continues to use the experimental accessory identity described in [BUILD.md](BUILD.md) and the existing notices; it is not Apple-certified, and future iOS acceptance is not guaranteed.
 
