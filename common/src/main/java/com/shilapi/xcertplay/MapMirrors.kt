@@ -21,12 +21,19 @@ internal object MapMirrors {
 
     /** The current active aspect ratio for mirror surfaces and launcher embedding. */
     var streamAspect: Double = PHYSICAL_STREAM_ASPECT
+        set(value) {
+            require(value.isFinite() && value > 0)
+            if (field == value) return
+            field = value
+            main.post { aspectListeners.forEach { it() } }
+        }
 
     /** The active dashboard stream's shape (defaults to PHYSICAL_STREAM_ASPECT or VIRTUAL_STREAM_ASPECT). */
     val STREAM_ASPECT: Double get() = streamAspect
 
     private val main = Handler(Looper.getMainLooper())
     private val surfaces = LinkedHashMap<String, Surface>()
+    private val aspectListeners = CopyOnWriteArraySet<() -> Unit>()
     private val streamListeners = CopyOnWriteArraySet<(Boolean) -> Unit>()
 
     /** Set by the CarPlay screen: applies one mirror to its current media sink. */
@@ -67,6 +74,10 @@ internal object MapMirrors {
             streamListeners.forEach { it(active) }
         }
     }
+
+    fun addAspectListener(listener: () -> Unit) { aspectListeners.add(listener) }
+
+    fun removeAspectListener(listener: () -> Unit) { aspectListeners.remove(listener) }
 
     fun addStreamListener(listener: (Boolean) -> Unit) { streamListeners.add(listener) }
 

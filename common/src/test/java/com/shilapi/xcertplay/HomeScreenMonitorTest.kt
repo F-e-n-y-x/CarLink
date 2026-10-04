@@ -49,7 +49,7 @@ class HomeScreenMonitorTest {
         assertTrue(isHomeMethod.invoke(monitor, "com.dy.launcher") as Boolean)
         assertTrue(isHomeMethod.invoke(monitor, "com.king.dyzm") as Boolean)
         assertTrue(isHomeMethod.invoke(monitor, "com.dudu.android.launcher") as Boolean)
-        assertTrue(isHomeMethod.invoke(monitor, "com.custom.carlauncher") as Boolean)
+        assertFalse(isHomeMethod.invoke(monitor, "com.custom.carlauncher") as Boolean)
 
         // Non-home full-screen apps
         assertFalse(isHomeMethod.invoke(monitor, "com.byd.panoramic") as Boolean)
@@ -57,6 +57,8 @@ class HomeScreenMonitorTest {
         assertFalse(isHomeMethod.invoke(monitor, "com.byd.carsetting") as Boolean)
         assertFalse(isHomeMethod.invoke(monitor, "com.kugou.android") as Boolean)
         assertFalse(isHomeMethod.invoke(monitor, "com.autonavi.amapauto") as Boolean)
+        assertFalse(isHomeMethod.invoke(monitor, "com.yecon.carsetting") as Boolean)
+        assertFalse(isHomeMethod.invoke(monitor, "com.unrelated.desktop.settings") as Boolean)
     }
 
     @Test
@@ -86,5 +88,22 @@ class HomeScreenMonitorTest {
 
         monitor.stop()
         assertFalse(monitor.running)
+    }
+    @Test fun stoppedMonitorReleasesForegroundListener() {
+        val monitor = HomeScreenMonitor(context) {}
+        monitor.start()
+        monitor.stop()
+        val companion = HomeScreenMonitor::class.java.getDeclaredField("foregroundListener").apply { isAccessible = true }
+        assertEquals(null, companion.get(null))
+    }
+
+    @Test fun unrelatedAccessibilityServiceDoesNotClaimForegroundAccess() {
+        org.robolectric.Shadows.shadowOf(context.getSystemService(android.app.AppOpsManager::class.java))
+            .setMode(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(),
+                context.packageName, android.app.AppOpsManager.MODE_IGNORED)
+        android.provider.Settings.Secure.putString(context.contentResolver,
+            android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            "${context.packageName}/UnrelatedService")
+        assertFalse(HomeScreenMonitor.hasAccess(context))
     }
 }

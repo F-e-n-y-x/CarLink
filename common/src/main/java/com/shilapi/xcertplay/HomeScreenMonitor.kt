@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -27,7 +26,8 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
     private var newestTime = 0L
     private var newestPackage: String? = null
     @Volatile private var reported: Boolean? = null
-    @Volatile private var homePackages = HOME_PACKAGES
+    @Volatile private var homePackages = HOME_PACKAGES + KNOWN_CAR_LAUNCHERS
+    private val listener: (String) -> Unit = ::handleForegroundPackage
     @Volatile private var active = false
 
     val running: Boolean get() = active || executor != null
@@ -40,7 +40,7 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
         homePackages = queryHomePackages(context)
 
         // Register for external foreground updates (e.g. from AccessibilityService)
-        foregroundListener = ::handleForegroundPackage
+        foregroundListener = listener
 
         // UsageStatsManager poller fallback
         if (DiLink51ClusterMonitor.hasAccess(context)) {
@@ -55,7 +55,7 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
     /** Main thread. */
     fun stop() {
         active = false
-        if (foregroundListener === ::handleForegroundPackage) {
+        if (foregroundListener === listener) {
             foregroundListener = null
         }
         executor?.shutdownNow()
@@ -65,7 +65,6 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
 
     private fun handleForegroundPackage(pkg: String) {
         if (!running) return
-        if (pkg == context.packageName || pkg.startsWith("com.shilapi.xcertplay")) return
         val visible = isHomePackage(pkg)
         if (visible != reported) {
             reported = visible
@@ -73,16 +72,7 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
         }
     }
 
-    private fun isHomePackage(pkg: String): Boolean {
-        if (pkg in homePackages) return true
-        val lower = pkg.lowercase()
-        return lower.contains("dydesktop") ||
-            lower.contains("diyou") ||
-            lower.contains("dyzm") ||
-            lower.contains("launcher") ||
-            lower.contains("desktop") ||
-            lower.contains("dudu.android")
-    }
+    private fun isHomePackage(pkg: String): Boolean = pkg in homePackages
 
     private fun poll() {
         val now = System.currentTimeMillis()
@@ -95,15 +85,13 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             @Suppress("DEPRECATION")
             if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= newestTime) {
                 val pkg = event.packageName
-                if (pkg != context.packageName && !pkg.startsWith("com.shilapi.xcertplay")) {
-                    newestTime = event.timeStamp
-                    newestPackage = pkg
-                }
+                newestTime = event.timeStamp
+                newestPackage = pkg
             }
         }
         // Overlap, because events can arrive a little late.
         since = (now - OVERLAP_MILLIS).coerceAtLeast(since)
-        val currentPkg = newestPackage ?: return
+        val currentPkg = newestPackage ?: ""
         handleForegroundPackage(currentPkg)
     }
 
@@ -132,19 +120,12 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             "com.byd.diyou",
             "com.dudu.android.launcher",  // 嘟嘟桌面
             "com.dudu.android.launcher.mini",
-            "com.yecon.carsetting",
             "com.tencent.autolauncher",   // 腾讯车联
             "com.mx.launcher",            // 喵驾桌面
-            "com.aispeech.aios.adapter",  // 思必驰
         )
 
-        fun hasAccess(context: Context): Boolean =
-            DiLink51ClusterMonitor.hasAccess(context) || isAccessibilityServiceEnabled(context)
-
-        private fun isAccessibilityServiceEnabled(context: Context): Boolean = runCatching {
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-                ?.contains(context.packageName) == true
-        }.getOrDefault(false)
+        // Accessibility alone is not a foreground source: this PR has no service dispatching events.
+        fun hasAccess(context: Context): Boolean = DiLink51ClusterMonitor.hasAccess(context)
 
         /** Query all launcher packages declared on the system. */
         fun queryHomePackages(context: Context): Set<String> {
@@ -153,8 +134,7 @@ internal class HomeScreenMonitor(context: Context, private val onChange: (Boolea
             runCatching {
                 val pm = context.packageManager
                 val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                val flags = if (android.os.Build.VERSION.SDK_INT >= 23) PackageManager.MATCH_ALL else 0
-                val list = pm.queryIntentActivities(intent, flags)
+                val list = pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
                 for (info in list) {
                     val pkg = info.activityInfo?.packageName
                     if (!pkg.isNullOrEmpty() && pkg != "android" && pkg != context.packageName) {

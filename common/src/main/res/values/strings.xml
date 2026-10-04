@@ -147,7 +147,7 @@
     <string name="choose_iphone">Choose iPhone</string>
     <string name="choose_location">Choose location</string>
     <string name="choose_save_location">Choose save location</string>
-    <string name="choose_where_to_save_your_report">Choose where to save your report.\u0020</string>
+    <string name="choose_where_to_save_your_report">Choose where to save your report. If the file picker is unavailable, DiPlay saves it in the app.\u0020</string>
     <string name="choose_your_iphone">Choose your iPhone</string>
     <string name="close">Close</string>
     <string name="cluster_map_size">Dashboard map size</string>
@@ -520,6 +520,12 @@
     <string name="widget_minutes">%1$d min</string>
     <string name="widget_hours_minutes">%1$d h %2$02d min</string>
     <string name="center_map_card">Dashboard map on the centre screen</string>
+    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">Requests CarPlay secondary map stream (Stream 111) for center screen floating card and launcher widget embedding on head units without a digital instrument cluster screen.</string>
+    <string name="center_map_card_virtual_description">Shows a 16:9 floating map card on the center screen with natural proportions and pinch-to-zoom support.</string>
+    <string name="center_map_auto_hide">Hide floating card over non-home apps</string>
+    <string name="center_map_auto_hide_description">Automatically hides the floating card in music players, reverse camera and settings, restoring it on the launcher</string>
+    <string name="center_map_auto_hide_active">Auto-hide when leaving home screen: Active</string>
+    <string name="center_map_auto_hide_needed">Auto-hide when leaving home screen: Not active. Grant Usage Access via ADB or Accessibility service.</string>
     <string name="center_map_card_description">While DiPlay is in the background, the dashboard map also shows as a card on the home screen: BYD home, map home or your default launcher. Tap the card to open CarPlay, drag it to move it, and pinch it to resize it. The dashboard keeps its map. Needs permission to draw over other apps.</string>
     <string name="center_map_overlay_allowed">Draw over other apps: allowed</string>
     <string name="center_map_overlay_missing">Draw over other apps: not allowed. Allow it in the app settings, or over ADB: adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
@@ -545,10 +551,7 @@
     <string name="hotspot_control_failed">The car could not start its hotspot. Open the hotspot in car settings.</string>
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
-    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">Requests CarPlay secondary map stream (Stream 111) for center screen floating card and launcher widget embedding on head units without a digital instrument cluster screen.</string>
-    <string name="center_map_card_virtual_description">Shows a 16:9 floating map card on the center screen with natural proportions and pinch-to-zoom support.</string>
-    <string name="center_map_auto_hide">Hide floating card over non-home apps</string>
-    <string name="center_map_auto_hide_description">Automatically hides the floating card in music players, reverse camera and settings, restoring it on the launcher</string>
-    <string name="center_map_auto_hide_active">Auto-hide when leaving home screen: Active</string>
-    <string name="center_map_auto_hide_needed">Auto-hide when leaving home screen: Not active. Grant Usage Access via ADB or Accessibility service.</string>
+    <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
+    <string name="view_diagnostic_report">View report</string>
+    <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
 </resources>

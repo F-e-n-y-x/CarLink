@@ -442,8 +442,6 @@ class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
-        val hasPhysicalCluster = ClusterMapPresentation.findDisplay(this) != null
-        MapMirrors.streamAspect = if (hasPhysicalCluster) MapMirrors.PHYSICAL_STREAM_ASPECT else MapMirrors.VIRTUAL_STREAM_ASPECT
         languagePreferenceAtCreate = AppLocale.preference(this)
         if (intent.action == "android.hardware.usb.action.USB_DEVICE_ATTACHED") {
             AirPlayPersistence.saveWirelessEnabled(this, false)
@@ -799,6 +797,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 if (DiLink51ClusterLayout.supported()) {
                     val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
                     return DiLink51ClusterLayout.streamConfig().also {
+                        MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
                         appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
                     }
                 }
@@ -810,6 +809,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     AirPlayPersistence.loadClusterMarkerVerticalStep(this),
                     AirPlayPersistence.loadClusterContent(this),
                 ).also {
+                    MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
                     appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
                 }
             }
@@ -901,7 +901,11 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun onHomeScreenVisible(visible: Boolean) {
         homeScreenVisible = visible
         appendLog("Centre map: home screen ${if (visible) "in front" else "not in front"}")
-        if (!visible) CenterMapOverlay.hide() else if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
+        if (!AirPlayPersistence.loadCenterMapAutoHide(this)) {
+            homeMonitor?.stop()
+            if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
+        } else if (!visible) CenterMapOverlay.hide()
+        else if (!isActivityStarted && !CenterMapOverlay.diPlayInFront()) showCenterMap()
     }
 
     private fun onCenterMapSurface(surface: Surface?) {

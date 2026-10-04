@@ -140,7 +140,7 @@
     <string name="choose_iphone">选择 iPhone</string>
     <string name="choose_location">选择位置</string>
     <string name="choose_save_location">选择保存位置</string>
-    <string name="choose_where_to_save_your_report">选择报告的保存位置。</string>
+    <string name="choose_where_to_save_your_report">选择报告的保存位置。如果文件选择器不可用，DiPlay 会在应用内保存报告。\u0020</string>
     <string name="choose_your_iphone">选择 iPhone</string>
     <string name="close">关闭</string>
     <string name="cluster_map_size">仪表盘地图大小</string>
@@ -520,6 +520,12 @@
     <string name="widget_minutes">%1$d 分钟</string>
     <string name="widget_hours_minutes">%1$d 小时 %2$02d 分钟</string>
     <string name="center_map_card">中控屏上的仪表盘地图</string>
+    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">向 iPhone 申请独立的 CarPlay 仪表/桌面地图流（Stream 111），供无液晶仪表车机的中控桌面悬浮卡片或第三方桌面内嵌使用。</string>
+    <string name="center_map_card_virtual_description">在中控屏桌面上显示标准 16:9 比例的浮动地图卡片，比例自然不再呈细长条状，支持随意拖拽与双指缩放。</string>
+    <string name="center_map_auto_hide">离开桌面时自动隐藏卡片</string>
+    <string name="center_map_auto_hide_description">打开音乐、倒车影像、全屏设置等应用时自动隐藏悬浮窗，返回桌面时自动恢复</string>
+    <string name="center_map_auto_hide_active">离开桌面自动隐藏：已开启（使用情况访问权限 / 无障碍服务）</string>
+    <string name="center_map_auto_hide_needed">离开桌面自动隐藏：未开启。请开启无障碍服务或通过 ADB 授予使用情况访问权限。</string>
     <string name="center_map_card_description">DiPlay 在后台运行时，仪表盘地图也会以卡片形式显示在主屏幕上：比亚迪主屏幕、地图主屏幕或你的默认启动器。点按卡片打开 CarPlay，拖动可移动卡片，双指缩放可调整大小。仪表盘上的地图不受影响。需要“显示在其他应用上层”权限。</string>
     <string name="center_map_overlay_allowed">显示在其他应用上层：已允许</string>
     <string name="center_map_overlay_missing">显示在其他应用上层：未允许。请在应用设置中允许，或通过 ADB：adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
@@ -545,10 +551,7 @@
     <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
-    <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">向 iPhone 申请独立的 CarPlay 仪表/桌面地图流（Stream 111），供无液晶仪表车机的中控桌面悬浮卡片或第三方桌面内嵌使用。</string>
-    <string name="center_map_card_virtual_description">在中控屏桌面上显示标准 16:9 比例的浮动地图卡片，比例自然不再呈细长条状，支持随意拖拽与双指缩放。</string>
-    <string name="center_map_auto_hide">离开桌面时自动隐藏卡片</string>
-    <string name="center_map_auto_hide_description">打开音乐、倒车影像、全屏设置等应用时自动隐藏悬浮窗，返回桌面时自动恢复</string>
-    <string name="center_map_auto_hide_active">离开桌面自动隐藏：已开启（使用情况访问权限 / 无障碍服务）</string>
-    <string name="center_map_auto_hide_needed">离开桌面自动隐藏：未开启。请开启无障碍服务或通过 ADB 授予使用情况访问权限。</string>
+    <string name="diagnostic_report_saved_in_app">由于公共保存位置不可用，报告已私密保存到 DiPlay。您可以在此分享或查看报告。不会自动发送任何内容。</string>
+    <string name="view_diagnostic_report">查看报告</string>
+    <string name="diagnostic_report_copy_hint">长按报告文本即可选择并复制。如果没有可用的分享应用，可以使用此方式。</string>
 </resources>
