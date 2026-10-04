@@ -689,7 +689,14 @@ class DiPlayActivity : ComponentActivity() {
                             val next = contents[it]
                             AirPlayPersistence.saveClusterContent(this, next)
                             render()
-                            if (content.url != next.url) reconnectForClusterMap()
+                            if (content.url != next.url) {
+                                // The iPhone's own contents switch live. DiPlay's card over the map, and the
+                                // DiLink 5.1 layout (always the map), are set up at connection, so they reconnect.
+                                val live = !customCard && !CarPlayClusterDisplay.usesCustomTurnCard(next) &&
+                                    !DiLink51ClusterLayout.supported() &&
+                                    CarPlayBackgroundSession.snapshot()?.controller?.showDashboardContent(next.url) == true
+                                if (!live) reconnectForClusterMap()
+                            }
                         }
                         if (customCard) {
                             card.addView(overlaySliderRow(

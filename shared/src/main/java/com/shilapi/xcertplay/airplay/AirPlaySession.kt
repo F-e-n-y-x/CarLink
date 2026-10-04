@@ -147,7 +147,27 @@ class AirPlaySession(
     fun setClusterUiShown(shown: Boolean): Boolean {
         val uuid = AirPlayInfoPlist.ALT_UUID
         if (!shown) return sendCommand(mapOf("type" to "stopUI", "params" to mapOf("uuid" to uuid)))
-        val url = config.cluster?.initialUrl ?: return false
+        return showClusterUrl(clusterUrl() ?: return false)
+    }
+
+    @Volatile private var liveClusterUrl: String? = null
+
+    /** What the dashboard shows: the connection's initialURL until it is switched live. */
+    fun clusterUrl(): String? = liveClusterUrl ?: config.cluster?.initialUrl
+
+    /**
+     * Switches the dashboard to another of the iPhone's `altScreenURLs` without reconnecting: `showUI`
+     * with that URL and a keyframe (on a Tang this switches map, turn card and both at once). With [send]
+     * false (the map is paused) the URL is only kept for the next `showUI`. False without a cluster stream.
+     */
+    fun setClusterUrl(url: String, send: Boolean): Boolean {
+        if (config.cluster == null || clusterStream <= 0) return false
+        liveClusterUrl = url
+        return !send || showClusterUrl(url)
+    }
+
+    private fun showClusterUrl(url: String): Boolean {
+        val uuid = AirPlayInfoPlist.ALT_UUID
         return sendCommand(mapOf("type" to "showUI", "params" to mapOf("uuid" to uuid, "url" to url))) &&
             sendCommand(mapOf("type" to "forceKeyFrame", "params" to mapOf("uuid" to uuid)))
     }

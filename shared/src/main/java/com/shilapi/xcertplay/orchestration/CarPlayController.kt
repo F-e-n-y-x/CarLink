@@ -466,7 +466,7 @@ class CarPlayController(
         val route = session to stream
         val visibility = clusterUiVisibility
         val shown = visibility?.takeIf { it.first == route }?.second ?: true
-        if (!DashboardMapEligibility.permits(airPlayConfig.cluster?.initialUrl,
+        if (!DashboardMapEligibility.permits(session.clusterUrl(),
                 dashboardMapOutputVisible, stream, shown, closed)) return null
         return Triple(session, stream, dashboardMapEpoch.get())
     }
@@ -569,6 +569,31 @@ class CarPlayController(
         ).apply {
             isDaemon = true
             start()
+        }
+    }
+
+    /**
+     * Switches what the dashboard shows to another of the iPhone's cluster contents without reconnecting;
+     * a paused map stays paused and comes back with the new content. False without a cluster stream.
+     */
+    fun showDashboardContent(url: String): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        if (session.clusterStream <= 0) return false
+        return try {
+            touchExecutor.execute {
+                synchronized(clusterUiLock) {
+                    // A cluster stream DiPlay has not paused yet starts with the map drawn.
+                    val shown = clusterUiShown || clusterUiStream != session to session.clusterStream
+                    val sent = session.setClusterUrl(url, send = shown)
+                    // The wheel zoom follows what the dashboard shows now, so zoom mode starts over.
+                    if (sent) dashboardMapEpoch.incrementAndGet()
+                    debugLog("Dashboard content: $url sent=$sent")
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
