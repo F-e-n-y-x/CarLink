@@ -66,6 +66,7 @@ class DiPlayActivity : ComponentActivity() {
     private var clusterSafeAreaDialog: Dialog? = null
     private var clusterContentRequestVersion = 0L
     private var pendingCarHotspotSetup = false
+    private var hotspotJoinControls: HotspotJoinControls? = null
     private var setupError: String? = null
     private var status: TextView? = null
     private var connectButton: Button? = null
@@ -247,6 +248,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        hotspotJoinControls?.close()
         WheelKeyService.cancelLearning()
         handler.removeCallbacks(automaticVehicleValidation)
         adbCheckGeneration++
@@ -1072,6 +1074,11 @@ class DiPlayActivity : ComponentActivity() {
                 }
             }, matchButton(12, 60))
             parent.addView(label(if (pendingCarHotspotSetup) getString(R.string.finish_setup_save_your_hotspot_details_to_use_this_mode) else if (carHotspotOff()) getString(R.string.hotspot_details_off) else getString(R.string.hotspot_details_saved), 15, if (carHotspotOff()) WARNING else MUTED).apply { setPadding(0, dp(12), 0, 0) })
+            val join = hotspotJoinControls ?: HotspotJoinControls(this,
+                { CarPlayBackgroundSession.hasSession() }, beforeAction = { startupHotspotCancelled = true },
+                labelFactory = { label(it, 15, MUTED) }, buttonFactory = { title, click -> button(title, false, click) })
+                .also { hotspotJoinControls = it }
+            parent.addView(join.build())
         } else if (mode == WirelessHotspotMode.EXISTING_WIFI) {
             parent.addView(label(getString(R.string.existing_wifi_instructions), 16, MUTED))
             parent.addView(button(getString(R.string.open_car_wi_fi_settings), false) { openCarClientWifiSettings() }, matchButton(12, 60))
