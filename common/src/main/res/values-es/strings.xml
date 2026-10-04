@@ -579,4 +579,6 @@
     <string name="wheel_zoom_note_volume">Volumen</string>
     <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
+    <string name="cluster_song_on_change">Canción solo al cambiar</string>
+    <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
 </resources>

@@ -607,6 +607,8 @@
     <string name="wheel_zoom_note_volume">Volume</string>
     <string name="wheel_key_service_label">DiPlay wheel keys</string>
     <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard. It only receives key presses and does not read the screen.</string>
+    <string name="cluster_song_on_change">Song only when it changes</string>
+    <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
     <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
     <string name="cluster_safe_area_reset">Reset cluster safe area</string>
     <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>

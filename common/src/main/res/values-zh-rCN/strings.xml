@@ -607,6 +607,8 @@
     <string name="wheel_zoom_note_volume">音量</string>
     <string name="wheel_key_service_label">DiPlay 方向盘按键</string>
     <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图。它只接收按键，不读取屏幕内容。</string>
+    <string name="cluster_song_on_change">仅在切歌时显示</string>
+    <string name="cluster_song_on_change_description">新歌曲在仪表盘上显示 5 秒，然后清空卡片。暂停和继续播放不会再次显示。</string>
     <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>

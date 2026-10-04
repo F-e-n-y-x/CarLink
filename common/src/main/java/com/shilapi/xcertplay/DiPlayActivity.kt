@@ -1405,6 +1405,11 @@ class DiPlayActivity : ComponentActivity() {
             if (it) checkAdbState(mayAsk = true)
             BydNavigationOutputs.clusterSongChanged(it)
         }
+        toggle(card, getString(R.string.cluster_song_on_change), getString(R.string.cluster_song_on_change_description),
+            BydOutputSettings.clusterSongOnChange(this), enabled = !adbSwitchChangePending) {
+            BydOutputSettings.setClusterSongOnChange(this, it)
+            BydNavigationOutputs.clusterSongOnChangeChanged()
+        }
     }
 
     private fun advancedVehicleData(card: LinearLayout) {

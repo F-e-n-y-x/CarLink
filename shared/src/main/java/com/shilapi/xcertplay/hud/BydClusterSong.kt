@@ -101,12 +101,18 @@ internal object BydClusterSong {
 
     private val shell = BydAdbShell(TAG)
     private const val NOTE_MILLIS = 3_000L
+    private const val ON_CHANGE_MILLIS = 5_000L
+
+    // An empty, stopped card: how the song leaves the dashboard between new songs.
+    private val EMPTY = ClusterSong(" ", false)
 
     private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-cluster-song").apply { isDaemon = true } }
     private val state = ClusterSongState() // guards wanted and note too
     @Volatile private var context: Context? = null
     private var wanted: ClusterSong? = null
     private var note: Any? = null // the note on the card now, if any
+    private var onChange: Any? = null // the new song's few seconds on the card, while they run
+    private var announced: String? = null // the last song shown in the "only when it changes" mode
     private var shown: ClusterSong? = null // writer thread
     private var firstLogged = false // writer thread
 
@@ -122,16 +128,65 @@ internal object BydClusterSong {
             state.accept(frame)
             val song = state.current()
             if (song == previous || !BydOutputSettings.clusterSong(app)) return
-            if (song == null) stop(app) else show(app, song)
+            if (song == null) {
+                stop(app)
+                return
+            }
+            if (!BydOutputSettings.clusterSongOnChange(app)) {
+                show(app, song)
+                return
+            }
+            // Only a new song shows, for a few seconds; play and pause alone do not bring it back.
+            if (announced != song.text) {
+                announced = song.text
+                showForChange(app, song)
+            } else if (onChange != null) show(app, song)
         }
+    }
+
+    private fun showForChange(app: Context, song: ClusterSong) {
+        val token = Any()
+        synchronized(state) {
+            onChange = token
+            show(app, song)
+        }
+        writer.schedule({ endChange(app, token) }, ON_CHANGE_MILLIS, TimeUnit.MILLISECONDS)
+    }
+
+    // Writer thread.
+    private fun endChange(app: Context, token: Any) {
+        synchronized(state) {
+            if (onChange !== token) return
+            onChange = null
+            // Preferences are saved before their callback; an expiry in that gap must also be safe.
+            if (!BydOutputSettings.clusterSong(app) || !BydOutputSettings.clusterSongOnChange(app)) return
+            if (note != null) return
+            wanted = EMPTY
+        }
+        write(app, EMPTY)
+    }
+
+    /** The "only when it changes" setting changed; applies at once. */
+    fun onChangeSettingChanged() {
+        val app = context ?: return
+        settingChanged(BydOutputSettings.clusterSong(app))
     }
 
     /** The setting changed: show the current song now, or stop the card DiPlay set. */
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
         synchronized(state) {
+            onChange = null
+            announced = null
             val song = state.current().takeIf { enabled }
-            if (song == null) stop(app) else show(app, song)
+            when {
+                song == null -> stop(app)
+                BydOutputSettings.clusterSongOnChange(app) -> {
+                    announced = song.text
+                    showForChange(app, song)
+                }
+                else -> show(app, song)
+            }
         }
     }
 
@@ -165,7 +220,10 @@ internal object BydClusterSong {
         val song = synchronized(state) {
             if (note !== token) return
             note = null
-            state.current().takeIf { BydOutputSettings.clusterSong(app) }.also { wanted = it }
+            val current = state.current().takeIf { BydOutputSettings.clusterSong(app) }
+            // In the "only when it changes" mode the card stays empty unless the new song's seconds still run.
+            (if (current != null && BydOutputSettings.clusterSongOnChange(app) && onChange == null) EMPTY else current)
+                .also { wanted = it }
         }
         if (song == null) clear(app) else write(app, song)
     }
@@ -173,7 +231,7 @@ internal object BydClusterSong {
 
     private fun show(app: Context, song: ClusterSong) {
         synchronized(state) {
-            // Song updates still advance the cache while a short wheel note has priority.
+            // Song updates still advance the cache and timer while a short wheel note has priority.
             if (note != null) return
             wanted = song
         }
@@ -182,6 +240,8 @@ internal object BydClusterSong {
 
     private fun stop(app: Context) {
         synchronized(state) {
+            onChange = null
+            announced = null
             note = null
             wanted = null
         }
@@ -192,7 +252,11 @@ internal object BydClusterSong {
         // Only the newest song matters; older queued ones are skipped.
         if (synchronized(state) { wanted } != song || song == shown) return
         val text = Base64.encodeToString(song.text.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-        val playing = if (song.playing) STATE_PLAYING else STATE_PAUSED
+        val playing = when {
+            song == EMPTY -> STATE_STOPPED
+            song.playing -> STATE_PLAYING
+            else -> STATE_PAUSED
+        }
         if (run(app, "${song.source ?: SOURCE_OTHERS} $playing $text")) {
             shown = song
             if (!firstLogged) {
