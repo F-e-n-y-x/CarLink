@@ -49,6 +49,7 @@ import kotlin.math.roundToInt
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var page = "home"
+    private var clusterProbed = false
     private var pendingCarHotspotSetup = false
     private var setupError: String? = null
     private var status: TextView? = null
@@ -158,6 +159,18 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
     override fun onPause() { handler.removeCallbacks(tick); super.onPause() }
+
+    /**
+     * Firmware such as DiLink 4.0 never lists its cluster display to apps, so the switch would stay
+     * hidden even where adb can put a window there. Ask adbd once and redraw when it answers.
+     */
+    private fun probeClusterOnce() {
+        if (clusterProbed) return
+        clusterProbed = true
+        Thread({
+            if (ClusterMirror.probe(this) != null) runOnUiThread { render() }
+        }, "cluster-probe").apply { isDaemon = true }.start()
+    }
 
     private fun render() {
         status = null; connectButton = null; disconnectButton = null; lastRunning = null
@@ -320,14 +333,18 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
                 getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
-            if (ClusterMapPresentation.findDisplay(this) != null) {
+            val presentationCluster = ClusterMapPresentation.findDisplay(this) != null
+            val adbCluster = ClusterMirror.cached(this)
+            if (!presentationCluster && adbCluster == null) probeClusterOnce()
+            if (presentationCluster || adbCluster != null) {
                 toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
                     getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c),
                     AirPlayPersistence.loadClusterMapEnabled(this)) {
                     AirPlayPersistence.saveClusterMapEnabled(this, it)
                     reconnectForClusterMap()
                 }
-                toggle(card, getString(R.string.center_map_card), getString(R.string.center_map_card_description),
+                // The card and launcher sharing belong to the displays DiPlay originally measured them on.
+                if (presentationCluster) toggle(card, getString(R.string.center_map_card), getString(R.string.center_map_card_description),
                     AirPlayPersistence.loadCenterMapOverlay(this)) {
                     AirPlayPersistence.saveCenterMapOverlay(this, it)
                     if (it && !CenterMapOverlay.permitted(this)) openOverlayPermission()
@@ -339,11 +356,11 @@ class DiPlayActivity : ComponentActivity() {
                         AirPlayPersistence.saveCenterMapFollowsDashboard(this, it)
                     }
                 }
-                toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
+                if (presentationCluster) toggle(card, getString(R.string.launcher_map_sharing), getString(R.string.launcher_map_sharing_description),
                     AirPlayPersistence.loadLauncherMapSharing(this)) {
                     AirPlayPersistence.saveLauncherMapSharing(this, it)
                 }
-                if (AirPlayPersistence.loadCenterMapOverlay(this)) {
+                if (presentationCluster && AirPlayPersistence.loadCenterMapOverlay(this)) {
                     val overlay = CenterMapOverlay.permitted(this)
                     card.addView(label(if (overlay) getString(R.string.center_map_overlay_allowed)
                         else getString(R.string.center_map_overlay_missing, packageName), 14, if (overlay) MUTED else WARNING))

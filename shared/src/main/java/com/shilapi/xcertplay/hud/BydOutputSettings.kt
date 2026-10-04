@@ -70,7 +70,11 @@ object BydOutputSettings {
 
     /** Whether the head unit has a BYD navigation receiver, so settings can hide a switch that cannot work. */
     fun available(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service")
+        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") ||
+            installed(context, "com.ts.car.someip.service") ||
+            // DiLink 4.0 ships the stock map as com.byd.automap, whose MeterActivity runs on the
+            // cluster projection display, instead of com.byd.amapservice.
+            installed(context, "com.byd.automap")
 
     private fun installed(context: Context, pkg: String): Boolean =
         runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess

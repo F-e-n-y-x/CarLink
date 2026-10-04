@@ -55,6 +55,21 @@
             android:exported="false"
             android:theme="@style/Theme.Xcertplay" />
 
+        <!--
+          Instrument cluster window for firmware that keeps its cluster display private to the OEM
+          container service. Launched onto that display by adbd (see ClusterMirror), never by intent.
+        -->
+        <activity
+            android:name="com.shilapi.xcertplay.ClusterMirrorActivity"
+            android:configChanges="density|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:resizeableActivity="true"
+            android:taskAffinity=":cluster"
+            android:theme="@style/Theme.Xcertplay" />
+
         <activity
             android:name="com.shilapi.xcertplay.MainActivity"
             android:exported="false"

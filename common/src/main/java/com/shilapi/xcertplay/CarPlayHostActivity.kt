@@ -280,6 +280,20 @@ class CarPlayHostActivity : ComponentActivity() {
     private var detectedCluster = ClusterActivityState.Snapshot(null, false)
     // Keep one surface per layer alive, including while its map card is hidden.
     private val clusterLayers = mutableMapOf<Boolean, ClusterMapPresentation>()
+
+    /** Receives the cluster window ClusterMirror opens through adb, when DisplayManager cannot see the display. */
+    private val clusterMirrorListener = object : ClusterMirror.Listener {
+        override fun onClusterMirrorSurface(surface: Surface?) {
+            ClusterMirror.activity?.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            onClusterSurface(surface)
+            updateClusterMapShown()
+        }
+
+        override fun onClusterMirrorClosed() {
+            onClusterSurface(null)
+            updateClusterMapShown()
+        }
+    }
     // Copies of stream 111 outside the dashboard (centre card, launcher maps) each get their own decoder.
     private val mirrorSink: (String, Surface?) -> Unit = { key, surface -> sink?.setMirrorSurface(SCREEN_TYPE_ALT, key, surface) }
     private val mirrorsChanged: () -> Unit = {
@@ -358,6 +372,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val teardownExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    // adb round trips for the cluster window; never on the main thread.
+    private val clusterExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
     // Some head units (e.g. BYD DiLink) update resources.configuration for day/night
@@ -660,8 +676,9 @@ class CarPlayHostActivity : ComponentActivity() {
             return
         }
         if (clusterPresentation != null) return
-        val display = ClusterMapPresentation.findDisplay(this, theme) ?: run {
-            appendLog("Cluster map: no cluster projection display among ${ClusterMapPresentation.describeDisplays(this)}")
+        val display = ClusterMapPresentation.findDisplay(this, theme)
+        if (display == null) {
+            ensureClusterMirror()
             return
         }
         val presentation = ClusterMapPresentation(this, display, theme) { surface -> runOnUiThread { onClusterSurface(surface) } }
@@ -722,7 +739,34 @@ class CarPlayHostActivity : ComponentActivity() {
         target.setMapVisible(visible)
     }
 
+    /**
+     * Cluster projection for firmware such as DiLink 4.0, whose cluster display never appears in
+     * DisplayManager so no Presentation can be built. adb can still put an activity there, and
+     * ClusterMirror returns its surface through the same onClusterSurface path.
+     */
+    private fun ensureClusterMirror() {
+        ClusterMirror.listener = clusterMirrorListener
+        val window = ClusterMirror.activity
+        if (window != null) {
+            window.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            onClusterSurface(window.outputSurface)
+            updateClusterMapShown()
+            return
+        }
+        val target = ClusterMirror.cached(this) ?: run {
+            appendLog("Cluster map: adb has not found the cluster display yet; check ADB over network")
+            return
+        }
+        Log.i(ClusterMapPresentation.TAG, "cluster mirror requesting display=${target.displayId} ${target.width}x${target.height}")
+        // adbd is a socket: keep every round trip off the main thread.
+        ClusterMirror.launch(applicationContext, target, clusterExecutor) { started ->
+            if (started) appendLog("Cluster map: cluster window requested on adb display ${target.displayId}")
+            else appendLog("Cluster map: adb cluster window failed to start")
+        }
+    }
+
     private fun dismissClusterPresentation() {
+        ClusterMirror.stop()
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         clusterLayers.clear()
         clusterPresentation = null
@@ -747,24 +791,38 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
         val theme = effectiveClusterTheme()
-        val display = ClusterMapPresentation.findDisplay(this, theme) ?: return null
-        val size = ClusterMapPresentation.sizeOf(display)
-        if (size.x <= 0 || size.y <= 0) return null
-        if (DiLink51ClusterLayout.supported()) {
-            val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
-            return DiLink51ClusterLayout.streamConfig().also {
-                appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+        val display = ClusterMapPresentation.findDisplay(this, theme)
+        if (display != null) {
+            val size = ClusterMapPresentation.sizeOf(display)
+            if (size.x <= 0 || size.y <= 0) return null
+            if (DiLink51ClusterLayout.supported()) {
+                val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
+                return DiLink51ClusterLayout.streamConfig().also {
+                    appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
+                }
+            }
+            return CarPlayClusterDisplay.config(
+                size.x,
+                size.y,
+                AirPlayPersistence.loadClusterMapScalePercent(this),
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                AirPlayPersistence.loadClusterContent(this),
+            ).also {
+                appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
             }
         }
+        // No Presentation is possible: ask for the display adb found instead.
+        val target = ClusterMirror.cached(this) ?: return null
         return CarPlayClusterDisplay.config(
-            size.x,
-            size.y,
+            target.width,
+            target.height,
             AirPlayPersistence.loadClusterMapScalePercent(this),
             AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
             AirPlayPersistence.loadClusterMarkerVerticalStep(this),
             AirPlayPersistence.loadClusterContent(this),
         ).also {
-            appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
+            appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on adb display ${target.displayId} safeArea=${it.safeArea} url=${it.initialUrl}")
         }
     }
 
@@ -837,7 +895,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(clusterPresentation != null && !MapMirrors.any)
+        val shown = clusterPresentation != null || ClusterMirror.activity != null
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(shown && !MapMirrors.any)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -854,6 +913,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         clusterMonitor?.stop()
+        clusterExecutor.shutdownNow()
         mainHandler.removeCallbacks(hideIdleCenterMap)
         homeMonitor?.stop()
         CenterMapOverlay.hide()
@@ -3101,6 +3161,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     syncAirPlayDarkMode()
                     if (menuOpen) return@runOnUiThread
                     appendLog("AirPlay session active")
+                    ensureClusterPresentation()
                 }
             }
 
@@ -3703,8 +3764,10 @@ class CarPlayHostActivity : ComponentActivity() {
                 Log.i(ClusterMapPresentation.TAG, "cluster stream active=$active")
                 appendLog("Cluster map: stream active=$active")
                 clusterPresentation?.setStreamActive(active)
+                ClusterMirror.activity?.setStreamActive(active)
                 MapMirrors.setStreamActive(active)
                 if (active) {
+                    ensureClusterPresentation()
                     mainHandler.removeCallbacks(hideIdleCenterMap)
                     if (!CenterMapOverlay.shown) CenterMapOverlay.scheduleShow()
                 } else {

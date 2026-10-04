@@ -11,6 +11,12 @@ internal object DiLink51ClusterLayout {
     const val BASE = "fission_bg_XDJAScreenProjection"
     const val FULL = "shared_${BASE}_0"
     const val SIDE = "shared_${BASE}_1"
+    /**
+     * DiLink 4.0 exposes a single 1920x720 cluster surface under this name instead of the 5.1
+     * shared layers. Full and Small screen navi are cropped by the cluster itself, so Android
+     * never reports a different size or a second layer for them.
+     */
+    const val DILINK4 = "fission_bg_xdjaVirtualSurface"
     private const val PREFS = "diplay_cluster_layout"
 
     enum class Theme(val label: String) {
@@ -65,6 +71,8 @@ internal object DiLink51ClusterLayout {
         return names.firstOrNull { it == BASE }
             ?: names.firstOrNull { it.contains(BASE) && it.endsWith("_0") }
             ?: names.firstOrNull { it.contains(BASE) }
+            // DiLink 4.0: one cluster surface, no shared layers to choose between.
+            ?: names.firstOrNull { it == DILINK4 }
     }
 
     fun plan(width: Int, height: Int, theme: Theme): Plan? {
