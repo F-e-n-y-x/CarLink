@@ -11,7 +11,6 @@ import android.util.Log
 import com.shilapi.xcertplay.orchestration.ManualHotspotBand
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.transport.Iap2WirelessSecurity
-import java.io.IOException
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -74,7 +73,7 @@ class ManualHotspotManager(
 
         val apConfiguration = readApConfiguration()
         if (apConfiguration != null && apConfiguration.ssid != expectedSsid) {
-            throw IOException(
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
                 "Manual hotspot SSID does not match the active local AP configuration: " +
                     "'${apConfiguration.ssid}'",
             )
@@ -124,7 +123,7 @@ class ManualHotspotManager(
             "hardwareAddressKnown=${localInterface.hardwareAddress != null} iface=${localInterface.name} " +
             "family=${if (localInterface.hostAddress is Inet6Address) "IPv6" else "IPv4"}")
         if (security != Iap2WirelessSecurity.NONE && passphrase.isEmpty()) {
-            throw IOException("Manual hotspot is secured but no passphrase was provided")
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, "Manual hotspot is secured but no passphrase was provided")
         }
 
         if (channel == 0) {
@@ -177,7 +176,7 @@ class ManualHotspotManager(
         if (expectedChannel > 0 && configuration.channel > 0 &&
             configuration.channel != expectedChannel
         ) {
-            throw IOException(
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
                 "Manual hotspot channel ${configuration.channel} does not match configured " +
                 "channel $expectedChannel",
             )
@@ -190,7 +189,7 @@ class ManualHotspotManager(
         if (actualBand != null && expectedBand != ManualHotspotBand.AUTO &&
             actualBand != expectedBand
         ) {
-            throw IOException(
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
                 "Manual hotspot band ${wifiBandLabel(configuration.band)} does not match " +
                     "configured band ${wifiBandLabel(if (expectedBand == ManualHotspotBand.GHZ_2_4) 1 else 2)}",
             )
@@ -198,7 +197,7 @@ class ManualHotspotManager(
         // WPA2 vs WPA3 variants are fine: the live security is what the iPhone is told (see start()).
         // Only an open/secured mismatch means the saved password cannot be right.
         if ((configuration.security == Iap2WirelessSecurity.NONE) != (expectedSecurity == Iap2WirelessSecurity.NONE)) {
-            throw IOException(
+            throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
                 "Manual hotspot security ${configuration.security} does not match configured " +
                     "security $expectedSecurity",
             )
@@ -206,10 +205,10 @@ class ManualHotspotManager(
         val frequency = configuration.frequencyMHz ?: return
         when (expectedBand) {
             ManualHotspotBand.GHZ_2_4 -> if (frequency !in 2_400..2_500) {
-                throw IOException("Manual hotspot is not running on 2.4 GHz")
+                throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, "Manual hotspot is not running on 2.4 GHz")
             }
             ManualHotspotBand.GHZ_5 -> if (frequency !in 5_150..5_895) {
-                throw IOException("Manual hotspot is not running on 5 GHz")
+                throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, "Manual hotspot is not running on 5 GHz")
             }
             ManualHotspotBand.AUTO -> Unit
         }
