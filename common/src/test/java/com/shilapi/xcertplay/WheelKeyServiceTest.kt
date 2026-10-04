@@ -39,6 +39,21 @@ class WheelKeyServiceTest {
 
     @After fun tearDown() { service.onDestroy() }
 
+    private val knobs = mutableListOf<com.shilapi.xcertplay.airplay.AirPlayKnobState>()
+    private var phone: Any? = "phone-one"
+    private var routeStarted = false
+
+    private fun joystickSetUp() {
+        service.session = { phone }
+        service.knob = { knobs.add(it) }
+        service.routeActive = { routeStarted }
+        WheelZoomSettings.setJoystick(service, true)
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.JOYSTICK, WheelKey(KeyEvent.KEYCODE_F4, 0, "?"))
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.NEXT, WheelKey(KeyEvent.KEYCODE_F5, 0, "?"))
+    }
+
+    private fun press(code: Int): Pair<Boolean, Boolean> = key(code, true) to key(code, false)
+
     private fun connect() {
         service.javaClass.getDeclaredMethod("onServiceConnected").apply { isAccessible = true }.invoke(service)
     }
@@ -138,5 +153,56 @@ class WheelKeyServiceTest {
         assertFalse(key(KeyEvent.KEYCODE_F3, true))
         assertFalse(key(KeyEvent.KEYCODE_F3, false))
         assertEquals(0, learned)
+    }
+
+    @Test fun joystickKeysDriveTheKnobAndTheModeKeyGoesBackOnlyWhileItIsOn() {
+        joystickSetUp()
+        assertEquals(false to false, press(KeyEvent.KEYCODE_F5))
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F4))
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F5))
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F2))
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F1))
+        assertEquals(listOf(1, -1), knobs.take(2).map { it.wheel })
+        assertTrue(knobs[2].back)
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F4))
+        // With the joystick off the mode key switches the zoom again.
+        zoomOn()
+        assertEquals(3, knobs.size)
+    }
+
+    @Test fun joystickEndsAfterIdleAndWhenARouteStarts() {
+        joystickSetUp()
+        press(KeyEvent.KEYCODE_F4)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(WheelZoomSettings.JOYSTICK_IDLE_MILLIS))
+        assertEquals(false to false, press(KeyEvent.KEYCODE_F5))
+        press(KeyEvent.KEYCODE_F4)
+        routeStarted = true
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_100))
+        assertEquals(false to false, press(KeyEvent.KEYCODE_F5))
+        assertTrue(knobs.isEmpty())
+    }
+
+    @Test fun joystickWithoutAutoOffStaysOnButEndsWithTheSettingOrANewPhone() {
+        joystickSetUp()
+        WheelZoomSettings.setJoystickAutoOff(service, false)
+        press(KeyEvent.KEYCODE_F4)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(WheelZoomSettings.JOYSTICK_IDLE_MILLIS * 2))
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F5))
+        phone = "phone-two"
+        assertEquals(false to false, press(KeyEvent.KEYCODE_F5))
+        press(KeyEvent.KEYCODE_F4)
+        WheelZoomSettings.setJoystick(service, false)
+        assertEquals(false to false, press(KeyEvent.KEYCODE_F5))
+        assertEquals(1, knobs.size)
+    }
+
+    @Test fun learningTakesTheNextKeyBeforeTheJoystick() {
+        joystickSetUp()
+        WheelZoomSettings.setEnabled(service, false)
+        assertTrue(learn())
+        assertEquals(true to true, press(KeyEvent.KEYCODE_F4))
+        assertEquals(1, learned)
+        assertEquals(KeyEvent.KEYCODE_F4, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE).code)
+        assertTrue(knobs.isEmpty())
     }
 }
