@@ -9,7 +9,7 @@
     "download": "Download APK",
     "install": "How to install",
     "promise": "No jailbreak, dongle, account or authentication server required.",
-    "requires": "Install on the car, not the iPhone. Android 9+; Wi-Fi Direct requires Android 10+. Wireless uses the built-in car hotspot or Wi-Fi Direct. Compatibility depends on the head unit, firmware and iOS version.",
+    "requires": "Install on the car, not the iPhone. Android 9+; Wi-Fi Direct requires Android 10+. Wireless uses the built-in car hotspot, Wi-Fi Direct or Existing Wi-Fi / Same LAN. Compatibility depends on the head unit, firmware and iOS version.",
     "gallery": "A familiar drive",
     "captions": [
       "A clear home screen with aligned wireless and USB controls.",
@@ -26,15 +26,16 @@
     "bssid": "ADB is not required for everyday use. APK installation options depend on the car. No manual MAC address entry.",
     "whats": "In this release",
     "features": [
-      "Preferred Wi-Fi Direct channel for the next connection: Auto remains the default; manual channels need radio/regional support and rejected or mismatched channels report an error. This is not a confirmed stutter fix.",
-      "Movable custom turn card over the dashboard map, with size choices and 2% position steps. Unknown maneuvers show no guessed arrow; expired guidance clears.",
-      "Two-, three- or four-finger settings swipes, with three as the default. Android TV/remote controls preserve ordinary head-unit touch and knob behavior.",
-      "Optional read-only legacy vehicle-data detection; default DiLink 5.0 mode remains the default. Only accepted fields/readings are used, with stale-probe and battery-publication concurrency corrections.",
-      "Optional automatic startup of the existing car hotspot, off by default, with verified permissions limited to DiPlay’s own package. Hotspot credentials are preserved.",
-      "Wireless location/vehicle data use the runtime Wi-Fi link; parked-video availability waits for SETUP/event readiness. Video still requires network ADB and valid P-gear data.",
-      "Keep artists across partial song updates and publish metadata/artwork only when changed, while playback position and state continue updating.",
-      "Android 9 audio compatibility, failed-codec cleanup, settled geometry/startup checks after reconnect, guarded Android 10 P2P recovery in Auto mode, and a wired VPN restricted to DiPlay.",
-      "Bounded wireless, media, theme and own-app exit diagnostics without audio/video/packet payload recording or automatic uploads."
+      "Existing Wi-Fi / Same LAN CarPlay through a router; stable hotspot readiness, bounded startup recovery and firmware-supported hotspot fallback through already-authorized ADB.",
+      "Apple USB default-handler support and optional USB prompt auto-confirm.",
+      "16:9 virtual/floating maps without a physical cluster, launcher auto-hide with Usage Access, split-screen/card layouts and better short-screen setup.",
+      "In-session settings, Local/USB-CH341 authentication choice, separate status/navigation bars and refreshed connection settings.",
+      "System/sensor/fixed day-night appearance, integer resolution from 30–160%, decoder-capability checks and live picture controls.",
+      "Custom turn-card size, opacity and arrival information; live native map/card switching.",
+      "Optional DiLink 4 cluster routing/calibration, stock-map holding with recovery; HUD song/lyrics retain the existing verified firmware gates. DiLink 3 cluster guidance/map support with recovery.",
+      "Optional wheel map zoom and main-screen joystick; song-only-on-change display and steadier album art with a neutral placeholder.",
+      "Android 10 authorized-ADB Wi-Fi scan pause for hotspot/P2P, excluding Same LAN; diagnostic TXT fallback with View/Share.",
+      "Android 9+; Wi-Fi Direct needs Android 10+. Support depends on firmware. DiLink 3/4 integration and recovery still need vehicle retests; unverified DiLink 4 HUD output stays disabled; this does not promise all stutter, call/Siri or connection bugs are fixed. Higher resolution costs performance. Force-stop can delay restoration until reopening. Test optional controls while parked."
     ],
     "compat": "Before you try it",
     "compatText": "A public preview, not an Apple-certified product. Authentication uses an experimental accessory identity recovered from public firmware; future acceptance is not guaranteed. Some head units still show stuttering or ignore icon-size changes. Start with 30 fps and HEVC off; try a lower resolution if needed.",
@@ -49,8 +50,9 @@
     "privacy": "Privacy",
     "footer": "Independent project based on xcertplay, with interface design from DiAuto. Not affiliated with Apple or BYD. CarPlay and its icon belong to Apple Inc.",
     "supportScope": "These projects focus on BYD cars. They may work on other brands, but other brands are unsupported and there are no plans to add support or fix brand-specific incompatibilities.",
-    "diagnosticsTitle": "Please send fresh reports from 0.2.11",
-    "diagnosticsText": "If a problem remains, reproduce it on 0.2.11, then open Settings → Diagnostics → Save diagnostic report. Android 10+ saves to Downloads/DiPlay; Android 9 uses a document picker. Review the .txt file and attach it to your existing GitHub issue with vehicle/firmware, iPhone/iOS, connection mode, steps and failure time. Never post your hotspot password. Qin Plus startup, Wi-Fi Direct stutter, Siri, iOS 15 and day/night firmware reports still need device evidence."
+    "diagnosticsTitle": "Please send fresh reports from 0.2.12",
+    "diagnosticsText": "1. Update to 0.2.12, reproduce it and note the failure time. 2. Open Settings → Diagnostics → Save diagnostic report. Android 10+ normally saves to Downloads/DiPlay; Android 9 uses a picker. If storage/picker is unavailable, follow the fallback confirmation and use View/Share. 3. Review the TXT and remove passwords/private details. Reports are not uploaded automatically. 4. Add it to your existing issue: https://github.com/shihabal3amri/DiPlay/issues Or open a new one: https://github.com/shihabal3amri/DiPlay/issues/new/choose Include vehicle/head-unit model, DiLink/Android/firmware, iPhone/iOS, USB / car hotspot / Wi-Fi Direct / Same LAN, steps, expected/actual result and time.",
+    "newIssue": "Create a new issue"
   },
   "ar": {
     "name": "العربية",
@@ -62,7 +64,7 @@
     "download": "تنزيل APK",
     "install": "طريقة التثبيت",
     "promise": "لا حاجة إلى جيلبريك أو قطعة خارجية أو حساب أو خادم مصادقة.",
-    "requires": "ثبّت التطبيق على شاشة السيارة، وليس الآيفون. يدعم أندرويد 9 فأحدث؛ يتطلب Wi-Fi Direct أندرويد 10 فأحدث. يستخدم الاتصال اللاسلكي نقطة اتصال السيارة أو Wi-Fi Direct. يعتمد التوافق على الشاشة ونظامها وإصدار iOS.",
+    "requires": "ثبّت التطبيق على شاشة السيارة، وليس الآيفون. يدعم أندرويد 9 فأحدث؛ يتطلب Wi-Fi Direct أندرويد 10 فأحدث. يستخدم الاتصال اللاسلكي نقطة اتصال السيارة أو Wi-Fi Direct أو شبكة Wi-Fi مشتركة/نفس الشبكة المحلية. يعتمد التوافق على الشاشة ونظامها وإصدار iOS.",
     "gallery": "تجربة مألوفة",
     "captions": [
       "واجهة واضحة مع محاذاة أزرار الاتصال اللاسلكي وUSB.",
@@ -79,15 +81,16 @@
     "bssid": "لا تحتاج إلى ADB للاستخدام اليومي. تختلف طريقة تثبيت APK حسب السيارة. لا حاجة لإدخال عنوان MAC يدوياً.",
     "whats": "في هذا الإصدار",
     "features": [
-      "قناة Wi-Fi Direct مفضّلة للاتصال التالي: يبقى الاختيار التلقائي هو الافتراضي. القنوات اليدوية تعتمد على دعم الجهاز والمنطقة، ويظهر خطأ عند رفض القناة أو استخدام قناة مختلفة. هذا ليس إصلاحًا مؤكدًا للتقطّع.",
-      "بطاقة انعطاف مخصصة قابلة للتحريك فوق خريطة العدادات، مع أحجام مختلفة وخطوات موضع بنسبة 2%. لا يظهر سهم تخميني للمناورات غير المعروفة، وتُزال الإرشادات المنتهية.",
-      "سحب لفتح الإعدادات بإصبعين أو ثلاثة أو أربعة، مع بقاء ثلاثة هو الافتراضي. تدعم أدوات Android TV والتحكم عن بُعد مع الحفاظ على لمس الشاشة وسلوك المقبض المعتاد.",
-      "اكتشاف اختياري للقراءة فقط لبيانات الوحدات القديمة؛ يبقى وضع DiLink 5.0 هو الافتراضي. تُستخدم الحقول والقراءات المقبولة فقط، مع تصحيحات للنتائج القديمة وتزامن نشر البطارية.",
-      "تشغيل تلقائي اختياري لنقطة اتصال السيارة الحالية، معطّل افتراضيًا. تُتحقق الأذونات لحزمة DiPlay نفسها فقط، وتُحفظ بيانات نقطة الاتصال.",
-      "تُرسل بيانات الموقع والسيارة اللاسلكية عبر رابط Wi-Fi الفعلي؛ ينتظر توفر فيديو الوقوف جاهزية SETUP وقناة الأحداث. يبقى الفيديو بحاجة إلى ADB الشبكي وقراءة صالحة للوضع P.",
-      "الاحتفاظ بالفنان عند تحديث الأغنية جزئيًا، ونشر المعلومات وصورة الألبوم فقط عند تغيّرها؛ يستمر تحديث موضع التشغيل وحالته.",
-      "توافق صوت أندرويد 9، وتحرير برامج الترميز التي فشل تشغيلها، وفحص حجم الشاشة والجاهزية بعد إعادة الاتصال، واستعادة P2P محددة على أندرويد 10 في الوضع التلقائي، وVPN سلكي محصور في DiPlay.",
-      "تشخيص محدود للاتصال اللاسلكي والوسائط ووضع الليل/النهار وخروج التطبيق، دون تسجيل محتوى الصوت أو الفيديو أو الحزم ودون رفع تلقائي."
+      "كار بلاي عبر شبكة Wi-Fi مشتركة/نفس الشبكة المحلية، وانتظار جاهزية نقطة اتصال السيارة واستعادة محدودة عند تعثر البدء، مع بديل لتشغيلها عبر ADB المصرّح به مسبقاً إذا دعمته الشاشة.",
+      "دعم تعيين DiPlay تطبيقاً افتراضياً لأجهزة Apple عبر USB، وتأكيد تلقائي اختياري لطلب إذن USB.",
+      "خرائط افتراضية وعائمة بنسبة 16:9 دون شاشة عدادات، وإخفاء فوق التطبيقات مع إذن الوصول إلى الاستخدام، وتخطيطات تقسيم الشاشة والبطاقات وتحسين الإعداد على الشاشات القصيرة.",
+      "إعدادات أثناء الجلسة، واختيار المصادقة المحلية أو USB/CH341، وتحكم منفصل بشريطي الحالة والتنقل، وتحديث إعدادات الاتصال عند العودة.",
+      "مظهر يتبع النظام أو مستشعر الضوء أو نهار/ليل ثابت، ودقة من 30 إلى 160% بخطوات 1% وفحص قدرات فك الترميز، وضبط حي للصورة.",
+      "حجم وشفافية ومعلومات وصول لبطاقة الانعطاف المخصصة، وتبديل حي بين خريطة الآيفون وبطاقته على العدادات.",
+      "توجيه ومعايرة اختيارية لعدادات DiLink 4، وتعليق خريطة المصنع مع الاستعادة؛ يبقى نص الأغنية/الكلمات على HUD مقيداً بالأنظمة التي تم التحقق منها سابقاً. ودعم إرشادات وخريطة عدادات DiLink 3 مع الاستعادة.",
+      "تكبير خريطة العدادات والتحكم بشاشة كار بلاي من المقود اختيارياً، وعرض الأغنية عند تغيرها فقط، وتحسين ثبات صورة الألبوم وصورة بديلة محايدة.",
+      "إيقاف مسح Wi-Fi عبر ADB المصرّح به على أندرويد 10 أثناء اتصال نقطة الاتصال/P2P، باستثناء الشبكة المحلية، وحفظ تقرير TXT بديل مع عرض/مشاركة.",
+      "أندرويد 9 فأحدث؛ Wi-Fi Direct يحتاج أندرويد 10 فأحدث. التوافق يعتمد على النظام. ما زال دمج DiLink 3/4 والاستعادة يحتاجان اختباراً في السيارة؛ خرج HUD غير الموثّق على DiLink 4 يبقى معطلاً؛ لا ندّعي إصلاح كل التقطّع أو مشكلات الاتصال والمكالمات/Siri. الدقة الأعلى تزيد الحمل، والإيقاف القسري قد يؤخر الاستعادة حتى إعادة فتح التطبيق. جرّب الوظائف الاختيارية والسيارة متوقفة."
     ],
     "compat": "قبل التجربة",
     "compatText": "نسخة تجريبية عامة غير معتمدة من Apple. تستخدم المصادقة هوية ملحق تجريبية مستخرجة من برنامج ثابت منشور، ولا يُضمن استمرار قبولها مستقبلاً. قد يستمر التقطّع أو عدم تطبيق حجم الأيقونات على بعض الشاشات. ابدأ بمعدل 30 إطاراً مع تعطيل HEVC، وجرّب دقة أقل عند الحاجة.",
@@ -102,8 +105,9 @@
     "privacy": "الخصوصية",
     "footer": "مشروع مستقل مبني على xcertplay وبتصميم واجهة من DiAuto. غير تابع لـ Apple أو BYD. كار بلاي وأيقونته ملك لشركة Apple.",
     "supportScope": "يركز هذان المشروعان على سيارات BYD. قد يعملان على علامات أخرى، لكنها غير مدعومة، ولا توجد خطط لإضافة دعم لها أو إصلاح مشكلات التوافق الخاصة بها.",
-    "diagnosticsTitle": "نحتاج تقارير جديدة من 0.2.11",
-    "diagnosticsText": "إذا استمرت المشكلة، أعد إظهارها على 0.2.11 ثم افتح الإعدادات → التشخيص → حفظ تقرير التشخيص. يحفظ أندرويد 10 فأحدث في Downloads/DiPlay؛ يستخدم أندرويد 9 منتقي المستندات. راجع ملف .txt وأرفقه بالمشكلة الحالية في GitHub مع السيارة والنظام والآيفون/iOS ونوع الاتصال والخطوات ووقت العطل. لا تنشر كلمة مرور نقطة الاتصال. ما زالت مشكلات بدء Qin Plus وتقطّع Wi-Fi Direct وSiri وiOS 15 ووضع الليل/النهار بحاجة إلى أدلة من الجهاز."
+    "diagnosticsTitle": "نحتاج تقارير جديدة من 0.2.12",
+    "diagnosticsText": "1. حدّث إلى 0.2.12، أعد إظهار المشكلة وسجّل وقتها. 2. افتح الإعدادات → التشخيص → حفظ تقرير التشخيص. يحفظ أندرويد 10+ عادةً في Downloads/DiPlay؛ أندرويد 9 يستخدم منتقي الملفات. إن تعذر الحفظ أو غاب المنتقي، اتبع رسالة الحفظ البديل واستخدم عرض/مشاركة. 3. راجع TXT واحذف كلمات المرور والتفاصيل الخاصة. لا تُرفع التقارير تلقائياً. 4. أرفقه بالمشكلة الحالية: https://github.com/shihabal3amri/DiPlay/issues أو افتح مشكلة جديدة: https://github.com/shihabal3amri/DiPlay/issues/new/choose اذكر السيارة والشاشة وDiLink/أندرويد/إصدار البرنامج الثابت، والآيفون/iOS، والاتصال عبر USB / نقطة اتصال السيارة / Wi-Fi Direct / نفس الشبكة المحلية، والخطوات، والمتوقع وما حدث ووقت العطل.",
+    "newIssue": "فتح مشكلة جديدة"
   },
   "ru": {
     "name": "Русский",
@@ -115,7 +119,7 @@
     "download": "Скачать APK",
     "install": "Как установить",
     "promise": "Без джейлбрейка, адаптера, аккаунта и сервера аутентификации.",
-    "requires": "Устанавливайте на головное устройство, а не на iPhone. Android 9+; Wi-Fi Direct требует Android 10+. Беспроводное подключение использует точку доступа автомобиля или Wi-Fi Direct. Совместимость зависит от устройства, прошивки и iOS.",
+    "requires": "Устанавливайте на головное устройство, а не на iPhone. Android 9+; Wi-Fi Direct требует Android 10+. Беспроводное подключение использует точку доступа автомобиля, Wi-Fi Direct или существующий Wi-Fi / общую локальную сеть. Совместимость зависит от устройства, прошивки и iOS.",
     "gallery": "Знакомый интерфейс",
     "captions": [
       "Главный экран с выровненными элементами беспроводного и USB-подключения.",
@@ -132,15 +136,16 @@
     "bssid": "Для повседневной работы ADB не нужен. Способ установки APK зависит от автомобиля. Вводить MAC-адрес вручную не требуется.",
     "whats": "В этом выпуске",
     "features": [
-      "Предпочтительный канал Wi-Fi Direct для следующего подключения: по умолчанию Авто. Ручной выбор зависит от радиомодуля и региональных ограничений; отказ или другой созданный канал вызывает ошибку. Устранение заиканий не подтверждено.",
-      "Перемещаемая карточка поворота поверх карты приборной панели: выбор размера и изменение положения с шагом 2%. Для неизвестного манёвра стрелка не придумывается; устаревшие указания очищаются.",
-      "Свайп вниз двумя, тремя или четырьмя пальцами для настроек; по умолчанию три. Управление Android TV/пультом сохраняет обычную работу сенсорного экрана и поворотного регулятора.",
-      "Необязательное определение полей старого головного устройства только чтением; стандартный режим DiLink 5.0 остаётся исходным. Используются только принятые поля/показания; исправлены устаревшие результаты и синхронизация публикации батареи.",
-      "Необязательный автозапуск существующей точки доступа автомобиля, выключенный по умолчанию. Проверяются разрешения только пакета DiPlay; имя и пароль точки доступа сохраняются.",
-      "Беспроводные данные местоположения/автомобиля идут по рабочему Wi-Fi-соединению; доступность видео в P ждёт SETUP и канала событий. По-прежнему нужны сетевой ADB и достоверное положение P.",
-      "Исполнитель сохраняется при частичном обновлении песни; метаданные и обложка публикуются лишь при изменениях. Позиция и состояние воспроизведения продолжают обновляться.",
-      "Совместимость аудио с Android 9, освобождение кодека после сбоя запуска, актуальные размеры и проверки готовности при переподключении, узкое восстановление P2P на Android 10 в Авто и проводной VPN только для DiPlay.",
-      "Ограниченные сводки беспроводного соединения, медиа, дневной/ночной темы и завершения самого приложения без записи аудио, видео, содержимого пакетов или автоматической отправки."
+      "CarPlay через существующий Wi-Fi / общую локальную сеть; ожидание готовности точки доступа, ограниченное восстановление запуска и поддерживаемый прошивкой резервный запуск через уже разрешённый ADB.",
+      "Обработчик Apple USB по умолчанию и необязательное автоматическое подтверждение USB-разрешений.",
+      "Виртуальные/плавающие карты 16:9 без экрана приборов, скрытие поверх приложений с доступом к статистике использования, разделённый экран/карточки и настройка на низких экранах.",
+      "Настройки внутри сеанса, выбор Local/USB-CH341, раздельные строки состояния/навигации и обновление настроек подключения при возврате.",
+      "Системная, сенсорная и фиксированная дневная/ночная тема; разрешение 30–160% с шагом 1%, проверка декодера и регулировка изображения без переподключения.",
+      "Размер, прозрачность и время прибытия на своей карточке поворота; переключение штатной карты/карточки на приборной панели без переподключения.",
+      "Необязательные вывод/калибровка DiLink 4, приостановка штатной карты с восстановлением; песни/тексты HUD сохраняют проверки ранее подтверждённой прошивки. Указания/карта DiLink 3 с восстановлением.",
+      "Необязательный зум карты приборов и джойстик CarPlay с руля; песня только при смене, стабильнее обложки и нейтральная заглушка.",
+      "Пауза сканирования Wi-Fi через разрешённый ADB на Android 10 для точки доступа/P2P, кроме общей LAN; резервное сохранение TXT с просмотром/отправкой.",
+      "Android 9+; Wi-Fi Direct — Android 10+. Поддержка зависит от прошивки. Интеграция DiLink 3/4 и восстановление ещё требуют проверки в автомобиле. Непроверенный вывод HUD DiLink 4 остаётся отключённым. Исправление всех заиканий, звонков/Siri и сбоев соединения не обещается. Высокое разрешение увеличивает нагрузку; принудительная остановка может отложить восстановление до открытия приложения. Проверяйте опции на стоянке."
     ],
     "compat": "Перед установкой",
     "compatText": "Предварительная версия для открытого тестирования, без сертификации Apple. Используется экспериментальная идентификация аксессуара из общедоступной прошивки; её принятие в будущем не гарантируется. На некоторых устройствах остаются рывки изображения или не применяется размер значков. Начните с 30 кадров/с и выключенного HEVC; при необходимости снизьте разрешение.",
@@ -155,8 +160,9 @@
     "privacy": "Конфиденциальность",
     "footer": "Независимый проект на базе xcertplay с дизайном интерфейса DiAuto. Не связан с Apple или BYD. CarPlay и его значок принадлежат Apple Inc.",
     "supportScope": "Эти проекты ориентированы на автомобили BYD. На других марках они могут работать, но другие марки не поддерживаются; добавление поддержки и исправление несовместимости с ними не планируются.",
-    "diagnosticsTitle": "Нужны свежие отчёты из 0.2.11",
-    "diagnosticsText": "Если проблема осталась, воспроизведите её на 0.2.11 и откройте Настройки → Диагностика → Сохранить диагностический отчёт. Android 10+ сохраняет в Downloads/DiPlay; Android 9 открывает выбор документа. Проверьте .txt и прикрепите к существующей задаче GitHub с моделью/прошивкой, iPhone/iOS, способом подключения, шагами и временем сбоя. Не публикуйте пароль точки доступа. Для запуска Qin Plus, заиканий Wi-Fi Direct, Siri, подключения iOS 15 и дневной/ночной темы всё ещё нужны данные с устройств."
+    "diagnosticsTitle": "Нужны свежие отчёты из 0.2.12",
+    "diagnosticsText": "1. Обновитесь до 0.2.12, воспроизведите сбой и запишите время. 2. Настройки → Диагностика → Сохранить диагностический отчёт. Android 10+ обычно сохраняет в Downloads/DiPlay; Android 9 открывает выбор файла. При недоступном хранилище/выборе следуйте сообщению резервного сохранения и используйте Просмотр/Поделиться. 3. Проверьте TXT, удалите пароли и личные сведения. Автоматической отправки нет. 4. Добавьте отчёт к своей задаче: https://github.com/shihabal3amri/DiPlay/issues Или создайте новую: https://github.com/shihabal3amri/DiPlay/issues/new/choose Укажите автомобиль/устройство, DiLink/Android/прошивку, iPhone/iOS, подключение USB / точка доступа автомобиля / Wi-Fi Direct / общая LAN, шаги, ожидаемый/фактический результат и время.",
+    "newIssue": "Создать новую задачу"
   },
   "uk": {
     "name": "Українська",
@@ -168,7 +174,7 @@
     "download": "Завантажити APK",
     "install": "Як встановити",
     "promise": "Без джейлбрейка, адаптера, облікового запису й сервера автентифікації.",
-    "requires": "Встановлюйте на головний пристрій автомобіля, а не на iPhone. Android 9+; Wi-Fi Direct потребує Android 10+. Бездротове підключення працює через точку доступу автомобіля або Wi-Fi Direct. Сумісність залежить від пристрою, прошивки й iOS.",
+    "requires": "Встановлюйте на головний пристрій автомобіля, а не на iPhone. Android 9+; Wi-Fi Direct потребує Android 10+. Бездротове підключення працює через точку доступу автомобіля, Wi-Fi Direct або наявний Wi-Fi / спільну локальну мережу. Сумісність залежить від пристрою, прошивки й iOS.",
     "gallery": "Звична поїздка",
     "captions": [
       "Зрозумілий головний екран із вирівняними кнопками бездротового й USB-підключення.",
@@ -185,15 +191,16 @@
     "bssid": "Для щоденного користування ADB не потрібен. Способи встановлення APK залежать від автомобіля. Вводити MAC-адресу вручну не потрібно.",
     "whats": "У цьому випуску",
     "features": [
-      "Бажаний канал Wi-Fi Direct для наступного підключення: типово Авто. Ручний вибір залежить від радіомодуля й регіональних обмежень; відхилений або інший створений канал спричиняє помилку. Усунення перебоїв не підтверджено.",
-      "Рухома картка повороту поверх карти панелі приладів: вибір розміру й зміна положення з кроком 2%. Для невідомого маневру стрілка не вигадується; прострочені вказівки очищаються.",
-      "Свайп униз двома, трьома або чотирма пальцями для налаштувань; типово три. Керування Android TV/пультом зберігає звичну роботу сенсорного екрана й поворотного регулятора.",
-      "Необов’язкове визначення полів старого головного пристрою лише зчитуванням; типовий режим DiLink 5.0 зберігається. Використовуються лише прийняті поля/показники; виправлено застарілі результати та синхронізацію публікації батареї.",
-      "Необов’язковий автозапуск наявної точки доступу автомобіля, типово вимкнений. Перевіряються дозволи лише пакета DiPlay; назва й пароль точки доступу зберігаються.",
-      "Бездротові дані місцезнаходження/автомобіля йдуть робочим Wi-Fi-з’єднанням; доступність відео в P чекає SETUP і каналу подій. Як і раніше, потрібні мережевий ADB та достовірне положення P.",
-      "Виконавець зберігається за часткового оновлення пісні; метадані й обкладинка публікуються лише після змін. Позиція та стан відтворення продовжують оновлюватися.",
-      "Сумісність аудіо з Android 9, звільнення кодека після збою запуску, актуальні розміри й перевірки готовності після перепідключення, вузьке відновлення P2P на Android 10 в Авто та дротовий VPN лише для DiPlay.",
-      "Обмежені зведення бездротового з’єднання, медіа, денної/нічної теми та завершення самого застосунку без запису аудіо, відео, вмісту пакетів або автоматичного надсилання."
+      "CarPlay через наявний Wi-Fi / спільну локальну мережу; очікування готовності точки доступу, обмежене відновлення запуску та підтримуваний прошивкою резервний запуск через уже дозволений ADB.",
+      "Типовий обробник Apple USB і необов’язкове автоматичне підтвердження USB-дозволів.",
+      "Віртуальні/плаваючі карти 16:9 без екрана приладів, приховування над застосунками з доступом до статистики використання, розділений екран/картки й кращі екрани підготовки малої висоти.",
+      "Налаштування в сеансі, вибір Local/USB-CH341, окремі рядки стану/навігації й оновлення параметрів підключення після повернення.",
+      "Системна, сенсорна та фіксована денна/нічна тема; роздільність 30–160% із кроком 1%, перевірка декодера й живе налаштування зображення.",
+      "Розмір, прозорість і дані прибуття власної картки повороту; перемикання штатної карти/картки на панелі приладів без перепідключення.",
+      "Необов’язкові виведення/калібрування DiLink 4, призупинення штатної карти з відновленням; пісні/текст HUD зберігають перевірки раніше підтвердженої прошивки. Вказівки/карта DiLink 3 з відновленням.",
+      "Необов’язковий зум карти приладів і джойстик CarPlay з керма; пісня лише під час зміни, стабільніші обкладинки й нейтральна заглушка.",
+      "Пауза сканування Wi-Fi через дозволений ADB на Android 10 для точки доступу/P2P, крім спільної LAN; резервне збереження TXT із переглядом/поширенням.",
+      "Android 9+; Wi-Fi Direct — Android 10+. Підтримка залежить від прошивки. Інтеграція DiLink 3/4 і відновлення ще потребують перевірки в автомобілі. Неперевірений вивід HUD DiLink 4 лишається вимкненим. Це не обіцянка виправлення всіх перебоїв, дзвінків/Siri чи збоїв з’єднання. Вища роздільність збільшує навантаження; примусова зупинка може відкласти відновлення до відкриття застосунку. Перевіряйте опції на стоянці."
     ],
     "compat": "Перш ніж спробувати",
     "compatText": "Це відкрита попередня версія, а не продукт, сертифікований Apple. Автентифікація використовує експериментальну ідентичність аксесуара, відновлену з публічної прошивки; що вона працюватиме й надалі, не гарантовано. На деяких головних пристроях досі бувають ривки або не діє зміна розміру значків. Почніть із 30 кадрів/с і вимкненим HEVC; за потреби спробуйте нижчу роздільність.",
@@ -208,8 +215,9 @@
     "privacy": "Конфіденційність",
     "footer": "Незалежний проєкт на основі xcertplay з дизайном інтерфейсу від DiAuto. Не пов’язаний з Apple чи BYD. CarPlay і його значок належать Apple Inc.",
     "supportScope": "Ці проєкти зосереджені на автомобілях BYD. Вони можуть працювати й з іншими марками, але інші марки не підтримуються, і планів додавати їхню підтримку чи виправляти несумісності з ними немає.",
-    "diagnosticsTitle": "Потрібні свіжі звіти з 0.2.11",
-    "diagnosticsText": "Якщо проблема лишилася, відтворіть її на 0.2.11 і відкрийте Налаштування → Діагностика → Зберегти діагностичний звіт. Android 10+ зберігає в Downloads/DiPlay; Android 9 відкриває вибір документа. Перевірте .txt і додайте до наявної проблеми GitHub із моделлю/прошивкою, iPhone/iOS, способом підключення, кроками й часом збою. Не публікуйте пароль точки доступу. Для запуску Qin Plus, перебоїв Wi-Fi Direct, Siri, підключення iOS 15 і денної/нічної теми досі потрібні дані з пристроїв."
+    "diagnosticsTitle": "Потрібні свіжі звіти з 0.2.12",
+    "diagnosticsText": "1. Оновіться до 0.2.12, відтворіть збій і запишіть час. 2. Налаштування → Діагностика → Зберегти діагностичний звіт. Android 10+ зазвичай зберігає в Downloads/DiPlay; Android 9 відкриває вибір файлу. Якщо сховище/вибір недоступні, дотримуйтеся повідомлення резервного збереження й використовуйте Перегляд/Поділитися. 3. Перевірте TXT, вилучіть паролі й приватні дані. Автоматичного надсилання немає. 4. Додайте до своєї проблеми: https://github.com/shihabal3amri/DiPlay/issues Або створіть нову: https://github.com/shihabal3amri/DiPlay/issues/new/choose Укажіть авто/пристрій, DiLink/Android/прошивку, iPhone/iOS, підключення USB / точка доступу автомобіля / Wi-Fi Direct / спільна LAN, кроки, очікуваний/фактичний результат і час.",
+    "newIssue": "Створити нову проблему"
   },
   "es": {
     "name": "Español",
@@ -221,7 +229,7 @@
     "download": "Descargar APK",
     "install": "Cómo instalar",
     "promise": "Sin jailbreak, adaptador, cuenta ni servidor de autenticación.",
-    "requires": "Instala en el equipo del coche, no en el iPhone. Android 9+; Wi-Fi Direct requiere Android 10+. La conexión inalámbrica usa el punto de acceso del coche o Wi-Fi Direct. La compatibilidad depende del equipo, firmware e iOS.",
+    "requires": "Instala en el equipo del coche, no en el iPhone. Android 9+; Wi-Fi Direct requiere Android 10+. La conexión inalámbrica usa el punto de acceso del coche, Wi-Fi Direct o Wi-Fi existente / misma red local. La compatibilidad depende del equipo, firmware e iOS.",
     "gallery": "Una experiencia familiar",
     "captions": [
       "Pantalla de inicio con los controles inalámbricos y USB alineados.",
@@ -238,15 +246,16 @@
     "bssid": "No necesitas ADB para el uso diario. El método de instalación del APK depende del coche. No hay que introducir direcciones MAC.",
     "whats": "En esta versión",
     "features": [
-      "Canal preferido de Wi-Fi Direct para la próxima conexión: Auto sigue siendo el valor inicial. Los canales manuales dependen del equipo y la región; un rechazo o canal distinto genera un error. No es una solución confirmada a los cortes.",
-      "Tarjeta de giro personalizada y movible sobre el mapa del cuadro, con tamaños y pasos de posición del 2%. No se inventa una flecha para maniobras desconocidas; se borran indicaciones caducadas.",
-      "Desliza hacia abajo con dos, tres o cuatro dedos para abrir ajustes; tres sigue siendo el valor inicial. Los controles de Android TV/mando conservan el comportamiento táctil y del mando giratorio habitual.",
-      "Detección opcional de datos en equipos antiguos, solo de lectura; el modo DiLink 5.0 sigue siendo el predeterminado. Solo se usan campos/lecturas aceptados; se corrigen resultados obsoletos y la concurrencia al publicar la batería.",
-      "Inicio automático opcional del punto de acceso existente del coche, desactivado de inicio. Se verifican permisos solo para el paquete de DiPlay; se conservan el nombre y la contraseña del punto de acceso.",
-      "Los datos inalámbricos de ubicación/vehículo usan el enlace Wi-Fi activo; la disponibilidad de vídeo en P espera a SETUP y al canal de eventos. Sigue requiriendo ADB por red y datos válidos de la posición P.",
-      "Conserva el artista en actualizaciones parciales de canciones y publica metadatos/portadas solo cuando cambian. La posición y el estado de reproducción siguen actualizándose.",
-      "Compatibilidad de audio con Android 9, liberación del códec tras fallos de inicio, tamaño actual y comprobaciones al reconectar, recuperación limitada de P2P en Android 10 con Auto y VPN por cable solo para DiPlay.",
-      "Diagnóstico limitado de conexión inalámbrica, medios, tema día/noche y cierre de la propia aplicación, sin grabar audio, vídeo o contenido de paquetes ni enviar informes automáticamente."
+      "CarPlay por Wi-Fi existente / misma red local; espera de disponibilidad del punto de acceso, recuperación limitada del inicio y alternativa compatible con el firmware mediante ADB ya autorizado.",
+      "DiPlay como controlador predeterminado de Apple USB y confirmación automática opcional de permisos USB.",
+      "Mapas virtuales/flotantes 16:9 sin pantalla de instrumentos, ocultación sobre apps con Acceso de uso, pantalla dividida/tarjetas y preparación adaptada a pantallas bajas.",
+      "Ajustes durante la sesión, autenticación Local/USB-CH341, barras de estado/navegación independientes y actualización de ajustes al regresar.",
+      "Apariencia del sistema/sensor o día/noche fija; resolución 30–160% en pasos del 1%, comprobación del decodificador y ajustes de imagen en vivo.",
+      "Tamaño, opacidad y llegada en la tarjeta de giro personalizada; cambio en vivo entre mapa/tarjeta nativos del cuadro.",
+      "Ruta/calibración opcionales de DiLink 4, suspensión del mapa original con recuperación; canción/letra en HUD conserva las comprobaciones del firmware ya verificado. Indicaciones/mapa DiLink 3 con recuperación.",
+      "Zoom del mapa del cuadro y joystick CarPlay desde el volante, opcionales; canción solo al cambiar, portadas más estables e imagen neutra cuando no hay portada.",
+      "Pausa de búsquedas Wi-Fi mediante ADB autorizado en Android 10 para punto de acceso/P2P, excepto la misma LAN; guardado alternativo de TXT con Ver/Compartir.",
+      "Android 9+; Wi-Fi Direct requiere Android 10+. La compatibilidad depende del firmware. La integración DiLink 3/4 y la recuperación aún necesitan pruebas en el coche. La salida HUD de DiLink 4 sin verificar sigue desactivada. No se promete resolver todos los cortes, llamadas/Siri o fallos de conexión. Más resolución aumenta la carga; forzar la detención puede retrasar la restauración hasta abrir la app. Prueba las opciones con el coche estacionado."
     ],
     "compat": "Antes de probar",
     "compatText": "Versión preliminar pública sin certificación de Apple. Usa una identidad de accesorio experimental obtenida de firmware público; no se garantiza su aceptación futura. Algunos equipos aún presentan tirones o no aplican los cambios de tamaño de iconos. Empieza con 30 fps y HEVC desactivado; reduce la resolución si hace falta.",
@@ -261,8 +270,9 @@
     "privacy": "Privacidad",
     "footer": "Proyecto independiente basado en xcertplay, con diseño de interfaz de DiAuto. Sin afiliación a Apple ni BYD. CarPlay y su icono pertenecen a Apple Inc.",
     "supportScope": "Estos proyectos se centran en coches BYD. Pueden funcionar en otras marcas, pero no se ofrece soporte para ellas ni hay planes de añadirlo o corregir incompatibilidades específicas.",
-    "diagnosticsTitle": "Necesitamos informes nuevos de 0.2.11",
-    "diagnosticsText": "Si el problema continúa, reprodúcelo en 0.2.11 y abre Ajustes → Diagnóstico → Guardar informe de diagnóstico. Android 10+ guarda en Downloads/DiPlay; Android 9 usa un selector de documentos. Revisa el .txt y adjúntalo a tu incidencia existente en GitHub con modelo/firmware, iPhone/iOS, conexión, pasos y hora del fallo. No publiques la contraseña del punto de acceso. El inicio de Qin Plus, los cortes de Wi-Fi Direct, Siri, la conexión con iOS 15 y el tema día/noche aún necesitan pruebas en dispositivos."
+    "diagnosticsTitle": "Necesitamos informes nuevos de 0.2.12",
+    "diagnosticsText": "1. Actualiza a 0.2.12, reproduce el fallo y anota la hora. 2. Ajustes → Diagnóstico → Guardar informe de diagnóstico. Android 10+ normalmente guarda en Downloads/DiPlay; Android 9 usa un selector. Si el almacenamiento/selector no funciona, sigue la confirmación del guardado alternativo y usa Ver/Compartir. 3. Revisa el TXT y elimina contraseñas/datos privados. No se envía automáticamente. 4. Añádelo a tu incidencia: https://github.com/shihabal3amri/DiPlay/issues O crea otra: https://github.com/shihabal3amri/DiPlay/issues/new/choose Incluye coche/equipo, DiLink/Android/firmware, iPhone/iOS, conexión USB / punto de acceso del coche / Wi-Fi Direct / misma LAN, pasos, resultado esperado/real y hora.",
+    "newIssue": "Crear una incidencia"
   },
   "zh-Hans": {
     "name": "简体中文",
@@ -274,7 +284,7 @@
     "download": "下载 APK",
     "install": "安装方法",
     "promise": "无需越狱、转接盒、账号或认证服务器。",
-    "requires": "请安装在车机上，而非 iPhone 上。支持 Android 9 及以上；Wi-Fi Direct 需要 Android 10 及以上。无线连接使用车机内置热点或 Wi-Fi Direct，兼容性取决于车机、固件和 iOS 版本。",
+    "requires": "请安装在车机上，而非 iPhone 上。支持 Android 9 及以上；Wi-Fi Direct 需要 Android 10 及以上。无线连接可使用车机内置热点、Wi-Fi Direct 或现有 Wi-Fi／同一局域网。兼容性取决于车机、固件和 iOS 版本。",
     "gallery": "熟悉的驾乘体验",
     "captions": [
       "无线和 USB 连接控件整齐对齐的主界面。",
@@ -291,15 +301,16 @@
     "bssid": "日常使用不需要 ADB。APK 安装方式取决于车机。无需手动输入 MAC 地址。",
     "whats": "本次更新",
     "features": [
-      "Wi-Fi Direct 首选信道在下次连接生效，默认仍为自动。手动信道取决于车机及地区支持；拒绝或使用其他信道会报错。此功能不代表卡顿问题已解决。",
-      "仪表地图上可移动的自定义转向卡片，支持大小选择及每次 2% 的位置调整。未知转向不显示猜测的箭头，过期指引会清除。",
-      "打开设置的下滑手势可选 2、3 或 4 指，默认仍为 3 指。新增 Android TV/遥控器操作，并保留普通车机触摸及旋钮行为。",
-      "可选旧版车机只读车辆数据探测，默认仍为 DiLink 5.0 模式。只使用已接受的字段及读数，并修正过期探测结果与电池发布的并发问题。",
-      "可选自动开启车机已有热点，默认关闭；启用前验证仅针对 DiPlay 自身应用包的权限，并保留热点名称与密码。",
-      "无线位置及车辆数据由实际 Wi-Fi 链路发送；停车视频等待 SETUP 和事件通道就绪。仍需网络 ADB 及有效的 P 挡数据。",
-      "歌曲部分更新未提供歌手时保留已有歌手；仅在信息或封面变化时重新发布，播放进度及状态继续更新。",
-      "修正 Android 9 音频兼容性，释放启动失败的编解码器；重连采用稳定尺寸及启动检查，自动模式下提供限定的 Android 10 P2P 兼容回退，有线 VPN 仅作用于 DiPlay。",
-      "新增有界无线、媒体、昼夜主题及本应用退出诊断，不录制音频、视频或数据包内容，也不自动上传。"
+      "通过现有 Wi-Fi／同一局域网使用 CarPlay；等待车机热点就绪、限定次数的启动恢复，以及固件支持时通过已授权 ADB 启动热点的备用方式。",
+      "Apple USB 默认处理应用匹配，以及可选的 USB 权限自动确认。",
+      "无独立仪表屏时提供 16:9 虚拟／悬浮地图；授予使用情况访问权限后在其他应用上自动隐藏；支持分屏／桌面卡片，并改善低矮屏幕的准备界面。",
+      "会话内设置、本地或 USB/CH341 认证选择、独立状态栏／导航栏控制，返回投屏界面后刷新连接设置。",
+      "跟随系统／光线传感器或固定昼夜外观；主屏分辨率可按 1% 调整至 30–160%，检查解码能力；实时调节亮度、对比度、饱和度与色温。",
+      "自定义转向卡片的大小、透明度与到达信息；仪表原生地图／转向卡片实时切换。",
+      "可选 DiLink 4 仪表路由与校准、原厂地图暂停及恢复；HUD 歌曲／歌词保留现有已验证固件的校验限制。DiLink 3 仪表指引与地图，并加入恢复机制。",
+      "可选方向盘仪表地图缩放和 CarPlay 主屏旋钮式操作；仅在歌曲变化时显示，封面切换更稳定，缺少封面时显示中性占位图。",
+      "Android 10 上通过已授权 ADB 暂停热点/P2P 会话的 Wi-Fi 扫描，同一局域网模式除外；诊断 TXT 备用保存及查看／分享。",
+      "最低 Android 9；Wi-Fi Direct 需要 Android 10。支持取决于固件，DiLink 3/4 整合与恢复仍需真车复测，未经验证的 DiLink 4 HUD 输出仍禁用，不代表所有卡顿、通话/Siri 或连接问题已解决。高分辨率会增加负载；强行停止应用可能使恢复延后至再次打开。请停车后测试可选功能。"
     ],
     "compat": "试用前请了解",
     "compatText": "这是公开预览版，未经 Apple 认证。认证使用从公开固件中提取的实验性配件身份，无法保证未来持续可用。部分车机仍可能出现卡顿或图标大小调整不生效。建议先使用 30 fps 并关闭 HEVC，必要时降低分辨率。",
@@ -314,7 +325,8 @@
     "privacy": "隐私",
     "footer": "基于 xcertplay 的独立项目，界面设计源自 DiAuto。与 Apple 或比亚迪无隶属关系。CarPlay 及其图标归 Apple Inc. 所有。",
     "supportScope": "这些项目专注于比亚迪汽车。它们可能在其他品牌上运行，但其他品牌不在支持范围内，也没有增加支持或修复其品牌特定兼容性问题的计划。",
-    "diagnosticsTitle": "请提供 0.2.11 的新诊断报告",
-    "diagnosticsText": "若问题仍在，请在 0.2.11 上复现，再打开设置 → 诊断 → 保存诊断报告。Android 10 及以上保存到 Downloads/DiPlay；Android 9 使用文件选择器。检查 .txt 后附在原有 GitHub 问题中，注明车型/固件、iPhone/iOS、连接方式、步骤和故障时间。请勿公开热点密码。Qin Plus 连接、Wi-Fi Direct 卡顿、Siri、iOS 15 连接及昼夜模式仍需真机证据。"
+    "diagnosticsTitle": "请提供 0.2.12 的新诊断报告",
+    "diagnosticsText": "1. 更新至 0.2.12，复现问题并记录发生时间。 2. 打开“设置 → 诊断 → 保存诊断报告”。Android 10+ 通常保存到 Downloads/DiPlay；Android 9 使用文件选择器。如存储或选择器不可用，请按备用保存提示使用“查看／分享”。 3. 检查 TXT，删除密码及隐私信息。报告不会自动上传。 4. 附到原有问题：https://github.com/shihabal3amri/DiPlay/issues 或新建问题：https://github.com/shihabal3amri/DiPlay/issues/new/choose 注明车型／车机、DiLink/Android/固件、iPhone/iOS、USB／车机热点／Wi-Fi Direct／同一局域网、复现步骤、预期与实际结果、故障时间。",
+    "newIssue": "新建问题"
   }
 }
