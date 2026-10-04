@@ -514,6 +514,10 @@ class DiPlayActivity : ComponentActivity() {
             nightDelaySettingControl(card, R.string.ambient_delay_title, R.string.ambient_delay_hint,
                 0..60, 2, R.string.ambient_delay_summary, { AirPlayPersistence.loadAmbientDelaySeconds(this) },
                 save = { AirPlayPersistence.saveAmbientDelaySeconds(this, it) })
+            card.addView(button(getString(R.string.picture_adjustments), false) {
+                startActivity(Intent(this, CarPlayHostActivity::class.java)
+                    .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+            }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
             resolutionSettingControl(card, R.string.resolution, R.string.custom_resolution_hint,
                 30..100, 100, R.string.custom_resolution_summary, { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
