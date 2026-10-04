@@ -11,6 +11,30 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class ClusterActivityOutputTest {
+    @Test fun launchRejectsWrongTokenAndDisplayAndStopInvalidatesTheTicket() {
+        val app = org.robolectric.RuntimeEnvironment.getApplication()
+        AirPlayPersistence.saveAdbClusterEnabled(app, true)
+        val owner = Any()
+        ClusterActivityOutput.bind(owner, 4) { }
+        val token = "01234567-89ab-cdef-0123-456789abcdef"
+        ClusterActivityOutput::class.java.getDeclaredField("launchToken")
+            .apply { isAccessible = true }.set(ClusterActivityOutput, token)
+        ClusterActivityOutput::class.java.getDeclaredField("expectedDisplay")
+            .apply { isAccessible = true }.setInt(ClusterActivityOutput, 7)
+        val activity = org.robolectric.Robolectric.buildActivity(AdbClusterActivity::class.java).get()
+        try {
+            assertFalse(ClusterActivityOutput.confirm(activity, "wrong", 7))
+            assertFalse(ClusterActivityOutput.confirm(activity, token, 0))
+            assertFalse(ClusterActivityOutput.confirm(activity, token, 8))
+            assertTrue(ClusterActivityOutput.confirm(activity, token, 7))
+            assertTrue(ClusterActivityOutput.hasConfirmedRoute())
+            ClusterActivityOutput.stop(owner)
+            assertFalse(ClusterActivityOutput.acceptsToken(token))
+            assertFalse(ClusterActivityOutput.confirm(activity, token, 7))
+            assertFalse(ClusterActivityOutput.hasConfirmedRoute())
+        } finally { ClusterActivityOutput.stop(owner) }
+    }
+
     @Test fun staleEditorsCannotChangeOrClearANewerCalibrationPreview() {
         val first = Any()
         val second = Any()

@@ -898,11 +898,11 @@ class CarPlayHostActivity : ComponentActivity() {
         clusterSurface = surface
         // Never fall back to the main surface: two decoders must not draw into one Surface.
         if (surface != null) {
-            sink?.setSurface(SCREEN_TYPE_ALT, surface)
             if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute() &&
                 !adbClusterConfigured && controller != null) {
+                ClusterActivityOutput.setStreamActive(false)
                 reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
-            }
+            } else sink?.setSurface(SCREEN_TYPE_ALT, surface)
         }
         updateClusterMapShown()
     }
