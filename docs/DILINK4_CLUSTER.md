@@ -1,6 +1,6 @@
 # Experimental DiLink 4 cluster video
 
-This optional route was tested on a 2022 BYD Seal with DiLink 4.0 / Android 10.
+The contributor reported testing this approach on a 2022 BYD Seal with DiLink 4.0 / Android 10. The updated upstream branch still needs a vehicle retest.
 It keeps the main CarPlay stream on the head unit and launches a separate Activity
 for the instrument-cluster stream. Other firmware has not been vehicle-tested.
 
@@ -48,7 +48,11 @@ stream. Map orientation is controlled by the phone's cluster stream.
 
 ## Scope and credit
 
-DiLink 5/5.1 selection order and the upstream virtual-cluster fallback remain.
+DiLink 5/5.1 and public cluster displays take priority even if the ADB switch is
+saved. Until an activity confirms the private display, the original virtual stream
+remains. If confirmation arrives after CarPlay starts, DiPlay reconnects once to
+request 1920×720 and covers the cluster during that transition. Turning off only
+the ADB option leaves the saved cluster-map enable preference intact.
 USB reconnection polling, colour controls and OEM song/L1 coordination are outside
 this change. Automated tests cannot establish visible placement on other cars.
 

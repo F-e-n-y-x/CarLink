@@ -582,7 +582,7 @@ class DiPlayActivity : ComponentActivity() {
                 render()
                 reconnectForClusterMap()
             }
-            val adbCluster = AirPlayPersistence.loadAdbClusterEnabled(this)
+            val adbCluster = AdbClusterRouter.enabled(this)
             if (adbCluster) {
                 card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
                 card.addView(button(getString(R.string.adb_cluster_open), false) { ClusterActivityOutput.retry() }, matchButton(10, 56))

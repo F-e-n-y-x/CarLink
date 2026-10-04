@@ -40,7 +40,11 @@ class AdbClusterSelectionTest {
             setName(DiLink51ClusterLayout.BASE)
             setFlags(Display.FLAG_PRESENTATION)
         }
-        try { assertFalse(AdbClusterRouter.enabled(app)) }
+        try {
+            assertFalse(AdbClusterRouter.enabled(app))
+            assertEquals(com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.MAP,
+                AirPlayPersistence.loadClusterContent(app))
+        }
         finally { ShadowDisplayManager.removeDisplay(id) }
     }
 
