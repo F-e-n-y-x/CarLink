@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="existing_wifi_title">شبكة Wi-Fi موجودة / نفس الشبكة المحلية</string>
+    <string name="existing_wifi_description">استخدم جهاز توجيه أو Wi-Fi محمولاً موجوداً. أبقِ iPhone والسيارة على الشبكة نفسها مع اتصال بالإنترنت.</string>
+    <string name="existing_wifi_hint">Wi-Fi موجودة · أبقِ الجهازين على شبكة Wi-Fi نفسها والبلوتوث قيد التشغيل. لا تحتاج إلى نقطة اتصال السيارة.</string>
+    <string name="existing_wifi_instructions">وصّل السيارة وiPhone بشبكة Wi-Fi خارجية واحدة في إعدادات النظام. أدخل اسمها الدقيق وكلمة مرور WPA2؛ اترك كلمة المرور فارغة للشبكة المفتوحة فقط. استخدم WPA2 أو الوضع المختلط WPA2/WPA3 وأوقف عزل الأجهزة في جهاز التوجيه. يحتفظ DiPlay بهذا الاتصال ولا ينشئ نقطة اتصال.</string>
+    <string name="existing_wifi_details">بيانات شبكة Wi-Fi الخارجية</string>
+    <string name="existing_wifi_ssid">اسم شبكة Wi-Fi الخارجية (SSID)</string>
+    <string name="existing_wifi_password">كلمة مرور شبكة Wi-Fi الخارجية</string>
+    <string name="existing_wifi_attaching">الاتصال بشبكة Wi-Fi الموجودة</string>
+    <string name="existing_wifi_ready">شبكة Wi-Fi الموجودة جاهزة: %1$s · %2$s · القناة %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">قناة Wi-Fi Direct المفضلة</string>
     <string name="wifi_direct_channel_summary">القناة المفضلة: %1$s</string>
     <string name="wifi_direct_channel_choice">القناة %1$d · %2$s</string>
@@ -508,6 +517,13 @@
     <string name="launcher_map_sharing">مشاركة الخريطة المباشرة مع المشغّلات الأخرى</string>
     <string name="launcher_map_sharing_description">يمكن للمشغّلات التي تدعم DiPlay عرض خريطة لوحة العدادات المباشرة داخل شاشتها الرئيسية. معطّل افتراضيًا، لأن أي تطبيق على وحدة القيادة يمكنه عندها طلب الخريطة. راجع docs/LAUNCHER_INTEGRATION.md.</string>
     <string name="turn_card_overlay_size">حجم بطاقة الانعطاف المخصصة</string>
+    <string name="turn_card_overlay_opacity">شفافية بطاقة الانعطاف المخصصة</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">الوصول %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$dس %2$dد</string>
+    <string name="turn_card_info_duration_m">%1$dد</string>
+    <string name="turn_card_info_km">%1$.1f كم</string>
     <string name="turn_card_overlay_horizontal">بطاقة الانعطاف المخصصة · يسار / يمين</string>
     <string name="turn_card_overlay_vertical">بطاقة الانعطاف المخصصة · أعلى / أسفل</string>
     <string name="turn_card_overlay_small">صغير</string>
@@ -537,6 +553,32 @@
     <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
     <string name="location_reporting_reconnects">يؤدي تغيير هذا الإعداد إلى إعادة اتصال جلسة CarPlay النشطة.</string>
     <string name="diagnostic_report_saved_in_app">تم حفظ التقرير بشكل خاص داخل DiPlay لعدم توفر موقع حفظ عام. يمكنك مشاركته أو عرضه هنا. لا يتم إرسال شيء تلقائياً.</string>
+    <string name="diagnostic_report_saved_to_path">تم حفظ التقرير في:\n%1$s\n\nيمكنك أيضاً مشاركته أو عرضه هنا. لا يتم إرسال شيء تلقائياً.</string>
     <string name="view_diagnostic_report">عرض التقرير</string>
     <string name="diagnostic_report_copy_hint">المس نص التقرير مطولاً لتحديده ونسخه. يمكنك استخدام ذلك إذا لم يتوفر تطبيق للمشاركة.</string>
+    <string name="wheel_map_zoom">تكبير خريطة لوحة العدادات بأزرار المقود</string>
+    <string name="wheel_map_zoom_description">يبدّل زر BYD المخصّص أزرار الصوت بين التحكم في الصوت وتكبير خريطة لوحة العدادات ما دامت لوحة العدادات تعرض خريطة CarPlay. أثناء المكالمة تتحكم الأزرار دائمًا في الصوت. في بعض السيارات يرسل زر الصوت في الكونسول الأزرار نفسها، لذلك يكبّر الخريطة أيضًا أثناء وضع التكبير. يستخدم خدمة أزرار المقود في DiPlay؛ وتحتاج الملاحظة على لوحة العدادات إلى ADB.</string>
+    <string name="wheel_keys_service_on">خدمة أزرار المقود: مفعّلة</string>
+    <string name="wheel_keys_service_starting">خدمة أزرار المقود: مسموح بها، جارٍ التشغيل…</string>
+    <string name="wheel_keys_service_off">خدمة أزرار المقود: متوقفة</string>
+    <string name="wheel_keys_enable_adb">تفعيل خدمة أزرار المقود · ADB</string>
+    <string name="wheel_keys_adb_failed">ADB غير متاح: %1$s</string>
+    <string name="wheel_keys_open_settings">فتح إعدادات تسهيل الاستخدام</string>
+    <string name="wheel_keys_no_settings">لا تحتوي هذه الوحدة على شاشة إعدادات تسهيل الاستخدام. استخدم زر ADB.</string>
+    <string name="wheel_zoom_behaviour">زر الوضع</string>
+    <string name="wheel_zoom_behaviour_toggle">يبدّل حتى الضغط مرة أخرى</string>
+    <string name="wheel_zoom_behaviour_timed">تكبير لمدة 5 ثوانٍ</string>
+    <string name="wheel_key_role_mode">الوضع</string>
+    <string name="wheel_key_role_zoom_in">تكبير</string>
+    <string name="wheel_key_role_zoom_out">تصغير</string>
+    <string name="wheel_key_assign">زر %1$s: %2$s · اضغط للتغيير</string>
+    <string name="wheel_key_press">اضغط الآن زر المقود الخاص بـ %1$s…</string>
+    <string name="wheel_zoom_mode_on">أزرار الصوت تكبّر الآن خريطة لوحة العدادات</string>
+    <string name="wheel_zoom_mode_off">أزرار الصوت تتحكم في الصوت مرة أخرى</string>
+    <string name="wheel_zoom_note_zoom">تكبير الخريطة</string>
+    <string name="wheel_zoom_note_volume">الصوت</string>
+    <string name="wheel_key_service_label">أزرار المقود في DiPlay</string>
+    <string name="wheel_key_service_description">تتيح لـ DiPlay استخدام أزرار المقود المختارة في إعداداته لتكبير خريطة CarPlay على لوحة العدادات. تستقبل ضغطات الأزرار فقط ولا تقرأ الشاشة.</string>
+    <string name="cluster_song_on_change">الأغنية عند تغيّرها فقط</string>
+    <string name="cluster_song_on_change_description">تظهر الأغنية الجديدة على لوحة العدادات لمدة 5 ثوانٍ، ثم تُفرَّغ البطاقة. الإيقاف المؤقت والاستئناف لا يعرضانها مرة أخرى.</string>
 </resources>

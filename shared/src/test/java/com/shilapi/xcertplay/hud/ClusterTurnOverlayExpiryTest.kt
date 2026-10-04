@@ -31,6 +31,13 @@ class ClusterTurnOverlayExpiryTest {
         assertEquals(150, events.last()!!.distanceMeters)
     }
 
+    @Test fun endingTheSessionClearsTheTurnCardImmediately() = withRoute { route, _, events ->
+        BydNavigationOutputs.endNow()
+        assertNull(route.currentApple())
+        assertNull(events.last())
+        assertEquals(2, events.size)
+    }
+
     private fun withRoute(test: (BydHudRouteState, (Long) -> Unit, MutableList<ClusterTurnGuidance?>) -> Unit) {
         var now = 0L
         val field = BydNavigationOutputs::class.java.getDeclaredField("overlayRoute").apply { isAccessible = true }

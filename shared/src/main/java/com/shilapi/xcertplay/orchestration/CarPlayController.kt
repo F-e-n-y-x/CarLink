@@ -43,6 +43,7 @@ import com.shilapi.xcertplay.network.diagnosticSummary
 import com.shilapi.xcertplay.network.CarPlayVpnService
 import com.shilapi.xcertplay.network.LocalOnlyHotspotManager
 import com.shilapi.xcertplay.network.ManualHotspotManager
+import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WifiP2pGroupManager
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
@@ -206,6 +207,10 @@ class CarPlayController(
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
     private var clusterUiShown = true
+    // Immutable snapshots keep accessibility key filtering away from the network-writing UI lock.
+    @Volatile private var clusterUiVisibility: Pair<Pair<AirPlaySession, Int>, Boolean>? = null
+    @Volatile private var dashboardMapOutputVisible = false
+    private val dashboardMapEpoch = AtomicInteger()
     private val playbackStatus = com.shilapi.xcertplay.media.CarPlayPlaybackStatus()
 
     /** Told when the iPhone starts or stops playing media; may run on any thread. */
@@ -443,6 +448,46 @@ class CarPlayController(
     }
 
     /** Sends one CarPlay media-button press (an [com.shilapi.xcertplay.airplay.AirPlayHid] media index). */
+    /** The host reports its physical cluster surface independently of the centre-map pause policy. */
+    fun setDashboardMapOutputVisible(visible: Boolean) {
+        val next = visible && !closed
+        if (dashboardMapOutputVisible == next) return
+        dashboardMapOutputVisible = next
+        dashboardMapEpoch.incrementAndGet()
+    }
+
+    /** Immutable stream geometry retained when a new host adopts this background controller. */
+    fun configuredClusterSize(): Pair<Int, Int>? = airPlayConfig.cluster?.let { it.widthPixels to it.heightPixels }
+
+    /** A visible physical map and its session/stream generation; null for a paused/virtual/turn-card route. */
+    fun dashboardMapRoute(): Any? {
+        val session = activeSession ?: return null
+        val stream = session.clusterStream
+        val route = session to stream
+        val visibility = clusterUiVisibility
+        val shown = visibility?.takeIf { it.first == route }?.second ?: true
+        if (!DashboardMapEligibility.permits(airPlayConfig.cluster?.initialUrl,
+                dashboardMapOutputVisible, stream, shown, closed)) return null
+        return Triple(session, stream, dashboardMapEpoch.get())
+    }
+
+    /** Whether the wheel can currently control the visible dashboard map. */
+    fun dashboardMapStreaming(): Boolean = dashboardMapRoute() != null
+
+    /** One zoom step for the dashboard map, as the car's own zoom controls send it. */
+    fun zoomDashboardMap(zoomIn: Boolean): Boolean {
+        val route = dashboardMapRoute() ?: return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute {
+                if (activeSession === session && dashboardMapRoute() == route) session.changeMapZoomLevel(zoomIn)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** Opens Siri on the iPhone, as the car's voice button does in CarPlay. */
     fun requestSiri(): Boolean {
         if (closed) return false
@@ -470,6 +515,7 @@ class CarPlayController(
         synchronized(this) {
             if (closed) return
             closed = true
+            dashboardMapOutputVisible = false
         }
         val teardownStarted = System.nanoTime()
         connectionDiagnostic("teardown begin transport=${config.transport}")
@@ -533,10 +579,13 @@ class CarPlayController(
         if (clusterUiStream != session to stream) {
             clusterUiStream = session to stream
             clusterUiShown = true
+            clusterUiVisibility = (session to stream) to true
         }
         if (shown == clusterUiShown) return@synchronized
         if (session.setClusterUiShown(shown)) {
             clusterUiShown = shown
+            clusterUiVisibility = (session to stream) to shown
+            dashboardMapEpoch.incrementAndGet()
             debugLog("Cluster map: ${if (shown) "showUI, the cluster shows the map" else "stopUI, the cluster hides the map"}")
         }
     }
@@ -575,10 +624,6 @@ class CarPlayController(
         phase = Phase.MFI
         onStatus(CarPlayStatus.DiscoveringMfi)
         val offlineDirectory = java.io.File(appContext.noBackupFilesDir, LocalMfiAuthenticationClient.DIRECTORY)
-        if (offlineDirectory.exists()) {
-            openLocalMfi(offlineDirectory)
-            return
-        }
         when (config.mfiTarget) {
             MfiTarget.LOCAL -> openLocalMfi(offlineDirectory)
             MfiTarget.USB_CH341 -> {
@@ -1028,6 +1073,7 @@ class CarPlayController(
                     mfi = mfi,
                     listener = wirelessSessionListener(generation),
                     media = media,
+                    additionalBindAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
                 )
             ) {
                 CarPlayVpnService.AttachResult.Started -> Unit
@@ -1058,6 +1104,7 @@ class CarPlayController(
                 // or IPv6 while the listener/probe was bound to the AP's IPv4 address.
                 useInterfaceMdns = true,
                 onEvent = { event -> debugLog("wireless bonjour: ${event.diagnosticSummary()}") },
+                additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
             )
             bonjour = bonjourClient
             bonjourClient.start()
@@ -1126,6 +1173,7 @@ class CarPlayController(
                 deviceIdentifier = deviceIdentifier,
                 publicKey = identity.publicKeyHex,
                 sourceVersion = airPlayConfig.sourceVersion,
+                accessPointBssid = hotspotInfo.accessPointBssid,
             )
             wirelessRuntimeIdentification = runtimeIdentification
             wirelessAirPlayEndpoint = endpoint
@@ -1844,6 +1892,10 @@ class CarPlayController(
             WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
                 preferredChannel = config.wifiP2pPreferredChannel)
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog)
+            WirelessHotspotMode.EXISTING_WIFI -> ExistingWifiManager(
+                appContext, config.existingWifiSsid, config.existingWifiPassphrase, ::debugLog,
+                onNetworkChanged = { if (!isStaleWirelessRun(generation)) restartWireless() },
+            )
             WirelessHotspotMode.MANUAL -> ManualHotspotManager(
                 context = appContext,
                 ssid = config.manualHotspotSsid

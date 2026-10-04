@@ -7,6 +7,7 @@ import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 object BydNavigationOutputs {
     /** Recover a journaled interrupted output when the app opens, even before a phone reconnects. */
     fun onAppOpened(context: Context) {
+        BydOemClusterNavi.restoreIfNeeded(context)
         if (BydStandaloneHudOutput.available(context)) start(context)
         // Read the battery early, so a reading is ready when CarPlay identifies (see batteryStatus).
         if (BydOutputSettings.batteryToIphoneActive(context)) BydBatteryStatus.start(context)
@@ -100,11 +101,23 @@ object BydNavigationOutputs {
     }
 
     private fun currentOverlay(): ClusterTurnGuidance? = synchronized(overlayLock) {
-        overlayRoute.currentApple()?.let { ClusterTurnGuidance.from(BydClusterFrame.from(it)) }
+        overlayRoute.currentApple()?.let { apple ->
+            ClusterTurnGuidance.from(BydClusterFrame.from(apple)).copy(
+                arrivalEpochSeconds = apple.arrivalEpochSeconds,
+                remainingSeconds = apple.remainingSeconds,
+                remainingMeters = apple.remainingMeters,
+            )
+        }
     }
 
     /** The dashboard song setting changed; applies at once. */
     fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
+
+    /** The dashboard song's "only when it changes" setting changed; applies at once. */
+    fun clusterSongOnChangeChanged() = BydClusterSong.onChangeSettingChanged()
+
+    /** A short note where the song shows on the dashboard; needs the same ADB access as the song. */
+    fun dashboardNote(text: String, source: Int? = null) = BydClusterSong.note(text, source)
 
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
     fun endNow() {
