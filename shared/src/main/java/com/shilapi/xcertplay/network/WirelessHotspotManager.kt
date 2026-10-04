@@ -8,9 +8,10 @@ enum class WirelessHotspotBackend(val label: String) {
     WIFI_P2P("Wi-Fi P2P"),
     LOCAL_ONLY_HOTSPOT("LocalOnlyHotspot"),
     MANUAL_HOTSPOT("Manual hotspot"),
+    EXISTING_WIFI("Existing Wi-Fi / Same LAN"),
 }
 
-/** The live Wi-Fi credentials and interface details for one wireless CarPlay hotspot. */
+/** The live Wi-Fi credentials and interface details for a wireless CarPlay network. */
 class WirelessHotspotInfo(
     val ssid: String,
     val passphrase: String,
@@ -30,11 +31,11 @@ class WirelessHotspotInfo(
             "hostAddress=$hostAddress, bandLabel='$bandLabel')"
 }
 
-/** Owns one Android Wi-Fi group and all resources needed to keep it alive. */
+/** Prepares a wireless network and owns only the resources acquired by this manager. */
 interface WirelessHotspotManager : Closeable {
     /**
-     * Starts a hotspot and waits up to [timeoutMillis] for its live configuration and AP
-     * interface. Implementations must not be called on the main thread.
+     * Creates or attaches to a wireless network and waits up to [timeoutMillis] for its live
+     * configuration and interface. Implementations must not be called on the main thread.
      */
     fun start(timeoutMillis: Long): WirelessHotspotInfo
 

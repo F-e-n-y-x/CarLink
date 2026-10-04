@@ -1,4 +1,13 @@
 <resources>
+    <string name="existing_wifi_title">现有 Wi-Fi / 同一局域网</string>
+    <string name="existing_wifi_description">使用已有路由器或随身 Wi-Fi。让 iPhone 和车机保持连接同一网络，并通过它上网。</string>
+    <string name="existing_wifi_hint">现有 Wi-Fi · 两台设备保持连接同一 Wi-Fi，蓝牙保持开启，无需开启车机热点。</string>
+    <string name="existing_wifi_instructions">先在系统设置中将车机和 iPhone 连接同一外部 Wi-Fi，再准确填写它的名称和 WPA2 密码；仅开放网络可留空密码。路由器使用 WPA2 或 WPA2/WPA3 混合模式，并关闭客户端隔离。DiPlay 保持此 Wi-Fi 连接，不创建热点。</string>
+    <string name="existing_wifi_details">外部 Wi-Fi 详情</string>
+    <string name="existing_wifi_ssid">外部 Wi-Fi 名称（SSID）</string>
+    <string name="existing_wifi_password">外部 Wi-Fi 密码</string>
+    <string name="existing_wifi_attaching">正在接入现有 Wi-Fi</string>
+    <string name="existing_wifi_ready">现有 Wi-Fi 就绪：%1$s · %2$s · 信道 %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">首选 Wi-Fi Direct 信道</string>
     <string name="wifi_direct_channel_summary">首选信道：%1$s</string>
     <string name="wifi_direct_channel_choice">信道 %1$d · %2$s</string>

@@ -283,6 +283,20 @@ object AirPlayPersistence {
             .putInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, channel).apply()
     }
 
+    fun loadExistingWifiSsid(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("existing_wifi_ssid", "").orEmpty()
+
+    fun loadExistingWifiPassphrase(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("existing_wifi_passphrase", "").orEmpty()
+
+    fun saveExistingWifiCredentials(context: Context, ssid: String, passphrase: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("existing_wifi_ssid", ssid)
+            .putString("existing_wifi_passphrase", passphrase).apply()
+    }
+
     fun loadManualHotspotSsid(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_MANUAL_HOTSPOT_SSID, null)
