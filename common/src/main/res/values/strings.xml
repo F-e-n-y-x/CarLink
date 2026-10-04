@@ -636,4 +636,9 @@
     <string name="first_tcp_timeout">The iPhone did not connect to CarPlay in time</string>
     <string name="wireless_startup_retries_exhausted">Automatic retries stopped. Check the connection and retry manually.</string>
     <string name="retry_carplay_connection">Retry connection</string>
+    <string name="carplay_dock">CarPlay dock</string>
+    <string name="carplay_dock_automatic">Automatic</string>
+    <string name="carplay_dock_driver_side">Driver\'s side</string>
+    <string name="carplay_dock_bottom">Bottom</string>
+    <string name="carplay_dock_hint">Where CarPlay shows its apps, clock and status. Between Driver\'s side and Bottom it moves at once; Automatic leaves it to the iPhone and applies after a reconnect.</string>
 </resources>

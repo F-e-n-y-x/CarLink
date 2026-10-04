@@ -152,6 +152,32 @@ object AirPlayInfoPlist {
         )
     }
 
+    /**
+     * viewAreaStatusBarEdge values, as CarPlay Simulator's StatusBarEdge (automatic, bottom, driver) and as
+     * seen on a Tang with iOS 27: 1 puts the dock at the bottom, 2 on the driver's side.
+     */
+    const val DOCK_EDGE_BOTTOM = 1
+    const val DOCK_EDGE_DRIVER_SIDE = 2
+    private val DOCK_EDGES = listOf(DOCK_EDGE_DRIVER_SIDE, DOCK_EDGE_BOTTOM)
+    private const val VIEW_AREA_ANIMATION_MILLIS = 300
+
+    /** The main screen's view area that carries [dockEdge]. */
+    fun dockViewArea(dockEdge: Int): Int = DOCK_EDGES.indexOf(dockEdge).coerceAtLeast(0)
+
+    /**
+     * updateViewArea for the main screen. Seen on a Tang with iOS 27: the iPhone acts on it only with an
+     * animation duration and the adjacent areas, the arguments CarPlaySDK's ViewAreaUpdate takes.
+     */
+    fun viewAreaCommand(index: Int, areaCount: Int = DOCK_EDGES.size): Map<String, Any?> = linkedMapOf(
+        "type" to "updateViewArea",
+        "params" to linkedMapOf(
+            "uuid" to MAIN_UUID,
+            "viewAreaIndex" to index,
+            "animationDurationMillis" to VIEW_AREA_ANIMATION_MILLIS,
+            "adjacentViewAreas" to (0 until areaCount).filter { it != index },
+        ),
+    )
+
     private fun displayEntry(display: AirPlayDisplayConfig, type: Int, uuid: String): Map<String, Any?> {
         val widthPhysical = AirPlayDisplaySettings.sanitizeReportedPhysicalMm(
             display.widthPhysicalMm ?: AirPlayDisplaySettings.DEFAULT_WIDTH_PHYSICAL_MM,
@@ -176,13 +202,16 @@ object AirPlayInfoPlist {
             "primaryInputDevice" to display.primaryInputDevice,
         )
 
-        entry["viewAreas"] = listOf(areaDict(display))
-        entry["initialViewArea"] = 0
+        // A fixed dock declares the whole screen once per edge; updateViewArea then moves the dock live.
+        val dock = display.dockEdge
+        entry["viewAreas"] = if (dock == null) listOf(areaDict(display)) else DOCK_EDGES.map { areaDict(display, it) }
+        entry["initialViewArea"] = if (dock == null) 0 else dockViewArea(dock)
+        if (dock != null) entry["viewAreaTransitionControl"] = true
         if (display.initialUrl != null) entry["initialURL"] = display.initialUrl
         return entry
     }
 
-    private fun areaDict(display: AirPlayDisplayConfig): Map<String, Any?> {
+    private fun areaDict(display: AirPlayDisplayConfig, dockEdge: Int? = null): Map<String, Any?> {
         // The session SETUP response enables "viewAreas", so /info must always describe one.
         // A display without custom insets uses the full panel for both the view and safe areas.
         val view = display.viewArea ?: AirPlayInsets()
@@ -194,6 +223,7 @@ object AirPlayInfoPlist {
             "originXPixels" to view.left,
             "originYPixels" to view.top,
         )
+        if (dockEdge != null) result["viewAreaStatusBarEdge"] = dockEdge
         val safe = display.safeArea ?: AirPlayInsets()
         val safeArea = linkedMapOf<String, Any?>(
             "widthPixels" to (width - safe.left - safe.right),

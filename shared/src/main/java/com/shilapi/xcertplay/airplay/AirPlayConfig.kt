@@ -22,6 +22,11 @@ data class AirPlayDisplayConfig(
     val initialUrl: String? = null,
     /** Display feature bits; null keeps the main-screen default (high-fidelity touch and knobs). */
     val features: Int? = null,
+    /**
+     * CarPlay's dock edge ([AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE] or [AirPlayInfoPlist.DOCK_EDGE_BOTTOM]),
+     * or null to leave it to the iPhone. Set, the screen declares one whole-screen view area per edge.
+     */
+    val dockEdge: Int? = null,
 )
 
 /** One OEM homescreen icon. */
