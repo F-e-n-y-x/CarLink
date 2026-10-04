@@ -534,4 +534,6 @@
     <string name="hotspot_control_failed">No se pudo iniciar el punto de acceso. Actívalo en los ajustes del coche.</string>
     <string name="byd_adb_features">Funciones BYD · requieren ADB</string>
     <string name="location_reporting_reconnects">Cambiar este ajuste vuelve a conectar la sesión activa de CarPlay.</string>
+    <string name="adapt_pip_resolution">Adaptar resolución en multiventana</string>
+    <string name="adapt_pip_resolution_description">Vuelva a conectar CarPlay para adaptar la resolución al aspecto de multiventana o PiP. Déjelo desactivado para un escalado instantáneo por GPU sin demora.</string>
 </resources>

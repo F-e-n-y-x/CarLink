@@ -2914,11 +2914,14 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun createAirPlayConfig(size: DisplaySize): AirPlayConfig {
-        val physical = resolvePhysicalSize(size)
+        val safeWidth = (size.width / 2 * 2).coerceAtLeast(2)
+        val safeHeight = (size.height / 2 * 2).coerceAtLeast(2)
+        val alignedSize = DisplaySize(safeWidth, safeHeight)
+        val physical = resolvePhysicalSize(alignedSize)
         val knobPrimary = AndroidTvInputMode.shouldUseKnobAsPrimaryInput(this)
         val baseDisplay = AirPlayDisplayConfig(
-            widthPixels = size.width,
-            heightPixels = size.height,
+            widthPixels = alignedSize.width,
+            heightPixels = alignedSize.height,
             widthPhysicalMm = physical.widthMm,
             heightPhysicalMm = physical.heightMm,
             fps = fps,
@@ -3329,7 +3332,13 @@ class CarPlayHostActivity : ComponentActivity() {
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
         val controllerGeneration = restartGeneration
         val config = createRuntimeConfig()
-        val airPlayConfig = createAirPlayConfig(size)
+        val effectiveSize = if (isMultiWindowActive() && !AirPlayPersistence.loadAdaptPipResolution(this) &&
+            maximumDetectedWidthPixels > size.width && maximumDetectedHeightPixels > size.height) {
+            DisplaySize(maximumDetectedWidthPixels, maximumDetectedHeightPixels)
+        } else {
+            size
+        }
+        val airPlayConfig = createAirPlayConfig(effectiveSize)
         val locationProvider: Iap2LocationProvider? =
             when {
                 !config.locationReportingEnabled -> null
@@ -3398,8 +3407,10 @@ class CarPlayHostActivity : ComponentActivity() {
         controller = next
         CarPlayMediaKeys.attach(this, next)
         if (airPlayConfig.videoInCar) CarPlayVideo.attach(this, next)
-        val display = CarPlaySessionDisplay(airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
-            displayRotation(), hideTopBar, hideBottomBar, size.width, size.height)
+        val display = CarPlaySessionDisplay(
+            airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
+            displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
+        )
         sessionDisplay = display
         videoView?.let { updateVideoLayout(it.width, it.height) }
         CarPlayBackgroundSession.store(next, renderer, size.width, size.height, this, display) { completion ->
@@ -3525,7 +3536,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     "${previous.width}x${previous.height} -> ${size.width}x${size.height}",
             )
             maybeStartCarPlay()
-        } else if (display != null && !layoutChanged && !isMultiWindowActive() &&
+        } else if (display != null && !layoutChanged &&
             size.width <= display.windowWidth && size.height <= display.windowHeight) {
             // Keep camera shrink/restore cycles within the original window connected. If the
             // session started in a camera window, growth beyond it needs a full-size canvas.
@@ -3548,11 +3559,13 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = sessionDisplay ?: return false
         if (display.rotation != displayRotation()) return true
         if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) return true
-        if (isMultiWindowActive() && newSize != null && newSize.width > 0 && newSize.height > 0) {
+        if (newSize != null && newSize.width > 0 && newSize.height > 0) {
             val baseAspect = display.width.toDouble() / display.height
             val currentAspect = newSize.width.toDouble() / newSize.height
             val aspectDiff = kotlin.math.abs(currentAspect / baseAspect - 1.0)
-            if (aspectDiff > 0.08) return true
+            if (aspectDiff > 0.08 && AirPlayPersistence.loadAdaptPipResolution(this)) {
+                return true
+            }
         }
         return false
     }
