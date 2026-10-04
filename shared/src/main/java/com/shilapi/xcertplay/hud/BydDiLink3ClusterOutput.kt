@@ -75,15 +75,19 @@ internal object BydDiLink3ClusterOutput {
             .onSuccess { accepted -> if (!accepted) Log.w(TAG, "Cluster mode pending recovery/retry") }
     }
 
-    private fun state(app: Context): DiLink3ClusterModeSession = session ?: DiLink3ClusterModeSession(
-        run = { command -> shell.run(app, command) },
-        loadRecovery = { prefs(app).getBoolean(JOURNAL, false) },
-        saveRecovery = { pending ->
+    private fun state(app: Context): DiLink3ClusterModeSession {
+        session?.let { return it }
+        val journal = DiLink3ClusterRecoveryJournal(prefs(app).getBoolean(JOURNAL, false)) { pending ->
             val edit = prefs(app).edit()
             if (pending) edit.putBoolean(JOURNAL, true) else edit.remove(JOURNAL)
             edit.commit()
-        },
-    ).also { session = it }
+        }
+        return DiLink3ClusterModeSession(
+            run = { command -> shell.run(app, command) },
+            loadRecovery = { journal.pending },
+            saveRecovery = journal::save,
+        ).also { session = it }
+    }
 
     private fun prefs(context: Context) = context.getSharedPreferences("diplay_dilink3_cluster", Context.MODE_PRIVATE)
 }
