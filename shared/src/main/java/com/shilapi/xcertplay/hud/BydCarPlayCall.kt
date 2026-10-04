@@ -178,10 +178,11 @@ object BydCarPlayCall {
         val apk = app.applicationInfo.sourceDir
         val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} $args")
             ?: return false
+        // A firmware without one of the features still shows the rest; only a tool that did not run is retried.
         val failed = output.lineSequence().map { it.trim() }.filter { it.contains('=') }
-            .any { line -> line.substringAfter('=').trim().toIntOrNull() != 0 }
-        if (failed) Log.w(TAG, "call write failed: ${output.trim().take(200)}")
-        return !failed
+            .filter { line -> line.substringAfter('=').trim().toIntOrNull() != 0 }.toList()
+        if (failed.isNotEmpty()) Log.w(TAG, "call writes not accepted: ${failed.joinToString().take(200)}")
+        return failed.none { it.startsWith("write=") }
     }
 }
 
