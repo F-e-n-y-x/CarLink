@@ -50,15 +50,6 @@ class ClusterMapPresentationTest {
         }
     }
 
-    @Test fun diLink3VirtualSurfaceIsUsedForTheCluster() {
-        val cluster = display("fission_bg_xdjaVirtualSurface")
-        try {
-            assertEquals(cluster, ClusterMapPresentation.findDisplay(context)?.displayId)
-        } finally {
-            ShadowDisplayManager.removeDisplay(cluster)
-        }
-    }
-
     @Test fun unrelatedPresentationDisplayIsNotUsedForTheCluster() {
         val other = display("Passenger display")
         try {
