@@ -1,4 +1,13 @@
 <resources>
+    <string name="existing_wifi_title">现有 Wi-Fi / 同一局域网</string>
+    <string name="existing_wifi_description">使用已有路由器或随身 Wi-Fi。让 iPhone 和车机保持连接同一网络，并通过它上网。</string>
+    <string name="existing_wifi_hint">现有 Wi-Fi · 两台设备保持连接同一 Wi-Fi，蓝牙保持开启，无需开启车机热点。</string>
+    <string name="existing_wifi_instructions">先在系统设置中将车机和 iPhone 连接同一外部 Wi-Fi，再准确填写它的名称和 WPA2 密码；仅开放网络可留空密码。路由器使用 WPA2 或 WPA2/WPA3 混合模式，并关闭客户端隔离。DiPlay 保持此 Wi-Fi 连接，不创建热点。</string>
+    <string name="existing_wifi_details">外部 Wi-Fi 详情</string>
+    <string name="existing_wifi_ssid">外部 Wi-Fi 名称（SSID）</string>
+    <string name="existing_wifi_password">外部 Wi-Fi 密码</string>
+    <string name="existing_wifi_attaching">正在接入现有 Wi-Fi</string>
+    <string name="existing_wifi_ready">现有 Wi-Fi 就绪：%1$s · %2$s · 信道 %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">首选 Wi-Fi Direct 信道</string>
     <string name="wifi_direct_channel_summary">首选信道：%1$s</string>
     <string name="wifi_direct_channel_choice">信道 %1$d · %2$s</string>
@@ -572,8 +581,34 @@
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
     <string name="diagnostic_report_saved_in_app">由于公共保存位置不可用，报告已私密保存到 DiPlay。您可以在此分享或查看报告。不会自动发送任何内容。</string>
+    <string name="diagnostic_report_saved_to_path">报告已保存到：\n%1$s\n\n您也可以在此分享或查看报告。不会自动发送任何内容。</string>
     <string name="view_diagnostic_report">查看报告</string>
     <string name="diagnostic_report_copy_hint">长按报告文本即可选择并复制。如果没有可用的分享应用，可以使用此方式。</string>
+    <string name="wheel_map_zoom">用方向盘按键缩放仪表盘地图</string>
+    <string name="wheel_map_zoom_description">仪表盘显示 CarPlay 地图时，比亚迪自定义按键可在音量和仪表盘地图缩放之间切换音量键。通话时按键始终调节音量。部分车型的中控音量与方向盘发送相同按键，因此缩放模式下它也会缩放地图。使用 DiPlay 方向盘按键服务；仪表盘上的提示需要 ADB。</string>
+    <string name="wheel_keys_service_on">方向盘按键服务：已开启</string>
+    <string name="wheel_keys_service_starting">方向盘按键服务：已允许，正在启动…</string>
+    <string name="wheel_keys_service_off">方向盘按键服务：已关闭</string>
+    <string name="wheel_keys_enable_adb">开启方向盘按键服务 · ADB</string>
+    <string name="wheel_keys_adb_failed">ADB 不可用：%1$s</string>
+    <string name="wheel_keys_open_settings">打开无障碍设置</string>
+    <string name="wheel_keys_no_settings">此车机没有无障碍设置页面，请使用 ADB 按钮。</string>
+    <string name="wheel_zoom_behaviour">模式键</string>
+    <string name="wheel_zoom_behaviour_toggle">切换，直到再次按下</string>
+    <string name="wheel_zoom_behaviour_timed">缩放 5 秒</string>
+    <string name="wheel_key_role_mode">模式</string>
+    <string name="wheel_key_role_zoom_in">放大</string>
+    <string name="wheel_key_role_zoom_out">缩小</string>
+    <string name="wheel_key_assign">%1$s按键：%2$s · 点按以更改</string>
+    <string name="wheel_key_press">现在请按下用于%1$s的方向盘按键…</string>
+    <string name="wheel_zoom_mode_on">音量键现在用于缩放仪表盘地图</string>
+    <string name="wheel_zoom_mode_off">音量键已恢复调节音量</string>
+    <string name="wheel_zoom_note_zoom">地图缩放</string>
+    <string name="wheel_zoom_note_volume">音量</string>
+    <string name="wheel_key_service_label">DiPlay 方向盘按键</string>
+    <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图。它只接收按键，不读取屏幕内容。</string>
+    <string name="cluster_song_on_change">仅在切歌时显示</string>
+    <string name="cluster_song_on_change_description">新歌曲在仪表盘上显示 5 秒，然后清空卡片。暂停和继续播放不会再次显示。</string>
     <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
@@ -585,4 +620,8 @@
     <string name="oem_cluster_hold_package">禁用整个原车地图</string>
     <string name="song_on_hud">HUD 显示曲名或歌词</string>
     <string name="song_on_hud_description">无导航指引时显示手机提供的曲名或歌词，导航方向和道路名称优先。</string>
+    <string name="hotspot_network_not_ready">热点网络未就绪</string>
+    <string name="first_tcp_timeout">等待 iPhone 接入 CarPlay 超时</string>
+    <string name="wireless_startup_retries_exhausted">自动重试已停止，请检查连接后手动重试。</string>
+    <string name="retry_carplay_connection">重新连接</string>
 </resources>

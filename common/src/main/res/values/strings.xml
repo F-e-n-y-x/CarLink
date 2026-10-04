@@ -1,4 +1,13 @@
 <resources>
+    <string name="existing_wifi_title">Existing Wi-Fi / Same LAN</string>
+    <string name="existing_wifi_description">Use an existing router or portable Wi-Fi. Keep the iPhone and car on the same network with Internet access.</string>
+    <string name="existing_wifi_hint">Existing Wi-Fi · Keep both devices on the same Wi-Fi and Bluetooth on. No car hotspot is needed.</string>
+    <string name="existing_wifi_instructions">Connect the car and iPhone to the same external Wi-Fi in system settings. Enter its exact name and WPA2 password below; leave the password empty only for an open network. Use WPA2 or WPA2/WPA3 mixed mode and disable client isolation on the router. DiPlay keeps this Wi-Fi connection and creates no hotspot.</string>
+    <string name="existing_wifi_details">External Wi-Fi details</string>
+    <string name="existing_wifi_ssid">External Wi-Fi name (SSID)</string>
+    <string name="existing_wifi_password">External Wi-Fi password</string>
+    <string name="existing_wifi_attaching">Attaching to existing Wi-Fi</string>
+    <string name="existing_wifi_ready">Existing Wi-Fi ready: %1$s · %2$s · channel %3$d · %4$s</string>
     <string name="built_in_car_hotspot">Built-in car hotspot</string>
     <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="wifi_direct_channel_title">Preferred Wi-Fi Direct channel</string>
@@ -572,8 +581,34 @@
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
     <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
+    <string name="diagnostic_report_saved_to_path">Your report was saved to:\n%1$s\n\nYou can also share it or view it here. Nothing is sent automatically.</string>
     <string name="view_diagnostic_report">View report</string>
     <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
+    <string name="wheel_map_zoom">Zoom the dashboard map with the wheel</string>
+    <string name="wheel_map_zoom_description">BYD\'s custom key switches the volume keys between volume and dashboard map zoom while the dashboard shows the CarPlay map. A call always keeps the volume. On some cars the console volume sends the same keys, so it zooms too while zoom is on. Uses DiPlay\'s wheel key service; the note on the dashboard needs ADB.</string>
+    <string name="wheel_keys_service_on">Wheel key service: on</string>
+    <string name="wheel_keys_service_starting">Wheel key service: allowed, starting…</string>
+    <string name="wheel_keys_service_off">Wheel key service: off</string>
+    <string name="wheel_keys_enable_adb">Turn on the wheel key service · ADB</string>
+    <string name="wheel_keys_adb_failed">ADB is not available: %1$s</string>
+    <string name="wheel_keys_open_settings">Open accessibility settings</string>
+    <string name="wheel_keys_no_settings">This head unit has no accessibility settings screen. Use the ADB button.</string>
+    <string name="wheel_zoom_behaviour">Mode key</string>
+    <string name="wheel_zoom_behaviour_toggle">switches until pressed again</string>
+    <string name="wheel_zoom_behaviour_timed">zoom for 5 seconds</string>
+    <string name="wheel_key_role_mode">mode</string>
+    <string name="wheel_key_role_zoom_in">zoom in</string>
+    <string name="wheel_key_role_zoom_out">zoom out</string>
+    <string name="wheel_key_assign">Key for %1$s: %2$s · tap to change</string>
+    <string name="wheel_key_press">Press the wheel key for %1$s now…</string>
+    <string name="wheel_zoom_mode_on">Volume keys now zoom the dashboard map</string>
+    <string name="wheel_zoom_mode_off">Volume keys control the volume again</string>
+    <string name="wheel_zoom_note_zoom">Map zoom</string>
+    <string name="wheel_zoom_note_volume">Volume</string>
+    <string name="wheel_key_service_label">DiPlay wheel keys</string>
+    <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard. It only receives key presses and does not read the screen.</string>
+    <string name="cluster_song_on_change">Song only when it changes</string>
+    <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
     <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
     <string name="cluster_safe_area_reset">Reset cluster safe area</string>
     <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
@@ -585,4 +620,8 @@
     <string name="oem_cluster_hold_package">Disable the whole stock map</string>
     <string name="song_on_hud">Song or lyrics on the HUD</string>
     <string name="song_on_hud_description">Show the title or lyrics supplied by the phone while no navigation guidance is active. Navigation directions and road names take priority.</string>
+    <string name="hotspot_network_not_ready">Hotspot network is not ready</string>
+    <string name="first_tcp_timeout">The iPhone did not connect to CarPlay in time</string>
+    <string name="wireless_startup_retries_exhausted">Automatic retries stopped. Check the connection and retry manually.</string>
+    <string name="retry_carplay_connection">Retry connection</string>
 </resources>
