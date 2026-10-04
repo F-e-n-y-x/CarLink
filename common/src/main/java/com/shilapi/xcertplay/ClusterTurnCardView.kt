@@ -59,6 +59,8 @@ internal class ClusterTurnCardView(context: Context) : View(context) {
     private var glyph: Drawable? = null
     private var glyphTag: Int = -1
 
+    init { applyPalette() }
+
     fun setLayout(xPercent: Int, yPercent: Int, sizePercent: Int) {
         this.xPercent = xPercent
         this.yPercent = yPercent
@@ -216,6 +218,7 @@ internal class ClusterTurnCardView(context: Context) : View(context) {
 
     /** Draws the tinted Material Symbols glyph; the roundabout exit number gets a corner badge. */
     private fun drawGlyph(canvas: Canvas, next: ClusterTurnGuidance, left: Float, top: Float, side: Float, exit: Int?) {
+        if (next.icon == 0) return
         val resId = glyphRes(next.icon)
         if (resId != glyphTag) {
             glyph = ContextCompat.getDrawable(context, resId)?.mutate()?.apply { setTint(accent) }

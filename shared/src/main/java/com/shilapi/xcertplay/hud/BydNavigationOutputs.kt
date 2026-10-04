@@ -115,7 +115,7 @@ object BydNavigationOutputs {
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
     fun endNow() {
         standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
-        // Keep the overlay route across a session drop (wireless handoff). The overlay's
-        // own 120 s staleness window retires a truly ended route.
+        synchronized(overlayLock) { overlayRoute.clear() }
+        refreshTurnOverlay()
     }
 }

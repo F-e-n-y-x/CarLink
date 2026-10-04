@@ -13,9 +13,9 @@ class ClusterTurnGuidanceTest {
     }
 
     @Test
-    fun unknownManeuverStillShowsAsStraightWhileNavigating() {
+    fun unknownManeuverMustNotInventAStraightInstruction() {
         val guidance = ClusterTurnGuidance.from(BydClusterFrame.from(BydAppleManeuver(80, 0, 0)))
-        assertEquals(9, guidance.icon)
+        assertEquals(0, guidance.icon)
         assertEquals(80, guidance.distanceMeters)
     }
 
