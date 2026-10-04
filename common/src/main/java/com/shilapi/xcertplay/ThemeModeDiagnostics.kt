@@ -5,6 +5,7 @@ import android.content.res.Configuration
 /** Samples only Android's existing theme signal; never infers a theme from vehicle state. */
 internal class ThemeModeDiagnostics {
     enum class Source(val label: String, val force: Boolean = false) {
+        CARPLAY_MODE("carplay-mode"),
         CREATE("create", true),
         START("start", true),
         STOP("stop", true),

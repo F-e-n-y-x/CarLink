@@ -70,6 +70,22 @@ class CarPlayHostThemeDiagnosticsTest {
         assertTrue(log.contains("THEME_DIAGNOSTIC send source=configuration-callback applied=light commandWritten=false"))
     }
 
+    @Test fun fixedDayIsNotOverriddenBySystemNightAndDiagnosticsKeepBothStates() {
+        val session = mock(AirPlaySession::class.java)
+        setField("activeAirPlaySession", session)
+        val controller = activity.javaClass.getDeclaredMethod("getNightModeController")
+            .apply { isAccessible = true }.invoke(activity) as CarPlayNightModeController
+        controller.configure(CarPlayNightMode.DAY, true)
+        commands.runAll()
+        refresh(Configuration.UI_MODE_NIGHT_NO, ThemeModeDiagnostics.Source.CALLBACK)
+        refresh(Configuration.UI_MODE_NIGHT_YES, ThemeModeDiagnostics.Source.CALLBACK)
+        commands.runAll()
+        assertEquals(false, getField("darkMode"))
+        verify(session, times(1)).setNightMode(false)
+        verify(session, times(0)).setNightMode(true)
+        assertTrue(logFile.readText().contains("reported=dark applied=light sessionActive=true"))
+    }
+
     private fun refresh(mode: Int, source: ThemeModeDiagnostics.Source) {
         activity.javaClass.getDeclaredMethod("refreshConfiguration", Configuration::class.java, ThemeModeDiagnostics.Source::class.java)
             .apply { isAccessible = true }.invoke(activity, configuration(mode), source)

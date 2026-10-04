@@ -59,6 +59,8 @@ object AirPlayPersistence {
     private const val KEY_MANUFACTURER = "manufacturer"
     private const val KEY_MODEL = "model"
     private const val KEY_OEM_LABEL = "oem_label"
+    private const val KEY_CARPLAY_NIGHT_MODE = "carplay_night_mode"
+    private const val KEY_AMBIENT_LUX_THRESHOLD = "ambient_lux_threshold"
     private const val KEY_FPS = "display_fps"
     private const val KEY_MEDIA_BUFFER_MS = "media_buffer_ms"
     private const val KEY_CLUSTER_MAP = "cluster_map_enabled"
@@ -98,6 +100,23 @@ object AirPlayPersistence {
     const val DEFAULT_OEM_LABEL = "BYD"
     const val DEFAULT_MFI_I2C_PATH = "/dev/i2c-1"
 
+    fun loadAmbientDelaySeconds(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt("ambient_delay_seconds", 2).coerceIn(0, 60)
+
+    fun saveAmbientDelaySeconds(context: Context, seconds: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("ambient_delay_seconds", seconds.coerceIn(0, 60)).apply()
+    }
+
+    fun loadDisplayScalePercent(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt("display_scale_percent", loadDisplayScaleTenths(context) * 10).coerceIn(30, 100)
+
+    fun saveDisplayScalePercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("display_scale_percent", percent.coerceIn(30, 100)).apply()
+    }
     /** Applied by the CarPlay host so overlay position/size updates without reconnecting. */
     @Volatile var overlaySettingsListener: (() -> Unit)? = null
 
@@ -415,6 +434,25 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_OEM_LABEL, oemLabel)
             .apply()
+    }
+
+    fun loadAmbientLightThreshold(context: Context): AmbientLightThreshold = AmbientLightThreshold.fromStored(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_AMBIENT_LUX_THRESHOLD, AmbientLightThreshold.DEFAULT_LUX),
+    )
+
+    fun saveAmbientLightThreshold(context: Context, threshold: AmbientLightThreshold) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_AMBIENT_LUX_THRESHOLD, threshold.lux).apply()
+    }
+
+    fun loadCarPlayNightMode(context: Context): CarPlayNightMode = CarPlayNightMode.fromKey(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_CARPLAY_NIGHT_MODE, null),
+    )
+
+    fun saveCarPlayNightMode(context: Context, mode: CarPlayNightMode) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_CARPLAY_NIGHT_MODE, mode.key).apply()
     }
 
     fun loadFps(context: Context): Int = AirPlayDisplaySettings.sanitizeFps(

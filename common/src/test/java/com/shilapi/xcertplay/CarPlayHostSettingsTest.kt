@@ -123,8 +123,28 @@ class CarPlayHostSettingsTest {
         assertEquals(original, field("displayScaleTenths"))
         assertEquals(3, field("gestureFingerCount"))
         invoke("openSettingsMenu")
-        assertEquals(original - CarPlayDisplayScale.MIN_TENTHS, resolutionSlider().progress)
+        assertEquals(original * 10 - 30, resolutionSlider().progress)
         assertEquals(activity.getString(R.string.settings_gesture_fingers, 3), gestureButton().text)
+    }
+
+    @Test fun customResolutionSurvivesCancelAndUnrelatedSettingsSave() {
+        AirPlayPersistence.saveDisplayScalePercent(activity, 73)
+        invoke("openSettingsMenu")
+        val slider = resolutionSlider()
+        assertEquals(43, slider.progress)
+        val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+            .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+        listener.onProgressChanged(slider, 0, true)
+        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
+        invoke("cancelSettingsEdits")
+        assertEquals(73, field("displayScalePercent"))
+        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
+        invoke("openSettingsMenu")
+        invoke("persistMenuSettings")
+        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
+        listener.onProgressChanged(slider, 0, true)
+        invoke("persistMenuSettings")
+        assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(activity))
     }
 
     @Test fun savingPersistsSettingsAndRestartsOnce() {
@@ -354,7 +374,7 @@ class CarPlayHostSettingsTest {
 
     private fun menu() = field("settingsMenu") as View
     private fun resolutionSlider() = views(menu()).filterIsInstance<SeekBar>()
-        .first { it.max == CarPlayDisplayScale.MAX_TENTHS - CarPlayDisplayScale.MIN_TENTHS }
+        .first { it.max == 70 }
     private fun gestureButton() = views(menu()).filterIsInstance<Button>()
         .first { it.text == activity.getString(R.string.settings_gesture_fingers, field("gestureFingerCount")) }
     private fun views(view: View): Sequence<View> = sequence {
