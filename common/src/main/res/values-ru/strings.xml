@@ -191,6 +191,8 @@
     <string name="follow_instrument_theme_and_map_card">Следовать теме приборов и карточке карты</string>
     <string name="frame_rate">Частота кадров</string>
     <string name="full_screen">Полный экран</string>
+    <string name="adapt_pip_resolution">Адаптация разрешения в многооконном режиме</string>
+    <string name="adapt_pip_resolution_description">Переподключает CarPlay для адаптации разрешения к пропорциям окна или PiP. Оставьте выключенным для мгновенного аппаратного масштабирования GPU.</string>
     <string name="fullscreen">Полноэкранный режим</string>
     <string name="getting_carplay_ready">Подготовка CarPlay…</string>
     <string name="got_it">Понятно</string>

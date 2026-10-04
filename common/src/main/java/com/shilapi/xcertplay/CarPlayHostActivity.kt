@@ -3368,7 +3368,8 @@ class CarPlayHostActivity : ComponentActivity() {
         val controllerGeneration = restartGeneration
         val config = createRuntimeConfig()
         val effectiveSize = if (isMultiWindowActive() && !AirPlayPersistence.loadAdaptPipResolution(this) &&
-            maximumDetectedWidthPixels > size.width && maximumDetectedHeightPixels > size.height) {
+            maximumDetectedWidthPixels >= size.width && maximumDetectedHeightPixels >= size.height &&
+            (maximumDetectedWidthPixels > size.width || maximumDetectedHeightPixels > size.height)) {
             DisplaySize(maximumDetectedWidthPixels, maximumDetectedHeightPixels)
         } else {
             size
@@ -4007,9 +4008,9 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun applyFullscreenMode() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode) return
-        val hideTop = hideTopBar
-        val hideBottom = hideBottomBar
+        val multiWindow = isMultiWindowActive()
+        val hideTop = hideTopBar && !multiWindow
+        val hideBottom = hideBottomBar && !multiWindow
         WindowCompat.setDecorFitsSystemWindows(window, !(hideTop && hideBottom))
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         if (hideTop) {

@@ -196,6 +196,8 @@
     <string name="follow_instrument_theme_and_map_card">Враховувати тему приборки та картку карти</string>
     <string name="frame_rate">Частота кадрів</string>
     <string name="full_screen">На весь екран</string>
+    <string name="adapt_pip_resolution">Адаптація роздільної здатності в багатооконному режимі</string>
+    <string name="adapt_pip_resolution_description">Перепідключає CarPlay для адаптації роздільної здатності до пропорцій вікна або PiP. Залиште вимкненим для миттєвого апаратного масштабування GPU.</string>
     <string name="fullscreen">Повний екран</string>
     <string name="getting_carplay_ready">Підготовка CarPlay…</string>
     <string name="got_it">Зрозуміло</string>

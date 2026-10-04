@@ -191,6 +191,8 @@
     <string name="follow_instrument_theme_and_map_card">اتبع سمة لوحة العدادات وبطاقة الخريطة</string>
     <string name="frame_rate">معدل الإطارات</string>
     <string name="full_screen">ملء الشاشة</string>
+    <string name="adapt_pip_resolution">تكييف دقة النوافذ المتعددة</string>
+    <string name="adapt_pip_resolution_description">إعادة توصيل CarPlay لتكييف دقة البث مع نسبة العرض إلى الارتفاع للنوافذ المتعددة أو صورة داخل صورة. اتركه معطلاً للتحجيم الفوري لوحدة معالجة الرسومات بدون تأخير.</string>
     <string name="fullscreen">ملء الشاشة</string>
     <string name="getting_carplay_ready">جارٍ تجهيز CarPlay…</string>
     <string name="got_it">فهمت</string>

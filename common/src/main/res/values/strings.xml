@@ -195,6 +195,8 @@
     <string name="follow_instrument_theme_and_map_card">Follow instrument theme and map card</string>
     <string name="frame_rate">Frame rate</string>
     <string name="full_screen">Full screen</string>
+    <string name="adapt_pip_resolution">Adapt multi-window resolution</string>
+    <string name="adapt_pip_resolution_description">Reconnect CarPlay to adapt stream resolution to multi-window or picture-in-picture aspect ratio. Leave disabled for instant 0ms GPU scaling.</string>
     <string name="fullscreen">Fullscreen</string>
     <string name="getting_carplay_ready">Getting CarPlay ready…</string>
     <string name="got_it">Got it</string>
