@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.Surface
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
+import com.shilapi.xcertplay.hud.BydOemClusterNavi
 import java.util.concurrent.ExecutorService
 
 /**
@@ -51,6 +52,9 @@ internal object ClusterMirror {
     private var adb: LocalAdb? = null
     private var retryAtMillis = 0L
     private val handler = Handler(Looper.getMainLooper())
+
+    /** Kept from [launch] so [stop] can undo the car-map hold without a caller-supplied Context. */
+    private var appContext: Context? = null
 
     /**
      * Runs [command] over the same loopback adbd link the vehicle readouts use. Background use never
@@ -126,13 +130,20 @@ internal object ClusterMirror {
             return
         }
         expecting = true
+        appContext = context.applicationContext
         val component = "${context.packageName}/${ClusterMirrorActivity::class.java.name}"
         executor.execute {
             val output = shell(context, "am start --display ${target.displayId} -n $component")
             val headline = output?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(160).orEmpty()
             val started = headline.isNotEmpty() && output?.contains("error", ignoreCase = true) != true
             Log.i(ClusterMapPresentation.TAG, "cluster mirror launch started=$started $headline")
-            if (!started) expecting = false
+            if (started) {
+                // The stock map shares this surface and the pair can reboot the cluster, so it is
+                // held down while DiPlay draws here and released again in [stop]/[detach].
+                BydOemClusterNavi.hold(context)
+            } else {
+                expecting = false
+            }
             handler.post { onResult(started) }
         }
     }
@@ -142,6 +153,7 @@ internal object ClusterMirror {
         expecting = false
         listener = null
         activity?.finish()
+        appContext?.let(BydOemClusterNavi::release)
     }
 
     /**
@@ -159,6 +171,8 @@ internal object ClusterMirror {
         if (this.activity !== activity) return
         this.activity = null
         listener?.onClusterMirrorClosed()
+        // The window went away on its own (adb dropped it, the user closed it); put the map back.
+        appContext?.let(BydOemClusterNavi::release)
     }
 
     private const val RETRY_MILLIS = 30_000L

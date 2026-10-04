@@ -818,8 +818,10 @@ class CarPlayHostActivity : ComponentActivity() {
             target.width,
             target.height,
             AirPlayPersistence.loadClusterMapScalePercent(this),
-            AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
-            AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+            // Small screen navi crops the cluster to a centre window, so the adb mirror's content
+            // must stay centred: any marker offset would move it out of the crop.
+            horizontalStep = 0,
+            verticalStep = 0,
             AirPlayPersistence.loadClusterContent(this),
         ).also {
             appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on adb display ${target.displayId} safeArea=${it.safeArea} url=${it.initialUrl}")

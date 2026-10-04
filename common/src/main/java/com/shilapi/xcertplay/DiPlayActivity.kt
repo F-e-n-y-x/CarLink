@@ -35,6 +35,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.hud.BydOemClusterHold
+import com.shilapi.xcertplay.hud.BydOemClusterNavi
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
@@ -333,6 +335,11 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
                 getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
+            toggle(card, getString(R.string.song_on_hud),
+                getString(R.string.song_on_hud_description),
+                com.shilapi.xcertplay.hud.BydOutputSettings.hudSong(this)) {
+                com.shilapi.xcertplay.hud.BydOutputSettings.setHudSong(this, it)
+            }
             val presentationCluster = ClusterMapPresentation.findDisplay(this) != null
             val adbCluster = ClusterMirror.cached(this)
             if (!presentationCluster && adbCluster == null) probeClusterOnce()
@@ -438,6 +445,19 @@ class DiPlayActivity : ComponentActivity() {
                         BydOutputSettings.clusterStreamPause(this)) {
                         BydOutputSettings.setClusterStreamPause(this, it)
                         if (it) checkAdbAccess(mayAsk = true)
+                    }
+                }
+                // The car's own map draws on the same cluster surface the adb mirror uses, so it can
+                // be held down while DiPlay is there. How it is held is the driver's choice, because
+                // taking the whole app away makes the cluster's own navigation mode stop working on
+                // some firmware, while disabling just its projection leaves everything else alone.
+                if (BydOemClusterNavi.applicable(this)) {
+                    card.addView(label(getString(R.string.oem_cluster_map_description), 14, MUTED)
+                        .apply { setPadding(0, 0, 0, dp(10)) })
+                    val holds = BydOemClusterHold.entries
+                    choice(card, getString(R.string.oem_cluster_map), holds.map { it.localizedLabel(this) },
+                        holds.indexOf(BydOutputSettings.oemClusterHold(this)), reconnects = false) { index ->
+                        BydOutputSettings.setOemClusterHold(this, holds[index])
                     }
                 }
             }

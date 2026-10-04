@@ -4,6 +4,7 @@ import android.content.Context
 import com.shilapi.xcertplay.airplay.CarPlaySize
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydClusterNaviMode
+import com.shilapi.xcertplay.hud.BydOemClusterHold
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 import com.shilapi.xcertplay.transport.EvChargingConnectors
 
@@ -30,6 +31,12 @@ internal fun BydClusterNaviMode.localizedLabel(context: Context): String = conte
     BydClusterNaviMode.TURN_ON_BY_NAVI -> R.string.navi_mode_turn_on_by_navi
     BydClusterNaviMode.SMALL -> R.string.navi_mode_small
     BydClusterNaviMode.FULL -> R.string.navi_mode_full
+})
+
+internal fun BydOemClusterHold.localizedLabel(context: Context): String = context.getString(when (this) {
+    BydOemClusterHold.OFF -> R.string.oem_cluster_hold_off
+    BydOemClusterHold.COMPONENT -> R.string.oem_cluster_hold_component
+    BydOemClusterHold.PACKAGE -> R.string.oem_cluster_hold_package
 })
 
 internal fun EvChargingConnectors.localizedLabel(context: Context): String = context.getString(when (this) {
