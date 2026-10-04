@@ -50,6 +50,9 @@ import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotManager
 import com.shilapi.xcertplay.network.WirelessInterfaceDiagnostics
 import com.shilapi.xcertplay.network.WirelessReceiveDiagnostics
+import com.shilapi.xcertplay.network.WirelessStartupPolicy
+import com.shilapi.xcertplay.network.WirelessStartupException
+import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
@@ -1064,6 +1067,7 @@ class CarPlayController(
             onStatus(CarPlayStatus.AttachingNetwork)
             val service = awaitVpnService()
                 ?: throw IOException("Could not bind the CarPlay AirPlay service")
+            startedHotspot?.validateReady()
             when (
                 val result = service.attachWireless(
                     bindAddress = hostAddress,
@@ -1107,6 +1111,7 @@ class CarPlayController(
                 additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
             )
             bonjour = bonjourClient
+            startedHotspot?.validateReady()
             bonjourClient.start()
             startedBonjour = bonjourClient
             diagnostics.start()
@@ -1189,6 +1194,7 @@ class CarPlayController(
                 "wireless Bluetooth iAP2 bootstrap starting " +
                     "location=false vehicleStatus=false",
             )
+            startedHotspot?.validateReady()
             val result = Iap2WirelessControlClient(
                 session = channel,
                 mfi = Iap2MfiAuthenticationClient(mfi),
@@ -1860,6 +1866,7 @@ class CarPlayController(
             type.equals("disable-bluetooth", ignoreCase = true)
 
     private fun startWirelessHotspot(generation: Int): WirelessHotspotInfo {
+        val readyDeadline = System.nanoTime() + WirelessStartupPolicy.HOTSPOT_READY_MILLIS * 1_000_000
         val hotspotMode = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
             config.wirelessHotspotMode == WirelessHotspotMode.WIFI_P2P
         ) {
@@ -1875,12 +1882,16 @@ class CarPlayController(
                 appContext,
                 isCancelled = { isStaleWirelessRun(generation) ||
                     !com.shilapi.xcertplay.network.CarHotspotSettings.enabled(appContext) },
-                log = ::debugLog,
+                timeoutMillis = ((readyDeadline - System.nanoTime()) / 1_000_000).coerceAtLeast(1),
+                log = { debugLog("generation=$generation atNs=${System.nanoTime()} $it; awaiting hotspot interface") },
             )
             val manualFallback = result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.UNSUPPORTED &&
                 com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext) == null
             if (result != com.shilapi.xcertplay.network.CarHotspotTethering.Result.READY && !manualFallback) {
-                throw IOException("${result.diagnostic}. Open the car hotspot settings and connect again.")
+                throw WirelessStartupException(
+                    if (result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.TIMED_OUT)
+                        WirelessStartupFailure.HOTSPOT_NOT_READY else WirelessStartupFailure.HOTSPOT_CONFIGURATION,
+                    "${result.diagnostic}. Open the car hotspot settings and connect again.")
             }
         }
         if (hotspotMode == WirelessHotspotMode.MANUAL &&
@@ -1904,12 +1915,15 @@ class CarPlayController(
                 band = config.manualHotspotBand,
                 channel = config.manualHotspotChannel,
                 security = config.manualHotspotSecurity,
-                onDiagnostic = ::debugLog,
+                onDiagnostic = { debugLog("generation=$generation $it") },
+                isCancelled = { isStaleWirelessRun(generation) },
             )
         }
         hotspot = manager
         val timeoutMillis = if (hotspotMode == WirelessHotspotMode.WIFI_P2P) {
             WIFI_P2P_START_TIMEOUT_MILLIS
+        } else if (hotspotMode == WirelessHotspotMode.MANUAL) {
+            ((readyDeadline - System.nanoTime()) / 1_000_000).coerceAtLeast(1)
         } else {
             HOTSPOT_START_TIMEOUT_MILLIS
         }
