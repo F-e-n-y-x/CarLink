@@ -17,6 +17,7 @@ object BydOutputSettings {
     private const val KEY_WHEEL_SPEED_TO_IPHONE = "wheel_speed_to_iphone"
     private const val KEY_VIDEO_WHILE_PARKED = "video_while_parked"
     private const val KEY_CLUSTER_SONG = "cluster_song"
+    private const val KEY_CLUSTER_SONG_ON_CHANGE = "cluster_song_on_change"
     private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
@@ -73,6 +74,12 @@ object BydOutputSettings {
 
     fun setClusterSong(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CLUSTER_SONG, enabled).apply()
+
+    /** Show a new song on the dashboard for a few seconds only, then an empty card. */
+    fun clusterSongOnChange(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG_ON_CHANGE, false)
+
+    fun setClusterSongOnChange(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_CLUSTER_SONG_ON_CHANGE, enabled).apply()
 
     fun videoWhileParkedActive(context: Context): Boolean =
         videoWhileParked(context) && supportedInSelectedMode(context) { it.gearSupported }

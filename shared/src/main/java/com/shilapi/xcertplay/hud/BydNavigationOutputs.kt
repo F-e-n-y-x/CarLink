@@ -112,6 +112,9 @@ object BydNavigationOutputs {
     /** The dashboard song setting changed; applies at once. */
     fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
 
+    /** The dashboard song's "only when it changes" setting changed; applies at once. */
+    fun clusterSongOnChangeChanged() = BydClusterSong.onChangeSettingChanged()
+
     /** A short note where the song shows on the dashboard; needs the same ADB access as the song. */
     fun dashboardNote(text: String, source: Int? = null) = BydClusterSong.note(text, source)
 

@@ -581,4 +581,6 @@
     <string name="wheel_zoom_note_volume">Гучність</string>
     <string name="wheel_key_service_label">Кнопки керма DiPlay</string>
     <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці. Лише отримує натискання кнопок і не читає екран.</string>
+    <string name="cluster_song_on_change">Пісня лише при зміні</string>
+    <string name="cluster_song_on_change_description">Нова пісня видна на приборці 5 секунд, потім картка порожніє. Пауза й продовження її не показують.</string>
 </resources>

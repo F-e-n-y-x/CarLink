@@ -569,4 +569,6 @@
     <string name="wheel_zoom_note_volume">Громкость</string>
     <string name="wheel_key_service_label">Кнопки руля DiPlay</string>
     <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели. Только получает нажатия кнопок и не читает экран.</string>
+    <string name="cluster_song_on_change">Песня только при смене</string>
+    <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
 </resources>
