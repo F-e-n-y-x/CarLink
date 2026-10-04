@@ -413,6 +413,25 @@ class CarPlayHostDisplaySizeTest {
         }
     }
 
+    @Test fun adoptingBackgroundClusterRestoresNativeAdbFlagButRejectsTheVirtualFallback() {
+        AirPlayPersistence.saveAdbClusterEnabled(activity, true)
+        val sink = AndroidMediaSink()
+        val display = CarPlaySessionDisplay(1920, 990, Surface.ROTATION_0, true, true, 1920, 990)
+        try {
+            for ((clusterSize, native) in listOf((1920 to 720) to true, (1280 to 720) to false, null to false)) {
+                val controller = org.mockito.Mockito.mock(CarPlayController::class.java)
+                org.mockito.Mockito.`when`(controller.configuredClusterSize()).thenReturn(clusterSize)
+                CarPlayBackgroundSession.store(controller, sink, 1920, 990, Any(), display) {}
+                assertEquals(true, invoke("adoptBackgroundSession"))
+                assertEquals("Adopted $clusterSize must keep the native/virtual distinction", native,
+                    getField("adbClusterConfigured"))
+            }
+        } finally {
+            AirPlayPersistence.saveAdbClusterEnabled(activity, false)
+            sink.close()
+        }
+    }
+
     private fun startSession(
         rotation: Int = Surface.ROTATION_0,
         windowWidth: Int = 1920,

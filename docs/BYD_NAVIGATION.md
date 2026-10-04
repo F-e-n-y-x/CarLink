@@ -12,6 +12,20 @@ Normal route end, disconnect, disabling navigation output and stale guidance tri
 
 Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in DiPlay it is enabled by default when available. Debug-only receivers/demos require Android's DUMP permission and are absent from release manifests. Development starter and vendor-access experiments are not part of the production navigation path.
 
+## DiLink 3.0 cluster guidance and map (experimental, needs ADB)
+
+DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/IP service and ship the stock AMap adapter as `com.example.amapservice` instead of `com.byd.amapservice`. DiPlay sends it the same navigation broadcasts. That adapter shows preformatted text rather than the numeric extras, so DiPlay also sends `SEG_REMAIN_DIS_AUTO` ("250 m"), `ROUTE_REMAIN_DIS_AUTO` ("5.4 km"), `ROUTE_REMAIN_TIME_AUTO` ("10 min") and `ETA_TEXT` ("15:55"); without them the cluster shows -1. The cluster keeps its stock view until it is switched, so DiPlay also runs, through its adb shell, the calls the stock ClusterDebug app uses (`service call AutoContainer 2 i32 1000 i32 <command> s16 ""`):
+
+- While CarPlay guidance is active: 39, "simple navigation", for the native turn card.
+- While "CarPlay map on dashboard" shows its map window on the cluster: 17, "half-screen projection". The map window uses DiLink 3's projection display, `fission_bg_xdjaVirtualSurface` (1920x720, owned by `com.xdja.containerservice`). The map takes priority over the turn card.
+- When both end: 18, "projection off", only if DiPlay changed the mode.
+
+Approve DiPlay's ADB access once with "Check ADB access"; without it the broadcasts are still sent but the cluster keeps its stock view. The DiLink 5 "Dashboard map only in Small and Full navi" option does not apply: DiLink 3 does not report the wheel-menu mode.
+
+The projection display does not exist after the car starts until the cluster has projected once. When DiPlay opens with BYD navigation on and the display is missing, it runs 16 (projection on), 35 (Di4.0 mode, which creates the display) and 18, as BYD DashCast does; the cluster shows an empty projection area for about six seconds. The display then stays until the car restarts. The map window selects this display through the same exact-name and 1920x720 check as DiLink 4.0. If a CarPlay session started before the display existed, DiPlay shows the map window when the display appears and reconnects once so the iPhone sends the 1920x720 cluster stream.
+
+Basis: on a BYD Han EV (GCC, DiLink 3.0 / Android 10), over shell: 16 then 35 created `fission_bg_xdjaVirtualSurface` (display 1, 1920x720, `FLAG_PRESENTATION`, not private, owner `com.xdja.containerservice`), and an ordinary app launched there appeared in the cluster's projection area with speed and readouts still visible (17 and 16 looked the same); 18 restored the gauges and the display remained. A broadcast with these extras followed by 39 showed the turn arrow, road, distances and ETA on the cluster; the windshield HUD showed nothing. The windshield HUD stayed blank in every test while driving, in both 39 and 18 cluster layouts. This was true even though the adapter wrote the instrument CAN guidance registers, including remaining time and ETA (those parse only from Chinese-format text such as "10分钟" and "预计今天15:55到达", which the cluster then shows in Chinese, so DiPlay keeps English text). The car reports a W-HUD (`SET_HUD_CONFIG` 1) with HUD navigation enabled (`SET_DYNAMIC_NAVI_FUNCTION_STATUS_FEEDBACK` 1), but its settings page shows only the ADAS option. DiPlay therefore claims no HUD guidance on DiLink 3. DiPlay's own map window there is not yet confirmed. A force-stopped DiPlay can leave the cluster switched until DiPlay next restores it.
+
 ## CarPlay map on the instrument cluster (experimental)
 
 DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No root or persistent helper is needed. The optional DiLink 5.1 automatic mode described below needs a one-time permission setup.
@@ -23,6 +37,7 @@ Validated on DiLink5.0 / Android12, firmware `BYD-AUTO/DiLink5.0/DiLink5.0:12/SK
 - The cluster's speed readout stays visible. "Small screen navi" crops the same picture on the cluster side; Android does not report that crop.
 - The car marker is placed through CarPlay's safe area: the centre of the panel (x 35–64 %, y 16–75 %), measured with a calibration grid to be clear of BYD's own readouts in both Full and Small screen navi. "Car marker · horizontal" (Left 40 % … Right 40 %) and "Car marker · vertical" (Up 30 % … Down 30 %) move it from there in 10 % steps of the panel. Near a panel edge the safe area shrinks so the marker stays at its centre.
 - "Dashboard shows" picks which of the cluster contents the iPhone offers in `altScreenURLs` DiPlay asks for: Map (`maps:/car/instrumentcluster/map`, default), Turn card (`…/instructioncard`) or Map with turn card (`maps:/car/instrumentcluster`). On the tested car the turn card fit the Small screen navi window well and streamed only 0–5 kbit/s against 0.3–4 Mbit/s for the map. The iPhone lays out the map, the car marker and the iOS glass turn card inside the same safe area, so the position settings below move whichever is shown; they are labelled "Car marker" or "Turn card" to match. The glass card cannot be moved on its own: it is painted into the dashboard video, not a separate Android view.
+- Switching "Dashboard shows" between the iPhone's own contents applies at once, without reconnecting: DiPlay sends `showUI` with the new URL and `forceKeyFrame` for the cluster screen (`{"uuid": <alt screen UUID>, "url": …}`), the same commands as the map pause below. On the contributor's Tang lab build the dashboard switched within a second; without a route the turn card shows Apple Maps' pinned places. A paused map stays paused and comes back with the new content. Failed delivery falls back to reconnecting for the current selection. A recreated cluster stream starts at its initial URL, then reapplies the live selection after SETUP/event readiness; wheel zoom follows delivered content. A replacement phone in the retained connection inherits the last delivered or safely retained paused selection. Switching between Map and DiPlay's own card uses the existing live overlay update; a different URL involving that overlay, or the DiLink 5.1 layout, reconnects.
 - "Dashboard map size" (or "Turn card size") sets the stream size, which the cluster scales up to the panel: Standard (100 %, sharpest), Larger (83 %, 1600x600, default) or Largest (67 %). Apple Maps ignores the reported physical size on the cluster, so resolution is the only way to change the map's scale.
 
 How it works: the iPhone lists the cluster content it offers in its `/info` request (`altScreenURLs`). DiPlay declares a second display of the cluster's size with no input devices and `initialURL=maps:/car/instrumentcluster/map`; without an initial URL the iPhone streams only a black frame. BYD exposes the cluster projection area as public presentation displays owned by `com.byd.containerservice`. The stock map's display (`fission_bg_XDJAScreenProjection`) is hidden from third-party apps, but its `shared_…_0` sibling is composited on top of it, so DiPlay shows a `Presentation` there.
@@ -59,6 +74,40 @@ Measured on the car: after `stopUI` the cluster stream carried no frames at all 
 Ordinary apps cannot read the mode: BYD's `INSTRUMENT_NAVI_TYPE` needs a BYD signature. The adb shell reads it through the `autoservice` binder (instrument device 1007, feature `0x40C03032`): `service call autoservice 5 i32 1007 i32 1086337074` → `Parcel(00000000 0000000N)`, N = 1 Off, 2 Turn on by navi, 3 Small screen navi, 4 Full screen navi. (The shell can also set it through `INSTRUMENT_NAVI_TYPE_SET`, `0x4C10A018`, with `service call autoservice 6 …`; DiPlay does not change the mode.)
 
 DiPlay runs the read through the head unit's own adbd on `127.0.0.1:5555` ("ADB over network" in developer options) with its own RSA key. The car asks once to allow that key; DiPlay offers it only after an explicit settings action, never during background validation or while driving. The TLS pairing flavour of wireless debugging is not supported.
+
+### Dashboard map zoom from the steering wheel (optional)
+
+CarPlay lets the car zoom the cluster map: the accessory sends the command `changeMapZoomLevel` with the cluster screen's UUID and a `zoomDirection` (`{"type": "changeMapZoomLevel", "params": {"uuid": <alt screen UUID>, "zoomDirection": N}}`), the same family as `stopUI`/`showUI`. With Apple Maps on a Tang, `zoomDirection` 0 zooms in and 1 zooms out (2, 3 and -1 also zoomed out). The iPhone does not answer these commands on the event channel, so the values were checked on the dashboard.
+
+The Tang's wheel has no spare keys for this, and BYD's window manager takes the wheel keys before any app can see them: volume (`KEYCODE` 291 / 292, scan 115 / 114, device `simulate-keys`) changes the volume, the custom key (305, scan 300) runs the action chosen for it in BYD's settings (screen rotation on our car). An accessibility service that filters key events receives keys earlier, in Android's input filter, and may keep them. With **Settings → BYD navigation → Zoom the dashboard map with the wheel** turned on and DiPlay's wheel key service running:
+
+- while the dashboard shows the CarPlay map, the custom key switches the volume keys to map zoom (volume up zooms in, volume down out) and back; the mode key can instead turn zoom on for five seconds after the last zoom press;
+- the mode shows briefly as a toast and, where the song shows on the dashboard, as "🔍 Map zoom" (with BYD's Bluetooth-music icon) or "🔊 Volume" for three seconds (this note uses the dashboard song's ADB access);
+- without the dashboard map the custom key keeps its BYD action and zoom mode ends; during a call (Android in a call or communication audio mode, which DiPlay sets for CarPlay calls) the volume keys always control the volume;
+- every key can be reassigned in the settings by pressing it, for wheels with other codes. Assignment expires after ten seconds and is cancelled when leaving the settings or disabling the feature.
+
+Map loss, a new CarPlay session, or disabling the feature ends zoom mode; reconnecting requires another mode-key press. Each physical key keeps the same consume/pass decision from its first press through repeats and release, including a call or timeout that begins during that press.
+
+The contributor tested an earlier lab build on a 2024 Tang. The updated upstream implementation has local regression coverage, but call-volume behavior and these lifecycle changes still need a vehicle retest.
+
+On the Tang the console's volume control sends exactly the same codes, scan codes and input device as the wheel's volume keys, so while zoom mode is on it zooms too. The phone (313) and short voice (304) keys are taken by BYD earlier or have their own action and are not used.
+
+BYD's settings have no accessibility page. The "Turn on the wheel key service · ADB" button adds DiPlay's service to `enabled_accessibility_services` through the head unit's own adbd (the car asks once to allow DiPlay's key) and keeps services already listed. The service only receives key events; it declares no window-content access.
+
+### CarPlay joystick on the steering wheel (optional)
+
+DiPlay already declares a rotary knob for CarPlay's main screen (HID `xcertplay Knob`). Checked with Apple Maps and lists on a Tang: only the knob's turn moves CarPlay's focus (the first turn opens the Maps side panel with search, pinned places and recents), select activates the focused item and back closes the screen; the knob's x/y nudges only pan a focused map, so the joystick does not use them.
+
+With **Settings → BYD navigation → CarPlay joystick on the wheel** turned on and the wheel key service running (see above):
+
+- BYD's media key (289, scan 89, normally opens BYD's media app) turns the joystick on and off; without a CarPlay session it keeps its BYD action;
+- while the joystick is on, previous/next (88 / 87) and the volume roller (291 / 292) turn the knob one step back or forward, play/pause (353, scan 505) selects and the custom key (305) goes back. With the joystick off the custom key switches the map zoom as before (if that setting is on); turning the joystick on ends zoom mode;
+- a toast shows the keys at a glance, and "Joystick on" / "Joystick off" shows briefly where the song shows on the dashboard;
+- "Joystick turns off by itself" (on by default) ends it 15 seconds after the last press and when a route starts, so the keys go back to music and volume; a new CarPlay session, or turning the setting off, ends it too;
+- during a call every key keeps its usual action;
+- every key can be reassigned in the settings by pressing it; a key assignment takes the next press before the joystick does.
+
+The wheel's dashboard-menu key would be the natural back key, but BYD takes it before the input filter (keycode 309, consumed while queueing), and even read from the input device the dashboard still opens its own menu on the same press. So the custom key goes back instead.
 
 ## ADB vehicle-data settings and firmware scope
 
@@ -159,3 +208,19 @@ What the iPhone expects, as observed with iOS 27 and checked against Apple's Car
 The player is Media3 ExoPlayer, which parses media in the app. The head unit's own MP4 parser (`libmmparser_lite.so` in `media.extractor`) aborted on progressive Safari video on a DiLink 5.0 Tang.
 
 What plays: video from Safari and from video player apps works in the car, including pause, seeking and the wheel keys. Apple TV sends HLS encrypted with `cbcs` (SAMPLE-AES) and keys for FairPlay, Widevine and PlayReady only; over AirPlay the iPhone brokers just the FairPlay key (`unhandledURL`, `streamingKey`), which needs a licensed FairPlay receiver, so Apple TV+ does not play here. When the car's player cannot play an item, DiPlay tells the iPhone as Apple's receiver does (`{type: error, error: {domain, code}, uuid}`), shows a short note and returns to CarPlay. Netflix does not support AirPlay. In testing YouTube played audio only.
+
+DiLink 3 cluster-mode changes keep a separate recovery journal before any
+`AutoContainer` command. If display creation fails after projection starts, DiPlay
+attempts projection-off immediately. A failed restoration stays pending and retries
+using already approved local ADB; reopening DiPlay also recovers an interrupted
+output even when navigation output has since been disabled. A new mode waits for
+that recovery. Android cannot guarantee restoration before force-stop; recovery
+runs after the app opens again. This journal does not change the stock-map package
+hold or the verified windshield HUD receiver checks.
+
+Before releasing DiLink 3 support, retest on the car: first display creation after
+boot, guidance-only mode, map priority over guidance, normal disconnect, temporary
+ADB loss during creation and shutdown, and reopening after an interrupted output.
+Confirm that gauges return after recovery and that existing DiLink 5 routing still
+wins on its supported hardware. Unit tests exercise the failure/recovery paths;
+the repaired branch still needs an end-to-end vehicle test.
