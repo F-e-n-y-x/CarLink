@@ -191,6 +191,8 @@
     <string name="follow_instrument_theme_and_map_card">Seguir el tema del cuadro y la tarjeta del mapa</string>
     <string name="frame_rate">Frecuencia de imágenes</string>
     <string name="full_screen">Pantalla completa</string>
+    <string name="adapt_pip_resolution">Adaptar resolución en multiventana</string>
+    <string name="adapt_pip_resolution_description">Vuelva a conectar CarPlay para adaptar la resolución al aspecto de multiventana o PiP. Déjelo desactivado para un escalado instantáneo por GPU sin demora.</string>
     <string name="fullscreen">Pantalla completa</string>
     <string name="getting_carplay_ready">Preparando CarPlay…</string>
     <string name="got_it">Entendido</string>

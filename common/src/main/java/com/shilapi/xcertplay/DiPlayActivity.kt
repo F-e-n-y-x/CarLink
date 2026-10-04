@@ -253,6 +253,16 @@ class DiPlayActivity : ComponentActivity() {
         super.onDestroy()
     }
 
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        render()
+    }
+
+    private val isCompactLayout: Boolean
+        get() = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode) ||
+            resources.configuration.screenWidthDp < 550 ||
+            resources.configuration.screenHeightDp < 450
+
     private fun render() {
         // A restore still waiting for layout keeps its target: the old page was never laid out.
         val previousScrollY = (pendingScrollY ?: rootScroll?.scrollY)?.takeIf { renderedPage == page }
@@ -260,19 +270,39 @@ class DiPlayActivity : ComponentActivity() {
         bydAdbControls = null
         adbSwitches.clear()
         adbStatus = null
+        val compact = isCompactLayout
         val scroll = ScrollView(this).apply { setBackgroundColor(BG); isFillViewport = true; clipToPadding = false }
         rootScroll = scroll
-        val content = column().apply { setPadding(dp(32), dp(24), dp(32), dp(32)) }
+        val content = column().apply {
+            if (compact) setPadding(dp(12), dp(10), dp(12), dp(12))
+            else setPadding(dp(32), dp(24), dp(32), dp(32))
+        }
         scroll.addView(content)
         val header = row().apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(ImageView(this).apply { setImageResource(R.drawable.ic_carplay); contentDescription = getString(R.string.carplay) }, LinearLayout.LayoutParams(dp(36), dp(36)))
-        header.addView(label(getString(R.string.diplay), 26, TEXT, true).apply { setPadding(dp(12), 0, 0, 0) }, LinearLayout.LayoutParams(0, dp(56), 1f))
-        header.addView(button(if (page == "home") getString(R.string.car_home) else getString(R.string.back), false) {
-            if (page == "home") startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
-            else { page = "home"; render() }
-        }, LinearLayout.LayoutParams(dp(130), dp(56)))
+        header.addView(
+            ImageView(this).apply {
+                setImageResource(R.drawable.ic_carplay)
+                contentDescription = getString(R.string.carplay)
+            },
+            LinearLayout.LayoutParams(if (compact) dp(24) else dp(36), if (compact) dp(24) else dp(36)),
+        )
+        header.addView(
+            label(getString(R.string.diplay), if (compact) 18 else 26, TEXT, true).apply {
+                setPadding(if (compact) dp(8) else dp(12), 0, 0, 0)
+            },
+            LinearLayout.LayoutParams(0, if (compact) dp(36) else dp(56), 1f),
+        )
+        if (page != "home" || !compact) {
+            header.addView(
+                button(if (page == "home") getString(R.string.car_home) else getString(R.string.back), false) {
+                    if (page == "home") startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
+                    else { page = "home"; render() }
+                },
+                LinearLayout.LayoutParams(if (compact) dp(80) else dp(130), if (compact) dp(36) else dp(56)),
+            )
+        }
         content.addView(header)
-        content.addView(space(24))
+        content.addView(space(if (compact) 8 else 24))
         when (page) {
             "connection" -> connectionSetup(content)
             "settings" -> settings(content)
@@ -296,6 +326,41 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun home(content: LinearLayout) {
+        val compact = isCompactLayout
+        if (compact) {
+            val card = card().apply { setPadding(dp(12), dp(10), dp(12), dp(10)) }
+            status = label(getString(R.string.ready_when_you_are), 16, TEXT, true).apply {
+                setPadding(0, 0, 0, dp(8))
+            }
+            card.addView(status)
+            connectButton = button(getString(R.string.connect_phone), true) {
+                if (CarPlayBackgroundSession.hasSession()) openProjection()
+                else connect(true)
+            }
+            card.addView(connectButton, matchButton(0, 44))
+
+            val buttonRow = row().apply {
+                setPadding(0, dp(8), 0, 0)
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val usbBtn = button(getString(R.string.connect_with_usb), false) { connect(false) }
+            val settingsBtn = button(getString(R.string.settings), false) { page = "settings"; render() }
+            buttonRow.addView(usbBtn, LinearLayout.LayoutParams(0, dp(38), 1f))
+            buttonRow.addView(space(8), LinearLayout.LayoutParams(dp(8), 1))
+            buttonRow.addView(settingsBtn, LinearLayout.LayoutParams(0, dp(38), 1f))
+            card.addView(buttonRow)
+
+            disconnectButton = button(getString(R.string.disconnect), false) {
+                disconnectButton?.isEnabled = false
+                CarPlayBackgroundSession.stop { runOnUiThread { refreshStatus() } }
+            }.apply { visibility = View.GONE }
+            card.addView(disconnectButton, matchButton(8, 38))
+
+            content.addView(card)
+            setupError?.let { content.addView(label(it, 13, WARNING).apply { setPadding(0, dp(6), 0, 0) }) }
+            return
+        }
+
         val wide = resources.configuration.screenWidthDp >= 850
         val body = column()
         val left = column()
@@ -438,6 +503,9 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
             toggle(card, getString(R.string.full_screen), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
+            }
+            toggle(card, getString(R.string.adapt_pip_resolution), getString(R.string.adapt_pip_resolution_description), AirPlayPersistence.loadAdaptPipResolution(this)) {
+                AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
         }
         section(content, getString(R.string.audio_routing)) { card ->
