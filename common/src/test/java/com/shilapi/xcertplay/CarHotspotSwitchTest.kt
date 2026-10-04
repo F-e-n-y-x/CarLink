@@ -10,6 +10,7 @@ import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydOutputSettings
+import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import java.util.concurrent.CopyOnWriteArrayList
@@ -40,9 +41,10 @@ class CarHotspotSwitchTest {
 
     @Before fun setUp() {
         val app = RuntimeEnvironment.getApplication()
-        for (name in listOf("diplay_byd_outputs", "diplay_car_hotspot", "xcertplay_airplay", "diplay")) {
+        for (name in listOf("diplay_byd_outputs", "diplay_byd_vehicle_fields", "diplay_car_hotspot", "xcertplay_airplay", "diplay")) {
             app.getSharedPreferences(name, 0).edit().clear().commit()
         }
+        BydVehicleFieldStore.clearMemoryForTests()
         CarPlayBackgroundSession.clear()
         CarHotspotAdbGrantTest.WritePermission.allowed = false
         ShadowSettings.setCanDrawOverlays(false)
@@ -70,6 +72,7 @@ class CarHotspotSwitchTest {
         StatusCheck.workers.forEach { it.join(3_000) }
         shadowOf(Looper.getMainLooper()).idle()
         CarPlayBackgroundSession.clear()
+        BydVehicleFieldStore.clearMemoryForTests()
     }
 
     @Test fun enablingDirectlyRequestsPermissionWithoutAnotherDialog() {
@@ -172,17 +175,36 @@ class CarHotspotSwitchTest {
         assertTrue(Grant.requested.isEmpty())
     }
 
-    @Test fun batterySwitchWaitsForAdbAndCanRetryInPlace() = assertFeatureFlow(
-        R.string.car_battery_for_the_iphone) { BydOutputSettings.batteryToIphone(activity) }
+    @Test fun vehicleControlsAreNotDuplicatedInTheHotspotPermissionCard() {
+        assertEquals(1, switches(controls).size)
+        assertFalse(BydOutputSettings.batteryToIphone(activity))
+        assertFalse(BydOutputSettings.wheelSpeedToIphone(activity))
+        assertFalse(BydOutputSettings.videoWhileParked(activity))
+        assertTrue(Grant.requested.isEmpty())
+    }
 
-    @Test fun tunnelSpeedSwitchWaitsForAdbAndCanRetryInPlace() = assertFeatureFlow(
-        R.string.wheel_speed_for_tunnels) { BydOutputSettings.wheelSpeedToIphone(activity) }
+    @Test fun anOutstandingVehicleCheckPreventsASecondAuthorizationFlow() {
+        DiPlayActivity::class.java.getDeclaredField("adbCheckInProgress").apply {
+            isAccessible = true
+        }.setBoolean(activity, true)
+        refreshControls()
+        assertFalse(hotspotSwitch().isEnabled)
+        // Even a stale listener cannot start another grant or save the setting.
+        hotspotSwitch().isChecked = true
+        assertFalse(CarHotspotSettings.enabled(activity))
+        assertFalse(hotspotSwitch().isChecked)
+        assertTrue(Grant.requested.isEmpty())
+        assertNull(Grant.worker)
 
-    @Test fun parkedVideoSwitchWaitsForAdbAndCanRetryInPlace() = assertFeatureFlow(
-        R.string.video_while_parked) { BydOutputSettings.videoWhileParked(activity) }
-
-    @Test fun clusterSongSwitchWaitsForAdbAndCanRetryInPlace() = assertFeatureFlow(
-        R.string.cluster_song) { BydOutputSettings.clusterSong(activity) }
+        DiPlayActivity::class.java.getDeclaredField("adbCheckInProgress").apply {
+            isAccessible = true
+        }.setBoolean(activity, false)
+        refreshControls()
+        assertTrue(hotspotSwitch().isEnabled)
+        hotspotSwitch().isChecked = true
+        awaitGrant(); completeGrant()
+        assertTrue(CarHotspotSettings.enabled(activity))
+    }
 
     @Test fun unexpectedAdbFailureRestoresTheSameSwitch() {
         Grant.fail = true
@@ -229,37 +251,6 @@ class CarHotspotSwitchTest {
         for ((name, value) in mapOf("initialLaunch" to false, "page" to "settings")) {
             DiPlayActivity::class.java.getDeclaredField(name).apply { isAccessible = true }.set(activity, value)
         }
-    }
-
-    private fun assertFeatureFlow(title: Int, read: () -> Boolean) {
-        val control = switchFor(title)
-        Grant.access = LocalAdb.Access.NOT_APPROVED
-        control.isChecked = true
-        awaitGrant()
-        assertFalse(read())
-        assertFalse(control.isEnabled)
-        completeGrant()
-        assertFalse(read())
-        assertFalse(control.isChecked)
-        assertTrue(control.isEnabled)
-        assertEquals(activity.getString(R.string.adb_not_approved), ShadowToast.getTextOfLatestToast())
-        Grant.access = LocalAdb.Access.READY
-        Grant.entered = CountDownLatch(1)
-        Grant.release = CountDownLatch(1)
-        control.isChecked = true
-        awaitGrant()
-        assertFalse(read())
-        completeGrant()
-        assertTrue(read())
-        assertTrue(control.isChecked)
-        assertTrue(control.isEnabled)
-        assertSame(control, switchFor(title))
-        assertSame(controls, activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0))
-        assertTrue(Grant.requested.isEmpty())
-        Grant.worker = null
-        control.isChecked = false
-        assertFalse(read())
-        assertNull(Grant.worker)
     }
 
     @Implements(BydAdbAccess::class, isInAndroidSdk = false)

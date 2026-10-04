@@ -4,13 +4,13 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.CompoundButton
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydOutputSettings
+import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import org.junit.Assert.*
@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowSettings
+import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "en", manifest = Config.NONE)
@@ -32,9 +32,11 @@ class BydAdbSettingsUiTest {
 
     @Before fun setUp() {
         val app = RuntimeEnvironment.getApplication()
-        for (name in listOf("diplay_byd_outputs", "diplay_car_hotspot", "xcertplay_airplay")) {
+        for (name in listOf("diplay_byd_outputs", "diplay_byd_vehicle_fields", "diplay_car_hotspot", "xcertplay_airplay")) {
             app.getSharedPreferences(name, 0).edit().clear().commit()
         }
+        BydVehicleFieldStore.clearMemoryForTests()
+        shadowOf(app.packageManager).removePackage("com.byd.amapservice")
         shadowOf(app.packageManager).installPackage(PackageInfo().apply {
             packageName = "com.byd.carsettings"
             applicationInfo = ApplicationInfo().apply {
@@ -47,96 +49,84 @@ class BydAdbSettingsUiTest {
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.MANUAL)
         controls = LinearLayout(activity)
         assertTrue(CarHotspotSetup.isBydHeadUnit(activity))
-        assertFalse(BydOutputSettings.available(activity))
+        assertFalse(BydOutputSettings.navigationAvailable(activity))
     }
 
-    @Test fun adbVehicleControlsAppearWithoutAmapOrSomeipNavigationServices() {
+    @Test fun hotspotAndVehicleSettingsHaveOneOwnerWithoutNavigationServices() {
         render(LocalAdb.Access.READY)
+        val advanced = advancedVehicleData()
+        val page = LinearLayout(activity).apply { addView(controls); addView(advanced) }
         assertEquals(View.VISIBLE, controls.visibility)
-        assertEquals(1, controls.childCount)
-        val labels = labels(controls.getChildAt(0))
-        for (id in listOf(R.string.byd_adb_features, R.string.car_battery_for_the_iphone,
-            R.string.wheel_speed_for_tunnels, R.string.video_while_parked, R.string.cluster_song,
-            R.string.check_adb_access, R.string.apply_and_reconnect, R.string.auto_car_hotspot_title)) {
-            assertEquals(activity.getString(id), 1, labels.count { it == activity.getString(id) })
-        }
-        assertTrue(labels.any { it.startsWith(activity.getString(R.string.charging_connectors)) })
-        assertTrue(labels.any { it.startsWith(activity.getString(R.string.low_charge_warning)) })
-        assertFalse(labels.contains(activity.getString(R.string.navigation_on_hud_and_instrument_cluster)))
-        assertFalse(labels.contains(activity.getString(R.string.dashboard_map_only_in_small_and_full_navi)))
-        assertFalse(BydOutputSettings.batteryToIphone(activity))
-        assertFalse(BydOutputSettings.wheelSpeedToIphone(activity))
-        assertFalse(BydOutputSettings.videoWhileParked(activity))
-        assertFalse(BydOutputSettings.clusterSong(activity))
+        assertEquals(1, switches(controls).size)
         assertFalse(CarHotspotSettings.enabled(activity))
-        assertEquals(4, buttons(controls).size)
-        assertFalse(labels.contains(activity.getString(R.string.open_car_hotspot_settings)))
-        assertFooterLast(R.string.adb_access_ready)
+        for (id in listOf(R.string.car_battery_for_the_iphone, R.string.wheel_speed_for_tunnels,
+            R.string.video_while_parked, R.string.auto_car_hotspot_title)) {
+            assertEquals(1, switches(page).count { it.contentDescription == activity.getString(id) })
+        }
+        assertEquals(1, labels(page).count { it == activity.getString(R.string.check_adb_access) })
+        assertTrue(labels(advanced).any { it.contains(activity.getString(R.string.vehicle_data_mode_default)) })
     }
 
-    @Test fun unapprovedAdbStillShowsVehicleOptionsAndTheAuthorizationEntry() {
+    @Test fun unapprovedHotspotStillShowsItsOptInAndVehicleSettingsRemainAvailable() {
         render(LocalAdb.Access.NOT_APPROVED)
         assertEquals(View.VISIBLE, controls.visibility)
-        assertEquals(1, controls.childCount)
-        val labels = labels(controls.getChildAt(0))
-        assertTrue(labels.contains(activity.getString(R.string.car_battery_for_the_iphone)))
-        assertTrue(labels.contains(activity.getString(R.string.video_while_parked)))
-        assertTrue(labels.contains(activity.getString(R.string.check_adb_access)))
-        assertTrue(labels.contains(activity.getString(R.string.adb_not_approved)))
-        assertTrue(labels.contains(activity.getString(R.string.auto_car_hotspot_title)))
-        assertFooterLast(R.string.adb_not_approved)
+        assertTrue(labels(controls).contains(activity.getString(R.string.adb_not_approved)))
+        assertEquals(1, switches(controls).size)
+        assertTrue(labels(advancedVehicleData()).contains(activity.getString(R.string.check_adb_access)))
     }
 
-    @Test fun changingHotspotModeOnlyHidesHotspotControlsAndPreservesTheSavedChoice() {
+    @Test fun changingHotspotModeHidesOnlyHotspotControlsAndPreservesTheSavedChoice() {
         CarHotspotSettings.setEnabled(activity, true)
         AirPlayPersistence.saveAutoStartOnBoot(activity, true)
-        ShadowSettings.setCanDrawOverlays(false)
         for (mode in listOf(WirelessHotspotMode.MANUAL, WirelessHotspotMode.WIFI_P2P, WirelessHotspotMode.MANUAL)) {
             AirPlayPersistence.saveWirelessHotspotMode(activity, mode)
             render(LocalAdb.Access.READY)
-            assertEquals(View.VISIBLE, controls.visibility)
-            assertEquals(1, controls.childCount)
-            val labels = labels(controls.getChildAt(0))
-            for (id in listOf(R.string.car_battery_for_the_iphone, R.string.wheel_speed_for_tunnels,
-                R.string.video_while_parked, R.string.cluster_song, R.string.check_adb_access)) {
-                assertTrue(labels.contains(activity.getString(id)))
-            }
-            assertEquals(mode == WirelessHotspotMode.MANUAL, labels.contains(activity.getString(R.string.auto_car_hotspot_title)))
-            assertFalse(labels.contains(activity.getString(R.string.open_car_hotspot_settings)))
+            assertEquals(if (mode == WirelessHotspotMode.MANUAL) View.VISIBLE else View.GONE, controls.visibility)
+            assertEquals(mode == WirelessHotspotMode.MANUAL, labels(controls).contains(activity.getString(R.string.auto_car_hotspot_title)))
+            assertEquals(3, switches(advancedVehicleData()).size)
             assertTrue(CarHotspotSettings.enabled(activity))
-            assertFooterLast(R.string.adb_access_ready)
+            assertTrue(AirPlayPersistence.loadAutoStartOnBoot(activity))
         }
     }
 
-    @Test fun losingSupportedAdbHidesTheSectionAndDetachesThePreviousStatusView() {
+    @Test fun unavailableHotspotAdbDoesNotHideTheVehicleModeOrItsSavedSwitches() {
+        BydOutputSettings.setBatteryToIphone(activity, true)
         for (access in listOf(LocalAdb.Access.UNREACHABLE, LocalAdb.Access.UNSUPPORTED)) {
             render(LocalAdb.Access.READY)
             render(access)
             assertEquals(View.GONE, controls.visibility)
             assertEquals(0, controls.childCount)
-            assertNull(DiPlayActivity::class.java.getDeclaredField("adbStatus").apply {
-                isAccessible = true
-            }.get(activity))
+            assertNull(ReflectionHelpers.getField<TextView?>(activity, "adbStatus"))
+            assertTrue(switches(advancedVehicleData()).single {
+                it.contentDescription == activity.getString(R.string.car_battery_for_the_iphone)
+            }.isChecked)
         }
     }
 
-    private fun assertFooterLast(status: Int) {
-        assertEquals(listOf(activity.getString(status), activity.getString(R.string.check_adb_access),
-            activity.getString(R.string.apply_and_reconnect)), labels(controls).takeLast(3))
+    @Test fun hotspotAuthorizationDisablesVehicleChoicesWithoutChangingPreferences() {
+        ReflectionHelpers.setField(activity, "adbSwitchChangePending", true)
+        val advanced = advancedVehicleData()
+        assertTrue(switches(advanced).all { !it.isEnabled })
+        assertFalse(descendants(advanced).filterIsInstance<TextView>().single {
+            it.text.startsWith(activity.getString(R.string.vehicle_data_mode) + " · ")
+        }.isEnabled)
+        assertFalse(BydOutputSettings.legacyVehicleProbe(activity))
+        assertFalse(BydOutputSettings.batteryToIphone(activity))
     }
 
+    private fun advancedVehicleData() = LinearLayout(activity).also {
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "advancedVehicleData",
+            ReflectionHelpers.ClassParameter.from(LinearLayout::class.java, it))
+    }
     private fun render(access: LocalAdb.Access) {
-        DiPlayActivity::class.java.getDeclaredMethod("renderBydAdbControls", LinearLayout::class.java,
-            LocalAdb.Access::class.java).apply { isAccessible = true }.invoke(activity, controls, access)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "renderBydAdbControls",
+            ReflectionHelpers.ClassParameter.from(LinearLayout::class.java, controls),
+            ReflectionHelpers.ClassParameter.from(LocalAdb.Access::class.java, access))
     }
-
-    private fun labels(view: View): List<String> = buildList {
-        if (view is TextView) add(view.text.toString())
-        if (view is ViewGroup) for (index in 0 until view.childCount) addAll(labels(view.getChildAt(index)))
+    private fun descendants(view: View): List<View> = buildList {
+        add(view)
+        if (view is ViewGroup) for (index in 0 until view.childCount) addAll(descendants(view.getChildAt(index)))
     }
-
-    private fun buttons(view: View): List<Button> = buildList {
-        if (view is Button && view !is CompoundButton) add(view)
-        if (view is ViewGroup) for (index in 0 until view.childCount) addAll(buttons(view.getChildAt(index)))
-    }
+    private fun labels(view: View) = descendants(view).filterIsInstance<TextView>().map { it.text.toString() }
+    private fun switches(view: View) = descendants(view).filterIsInstance<Switch>()
 }

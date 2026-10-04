@@ -8,6 +8,42 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WirelessStartupDiagnosticsTest {
+    @Test fun observerExportsSummaryAndAllFourSnapshotLinesSeparately() {
+        val sampled = CountDownLatch(4)
+        val logs = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val diagnostics = WirelessStartupDiagnostics(
+            sample = { "interfaceState=up\nreceiveCounters ifaceRx=sampled lastCounter=1\n" +
+                "receiveCounters udp4=sampled lastCounter=2\nreceiveCounters udp6=sampled lastCounter=3" },
+            log = {
+                logs.add(it)
+                if (it.startsWith("wireless snapshot ")) sampled.countDown()
+            },
+        )
+        diagnostics.start()
+        try {
+            assertTrue(sampled.await(2, TimeUnit.SECONDS))
+            assertTrue(logs.any { it.startsWith("wireless startup") && !it.contains("interfaceState") })
+            assertTrue(logs.any { it.endsWith("lastCounter=3") })
+            assertTrue(logs.all { !it.contains('\n') && !it.contains('\r') })
+        } finally { diagnostics.close() }
+    }
+
+    @Test fun startupTimersMeasureTheFirstRequestAndFirstAcceptedTcpWithoutChangingStages() {
+        var clock = 1_000_000_000L
+        val diagnostics = WirelessStartupDiagnostics({ "" }, {}, nowNs = { clock })
+        assertTrue(diagnostics.summary().contains("startRequestAgeMs=none firstTcpAfterStartMs=none"))
+        diagnostics.controlProgress("iap2 tx=0x4301 carplay-start-session")
+        clock += 20_000_000_000L
+        // A repeated request must not hide how long the original handoff has been stalled.
+        diagnostics.controlProgress("iap2 tx=0x4301 carplay-start-session")
+        assertTrue(diagnostics.summary().contains("startRequestAgeMs=20000 firstTcpAfterStartMs=none"))
+        diagnostics.connectionAccepted()
+        clock += 2_000_000_000L
+        diagnostics.connectionAccepted()
+        assertTrue(diagnostics.summary().contains("startRequestAgeMs=22000 firstTcpAfterStartMs=20000"))
+        diagnostics.close()
+    }
+
     @Test fun closedObserverCannotBeStartedAndCannotFailTeardown() {
         var samples = 0
         val diagnostics = WirelessStartupDiagnostics({ samples++; "" }, { throw IllegalStateException("observer failed") })

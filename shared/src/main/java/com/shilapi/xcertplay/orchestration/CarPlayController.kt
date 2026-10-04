@@ -23,6 +23,7 @@ import android.provider.Settings
 import android.util.Log
 import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayContact
+import com.shilapi.xcertplay.airplay.AirPlayKnobState
 import com.shilapi.xcertplay.airplay.AirPlayDeviceInfo
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.AirPlayMediaHandler
@@ -47,6 +48,7 @@ import com.shilapi.xcertplay.network.WirelessHotspotInfo
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotManager
 import com.shilapi.xcertplay.network.WirelessInterfaceDiagnostics
+import com.shilapi.xcertplay.network.WirelessReceiveDiagnostics
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
@@ -469,6 +471,18 @@ open class CarPlayController(
         val session = activeSession ?: return false
         return try {
             touchExecutor.execute { session.sendTouch(contacts) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** Sends a CarPlay knob/touchpad movement or button state through the AirPlay HID channel. */
+    fun sendKnob(state: AirPlayKnobState, momentary: Boolean = true): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute { session.sendKnob(state, momentary) }
             true
         } catch (_: Exception) {
             false
@@ -1012,11 +1026,13 @@ open class CarPlayController(
                     "frequency=${hotspotInfo.frequencyMHz?.toString() ?: "unknown"}MHz",
             )
             var startedBonjour: CarPlayBonjour? = null
+            val receiveDiagnostics = WirelessReceiveDiagnostics(hotspotInfo.interfaceName)
             val diagnostics = WirelessStartupDiagnostics(
                 sample = {
                     "${WirelessInterfaceDiagnostics.snapshot(hotspotInfo.interfaceName)} " +
                         "${startedHotspot?.connectionDiagnosticSnapshot() ?: "association=unknown"} " +
-                        (startedBonjour?.diagnosticSnapshot() ?: "bonjour=not_started")
+                        (startedBonjour?.diagnosticSnapshot() ?: "bonjour=not_started") + "\n" +
+                        receiveDiagnostics.snapshot()
                 },
                 log = { message -> if (!isStaleWirelessRun(generation)) debugLog(message) },
             )
@@ -1874,7 +1890,8 @@ open class CarPlayController(
             throw IOException("The car hotspot is off. Turn it on in the car settings and connect again.")
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
-            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog)
+            WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
+                preferredChannel = config.wifiP2pPreferredChannel)
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> LocalOnlyHotspotManager(appContext, ::debugLog)
             WirelessHotspotMode.MANUAL -> ManualHotspotManager(
                 context = appContext,

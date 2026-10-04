@@ -17,6 +17,7 @@ object BydOutputSettings {
     private const val KEY_WHEEL_SPEED_TO_IPHONE = "wheel_speed_to_iphone"
     private const val KEY_VIDEO_WHILE_PARKED = "video_while_parked"
     private const val KEY_CLUSTER_SONG = "cluster_song"
+    private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
 
@@ -33,8 +34,13 @@ object BydOutputSettings {
     /** Tell the iPhone the car's charge and range (needs ADB over network); applies on the next connection. */
     fun batteryToIphone(context: Context): Boolean = prefs(context).getBoolean(KEY_BATTERY_TO_IPHONE, false)
 
-    fun setBatteryToIphone(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_BATTERY_TO_IPHONE, enabled).apply()
+    fun setBatteryToIphone(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_BATTERY_TO_IPHONE, enabled).commit()
+    }
+
+    /** Default mode uses the DiLink 5.0 addresses; legacy mode exposes only fields its saved probe confirmed. */
+    fun batteryToIphoneActive(context: Context): Boolean =
+        batteryToIphone(context) && supportedInSelectedMode(context) { it.batterySupported }
 
     /** The charging inlets the iPhone is told about; applies on the next connection. */
     fun chargingConnectors(context: Context): EvChargingConnectors =
@@ -42,19 +48,25 @@ object BydOutputSettings {
             ?.let { saved -> EvChargingConnectors.entries.firstOrNull { it.name == saved } }
             ?: EvChargingConnectors.CCS2_TYPE2
 
-    fun setChargingConnectors(context: Context, connectors: EvChargingConnectors) =
-        prefs(context).edit().putString(KEY_CHARGING_CONNECTORS, connectors.name).apply()
+    fun setChargingConnectors(context: Context, connectors: EvChargingConnectors) {
+        prefs(context).edit().putString(KEY_CHARGING_CONNECTORS, connectors.name).commit()
+    }
 
     /** Send wheel speed and gear with the car's GPS (needs ADB over network); applies on the next connection. */
     fun wheelSpeedToIphone(context: Context): Boolean = prefs(context).getBoolean(KEY_WHEEL_SPEED_TO_IPHONE, false)
 
-    fun setWheelSpeedToIphone(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_WHEEL_SPEED_TO_IPHONE, enabled).apply()
+    fun setWheelSpeedToIphone(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WHEEL_SPEED_TO_IPHONE, enabled).commit()
+    }
+
+    fun wheelSpeedToIphoneActive(context: Context): Boolean =
+        wheelSpeedToIphone(context) && supportedInSelectedMode(context) { it.motionSupported }
     /** Offer iOS 27 video in car, played only while the gear reads P (needs ADB over network). */
     fun videoWhileParked(context: Context): Boolean = prefs(context).getBoolean(KEY_VIDEO_WHILE_PARKED, false)
 
-    fun setVideoWhileParked(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_VIDEO_WHILE_PARKED, enabled).apply()
+    fun setVideoWhileParked(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VIDEO_WHILE_PARKED, enabled).commit()
+    }
 
     /** Show the CarPlay song in the dashboard's music card (needs ADB over network); applies at once. */
     fun clusterSong(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG, false)
@@ -62,20 +74,48 @@ object BydOutputSettings {
     fun setClusterSong(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CLUSTER_SONG, enabled).apply()
 
+    fun videoWhileParkedActive(context: Context): Boolean =
+        videoWhileParked(context) && supportedInSelectedMode(context) { it.gearSupported }
+
+    /**
+     * Use addresses saved by the legacy head-unit probe. Existing installations with a saved probe
+     * migrate to this mode; a fresh installation stays on the default DiLink 5.0 path.
+     */
+    fun legacyVehicleProbe(context: Context): Boolean {
+        val settings = prefs(context)
+        return if (settings.contains(KEY_LEGACY_VEHICLE_PROBE)) {
+            settings.getBoolean(KEY_LEGACY_VEHICLE_PROBE, false)
+        } else {
+            BydVehicleFieldStore.load(context) != null
+        }
+    }
+
+    fun setLegacyVehicleProbe(context: Context, enabled: Boolean) {
+        check(prefs(context).edit().putBoolean(KEY_LEGACY_VEHICLE_PROBE, enabled).commit()) {
+            "Could not persist BYD vehicle-data mode"
+        }
+    }
+
     /** At or below this charge the iPhone gets the low-range warning. */
     fun lowChargePercent(context: Context): Int = prefs(context).getInt(KEY_LOW_CHARGE_PERCENT, DEFAULT_LOW_CHARGE_PERCENT)
 
     fun setLowChargePercent(context: Context, percent: Int) =
         prefs(context).edit().putInt(KEY_LOW_CHARGE_PERCENT, percent).apply()
 
-    /** Whether the head unit has a BYD navigation receiver, so settings can hide a switch that cannot work. */
-    fun available(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) ||
-            installed(context, "com.byd.amapservice") ||
-            installed(context, "com.ts.car.someip.service")
+    /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
+    fun navigationAvailable(context: Context): Boolean =
+        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service")
+
+    /** Legacy alias for navigationAvailable. */
+    fun available(context: Context): Boolean = navigationAvailable(context)
 
     private fun installed(context: Context, pkg: String): Boolean =
         runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+
+    private fun supportedInSelectedMode(
+        context: Context,
+        supported: (BydVehicleCapabilities) -> Boolean,
+    ): Boolean = !legacyVehicleProbe(context) || BydVehicleFieldStore.load(context)?.let(supported) == true
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }

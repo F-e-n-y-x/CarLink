@@ -6,6 +6,7 @@ import com.shilapi.xcertplay.airplay.AirPlayDisplaySettings
 import com.shilapi.xcertplay.airplay.AirPlayPhysicalSizeBasis
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import com.shilapi.xcertplay.airplay.CarPlayUiScale
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.airplay.PairingStore
@@ -15,6 +16,7 @@ import com.shilapi.xcertplay.orchestration.ManualHotspotBand
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
+import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.transport.LockdownPairRecord
 import java.io.File
 
@@ -47,6 +49,7 @@ object AirPlayPersistence {
     private const val KEY_NAVIGATION_STREAM_TYPE = "navigation_stream_type"
     private const val KEY_WIRELESS_ENABLED = "wireless_enabled"
     private const val KEY_WIRELESS_HOTSPOT_MODE = "wireless_hotspot_mode"
+    private const val KEY_WIFI_P2P_PREFERRED_CHANNEL = "wifi_p2p_preferred_channel"
     private const val KEY_MANUAL_HOTSPOT_SSID = "manual_hotspot_ssid"
     private const val KEY_MANUAL_HOTSPOT_PASSPHRASE = "manual_hotspot_passphrase"
     private const val KEY_MANUAL_HOTSPOT_BAND = "manual_hotspot_band"
@@ -66,6 +69,10 @@ object AirPlayPersistence {
     private const val KEY_CLUSTER_CONTENT = "cluster_content"
     private const val KEY_CLUSTER_MARKER_X = "cluster_marker_horizontal_step"
     private const val KEY_CLUSTER_MARKER_Y = "cluster_marker_vertical_step"
+    private const val KEY_CLUSTER_TURN_CARD_OVERLAY_POSITION = "cluster_turn_card_overlay_position"
+    private const val KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE = "cluster_turn_card_overlay_size"
+    private const val KEY_CLUSTER_TURN_CARD_OVERLAY_X = "cluster_turn_card_overlay_x_percent"
+    private const val KEY_CLUSTER_TURN_CARD_OVERLAY_Y = "cluster_turn_card_overlay_y_percent"
     private const val KEY_CENTER_MAP_FOLLOWS_DASHBOARD = "center_map_follows_dashboard"
     private const val KEY_SETTINGS_GESTURE_FINGERS = "settings_gesture_fingers"
     private const val KEY_WIDTH_PHYSICAL_MM = "display_width_physical_mm"
@@ -90,6 +97,9 @@ object AirPlayPersistence {
     const val DEFAULT_MODEL = "DiPlay"
     const val DEFAULT_OEM_LABEL = "BYD"
     const val DEFAULT_MFI_I2C_PATH = "/dev/i2c-1"
+
+    /** Applied by the CarPlay host so overlay position/size updates without reconnecting. */
+    @Volatile var overlaySettingsListener: (() -> Unit)? = null
 
     fun loadDisplayScaleTenths(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -261,6 +271,18 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()
+    }
+
+    fun loadWifiP2pPreferredChannel(context: Context): Int = runCatching {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, WifiP2pChannels.AUTO)
+            .takeIf(WifiP2pChannels::isValid) ?: WifiP2pChannels.AUTO
+    }.getOrDefault(WifiP2pChannels.AUTO)
+
+    fun saveWifiP2pPreferredChannel(context: Context, channel: Int) {
+        require(WifiP2pChannels.isValid(channel))
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, channel).apply()
     }
 
     fun loadManualHotspotSsid(context: Context): String =
@@ -503,7 +525,7 @@ object AirPlayPersistence {
 
     /** Whether to renegotiate resolution when entering/exiting freeform floating windows or launcher PiP. */
     fun loadAdaptPipResolution(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ADAPT_PIP_RESOLUTION, true)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ADAPT_PIP_RESOLUTION, false)
 
     fun saveAdaptPipResolution(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ADAPT_PIP_RESOLUTION, enabled).apply()
@@ -516,6 +538,7 @@ object AirPlayPersistence {
 
     fun saveClusterContent(context: Context, content: CarPlayClusterDisplay.Content) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_CLUSTER_CONTENT, content.name).apply()
+        overlaySettingsListener?.invoke()
     }
 
     /** Fingers for the swipe-down that opens settings; some head units reserve three. */
@@ -535,6 +558,59 @@ object AirPlayPersistence {
     fun saveCenterMapFollowsDashboard(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_CENTER_MAP_FOLLOWS_DASHBOARD, enabled).apply()
+    }
+
+    fun loadClusterTurnCardOverlaySize(context: Context): CarPlayClusterDisplay.OverlaySize =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE, null)
+            ?.let { name -> CarPlayClusterDisplay.OverlaySize.entries.firstOrNull { it.name == name } }
+            ?: CarPlayClusterDisplay.OverlaySize.MEDIUM
+
+    fun saveClusterTurnCardOverlaySize(context: Context, size: CarPlayClusterDisplay.OverlaySize) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE, size.name).apply()
+        overlaySettingsListener?.invoke()
+    }
+
+    fun loadClusterTurnCardOverlayXPercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val raw = if (prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_X)) {
+            prefs.getInt(KEY_CLUSTER_TURN_CARD_OVERLAY_X, ClusterTurnCardOverlay.DEFAULT_X_PERCENT)
+        } else when (prefs.getString(KEY_CLUSTER_TURN_CARD_OVERLAY_POSITION, null)) {
+            "LEFT" -> 20
+            "CENTER" -> 50
+            else -> ClusterTurnCardOverlay.DEFAULT_X_PERCENT
+        }
+        return ClusterTurnCardOverlay.snap(raw, ClusterTurnCardOverlay.xPercents)
+    }
+
+    fun saveClusterTurnCardOverlayXPercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(
+                KEY_CLUSTER_TURN_CARD_OVERLAY_X,
+                ClusterTurnCardOverlay.snap(percent, ClusterTurnCardOverlay.xPercents),
+            ).apply()
+        overlaySettingsListener?.invoke()
+    }
+
+    fun loadClusterTurnCardOverlayYPercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_Y)) {
+            return ClusterTurnCardOverlay.snap(
+                prefs.getInt(KEY_CLUSTER_TURN_CARD_OVERLAY_Y, ClusterTurnCardOverlay.DEFAULT_Y_PERCENT),
+                ClusterTurnCardOverlay.yPercents,
+            )
+        }
+        return ClusterTurnCardOverlay.DEFAULT_Y_PERCENT
+    }
+
+    fun saveClusterTurnCardOverlayYPercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(
+                KEY_CLUSTER_TURN_CARD_OVERLAY_Y,
+                ClusterTurnCardOverlay.snap(percent, ClusterTurnCardOverlay.yPercents),
+            ).apply()
+        overlaySettingsListener?.invoke()
     }
 
     fun loadClusterMapScalePercent(context: Context): Int = CarPlayClusterDisplay.STREAM_SCALE_PERCENT.let { default ->
