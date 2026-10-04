@@ -132,7 +132,7 @@ class CarPlayHostSettingsTest {
         setField("wirelessHotspotMode", WirelessHotspotMode.MANUAL)
         setField("manualHotspotSsid", "Draft hotspot")
         setField("mfiTarget", MfiTarget.LOCAL)
-        activity.onResume()
+        invoke("onResume")
         assertEquals(WirelessHotspotMode.MANUAL, field("wirelessHotspotMode"))
         assertEquals("Draft hotspot", field("manualHotspotSsid"))
         assertEquals(MfiTarget.LOCAL, field("mfiTarget"))
