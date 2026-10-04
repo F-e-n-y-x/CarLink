@@ -100,7 +100,7 @@ object BydNavigationOutputs {
     }
 
     private fun currentOverlay(): ClusterTurnGuidance? = synchronized(overlayLock) {
-        overlayRoute.currentApple()?.let { ClusterTurnGuidance.from(BydClusterFrame.from(it)) }
+        overlayRoute.currentApple()?.let { ClusterTurnGuidance.from(BydClusterFrame.from(it), it.arrivalEpochSeconds) }
     }
 
     /** The dashboard song setting changed; applies at once. */

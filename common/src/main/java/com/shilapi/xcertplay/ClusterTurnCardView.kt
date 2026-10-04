@@ -104,13 +104,34 @@ internal class ClusterTurnCardView(context: Context) : View(context) {
             ellipsize(distanceLabel(next.distanceMeters), textWidth, distancePaint),
             textLeft, card.top + h * 0.44f, distancePaint,
         )
+        val summary = routeSummary(next)
         val road = roadLabel(next)
         if (road.isNotEmpty()) {
             canvas.drawText(
                 ellipsize(road, textWidth, roadPaint),
-                textLeft, card.top + h * 0.72f, roadPaint,
+                textLeft, card.top + h * (if (summary.isEmpty()) 0.72f else 0.66f), roadPaint,
             )
         }
+        if (summary.isNotEmpty()) {
+            canvas.drawText(ellipsize(summary, textWidth, roadPaint),
+                textLeft, card.top + h * 0.87f, roadPaint)
+        }
+    }
+
+    internal fun routeSummary(next: ClusterTurnGuidance): String {
+        val arrival = next.arrivalEpochSeconds?.takeIf { it > 0 && it <= Long.MAX_VALUE / 1000 }
+        val time = when {
+            arrival != null -> context.getString(R.string.turn_card_arrival,
+                android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(arrival * 1000)))
+            next.remainingSeconds >= 0 -> context.getString(R.string.turn_card_minutes_left,
+                (next.remainingSeconds.toLong() + 59) / 60)
+            else -> ""
+        }
+        val remaining = if (next.remainingMeters >= 0) {
+            if (next.remainingMeters < 1000) context.getString(R.string.turn_card_distance_m, next.remainingMeters)
+            else context.getString(R.string.turn_card_distance_km, next.remainingMeters / 100 / 10f)
+        } else ""
+        return listOf(time, remaining).filter { it.isNotEmpty() }.joinToString(" · ")
     }
 
     /** Draws the tinted Material Symbols glyph; the roundabout exit number gets a corner badge. */

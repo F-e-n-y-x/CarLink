@@ -20,6 +20,19 @@ class ClusterTurnGuidanceTest {
     }
 
     @Test
+    fun routeSummarySurvivesTheOverlayHandoff() {
+        val maneuver = BydAppleManeuver(53, 1, 0, "Next road", 630, 4200, 1791072000)
+        val guidance = ClusterTurnGuidance.from(BydClusterFrame.from(maneuver), maneuver.arrivalEpochSeconds)
+        assertEquals(630, guidance.remainingSeconds)
+        assertEquals(4200, guidance.remainingMeters)
+        assertEquals(1791072000L, guidance.arrivalEpochSeconds)
+        val missing = ClusterTurnGuidance.from(BydClusterFrame.from(BydAppleManeuver(80, 0, 0)))
+        assertEquals(-1, missing.remainingSeconds)
+        assertEquals(-1, missing.remainingMeters)
+        assertEquals(null, missing.arrivalEpochSeconds)
+    }
+
+    @Test
     fun leftTurnIsUnchanged() {
         val guidance = ClusterTurnGuidance.from(BydClusterFrame.from(BydAppleManeuver(53, 1, 0)))
         assertEquals(2, guidance.icon)

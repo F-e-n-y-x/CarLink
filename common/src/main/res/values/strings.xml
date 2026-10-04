@@ -539,6 +539,14 @@
     <string name="center_map_no_permission_screen">This head unit has no settings screen for this permission. Allow it over ADB.</string>
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="adb_cluster_activity_label">Cluster Map</string>
+    <string name="adb_cluster_activity_mode">DiLink 4 cluster video via ADB (experimental)</string>
+    <string name="adb_cluster_activity_description">Launch the map directly on the verified cluster display through internal ADB. Authorize ADB, then reconnect the iPhone.</string>
+    <string name="adb_cluster_authorize">Authorize ADB / retry cluster routing</string>
+    <string name="adb_cluster_open">Retry cluster map</string>
+    <string name="adb_cluster_routing">Launching cluster map through ADB…</string>
+    <string name="adb_cluster_routed">Cluster task routed; waiting for iPhone map</string>
+    <string name="adb_cluster_route_failed">Cluster launch failed; export diagnostics.</string>
     <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
     <string name="carplay_controls">CarPlay controls</string>
     <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
@@ -559,4 +567,10 @@
     <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
     <string name="view_diagnostic_report">View report</string>
     <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
+    <string name="turn_card_arrival">Arrival %1$s</string>
+    <string name="turn_card_minutes_left">%1$d min left</string>
+    <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
+    <string name="cluster_safe_area_reset">Reset cluster safe area</string>
+    <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
+    <string name="cluster_safe_area_live_hint">Drag the green edges here and watch the outline on the cluster. Save applies the layout after reconnecting; Cancel keeps your current box.</string>
 </resources>
