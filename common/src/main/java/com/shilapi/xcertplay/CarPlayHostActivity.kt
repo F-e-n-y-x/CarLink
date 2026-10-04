@@ -342,6 +342,9 @@ class CarPlayHostActivity : ComponentActivity() {
     private var maximumDetectedWidthPixels = 0
     private var maximumDetectedHeightPixels = 0
     private var rightHandDrive = false
+    private var carPlayDock = CarPlayDock.AUTOMATIC
+    /** The dock the running session declared; null before the first connection. */
+    private var sessionDock: CarPlayDock? = null
     private var hideTopBar = true
     private var hideBottomBar = true
     private var safeAreaDrawOutside = true
@@ -536,6 +539,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun loadPersistedSettings() {
+        carPlayDock = CarPlayDock.load(this)
         carPlayNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         ambientLightThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         ambientDelaySeconds = AirPlayPersistence.loadAmbientDelaySeconds(this)
@@ -1545,6 +1549,13 @@ class CarPlayHostActivity : ComponentActivity() {
             ).apply { topMargin = dp(26) },
         )
         content.addView(
+            buildDockSection(),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(26) },
+        )
+        content.addView(
             settingsCategoryHeader(getString(R.string.display_video)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1989,6 +2000,7 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveOemLabel(this, oemLabel)
         AirPlayPersistence.saveDebugLogsEnabled(this, debugLogsEnabled)
         AirPlayPersistence.saveRightHandDrive(this, rightHandDrive)
+        CarPlayDock.save(this, carPlayDock)
         AirPlayPersistence.saveHideTopBar(this, hideTopBar)
         AirPlayPersistence.saveHideBottomBar(this, hideBottomBar)
         AirPlayPersistence.saveSafeAreaDrawOutside(this, safeAreaDrawOutside)
@@ -2474,6 +2486,57 @@ class CarPlayHostActivity : ComponentActivity() {
         iconPreviewView = preview
         iconStatusView = status
         updateAirPlayIconPreview()
+        return section
+    }
+
+    // Between the driver's side and the bottom the dock moves at once (and is saved at once) when the
+    // running session declared both; to or from automatic waits for Save, which reconnects.
+    private fun buildDockSection(): View {
+        val section = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        section.addView(
+            menuText(getString(R.string.carplay_dock), 20f, MENU_SECONDARY),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ),
+        )
+        val group = RadioGroup(this).apply {
+            orientation = RadioGroup.HORIZONTAL
+        }
+        val labels = mapOf(
+            CarPlayDock.AUTOMATIC to R.string.carplay_dock_automatic,
+            CarPlayDock.DRIVER_SIDE to R.string.carplay_dock_driver_side,
+            CarPlayDock.BOTTOM to R.string.carplay_dock_bottom,
+        )
+        val buttons = CarPlayDock.entries.associateWith { dock ->
+            RadioButton(this).apply {
+                id = View.generateViewId()
+                text = getString(labels.getValue(dock))
+                setTextColor(Color.WHITE)
+                isChecked = carPlayDock == dock
+            }.also { group.addView(it) }
+        }
+        group.setOnCheckedChangeListener { _, checkedId ->
+            val next = buttons.entries.firstOrNull { it.value.id == checkedId }?.key ?: return@setOnCheckedChangeListener
+            carPlayDock = next
+            val from = sessionDock
+            val edge = next.edge
+            if (from != null && edge != null && CarPlayDock.movesLive(from, next) &&
+                controller?.showViewArea(com.shilapi.xcertplay.airplay.AirPlayInfoPlist.dockViewArea(edge)) == true
+            ) {
+                CarPlayDock.save(this, next)
+            }
+        }
+        section.addView(
+            group,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(8) },
+        )
+        section.addView(menuText(getString(R.string.carplay_dock_hint), 16f, MENU_SECONDARY))
         return section
     }
 
@@ -3342,7 +3405,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 displayHeightPixels = scaledDisplay.heightPixels,
             ),
             safeAreaDrawOutside = safeAreaDrawOutside,
-            dockEdge = CarPlayDock.load(this).edge,
+            dockEdge = CarPlayDock.load(this).also { sessionDock = it }.edge,
         )
         val requestSummary = "Display request selected=${CarPlayUiScale.label(requestedPercent)} percent=$requestedPercent " +
             "surface=${size.width}x${size.height} resolution=${requestedResolutionPercent}% " +
