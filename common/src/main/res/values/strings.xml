@@ -1,4 +1,13 @@
 <resources>
+    <string name="existing_wifi_title">Existing Wi-Fi / Same LAN</string>
+    <string name="existing_wifi_description">Use an existing router or portable Wi-Fi. Keep the iPhone and car on the same network with Internet access.</string>
+    <string name="existing_wifi_hint">Existing Wi-Fi · Keep both devices on the same Wi-Fi and Bluetooth on. No car hotspot is needed.</string>
+    <string name="existing_wifi_instructions">Connect the car and iPhone to the same external Wi-Fi in system settings. Enter its exact name and WPA2 password below; leave the password empty only for an open network. Use WPA2 or WPA2/WPA3 mixed mode and disable client isolation on the router. DiPlay keeps this Wi-Fi connection and creates no hotspot.</string>
+    <string name="existing_wifi_details">External Wi-Fi details</string>
+    <string name="existing_wifi_ssid">External Wi-Fi name (SSID)</string>
+    <string name="existing_wifi_password">External Wi-Fi password</string>
+    <string name="existing_wifi_attaching">Attaching to existing Wi-Fi</string>
+    <string name="existing_wifi_ready">Existing Wi-Fi ready: %1$s · %2$s · channel %3$d · %4$s</string>
     <string name="built_in_car_hotspot">Built-in car hotspot</string>
     <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="wifi_direct_channel_title">Preferred Wi-Fi Direct channel</string>
@@ -546,6 +555,14 @@
     <string name="center_map_no_permission_screen">This head unit has no settings screen for this permission. Allow it over ADB.</string>
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
+    <string name="adb_cluster_activity_label">Cluster Map</string>
+    <string name="adb_cluster_activity_mode">DiLink 4 cluster video via ADB (experimental)</string>
+    <string name="adb_cluster_activity_description">Launch the map directly on the verified cluster display through internal ADB. Authorize ADB, then reconnect the iPhone.</string>
+    <string name="adb_cluster_authorize">Authorize ADB / retry cluster routing</string>
+    <string name="adb_cluster_open">Retry cluster map</string>
+    <string name="adb_cluster_routing">Launching cluster map through ADB…</string>
+    <string name="adb_cluster_routed">Cluster task routed; waiting for iPhone map</string>
+    <string name="adb_cluster_route_failed">Cluster launch failed; export diagnostics.</string>
     <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
     <string name="carplay_controls">CarPlay controls</string>
     <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
@@ -564,6 +581,7 @@
     <string name="byd_adb_features">BYD features · needs ADB</string>
     <string name="location_reporting_reconnects">Changing this setting reconnects an active CarPlay session.</string>
     <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
+    <string name="diagnostic_report_saved_to_path">Your report was saved to:\n%1$s\n\nYou can also share it or view it here. Nothing is sent automatically.</string>
     <string name="view_diagnostic_report">View report</string>
     <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
     <string name="wheel_map_zoom">Zoom the dashboard map with the wheel</string>
@@ -591,4 +609,15 @@
     <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard. It only receives key presses and does not read the screen.</string>
     <string name="cluster_song_on_change">Song only when it changes</string>
     <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
+    <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
+    <string name="cluster_safe_area_reset">Reset cluster safe area</string>
+    <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
+    <string name="cluster_safe_area_live_hint">Drag the green edges here and watch the outline on the cluster. Save applies the layout after reconnecting; Cancel keeps your current box.</string>
+    <string name="oem_cluster_map">Hide the car’s own cluster map</string>
+    <string name="oem_cluster_map_description">Optional: keep the stock map off the cluster while DiPlay projects there. Off leaves it alone. Component mode hides its cluster projection; package mode disables the whole stock map until projection stops. Requires authorized local ADB. Changes apply after reconnecting.</string>
+    <string name="oem_cluster_hold_off">Off</string>
+    <string name="oem_cluster_hold_component">Hide only its cluster projection</string>
+    <string name="oem_cluster_hold_package">Disable the whole stock map</string>
+    <string name="song_on_hud">Song or lyrics on the HUD</string>
+    <string name="song_on_hud_description">Show the title or lyrics supplied by the phone while no navigation guidance is active. Navigation directions and road names take priority.</string>
 </resources>

@@ -18,6 +18,8 @@ object BydOutputSettings {
     private const val KEY_VIDEO_WHILE_PARKED = "video_while_parked"
     private const val KEY_CLUSTER_SONG = "cluster_song"
     private const val KEY_CLUSTER_SONG_ON_CHANGE = "cluster_song_on_change"
+    private const val KEY_HUD_SONG = "hud_song"
+    private const val KEY_OEM_CLUSTER_HOLD = "oem_cluster_hold"
     private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
@@ -103,11 +105,29 @@ object BydOutputSettings {
         }
     }
 
+    /** Optional title/lyrics when navigation is absent; only the verified HUD output can send it. */
+    fun hudSong(context: Context): Boolean = prefs(context).getBoolean(KEY_HUD_SONG, false)
+    fun setHudSong(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_HUD_SONG, enabled).apply()
+
+    /** OEM changes require an explicit selection; fresh installations leave the stock map alone. */
+    fun oemClusterHold(context: Context): BydOemClusterHold {
+        val settings = prefs(context)
+        BydOemClusterHold.fromName(settings.getString(KEY_OEM_CLUSTER_HOLD, null))?.let { return it }
+        return if (settings.getBoolean("oem_cluster_freeze", false)) BydOemClusterHold.PACKAGE
+            else BydOemClusterHold.OFF
+    }
+    fun setOemClusterHold(context: Context, hold: BydOemClusterHold) =
+        prefs(context).edit().putString(KEY_OEM_CLUSTER_HOLD, hold.name).apply()
+
     /** At or below this charge the iPhone gets the low-range warning. */
     fun lowChargePercent(context: Context): Int = prefs(context).getInt(KEY_LOW_CHARGE_PERCENT, DEFAULT_LOW_CHARGE_PERCENT)
 
     fun setLowChargePercent(context: Context, percent: Int) =
         prefs(context).edit().putInt(KEY_LOW_CHARGE_PERCENT, percent).apply()
+
+    fun standaloneHudAvailable(context: Context): Boolean = BydStandaloneHudOutput.available(context)
+    fun standaloneHudDiagnosticReport(context: Context): String = BydStandaloneHudOutput.diagnostics(context)
 
     /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
     fun navigationAvailable(context: Context): Boolean =

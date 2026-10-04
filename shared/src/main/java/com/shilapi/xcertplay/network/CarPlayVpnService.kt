@@ -47,6 +47,7 @@ class CarPlayVpnService : VpnService() {
         val mfi: MfiAuthenticator?,
         val listener: AirPlaySessionListener,
         val media: AirPlayMediaHandler,
+        val additionalAddresses: List<InetAddress> = emptyList(),
     )
 
     private val binder = LocalBinder()
@@ -55,6 +56,7 @@ class CarPlayVpnService : VpnService() {
     private val sessions = mutableSetOf<AirPlaySession>()
     @Volatile private var attachment: AirPlayAttachment? = null
     private var serverSocket: ServerSocket? = null
+    private var additionalServers: List<ServerSocket> = emptyList()
     private var bridge: Ipv6NcmBridge? = null
     private var tun: ParcelFileDescriptor? = null
     private var attachGeneration = 0
@@ -129,6 +131,7 @@ class CarPlayVpnService : VpnService() {
         mfi: MfiAuthenticator?,
         listener: AirPlaySessionListener,
         media: AirPlayMediaHandler,
+        additionalBindAddresses: List<InetAddress> = emptyList(),
     ): AttachResult {
         if (active.get()) {
             Log.i(TAG, "replacing stale local-only Wi-Fi attachment")
@@ -139,7 +142,7 @@ class CarPlayVpnService : VpnService() {
         return try {
             startAirPlayServer(
                 generation,
-                AirPlayAttachment(bindAddress, config, identity, pairings, mfi, listener, media),
+                AirPlayAttachment(bindAddress, config, identity, pairings, mfi, listener, media, additionalBindAddresses),
             )
             AttachResult.Started
         } catch (error: Exception) {
@@ -168,17 +171,31 @@ class CarPlayVpnService : VpnService() {
         generation: Int,
         replacement: AirPlayAttachment,
     ) {
-        val server = AirPlayPortSelector.bind(replacement.address, replacement.config.port) { busy, bound ->
-            Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
+        val servers = if (replacement.additionalAddresses.isEmpty()) {
+            listOf(AirPlayPortSelector.bind(replacement.address, replacement.config.port) { busy, bound ->
+                Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
+            })
+        } else {
+            AirPlayPortSelector.bindAll(listOf(replacement.address) + replacement.additionalAddresses,
+                replacement.config.port) { busy, bound ->
+                Log.w(TAG, "AirPlay port $busy is in use; listening on $bound instead")
+            }
         }
+        val server = servers.first()
         attachment = replacement.copy(config = replacement.config.copy(port = server.localPort))
         serverSocket = server
-        Thread(
-            { acceptLoop(generation, server) },
-            "airplay-accept",
-        ).apply {
-            isDaemon = true
-            start()
+        additionalServers = servers.drop(1)
+        servers.forEach { bound ->
+            runCatching { replacement.listener.onDebugLog(
+                "airplay listener ready family=${if (bound.inetAddress is Inet6Address) "IPv6" else "IPv4"} port=${bound.localPort}",
+            ) }
+            Thread(
+                { acceptLoop(generation, bound) },
+                "airplay-accept",
+            ).apply {
+                isDaemon = true
+                start()
+            }
         }
     }
 
@@ -294,6 +311,8 @@ class CarPlayVpnService : VpnService() {
         attachment = null
         serverSocket?.close()
         serverSocket = null
+        additionalServers.forEach { it.close() }
+        additionalServers = emptyList()
         closeSessionsLocked()
         bridge?.close()
         bridge = null

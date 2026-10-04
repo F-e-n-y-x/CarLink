@@ -252,13 +252,14 @@ class Iap2WirelessControlClient(
             "iap2 availability decode=failed failureClass=${error.javaClass.simpleName}"
         }
 
-        /** Reference-compatible 0x5703 body. BSSID is omitted when the platform does not expose it. */
+        /** Optional AP hint is independent of the AirPlay receiver identity. */
         fun accessoryWiFiConfiguration(endpoint: Iap2WirelessCarPlayEndpoint): Iap2Frame =
             Iap2WirelessMessages.accessoryWiFiConfiguration(
                 ssid = endpoint.ssid,
                 passphrase = endpoint.passphrase,
                 channel = endpoint.channel,
                 securityType = endpoint.security.wireValue,
+                bssid = endpoint.accessPointBssid,
             )
 
         /** Wireless 0x4301 reply carrying the receiver address, port and pairing identity. */
@@ -323,10 +324,13 @@ class Iap2WirelessCarPlayEndpoint(
     val deviceIdentifier: String,
     val publicKey: String,
     val sourceVersion: String,
+    accessPointBssid: ByteArray? = null,
 ) {
     val ipAddresses: List<String> = ipAddresses.toList()
+    val accessPointBssid: ByteArray? = accessPointBssid?.copyOf()
 
     init {
+        require(accessPointBssid == null || accessPointBssid.size == 6) { "AP address must contain six bytes" }
         require(ssid.isNotBlank()) { "ssid is required and must not be blank" }
         require('\u0000' !in ssid) { "ssid must not contain U+0000" }
         require('\u0000' !in passphrase) { "passphrase must not contain U+0000" }

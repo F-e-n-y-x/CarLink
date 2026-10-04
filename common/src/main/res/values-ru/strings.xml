@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="existing_wifi_title">Существующая Wi-Fi / Одна LAN</string>
+    <string name="existing_wifi_description">Используйте существующий роутер или мобильную точку Wi-Fi. iPhone и автомобиль остаются в одной сети с доступом в Интернет.</string>
+    <string name="existing_wifi_hint">Существующая Wi-Fi · Подключите оба устройства к одной Wi-Fi и включите Bluetooth. Точка доступа автомобиля не нужна.</string>
+    <string name="existing_wifi_instructions">В системных настройках подключите автомобиль и iPhone к одной внешней Wi-Fi. Введите её точное имя и пароль WPA2; оставьте пароль пустым только для открытой сети. Используйте WPA2 или смешанный режим WPA2/WPA3 и отключите изоляцию клиентов на роутере. DiPlay сохраняет это подключение и не создаёт точку доступа.</string>
+    <string name="existing_wifi_details">Данные внешней Wi-Fi</string>
+    <string name="existing_wifi_ssid">Имя внешней Wi-Fi (SSID)</string>
+    <string name="existing_wifi_password">Пароль внешней Wi-Fi</string>
+    <string name="existing_wifi_attaching">Подключение к существующей Wi-Fi</string>
+    <string name="existing_wifi_ready">Существующая Wi-Fi готова: %1$s · %2$s · канал %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">Предпочтительный канал Wi-Fi Direct</string>
     <string name="wifi_direct_channel_summary">Предпочтительный канал: %1$s</string>
     <string name="wifi_direct_channel_choice">Канал %1$d · %2$s</string>
@@ -544,6 +553,7 @@
     <string name="byd_adb_features">Функции BYD · нужен ADB</string>
     <string name="location_reporting_reconnects">Изменение этой настройки перезапускает активное подключение CarPlay.</string>
     <string name="diagnostic_report_saved_in_app">Отчёт сохранён приватно в DiPlay, поскольку общедоступное место сохранения недоступно. Поделитесь им или просмотрите его здесь. Ничего не отправляется автоматически.</string>
+    <string name="diagnostic_report_saved_to_path">Отчёт сохранён в:\n%1$s\n\nВы также можете поделиться им или просмотреть его здесь. Ничего не отправляется автоматически.</string>
     <string name="view_diagnostic_report">Просмотреть отчёт</string>
     <string name="diagnostic_report_copy_hint">Нажмите и удерживайте текст отчёта, чтобы выделить и скопировать его. Это можно использовать, если нет приложения для отправки.</string>
     <string name="wheel_map_zoom">Масштаб карты на приборной панели кнопками руля</string>
