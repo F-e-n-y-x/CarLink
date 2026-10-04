@@ -411,22 +411,28 @@ class DiPlayActivity : ComponentActivity() {
                         sizes.indexOf(AirPlayPersistence.loadClusterMapScalePercent(this)).coerceAtLeast(0)) {
                         AirPlayPersistence.saveClusterMapScalePercent(this, sizes[it])
                     }
-                    val across = CarPlayClusterDisplay.horizontalSteps.toList()
-                    choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
-                        across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
+                    if (presentationCluster) {
+                        val across = CarPlayClusterDisplay.horizontalSteps.toList()
+                        choice(card, getString(if (turnCard) R.string.turn_card_horizontal else R.string.car_marker_horizontal), across.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
+                            across.indexOf(AirPlayPersistence.loadClusterMarkerHorizontalStep(this)).coerceAtLeast(0)) {
+                            AirPlayPersistence.saveClusterMarkerHorizontalStep(this, across[it])
+                        }
+                        val upDown = CarPlayClusterDisplay.verticalSteps.toList()
+                        choice(card, getString(if (turnCard) R.string.turn_card_vertical else R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
+                            upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
+                            AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
+                        }
+                        card.addView(button(getString(if (turnCard) R.string.reset_turn_card_to_centre else R.string.reset_car_marker_to_centre), false) {
+                            AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
+                            AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
+                            render()
+                            reconnectForClusterMap()
+                        }, matchButton(10, 56))
+                    } else {
+                        // The adb mirror shares one cluster surface with the car's own map, and Small
+                        // screen navi crops it to a centre window, so the marker cannot be moved.
+                        card.addView(label(getString(R.string.mirror_content_always_centred), 14, MUTED))
                     }
-                    val upDown = CarPlayClusterDisplay.verticalSteps.toList()
-                    choice(card, getString(if (turnCard) R.string.turn_card_vertical else R.string.car_marker_vertical), upDown.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
-                        upDown.indexOf(AirPlayPersistence.loadClusterMarkerVerticalStep(this)).coerceAtLeast(0)) {
-                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, upDown[it])
-                    }
-                    card.addView(button(getString(if (turnCard) R.string.reset_turn_card_to_centre else R.string.reset_car_marker_to_centre), false) {
-                        AirPlayPersistence.saveClusterMarkerHorizontalStep(this, 0)
-                        AirPlayPersistence.saveClusterMarkerVerticalStep(this, 0)
-                        render()
-                        reconnectForClusterMap()
-                    }, matchButton(10, 56))
                     toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),
                         getString(R.string.dashboard_map_only_in_small_and_full_navi_description),
                         BydOutputSettings.clusterStreamPause(this)) {

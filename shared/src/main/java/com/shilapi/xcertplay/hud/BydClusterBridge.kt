@@ -26,7 +26,6 @@ internal object BydClusterBridge {
     private val route = BydHudRouteState()
     private var context: Context? = null
     private var available = false
-    private var factory: BydFactoryNavigationOutput? = null
     private var senderStarted = false
     private var lastSent: BydClusterFrame? = null
     private var ticksSinceSend = 0
@@ -41,11 +40,7 @@ internal object BydClusterBridge {
         } catch (_: PackageManager.NameNotFoundException) {
             false
         }
-        if (!available && appContext.packageName.endsWith(".hudtest")) {
-            factory = BydFactoryNavigationOutput(appContext.applicationContext)
-            available = true
-        }
-        Log.i(TAG, "cluster adapter available=$available factoryTest=${factory != null}")
+        Log.i(TAG, "cluster adapter available=$available")
         if (available && !senderStarted) {
             senderStarted = true
             Executors.newSingleThreadScheduledExecutor { runnable ->
@@ -85,12 +80,6 @@ internal object BydClusterBridge {
             return
         }
         if (!force && frame == lastSent) return
-        factory?.let {
-            it.update(frame.icon, frame.roundaboutExit, frame.distanceMeters)
-            lastSent = frame
-            ticksSinceSend = 0
-            return
-        }
         val intent = baseIntent(KEY_GUIDANCE).apply {
             putExtra("TYPE", 0)
             putExtra("EXTRA_STATE", 0)
@@ -113,12 +102,6 @@ internal object BydClusterBridge {
     }
 
     private fun sendEndLocked() {
-        factory?.let {
-            it.clear()
-            lastSent = null
-            guidanceLogged = false
-            return
-        }
         val intent = baseIntent(KEY_STATE).apply {
             putExtra("EXTRA_STATE", STATE_ENDED)
             putExtra("EXTRA_IS_FOREGROUND", 1)

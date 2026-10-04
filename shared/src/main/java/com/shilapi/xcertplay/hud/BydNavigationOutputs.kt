@@ -10,8 +10,9 @@ object BydNavigationOutputs {
         if (BydStandaloneHudOutput.available(context)) start(context)
         // Read the battery early, so a reading is ready when CarPlay identifies (see batteryStatus).
         if (BydOutputSettings.batteryToIphone(context)) BydBatteryStatus.start(context)
+        // Undo a stock map left disabled by a mirror that never stopped (app killed, car switched off).
+        BydOemClusterNavi.restoreIfNeeded(context)
     }
-    fun setDiagnosticHold(hold: Boolean) { BydStandaloneHudOutput.syntheticHold = hold }
     @Volatile private var useStandalone = false
     private val standalone = NavigationOutputWorker("diplay-standalone-output", BydStandaloneNavigationBridge::clear)
     private val hud = NavigationOutputWorker("diplay-hud-output", BydHudBridge::clear)

@@ -14,15 +14,25 @@ class BydClusterSongTest {
     fun followsTitleArtistAndPlaybackStatus() {
         val state = ClusterSongState()
 
-        assertEquals(ClusterSong("Numb — Linkin Park", false),
+        assertEquals(ClusterSong("Numb — Linkin Park", false, "Numb"),
             state.accept(update { group(0) { string(1, "Numb"); string(12, "Linkin Park") } }))
-        assertEquals(ClusterSong("Numb — Linkin Park", true), state.accept(update { group(1) { u8(0, 1) } }))
+        assertEquals(ClusterSong("Numb — Linkin Park", true, "Numb"), state.accept(update { group(1) { u8(0, 1) } }))
         // Elapsed time alone changes nothing on the card.
         assertNull(state.accept(update { group(1) { u32(1, 120_706L) } }))
-        assertEquals(ClusterSong("Numb — Linkin Park", false), state.accept(update { group(1) { u8(0, 2) } }))
+        assertEquals(ClusterSong("Numb — Linkin Park", false, "Numb"), state.accept(update { group(1) { u8(0, 2) } }))
         // A new title without an artist is a new item that has none.
         assertEquals(ClusterSong("Podcast", false), state.accept(update { group(0) { string(1, "Podcast") } }))
-        assertEquals(ClusterSong("Podcast — Host", false), state.accept(update { group(0) { string(12, "Host") } }))
+        assertEquals(ClusterSong("Podcast — Host", false, "Podcast"), state.accept(update { group(0) { string(12, "Host") } }))
+    }
+
+    @Test
+    fun lineCarriesTheTitleAloneForNarrowOutputs() {
+        val state = ClusterSongState()
+        // A music app that pushes lyrics sends them as the title; the HUD row is far too narrow
+        // for "line — artist", so it gets the title on its own.
+        state.accept(update { group(0) { string(1, "Cause baby you're a firework"); string(12, "Katy Perry") } })
+        assertEquals("Cause baby you're a firework", state.current()!!.line)
+        assertEquals("Cause baby you're a firework — Katy Perry", state.current()!!.text)
     }
 
     @Test

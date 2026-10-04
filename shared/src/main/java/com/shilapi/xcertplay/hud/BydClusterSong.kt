@@ -9,8 +9,12 @@ import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 
-/** What the dashboard's music card shows. */
-internal data class ClusterSong(val text: String, val playing: Boolean)
+/**
+ * What the dashboard's music card shows. [line] is the title on its own: with a music app that
+ * pushes lyrics through the title it is the lyric line, and it is what narrow outputs such as the
+ * HUD should use, since the " — Artist" part of [text] would eat most of that one row.
+ */
+internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text)
 
 /**
  * The CarPlay song for the dashboard, from iAP2 NowPlayingUpdate (0x5001): title (1) and artist (12)
@@ -39,7 +43,7 @@ internal class ClusterSongState {
         runCatching { body.optionalGroup(PLAYBACK)?.optionalU8(STATUS) }.getOrNull()?.let { status ->
             playing = status == STATUS_PLAYING || status == STATUS_SEEK_FORWARD || status == STATUS_SEEK_BACKWARD
         }
-        val next = text(title, artist)?.let { ClusterSong(it, playing) }
+        val next = text(title, artist)?.let { ClusterSong(it, playing, title!!.trim()) }
         if (next == last) return null
         last = next
         return next
@@ -134,6 +138,13 @@ internal object BydClusterSong {
         synchronized(state) { state.clear() }
         stop(app)
     }
+
+    /**
+     * The line known so far, for outputs beyond the dashboard card, such as the HUD. A music app may
+     * advance this line by line while it plays, so callers should send it again rather than skip it
+     * as unchanged; the output decides what counts as a repeat.
+     */
+    fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {
         synchronized(state) { wanted = song }
