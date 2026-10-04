@@ -390,6 +390,14 @@ class CarPlayController(
 
     fun isClosed(): Boolean = closed
 
+    /** Nonblocking identity for wheel controls: only an unclosed phone with an accepted primary stream. */
+    fun activeAirPlaySessionToken(): Any? {
+        if (closed) return null
+        val session = activeSession ?: return null
+        val token = session.mainScreenSessionToken() ?: return null
+        return token.takeIf { !closed && activeSession === session && session.mainScreenSessionToken() === token }
+    }
+
     fun hasActiveAirPlayAttachment(): Boolean = synchronized(lifecycleLock) {
         !closed && vpnService?.isAttached() == true
     }
@@ -454,8 +462,14 @@ class CarPlayController(
     fun sendKnob(state: AirPlayKnobState, momentary: Boolean = true): Boolean {
         if (closed) return false
         val session = activeSession ?: return false
+        val token = session.mainScreenSessionToken() ?: return false
+        if (closed || activeSession !== session) return false
         return try {
-            touchExecutor.execute { session.sendKnob(state, momentary) }
+            touchExecutor.execute {
+                if (!closed && activeSession === session && session.mainScreenSessionToken() === token) {
+                    session.sendKnob(state, momentary)
+                }
+            }
             true
         } catch (_: Exception) {
             false
