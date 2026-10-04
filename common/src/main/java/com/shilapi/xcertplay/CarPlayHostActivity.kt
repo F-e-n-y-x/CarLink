@@ -365,6 +365,7 @@ class CarPlayHostActivity : ComponentActivity() {
             initialNight = darkMode,
         ) { night ->
             darkMode = night
+            applyClusterTurnOverlay()
             appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
             logThemeState(nightModeDiagnosticSource, resources.configuration)
             syncAirPlayDarkMode(nightModeDiagnosticSource)
