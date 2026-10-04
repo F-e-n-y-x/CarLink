@@ -534,4 +534,6 @@
     <string name="hotspot_control_failed">تعذر تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
     <string name="location_reporting_reconnects">يؤدي تغيير هذا الإعداد إلى إعادة اتصال جلسة CarPlay النشطة.</string>
+    <string name="adapt_pip_resolution">تكييف دقة النوافذ المتعددة</string>
+    <string name="adapt_pip_resolution_description">إعادة توصيل CarPlay لتكييف دقة البث مع نسبة العرض إلى الارتفاع للنوافذ المتعددة أو صورة داخل صورة. اتركه معطلاً للتحجيم الفوري لوحدة معالجة الرسومات بدون تأخير.</string>
 </resources>

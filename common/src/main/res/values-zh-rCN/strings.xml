@@ -568,4 +568,6 @@
     <string name="hotspot_control_failed">车机热点开启失败，请在车机设置中开启。</string>
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
+    <string name="adapt_pip_resolution">画中画与分屏自适应</string>
+    <string name="adapt_pip_resolution_description">切换至桌面画中画或分屏悬浮小窗口时，自动断开重连以适应窗口分辨率，消除上下左右黑边。保持关闭可实现 0 毫秒 GPU 秒级自适应且不重连。</string>
 </resources>

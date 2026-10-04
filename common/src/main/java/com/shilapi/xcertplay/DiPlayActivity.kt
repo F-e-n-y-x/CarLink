@@ -518,7 +518,7 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.full_screen), getString(R.string.hide_the_car_s_system_bars_while_carplay_is_open), AirPlayPersistence.loadHideTopBar(this) && AirPlayPersistence.loadHideBottomBar(this)) {
                 AirPlayPersistence.saveHideTopBar(this, it); AirPlayPersistence.saveHideBottomBar(this, it)
             }
-            toggle(card, "画中画与分屏自适应", "切换至桌面画中画或分屏悬浮小窗口时，自动断开重连以适应窗口分辨率，消除上下左右黑边。", AirPlayPersistence.loadAdaptPipResolution(this)) {
+            toggle(card, getString(R.string.adapt_pip_resolution), getString(R.string.adapt_pip_resolution_description), AirPlayPersistence.loadAdaptPipResolution(this)) {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
         }
