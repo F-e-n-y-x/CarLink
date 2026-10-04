@@ -861,7 +861,8 @@ class CarPlayHostActivity : ComponentActivity() {
         ClusterActivityOutput.setTurnCard(if (overlay) clusterTurnGuidance else null,
             AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
             AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
-            AirPlayPersistence.loadClusterTurnCardOverlaySize(this))
+            AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(this),
+            AirPlayPersistence.loadClusterTurnCardOpacityPercent(this), darkMode)
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         for (presentation in presentations) {
             presentation.setTurnCardOverlay(

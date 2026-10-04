@@ -33,13 +33,15 @@ class ClusterActivityOutputTest {
         val guidance = com.shilapi.xcertplay.hud.ClusterTurnGuidance(2, 0, 80, "Road",
             remainingMeters = 4200L, remainingSeconds = 630L)
         ClusterActivityOutput.bind(host, 4) { }
-        ClusterActivityOutput.setTurnCard(guidance, 20, 50,
-            com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize.LARGE)
+        ClusterActivityOutput.setTurnCard(guidance, 20, 50, 70, 60, true)
         ClusterActivityOutput.bind(newerHost, 5) { }
         ClusterActivityOutput.stop(host)
         assertEquals(guidance, ClusterActivityOutput.guidance)
         assertEquals(20, ClusterActivityOutput.cardX)
         assertEquals(50, ClusterActivityOutput.cardY)
+        assertEquals(70, ClusterActivityOutput.cardSize)
+        assertEquals(60, ClusterActivityOutput.cardOpacity)
+        assertTrue(ClusterActivityOutput.cardNight)
         ClusterActivityOutput.stop(newerHost)
         assertNull(ClusterActivityOutput.guidance)
         assertFalse(ClusterActivityOutput.streamActive)

@@ -82,6 +82,8 @@ class AdbClusterActivity : Activity() {
 
     internal fun updateTurnCard() {
         turnCard?.setLayout(ClusterActivityOutput.cardX, ClusterActivityOutput.cardY, ClusterActivityOutput.cardSize)
+        turnCard?.setOpacity(ClusterActivityOutput.cardOpacity)
+        turnCard?.setNightMode(ClusterActivityOutput.cardNight)
         turnCard?.setGuidance(if (ClusterActivityOutput.streamActive) ClusterActivityOutput.guidance else null)
         updateSafeAreaPreview()
     }
@@ -159,15 +161,21 @@ internal object ClusterActivityOutput {
         private set
     var cardY = com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay.DEFAULT_Y_PERCENT
         private set
-    var cardSize = com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize.MEDIUM
+    var cardSize = com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay.DEFAULT_SIZE_PERCENT
+        private set
+    var cardOpacity = com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay.DEFAULT_OPACITY_PERCENT
+        private set
+    var cardNight = false
         private set
 
     fun setTurnCard(next: com.shilapi.xcertplay.hud.ClusterTurnGuidance?, x: Int, y: Int,
-        size: com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize) {
+        size: Int, opacity: Int, night: Boolean) {
         guidance = next
         cardX = x
         cardY = y
         cardSize = size
+        cardOpacity = opacity
+        cardNight = night
         activity.get()?.updateTurnCard()
     }
 
