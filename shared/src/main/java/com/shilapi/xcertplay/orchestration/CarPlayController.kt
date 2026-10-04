@@ -207,6 +207,10 @@ class CarPlayController(
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
     private var clusterUiShown = true
+    // Immutable snapshots keep accessibility key filtering away from the network-writing UI lock.
+    @Volatile private var clusterUiVisibility: Pair<Pair<AirPlaySession, Int>, Boolean>? = null
+    @Volatile private var dashboardMapOutputVisible = false
+    private val dashboardMapEpoch = AtomicInteger()
     private val playbackStatus = com.shilapi.xcertplay.media.CarPlayPlaybackStatus()
 
     /** Told when the iPhone starts or stops playing media; may run on any thread. */
@@ -444,15 +448,40 @@ class CarPlayController(
     }
 
     /** Sends one CarPlay media-button press (an [com.shilapi.xcertplay.airplay.AirPlayHid] media index). */
-    /** The iPhone is streaming the dashboard (cluster) map right now. */
-    fun dashboardMapStreaming(): Boolean = !closed && (activeSession?.clusterStream ?: 0) > 0
+    /** The host reports its physical cluster surface independently of the centre-map pause policy. */
+    fun setDashboardMapOutputVisible(visible: Boolean) {
+        val next = visible && !closed
+        if (dashboardMapOutputVisible == next) return
+        dashboardMapOutputVisible = next
+        dashboardMapEpoch.incrementAndGet()
+    }
+
+    /** Immutable stream geometry retained when a new host adopts this background controller. */
+    fun configuredClusterSize(): Pair<Int, Int>? = airPlayConfig.cluster?.let { it.widthPixels to it.heightPixels }
+
+    /** A visible physical map and its session/stream generation; null for a paused/virtual/turn-card route. */
+    fun dashboardMapRoute(): Any? {
+        val session = activeSession ?: return null
+        val stream = session.clusterStream
+        val route = session to stream
+        val visibility = clusterUiVisibility
+        val shown = visibility?.takeIf { it.first == route }?.second ?: true
+        if (!DashboardMapEligibility.permits(airPlayConfig.cluster?.initialUrl,
+                dashboardMapOutputVisible, stream, shown, closed)) return null
+        return Triple(session, stream, dashboardMapEpoch.get())
+    }
+
+    /** Whether the wheel can currently control the visible dashboard map. */
+    fun dashboardMapStreaming(): Boolean = dashboardMapRoute() != null
 
     /** One zoom step for the dashboard map, as the car's own zoom controls send it. */
     fun zoomDashboardMap(zoomIn: Boolean): Boolean {
-        if (closed) return false
+        val route = dashboardMapRoute() ?: return false
         val session = activeSession ?: return false
         return try {
-            touchExecutor.execute { session.changeMapZoomLevel(zoomIn) }
+            touchExecutor.execute {
+                if (activeSession === session && dashboardMapRoute() == route) session.changeMapZoomLevel(zoomIn)
+            }
             true
         } catch (_: Exception) {
             false
@@ -486,6 +515,7 @@ class CarPlayController(
         synchronized(this) {
             if (closed) return
             closed = true
+            dashboardMapOutputVisible = false
         }
         val teardownStarted = System.nanoTime()
         connectionDiagnostic("teardown begin transport=${config.transport}")
@@ -549,10 +579,13 @@ class CarPlayController(
         if (clusterUiStream != session to stream) {
             clusterUiStream = session to stream
             clusterUiShown = true
+            clusterUiVisibility = (session to stream) to true
         }
         if (shown == clusterUiShown) return@synchronized
         if (session.setClusterUiShown(shown)) {
             clusterUiShown = shown
+            clusterUiVisibility = (session to stream) to shown
+            dashboardMapEpoch.incrementAndGet()
             debugLog("Cluster map: ${if (shown) "showUI, the cluster shows the map" else "stopUI, the cluster hides the map"}")
         }
     }

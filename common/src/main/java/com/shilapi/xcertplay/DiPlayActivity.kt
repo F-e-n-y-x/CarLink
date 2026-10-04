@@ -238,12 +238,14 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
     override fun onPause() {
+        WheelKeyService.cancelLearning()
         pausedForAdbSwitchChange = adbSwitchChangePending
         handler.removeCallbacks(tick)
         super.onPause()
     }
 
     override fun onDestroy() {
+        WheelKeyService.cancelLearning()
         handler.removeCallbacks(automaticVehicleValidation)
         adbCheckGeneration++
         synchronized(vehicleOperationLock) {
@@ -268,6 +270,8 @@ class DiPlayActivity : ComponentActivity() {
             resources.configuration.screenHeightDp < 450
 
     private fun render() {
+        // A pending assignment belongs to the widgets being replaced, never to another page.
+        WheelKeyService.cancelLearning()
         // A restore still waiting for layout keeps its target: the old page was never laid out.
         val previousScrollY = (pendingScrollY ?: rootScroll?.scrollY)?.takeIf { renderedPage == page }
         status = null; connectButton = null; disconnectButton = null; lastRunning = null
@@ -1381,7 +1385,9 @@ class DiPlayActivity : ComponentActivity() {
             })
             lateinit var assign: android.widget.Button
             assign = button(getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()), false) {
-                val started = WheelKeyService.learn(role) { _, key ->
+                val started = WheelKeyService.learn(role, cancelled = {
+                    runOnUiThread { assign.text = getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()) }
+                }) { _, key ->
                     runOnUiThread { assign.text = getString(R.string.wheel_key_assign, name, key.toString()) }
                 }
                 if (started) assign.text = getString(R.string.wheel_key_press, name)

@@ -31,48 +31,79 @@ import com.shilapi.xcertplay.hud.BydNavigationOutputs
 class WheelKeyService : AccessibilityService() {
     private val keys = WheelZoomKeys()
     private val handler = Handler(Looper.getMainLooper())
-    private val endTimedMode = Runnable { if (keys.timeOut()) announce(zoomOn = false) }
+    private var learning: WheelZoomSettings.Role? = null
+    private var learnt: ((WheelZoomSettings.Role, WheelKey) -> Unit)? = null
+    private var learningCancelled: (() -> Unit)? = null
+    private val endLearning = Runnable { clearLearning() }
+    private val endTimedMode = Runnable {
+        refreshEligibility()
+        if (keys.timeOut() && eligibleRoute() != null) announce(zoomOn = false)
+    }
+    // This read is nonblocking: no ADB, input-device query or network lock in the periodic poll.
+    internal var mapRoute: () -> Any? = { CarPlayBackgroundSession.snapshot()?.controller?.dashboardMapRoute() }
+    private val pollEligibility = object : Runnable {
+        override fun run() {
+            if (running !== this@WheelKeyService) return
+            refreshEligibility()
+            handler.postDelayed(this, ELIGIBILITY_POLL_MILLIS)
+        }
+    }
 
     override fun onServiceConnected() {
         running = this
+        refreshEligibility()
+        handler.removeCallbacks(pollEligibility)
+        handler.postDelayed(pollEligibility, ELIGIBILITY_POLL_MILLIS)
         Log.i(TAG, "wheel key service connected")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         if (running === this) running = null
+        clearLearning()
+        keys.updateEligibility(null)
+        handler.removeCallbacks(pollEligibility)
         handler.removeCallbacks(endTimedMode)
         return super.onUnbind(intent)
     }
 
+    override fun onDestroy() {
+        if (running === this) running = null
+        clearLearning()
+        keys.timeOut()
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
 
-    override fun onInterrupt() = Unit
+    override fun onInterrupt() { settingsChanged() }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
         val key = WheelKey(event.keyCode, event.scanCode, deviceName(event.deviceId))
         val down = event.action == KeyEvent.ACTION_DOWN
-        if (!down && swallowUp == key) {
-            swallowUp = null
-            return true
-        }
-        learning?.let { role ->
-            if (down) {
-                learning = null
-                swallowUp = key // its release must not reach the car on its own either
-                WheelZoomSettings.assign(this, role, key)
-                Log.i(TAG, "$role key is now $key")
-                learnt?.invoke(role, key)
-            }
-            return true
-        }
-        if (!WheelZoomSettings.enabled(this)) return false
+        refreshEligibility()
+        val calling = inCall()
+        if (calling) clearLearning()
+        val enabled = WheelZoomSettings.enabled(this)
         val controller = CarPlayBackgroundSession.snapshot()?.controller
         val action = keys.onKey(
-            role = WheelZoomSettings.roleOf(this, key),
+            role = if (enabled) WheelZoomSettings.roleOf(this, key) else null,
             down = down,
             firstPress = event.repeatCount == 0,
-            mapShown = controller?.dashboardMapStreaming() == true,
-            inCall = inCall(),
+            mapShown = eligibleRoute() != null,
+            inCall = calling,
+            physicalKey = PhysicalWheelKey(event.deviceId, event.keyCode, event.scanCode),
+            onFirstPress = {
+                learning?.let { role ->
+                    val done = learnt
+                    clearLearning(notify = false)
+                    WheelZoomSettings.assign(this, role, key)
+                    Log.i(TAG, "$role key is now $key")
+                    done?.invoke(role, key)
+                    WheelZoomKeys.Action.CONSUME
+                }
+            },
         )
         when (action) {
             WheelZoomKeys.Action.PASS -> return false
@@ -84,6 +115,29 @@ class WheelKeyService : AccessibilityService() {
         }
         rearmTimedMode()
         return true
+    }
+
+    private fun eligibleRoute(): Any? = if (WheelZoomSettings.enabled(this)) mapRoute() else null
+
+    private fun refreshEligibility() {
+        if (!WheelZoomSettings.enabled(this)) clearLearning()
+        if (keys.updateEligibility(eligibleRoute())) handler.removeCallbacks(endTimedMode)
+    }
+
+    private fun clearLearning(notify: Boolean = true) {
+        val cancelled = learningCancelled.takeIf { learning != null && notify }
+        learning = null
+        learnt = null
+        learningCancelled = null
+        handler.removeCallbacks(endLearning)
+        cancelled?.invoke()
+    }
+
+    private fun settingsChanged() {
+        clearLearning()
+        keys.timeOut()
+        handler.removeCallbacks(endTimedMode)
+        refreshEligibility()
     }
 
     // In the timed behaviour zoom mode ends a few seconds after the last press.
@@ -117,20 +171,27 @@ class WheelKeyService : AccessibilityService() {
     companion object {
         private const val TAG = "DiPlay-WheelKeys"
         private const val ZOOM_NOTE_SOURCE = 6
+        private const val ELIGIBILITY_POLL_MILLIS = 250L
+        internal const val LEARNING_TIMEOUT_MILLIS = 10_000L
         @Volatile private var running: WheelKeyService? = null
-        @Volatile private var learning: WheelZoomSettings.Role? = null
-        @Volatile private var learnt: ((WheelZoomSettings.Role, WheelKey) -> Unit)? = null
-        @Volatile private var swallowUp: WheelKey? = null
 
         fun connected(): Boolean = running != null
 
         /** The next key pressed is assigned to [role]; [done] runs on the service's thread. */
-        fun learn(role: WheelZoomSettings.Role, done: (WheelZoomSettings.Role, WheelKey) -> Unit): Boolean {
-            if (running == null) return false
-            learnt = done
-            learning = role
+        fun learn(role: WheelZoomSettings.Role, cancelled: () -> Unit = {}, done: (WheelZoomSettings.Role, WheelKey) -> Unit): Boolean {
+            val service = running ?: return false
+            if (!WheelZoomSettings.enabled(service)) return false
+            service.clearLearning()
+            service.learnt = done
+            service.learningCancelled = cancelled
+            service.learning = role
+            service.handler.postDelayed(service.endLearning, LEARNING_TIMEOUT_MILLIS)
             return true
         }
+
+        fun cancelLearning() { running?.onMain { clearLearning() } }
+
+        fun settingsChanged() { running?.onMain { settingsChanged() } }
 
         fun enabledInSettings(context: Context): Boolean {
             val list = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
@@ -157,6 +218,29 @@ class WheelKeyService : AccessibilityService() {
 
         private fun component(context: Context) = ComponentName(context, WheelKeyService::class.java)
     }
+
+    private fun onMain(action: WheelKeyService.() -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) action() else handler.post { action() }
+    }
+}
+
+/** Use the input-device ID for a held press; saved assignments still use the stable device name. */
+private data class PhysicalWheelKey(val device: Int, val code: Int, val scan: Int)
+
+/** Keep the system's key stream well-formed even if settings/calls/routes change mid-press. */
+internal class WheelKeyPresses {
+    private val consumed = mutableMapOf<Any, Boolean>()
+
+    fun filter(key: Any?, down: Boolean, firstPress: Boolean, decide: () -> WheelZoomKeys.Action): WheelZoomKeys.Action {
+        key ?: return WheelZoomKeys.Action.PASS
+        if (!down) return disposition(consumed.remove(key) ?: false)
+        consumed[key]?.let { return disposition(it) }
+        // A repeat whose DOWN was not seen is passed without starting a new action or capture.
+        if (!firstPress) return WheelZoomKeys.Action.PASS
+        return decide().also { consumed[key] = it != WheelZoomKeys.Action.PASS }
+    }
+
+    private fun disposition(consume: Boolean) = if (consume) WheelZoomKeys.Action.CONSUME else WheelZoomKeys.Action.PASS
 }
 
 /** A key as the head unit reports it; code, scan code and device name tell keys apart. */
@@ -178,22 +262,32 @@ class WheelZoomKeys {
 
     var zoomMode = false
         private set
+    private var route: Any? = null
+    private val presses = WheelKeyPresses()
+
+    /** A new phone/stream or a lost map never inherits the old session's zoom mode. */
+    fun updateEligibility(route: Any?): Boolean {
+        if (this.route == route) return false
+        this.route = route
+        return timeOut()
+    }
 
     /** [role] is null for keys that have no role; [firstPress] is false for auto-repeats. */
-    fun onKey(role: WheelZoomSettings.Role?, down: Boolean, firstPress: Boolean, mapShown: Boolean, inCall: Boolean): Action {
-        role ?: return Action.PASS
+    fun onKey(role: WheelZoomSettings.Role?, down: Boolean, firstPress: Boolean, mapShown: Boolean, inCall: Boolean,
+        physicalKey: Any? = role, onFirstPress: (() -> Action?)? = null): Action {
+        if (!mapShown) timeOut()
+        return presses.filter(physicalKey, down, firstPress) {
+            onFirstPress?.invoke() ?: decide(role, mapShown, inCall)
+        }
+    }
+
+    private fun decide(role: WheelZoomSettings.Role?, mapShown: Boolean, inCall: Boolean): Action {
+        if (role == null || !mapShown || inCall) return Action.PASS
         if (role == WheelZoomSettings.Role.MODE) {
-            // Without the dashboard map the key keeps the car's own action, and zoom mode ends.
-            if (!mapShown) {
-                zoomMode = false
-                return Action.PASS
-            }
-            if (!down || !firstPress) return Action.CONSUME
             zoomMode = !zoomMode
             return if (zoomMode) Action.MODE_ON else Action.MODE_OFF
         }
-        if (!zoomMode || !mapShown || inCall) return Action.PASS
-        if (!down || !firstPress) return Action.CONSUME
+        if (!zoomMode) return Action.PASS
         return if (role == WheelZoomSettings.Role.ZOOM_IN) Action.ZOOM_IN else Action.ZOOM_OUT
     }
 
@@ -225,19 +319,26 @@ object WheelZoomSettings {
 
     fun enabled(context: Context): Boolean = prefs(context).getBoolean(KEY_ENABLED, false)
 
-    fun setEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
+    fun setEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
+        WheelKeyService.settingsChanged()
+    }
 
     fun behaviour(context: Context): Behaviour =
         Behaviour.entries.firstOrNull { it.name == prefs(context).getString(KEY_BEHAVIOUR, null) } ?: Behaviour.TOGGLE
 
-    fun setBehaviour(context: Context, behaviour: Behaviour) =
+    fun setBehaviour(context: Context, behaviour: Behaviour) {
         prefs(context).edit().putString(KEY_BEHAVIOUR, behaviour.name).apply()
+        WheelKeyService.settingsChanged()
+    }
 
     fun key(context: Context, role: Role): WheelKey =
         WheelKey.decode(prefs(context).getString("key_${role.name}", null)) ?: role.defaultKey
 
-    fun assign(context: Context, role: Role, key: WheelKey) =
+    fun assign(context: Context, role: Role, key: WheelKey) {
         prefs(context).edit().putString("key_${role.name}", key.encode()).apply()
+        WheelKeyService.settingsChanged()
+    }
 
     fun roleOf(context: Context, key: WheelKey): Role? = Role.entries.firstOrNull { key(context, it) == key }
 

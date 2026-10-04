@@ -66,10 +66,14 @@ CarPlay lets the car zoom the cluster map: the accessory sends the command `chan
 
 The Tang's wheel has no spare keys for this, and BYD's window manager takes the wheel keys before any app can see them: volume (`KEYCODE` 291 / 292, scan 115 / 114, device `simulate-keys`) changes the volume, the custom key (305, scan 300) runs the action chosen for it in BYD's settings (screen rotation on our car). An accessibility service that filters key events receives keys earlier, in Android's input filter, and may keep them. With **Settings → BYD navigation → Zoom the dashboard map with the wheel** turned on and DiPlay's wheel key service running:
 
-- while the dashboard streams the CarPlay map, the custom key switches the volume keys to map zoom (volume up zooms in, volume down out) and back; the mode key can instead turn zoom on for five seconds after the last zoom press;
+- while the dashboard shows the CarPlay map, the custom key switches the volume keys to map zoom (volume up zooms in, volume down out) and back; the mode key can instead turn zoom on for five seconds after the last zoom press;
 - the mode shows briefly as a toast and, where the song shows on the dashboard, as "🔍 Map zoom" (with BYD's Bluetooth-music icon) or "🔊 Volume" for three seconds (this note uses the dashboard song's ADB access);
 - without the dashboard map the custom key keeps its BYD action and zoom mode ends; during a call (Android in a call or communication audio mode, which DiPlay sets for CarPlay calls) the volume keys always control the volume;
-- every key can be reassigned in the settings by pressing it, for wheels with other codes.
+- every key can be reassigned in the settings by pressing it, for wheels with other codes. Assignment expires after ten seconds and is cancelled when leaving the settings or disabling the feature.
+
+Map loss, a new CarPlay session, or disabling the feature ends zoom mode; reconnecting requires another mode-key press. Each physical key keeps the same consume/pass decision from its first press through repeats and release, including a call or timeout that begins during that press.
+
+The contributor tested an earlier lab build on a 2024 Tang. The updated upstream implementation has local regression coverage, but call-volume behavior and these lifecycle changes still need a vehicle retest.
 
 On the Tang the console's volume control sends exactly the same codes, scan codes and input device as the wheel's volume keys, so while zoom mode is on it zooms too. The phone (313) and short voice (304) keys are taken by BYD earlier or have their own action and are not used.
 
