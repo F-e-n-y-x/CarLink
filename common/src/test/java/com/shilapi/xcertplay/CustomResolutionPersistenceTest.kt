@@ -34,4 +34,22 @@ class CustomResolutionPersistenceTest {
         assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(context))
     }
 
+    @Test fun directSavedValuesClampAndLegacyKeysRemainBounded() {
+        val prefs = context.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE)
+        prefs.edit().putInt("display_scale_percent", Int.MAX_VALUE).apply()
+        assertEquals(160, AirPlayPersistence.loadDisplayScalePercent(context))
+        prefs.edit().putInt("display_scale_percent", Int.MIN_VALUE).apply()
+        assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(context))
+        prefs.edit().remove("display_scale_percent").putInt("display_scale_tenths", Int.MAX_VALUE).apply()
+        assertEquals(100, AirPlayPersistence.loadDisplayScalePercent(context))
+        prefs.edit().putInt("display_scale_tenths", Int.MIN_VALUE).apply()
+        assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(context))
+    }
+
+    @Test fun supersampledPercentSurvivesLegacySettingsSave() {
+        AirPlayPersistence.saveDisplayScalePercent(context, 157)
+        AirPlayPersistence.saveDisplayScaleTenths(context, 10)
+        assertEquals(157, AirPlayPersistence.loadDisplayScalePercent(context))
+    }
+
 }

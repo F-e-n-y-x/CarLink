@@ -321,7 +321,6 @@
     <string name="s_1_choose_your_connection">1 · Виберіть спосіб підключення</string>
     <string name="s_1_connect_a_computer_with_adb_installed_to_the_car_using">1. Підключіть до автомобіля комп’ютер з установленим ADB через наявне USB-з’єднання або бездротове налагодження. Якщо автомобіль запитає, дозвольте налагодження.\n\n2. Виконайте цю команду в терміналі комп’ютера:</string>
     <string name="s_1_open_car_hotspot_settings_turn_the_hotspot_on_and_sele">1. Відкрийте налаштування точки доступу автомобіля, увімкніть її та виберіть 5 ГГц, якщо доступно.\n2. Точно скопіюйте її назву й пароль нижче.\n3. Не вимикайте точку доступу під час підключення. DiPlay передасть дані через Bluetooth; iPhone приєднається автоматично.</string>
-    <string name="s_2_0x">2.0x</string>
     <string name="s_2_4_ghz">2,4 ГГц</string>
     <string name="s_2_pair_your_iphone">2 · Спарте свій iPhone</string>
     <string name="s_300_ms_default">300 мс · типово</string>

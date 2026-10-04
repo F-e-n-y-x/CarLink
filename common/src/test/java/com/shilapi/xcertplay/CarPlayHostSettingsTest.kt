@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.RadioButton
+import android.widget.TextView
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.*
@@ -128,23 +129,31 @@ class CarPlayHostSettingsTest {
     }
 
     @Test fun customResolutionSurvivesCancelAndUnrelatedSettingsSave() {
-        AirPlayPersistence.saveDisplayScalePercent(activity, 73)
+        for (percent in listOf(73, 157, 160)) {
+            AirPlayPersistence.saveDisplayScalePercent(activity, percent)
+            invoke("openSettingsMenu")
+            val slider = resolutionSlider()
+            assertEquals(percent - CarPlayDisplayScale.MIN_PERCENT, slider.progress)
+            val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
+                .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
+            listener.onProgressChanged(slider, 0, true)
+            assertEquals(percent, AirPlayPersistence.loadDisplayScalePercent(activity))
+            invoke("cancelSettingsEdits")
+            assertEquals(percent, field("displayScalePercent"))
+            assertEquals(percent, AirPlayPersistence.loadDisplayScalePercent(activity))
+            invoke("openSettingsMenu")
+            invoke("persistMenuSettings")
+            assertEquals(percent, AirPlayPersistence.loadDisplayScalePercent(activity))
+            invoke("cancelSettingsEdits")
+        }
+    }
+
+    @Test fun resolutionEndpointLabelsMatchTheActualSliderRange() {
         invoke("openSettingsMenu")
-        val slider = resolutionSlider()
-        assertEquals(43, slider.progress)
-        val listener = SeekBar::class.java.getDeclaredField("mOnSeekBarChangeListener")
-            .apply { isAccessible = true }.get(slider) as SeekBar.OnSeekBarChangeListener
-        listener.onProgressChanged(slider, 0, true)
-        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
-        invoke("cancelSettingsEdits")
-        assertEquals(73, field("displayScalePercent"))
-        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
-        invoke("openSettingsMenu")
-        invoke("persistMenuSettings")
-        assertEquals(73, AirPlayPersistence.loadDisplayScalePercent(activity))
-        listener.onProgressChanged(slider, 0, true)
-        invoke("persistMenuSettings")
-        assertEquals(30, AirPlayPersistence.loadDisplayScalePercent(activity))
+        val labels = views(menu()).filterIsInstance<TextView>().map { it.text.toString() }.toList()
+        assertTrue(labels.contains(activity.getString(R.string.custom_resolution_summary, 30)))
+        assertTrue(labels.contains(activity.getString(R.string.custom_resolution_summary, 160)))
+        assertFalse(labels.contains("2.0x"))
     }
 
     @Test fun resumingWithTheMenuOpenPreservesUnsavedConnectionEdits() {
