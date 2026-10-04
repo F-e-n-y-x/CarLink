@@ -531,8 +531,10 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ADB_CLUSTER_ACTIVITY, false)
 
     fun saveAdbClusterEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_ADB_CLUSTER_ACTIVITY, enabled).putBoolean(KEY_CLUSTER_MAP, enabled).apply()
+        val edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ADB_CLUSTER_ACTIVITY, enabled)
+        if (enabled) edit.putBoolean(KEY_CLUSTER_MAP, true)
+        edit.apply()
     }
 
     fun saveClusterMapEnabled(context: Context, enabled: Boolean) {

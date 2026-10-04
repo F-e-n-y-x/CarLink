@@ -28,9 +28,9 @@ class AdbClusterActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!AirPlayPersistence.loadAdbClusterEnabled(this)) { finish(); return }
+        if (!AdbClusterRouter.enabled(this)) { finish(); return }
         val token = intent.getStringExtra("cluster_launch_token")
-        if (!ClusterActivityOutput.acceptsToken(token)) { ClusterActivityOutput.retry(); finish(); return }
+        if (!ClusterActivityOutput.acceptsToken(token)) { finish(); return }
         window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
@@ -132,9 +132,11 @@ internal object ClusterActivityOutput {
     private val retryTick = Runnable { launchHost.get()?.let(::ensure) }
 
     fun acceptsToken(token: String?): Boolean = token != null && token == launchToken && hostOwner != null
+    fun hasConfirmedRoute(): Boolean = activity.get()?.let { !it.isFinishing && !it.isDestroyed } == true &&
+        expectedDisplay > 0
     fun confirm(window: AdbClusterActivity, token: String?, display: Int): Boolean {
         if (!acceptsToken(token) || display <= 0 || display != expectedDisplay ||
-            !AirPlayPersistence.loadAdbClusterEnabled(window)) return false
+            !AdbClusterRouter.enabled(window)) return false
         activity.get()?.takeIf { it !== window }?.finish()
         activity = WeakReference(window)
         launchPending = false
@@ -202,6 +204,12 @@ internal object ClusterActivityOutput {
     }
 
     fun bind(owner: Any, taskId: Int, callback: (Surface?) -> Unit) {
+        if (hostOwner !== owner && !hasConfirmedRoute()) {
+            ++generation
+            launchToken = null
+            expectedDisplay = -1
+            launchPending = false
+        }
         hostOwner = owner
         mainTaskId = taskId
         onSurface = callback
@@ -210,7 +218,7 @@ internal object ClusterActivityOutput {
 
     fun ensure(host: Activity) {
         launchHost = WeakReference(host)
-        if (!AirPlayPersistence.loadAdbClusterEnabled(host) || hostOwner == null) return
+        if (!AdbClusterRouter.enabled(host) || hostOwner !== host) return
         if (activity.get()?.let { !it.isFinishing && !it.isDestroyed } == true || launchPending) return
         launchPending = true
         val epoch = ++generation

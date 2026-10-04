@@ -777,7 +777,7 @@ class CarPlayHostActivity : ComponentActivity() {
             dismissClusterPresentation()
             return
         }
-        if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+        if (AdbClusterRouter.enabled(this)) {
             ClusterActivityOutput.bind(this, taskId) { onClusterSurface(it) }
             ClusterActivityOutput.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
             applyClusterTurnOverlay()
@@ -786,6 +786,7 @@ class CarPlayHostActivity : ComponentActivity() {
             }
             return
         }
+        ClusterActivityOutput.stop(this)
         val theme = effectiveClusterTheme()
         if (DiLink51ClusterLayout.supported()) {
             ensureDiLink51ClusterPresentation(theme)
@@ -891,18 +892,28 @@ class CarPlayHostActivity : ComponentActivity() {
         if (clusterSurface === surface) return
         // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
         // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
-        if ((!DiLink51ClusterLayout.supported() && !AirPlayPersistence.loadAdbClusterEnabled(this)) || surface == null) {
+        if ((!DiLink51ClusterLayout.supported() && !AdbClusterRouter.enabled(this)) || surface == null) {
             clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
         }
         clusterSurface = surface
         // Never fall back to the main surface: two decoders must not draw into one Surface.
-        if (surface != null) sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        if (surface != null) {
+            sink?.setSurface(SCREEN_TYPE_ALT, surface)
+            if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute() &&
+                !adbClusterConfigured && controller != null) {
+                reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
+            }
+        }
         updateClusterMapShown()
     }
 
+    private var adbClusterConfigured = false
+
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
+        adbClusterConfigured = false
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
-        if (AirPlayPersistence.loadAdbClusterEnabled(this)) {
+        if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute()) {
+            adbClusterConfigured = true
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
                 AirPlayPersistence.loadClusterMarkerVerticalStep(this),
@@ -1057,7 +1068,7 @@ class CarPlayHostActivity : ComponentActivity() {
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
-            (AirPlayPersistence.loadAdbClusterEnabled(this) && clusterSurface != null)) && !MapMirrors.any)
+            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && !MapMirrors.any)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

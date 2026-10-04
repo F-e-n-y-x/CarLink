@@ -10,6 +10,10 @@ internal object AdbClusterRouter {
     private const val REPORT = "adb-cluster-route.txt"
     data class Result(val success: Boolean, val report: String)
 
+    /** Existing public cluster displays always win, even when the experimental switch is saved. */
+    fun enabled(context: Context): Boolean = AirPlayPersistence.loadAdbClusterEnabled(context) &&
+        !DiLink51ClusterLayout.supported() && ClusterMapPresentation.findDisplay(context) == null
+
     // Match only the base logical display, not a device's layer-stack number or override record.
     internal fun displayId(dump: String): Int? {
         val candidates = dump.lineSequence().mapNotNull { line ->
@@ -61,7 +65,7 @@ internal object AdbClusterRouter {
                     if (access != LocalAdb.Access.READY) return@use
                     val display = displayId(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
-                    if (display == null || !AirPlayPersistence.loadAdbClusterEnabled(context) || !prepare(display)) return@use
+                    if (display == null || !enabled(context) || !prepare(display)) return@use
                     val output = adb.shell(launchCommand(context.packageName, display, token)).orEmpty()
                     success = accepted(output)
                     appendLine(output.take(1500))
@@ -71,7 +75,8 @@ internal object AdbClusterRouter {
                 appendLine("routeError=${error.javaClass.simpleName}: ${error.message}")
             }
         }
-        File(context.filesDir, REPORT).writeText(text)
+        // A failed diagnostic write must not leave launchPending stuck forever.
+        runCatching { File(context.filesDir, REPORT).writeText(text) }
         return Result(success, text)
     }
 
