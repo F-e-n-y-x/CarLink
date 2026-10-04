@@ -144,7 +144,7 @@
     <string name="choose_iphone">Выбрать iPhone</string>
     <string name="choose_location">Выбрать место</string>
     <string name="choose_save_location">Выбрать место сохранения</string>
-    <string name="choose_where_to_save_your_report">Выберите, куда сохранить отчёт.\u0020</string>
+    <string name="choose_where_to_save_your_report">Выберите место сохранения отчёта. Если средство выбора файлов недоступно, DiPlay сохранит его в приложении.\u0020</string>
     <string name="choose_your_iphone">Выберите свой iPhone</string>
     <string name="close">Закрыть</string>
     <string name="cluster_map_size">Размер карты на приборной панели</string>
@@ -191,6 +191,8 @@
     <string name="follow_instrument_theme_and_map_card">Следовать теме приборов и карточке карты</string>
     <string name="frame_rate">Частота кадров</string>
     <string name="full_screen">Полный экран</string>
+    <string name="adapt_pip_resolution">Адаптация разрешения в многооконном режиме</string>
+    <string name="adapt_pip_resolution_description">Переподключает CarPlay для адаптации разрешения к пропорциям окна или PiP. Оставьте выключенным для мгновенного аппаратного масштабирования GPU.</string>
     <string name="fullscreen">Полноэкранный режим</string>
     <string name="getting_carplay_ready">Подготовка CarPlay…</string>
     <string name="got_it">Понятно</string>
@@ -534,4 +536,7 @@
     <string name="hotspot_control_failed">Не удалось включить точку доступа. Откройте настройки автомобиля.</string>
     <string name="byd_adb_features">Функции BYD · нужен ADB</string>
     <string name="location_reporting_reconnects">Изменение этой настройки перезапускает активное подключение CarPlay.</string>
+    <string name="diagnostic_report_saved_in_app">Отчёт сохранён приватно в DiPlay, поскольку общедоступное место сохранения недоступно. Поделитесь им или просмотрите его здесь. Ничего не отправляется автоматически.</string>
+    <string name="view_diagnostic_report">Просмотреть отчёт</string>
+    <string name="diagnostic_report_copy_hint">Нажмите и удерживайте текст отчёта, чтобы выделить и скопировать его. Это можно использовать, если нет приложения для отправки.</string>
 </resources>
