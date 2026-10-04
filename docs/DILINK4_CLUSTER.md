@@ -53,8 +53,7 @@ saved. Until an activity confirms the private display, the original virtual stre
 remains. If confirmation arrives after CarPlay starts, DiPlay reconnects once to
 request 1920×720 and covers the cluster during that transition. Turning off only
 the ADB option leaves the saved cluster-map enable preference intact.
-USB reconnection polling, colour controls and OEM song/L1 coordination are outside
-this change. Automated tests cannot establish visible placement on other cars.
+USB reconnection and colour controls retain the implementations already on main. Automated tests cannot establish visible placement on other cars.
 
 The direct `am start-activity --display … -f 0x18000000` approach follows the legacy
 platform-21 implementation published by 寒叙 (@Hanxu4131):
@@ -63,3 +62,22 @@ LegacyClusterMap.kt and ClusterMapActivity.kt).
 
 Vehicle testing and feedback: @ojjj13. Implementation and debugging assistance:
 ChatGPT/Codex. DiPlay/xcertplay authors and existing licence notices are retained.
+
+## Optional stock map and HUD text
+
+This route is shared with PR #187; there is only one decoder-surface owner.
+Stock-map holding defaults off. A selected component/package hold is journaled
+before changing OEM state, checked before launch, and restores the exact original
+state on failure, stop, or the next app launch after a crash. A failed restoration
+retains the journal and retries using already authorized local ADB. If recovery
+cannot complete, the next held launch is refused. Until recovery succeeds, the
+stock map can remain disabled; force-stop cannot guarantee immediate restoration.
+
+HUD text defaults off and yields to active navigation. Leaving guidance for text
+clears maneuver/distance records first. Existing firmware, receiver/version and
+signing-certificate restrictions remain. DiLink 4 cluster video does not imply
+DiLink 4 HUD support: no verified DiLink 4 HUD receiver profile was supplied with
+these PRs. Diagnostic exports include the firmware and installed receiver version,
+certificate and permission metadata needed to review a new profile. Do not add
+one based only on package presence. Fork application-ID/build changes and deleted
+HUD diagnostic tooling from #187 are intentionally excluded.

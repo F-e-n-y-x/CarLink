@@ -35,6 +35,7 @@
         <package android:name="com.byd.clusterdebug" />
         <package android:name="com.ts.car.someip.service" />
         <package android:name="com.byd.amapservice" />
+        <package android:name="com.byd.automap" />
         <intent>
             <action android:name="com.android.settings.WIFI_TETHER_SETTINGS" />
         </intent>

@@ -66,6 +66,11 @@ internal object AdbClusterRouter {
                     val display = displayId(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
                     if (display == null || !enabled(context) || !prepare(display)) return@use
+                    val held = com.shilapi.xcertplay.hud.BydOemClusterNavi.holdForLaunch(context, token) {
+                        enabled(context) && prepare(display)
+                    }
+                    appendLine("stockMapHoldReady=$held")
+                    if (!held || !enabled(context) || !prepare(display)) return@use
                     val output = adb.shell(launchCommand(context.packageName, display, token)).orEmpty()
                     success = accepted(output)
                     appendLine(output.take(1500))

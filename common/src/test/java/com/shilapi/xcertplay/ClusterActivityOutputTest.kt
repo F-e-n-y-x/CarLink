@@ -28,11 +28,30 @@ class ClusterActivityOutputTest {
             assertFalse(ClusterActivityOutput.confirm(activity, token, 8))
             assertTrue(ClusterActivityOutput.confirm(activity, token, 7))
             assertTrue(ClusterActivityOutput.hasConfirmedRoute())
-            ClusterActivityOutput.stop(owner)
+            var restored = false
+            ClusterActivityOutput.completeLaunch(token, current = true, accepted = false) { restored = true }
+            assertFalse(restored)
+            assertTrue(ClusterActivityOutput.hasConfirmedRoute())
+            ClusterActivityOutput.stopForSettings()
             assertFalse(ClusterActivityOutput.acceptsToken(token))
             assertFalse(ClusterActivityOutput.confirm(activity, token, 7))
             assertFalse(ClusterActivityOutput.hasConfirmedRoute())
         } finally { ClusterActivityOutput.stop(owner) }
+    }
+
+    @Test fun rejectedShellLaunchInvalidatesAdmissionBeforeRestoringOemState() {
+        val owner = Any()
+        ClusterActivityOutput.bind(owner, 4) { }
+        val token = "01234567-89ab-cdef-0123-456789abcdef"
+        ClusterActivityOutput::class.java.getDeclaredField("launchToken")
+            .apply { isAccessible = true }.set(ClusterActivityOutput, token)
+        var restored = false
+        ClusterActivityOutput.completeLaunch(token, current = true, accepted = false) {
+            assertFalse(ClusterActivityOutput.acceptsToken(token))
+            restored = true
+        }
+        assertTrue(restored)
+        ClusterActivityOutput.stop(owner)
     }
 
     @Test fun staleEditorsCannotChangeOrClearANewerCalibrationPreview() {

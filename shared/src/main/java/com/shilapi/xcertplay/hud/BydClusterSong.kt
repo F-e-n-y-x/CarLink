@@ -10,7 +10,7 @@ import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 
 /** What the dashboard's music card shows. */
-internal data class ClusterSong(val text: String, val playing: Boolean)
+internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text)
 
 /**
  * The CarPlay song for the dashboard, from iAP2 NowPlayingUpdate (0x5001): title (1) and artist (12)
@@ -40,7 +40,7 @@ internal class ClusterSongState {
         runCatching { body.optionalGroup(PLAYBACK)?.optionalU8(STATUS) }.getOrNull()?.let { status ->
             playing = status == STATUS_PLAYING || status == STATUS_SEEK_FORWARD || status == STATUS_SEEK_BACKWARD
         }
-        val next = text(title, artist)?.let { ClusterSong(it, playing) }
+        val next = text(title, artist)?.let { ClusterSong(it, playing, title!!.trim()) }
         if (next == last) return null
         last = next
         return next
@@ -135,6 +135,8 @@ internal object BydClusterSong {
         synchronized(state) { state.clear() }
         stop(app)
     }
+
+    fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {
         synchronized(state) { wanted = song }

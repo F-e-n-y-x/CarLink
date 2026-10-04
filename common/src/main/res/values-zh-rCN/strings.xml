@@ -578,4 +578,11 @@
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
     <string name="cluster_safe_area_live_hint">在此拖动绿色边界，仪表会同步显示区域框。保存后重新连接生效；取消保留当前区域。</string>
+    <string name="oem_cluster_map">隐藏原车仪表地图</string>
+    <string name="oem_cluster_map_description">可选：DiPlay 投屏期间暂停原车地图的仪表投屏。关闭时不修改原车地图。组件模式只隐藏仪表投屏，整包模式会禁用整个原车地图，停止投屏后恢复原状态。需要已授权的本地 ADB，重新连接后生效。</string>
+    <string name="oem_cluster_hold_off">关闭</string>
+    <string name="oem_cluster_hold_component">只隐藏仪表投屏</string>
+    <string name="oem_cluster_hold_package">禁用整个原车地图</string>
+    <string name="song_on_hud">HUD 显示曲名或歌词</string>
+    <string name="song_on_hud_description">无导航指引时显示手机提供的曲名或歌词，导航方向和道路名称优先。</string>
 </resources>

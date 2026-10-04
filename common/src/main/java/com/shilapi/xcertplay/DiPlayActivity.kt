@@ -579,6 +579,7 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.adb_cluster_activity_mode),
                 getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 AirPlayPersistence.saveAdbClusterEnabled(this, it)
+                ClusterActivityOutput.stopForSettings()
                 render()
                 reconnectForClusterMap()
             }
@@ -586,6 +587,16 @@ class DiPlayActivity : ComponentActivity() {
             if (adbCluster) {
                 card.addView(button(getString(R.string.adb_cluster_authorize), false) { authorizeClusterRouting() }, matchButton(10, 56))
                 card.addView(button(getString(R.string.adb_cluster_open), false) { ClusterActivityOutput.retry() }, matchButton(10, 56))
+            }
+            if (adbCluster && com.shilapi.xcertplay.hud.BydOemClusterNavi.applicable(this)) {
+                val holds = com.shilapi.xcertplay.hud.BydOemClusterHold.entries
+                card.addView(label(getString(R.string.oem_cluster_map_description), 14, MUTED))
+                choice(card, getString(R.string.oem_cluster_map), holds.map { it.localizedLabel(this) },
+                    holds.indexOf(BydOutputSettings.oemClusterHold(this))) { index ->
+                    BydOutputSettings.setOemClusterHold(this, holds[index])
+                    ClusterActivityOutput.stopForSettings()
+                    reconnectForClusterMap()
+                }
             }
             val clusterDisplay = ClusterMapPresentation.findDisplay(this)
             val clusterSize = clusterDisplay?.let { ClusterMapPresentation.sizeOf(it) }
@@ -749,6 +760,10 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.navigation_on_hud_and_instrument_cluster),
                 getString(R.string.show_phone_navigation_arrows_distance_and_street_names_on),
                 com.shilapi.xcertplay.hud.BydOutputSettings.enabled(this)) { com.shilapi.xcertplay.hud.BydOutputSettings.setEnabled(this, it) }
+            if (BydOutputSettings.standaloneHudAvailable(this)) {
+                toggle(card, getString(R.string.song_on_hud), getString(R.string.song_on_hud_description),
+                    BydOutputSettings.hudSong(this)) { BydOutputSettings.setHudSong(this, it) }
+            }
             clusterSongSwitch(card)
         }
         section(content, getString(R.string.permissions_and_connection_help), R.drawable.ic_dp_permissions) { card ->
@@ -2505,6 +2520,9 @@ class DiPlayActivity : ComponentActivity() {
                     AdbClusterRouter.report(appContext).lineSequence().forEach { line ->
                         DiagnosticRedactor.redact(line)?.let { appendLine(it) }
                     }
+                    appendLine()
+                    appendLine("--- Standalone HUD compatibility ---")
+                    appendLine(BydOutputSettings.standaloneHudDiagnosticReport(appContext))
                     appendLine()
                     appendLine("--- BYD vehicle-data probe ---")
                     appendLine(
