@@ -1,11 +1,15 @@
 package com.shilapi.xcertplay
 
+import android.content.Intent
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.os.Handler
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
+import android.widget.RadioButton
 import com.shilapi.xcertplay.airplay.*
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.*
@@ -19,6 +23,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.MockedConstruction
 import org.mockito.Mockito.mockConstruction
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -45,6 +51,7 @@ class CarPlayHostSettingsTest {
         setField("activeDisplaySize", size)
         CarPlayBackgroundSession::class.java.getDeclaredField("owner").apply { isAccessible = true }
             .set(CarPlayBackgroundSession, activity)
+        AirPlayPersistence.saveMfiTarget(activity, MfiTarget.USB_CH341)
         AirPlayPersistence.saveWirelessHotspotMode(activity, WirelessHotspotMode.WIFI_P2P)
         invoke("loadPersistedSettings")
         invoke("buildContentView")
@@ -190,6 +197,78 @@ class CarPlayHostSettingsTest {
         invoke("cancelSettingsEdits")
         assertSame(controller, field("controller"))
         assertEquals(0, field("restartGeneration"))
+    }
+
+    @Test fun authenticationChoicesOnlyExposeLocalAndCh341() {
+        invoke("openSettingsMenu")
+        val options = views(menu()).filterIsInstance<RadioButton>().filter { it.tag is MfiTarget }.toList()
+        assertEquals(listOf(MfiTarget.LOCAL, MfiTarget.USB_CH341), options.map { it.tag })
+        options.first().performClick()
+        invoke("cancelSettingsEdits")
+        assertEquals(MfiTarget.USB_CH341, AirPlayPersistence.loadMfiTarget(activity))
+        assertEquals(MfiTarget.USB_CH341, field("mfiTarget"))
+    }
+
+    @Test fun selectingLocalWithoutIdentityKeepsTheMenuAndSavedUsbChoice() {
+        attachController()
+        invoke("openSettingsMenu")
+        views(menu()).filterIsInstance<RadioButton>().first { it.tag == MfiTarget.LOCAL }.performClick()
+        invoke("saveSettingsAndReconnect")
+        assertTrue(field("menuOpen") as Boolean)
+        assertEquals(MfiTarget.USB_CH341, AirPlayPersistence.loadMfiTarget(activity))
+        assertEquals(View.VISIBLE, (field("mfiErrorView") as View).visibility)
+        assertEquals(0, field("restartGeneration"))
+    }
+
+    @Test fun switchingToUsbPersistsAndPassesUsbToTheRuntime() {
+        AirPlayPersistence.saveMfiTarget(activity, MfiTarget.LOCAL)
+        attachController()
+        invoke("openSettingsMenu")
+        views(menu()).filterIsInstance<RadioButton>().first { it.tag == MfiTarget.USB_CH341 }.performClick()
+        invoke("saveSettingsAndReconnect")
+        assertFalse(field("menuOpen") as Boolean)
+        assertEquals(MfiTarget.USB_CH341, AirPlayPersistence.loadMfiTarget(activity))
+        val config = invoke("createRuntimeConfig") as CarPlayRuntimeConfig
+        assertEquals(MfiTarget.USB_CH341, config.mfiTarget)
+        assertEquals(listOf(com.shilapi.xcertplay.transport.UsbDeviceId(0x1a86, 0x5512)), config.ch341Devices)
+        assertEquals(1, field("restartGeneration"))
+    }
+
+    @Test fun localRuntimeDoesNotRequestCh341Devices() {
+        AirPlayPersistence.saveMfiTarget(activity, MfiTarget.LOCAL)
+        invoke("loadPersistedSettings")
+        val config = invoke("createRuntimeConfig") as CarPlayRuntimeConfig
+        assertEquals(MfiTarget.LOCAL, config.mfiTarget)
+        assertTrue(config.ch341Devices.isEmpty())
+    }
+
+    @Test fun ch341AttachmentKeepsTheWirelessSession() {
+        val controller = attachController()
+        AirPlayPersistence.saveWirelessEnabled(activity, true)
+        invoke("loadPersistedSettings")
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x1a86)
+        `when`(device.productId).thenReturn(0x5512)
+        val intent = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        activity.javaClass.getDeclaredMethod("onNewIntent", Intent::class.java)
+            .apply { isAccessible = true }.invoke(activity, intent)
+        assertTrue(AirPlayPersistence.loadWirelessEnabled(activity))
+        assertTrue(field("wirelessEnabled") as Boolean)
+        assertSame(controller, field("controller"))
+        assertFalse((field("shuttingDown") as AtomicBoolean).get())
+        assertFalse(activity.isFinishing)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test fun onlyIphoneAttachmentSelectsWiredTransport() {
+        val method = activity.javaClass.getDeclaredMethod("isIphoneUsbAttachment", Intent::class.java)
+            .apply { isAccessible = true }
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x05ac)
+        val attached = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        assertEquals(true, method.invoke(activity, attached))
+        assertEquals(false, method.invoke(activity, Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED)))
+        assertEquals(false, method.invoke(activity, Intent(UsbManager.ACTION_USB_DEVICE_DETACHED).putExtra(UsbManager.EXTRA_DEVICE, device)))
     }
 
     private fun gesture(fingers: Int, x: Float = 400f, y: Float = 700f) {

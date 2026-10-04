@@ -575,10 +575,6 @@ class CarPlayController(
         phase = Phase.MFI
         onStatus(CarPlayStatus.DiscoveringMfi)
         val offlineDirectory = java.io.File(appContext.noBackupFilesDir, LocalMfiAuthenticationClient.DIRECTORY)
-        if (offlineDirectory.exists()) {
-            openLocalMfi(offlineDirectory)
-            return
-        }
         when (config.mfiTarget) {
             MfiTarget.LOCAL -> openLocalMfi(offlineDirectory)
             MfiTarget.USB_CH341 -> {
