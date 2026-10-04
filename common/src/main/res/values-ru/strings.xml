@@ -536,8 +536,6 @@
     <string name="hotspot_control_failed">Не удалось включить точку доступа. Откройте настройки автомобиля.</string>
     <string name="byd_adb_features">Функции BYD · нужен ADB</string>
     <string name="location_reporting_reconnects">Изменение этой настройки перезапускает активное подключение CarPlay.</string>
-    <string name="adapt_pip_resolution">Адаптация разрешения в многооконном режиме</string>
-    <string name="adapt_pip_resolution_description">Переподключает CarPlay для адаптации разрешения к пропорциям окна или PiP. Оставьте выключенным для мгновенного аппаратного масштабирования GPU.</string>
     <string name="diagnostic_report_saved_in_app">Отчёт сохранён приватно в DiPlay, поскольку общедоступное место сохранения недоступно. Поделитесь им или просмотрите его здесь. Ничего не отправляется автоматически.</string>
     <string name="view_diagnostic_report">Просмотреть отчёт</string>
     <string name="diagnostic_report_copy_hint">Нажмите и удерживайте текст отчёта, чтобы выделить и скопировать его. Это можно использовать, если нет приложения для отправки.</string>

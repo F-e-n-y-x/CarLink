@@ -536,8 +536,6 @@
     <string name="hotspot_control_failed">تعذر تشغيل نقطة الاتصال. افتح إعدادات السيارة لتشغيلها.</string>
     <string name="byd_adb_features">ميزات BYD · تتطلب ADB</string>
     <string name="location_reporting_reconnects">يؤدي تغيير هذا الإعداد إلى إعادة اتصال جلسة CarPlay النشطة.</string>
-    <string name="adapt_pip_resolution">تكييف دقة النوافذ المتعددة</string>
-    <string name="adapt_pip_resolution_description">إعادة توصيل CarPlay لتكييف دقة البث مع نسبة العرض إلى الارتفاع للنوافذ المتعددة أو صورة داخل صورة. اتركه معطلاً للتحجيم الفوري لوحدة معالجة الرسومات بدون تأخير.</string>
     <string name="diagnostic_report_saved_in_app">تم حفظ التقرير بشكل خاص داخل DiPlay لعدم توفر موقع حفظ عام. يمكنك مشاركته أو عرضه هنا. لا يتم إرسال شيء تلقائياً.</string>
     <string name="view_diagnostic_report">عرض التقرير</string>
     <string name="diagnostic_report_copy_hint">المس نص التقرير مطولاً لتحديده ونسخه. يمكنك استخدام ذلك إذا لم يتوفر تطبيق للمشاركة.</string>
