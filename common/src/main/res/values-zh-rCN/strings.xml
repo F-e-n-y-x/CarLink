@@ -103,6 +103,9 @@
     <string name="auto_start_on_boot">开机后自动启动</string>
     <string name="automatic_cluster_map_setup">自动仪表盘地图设置</string>
     <string name="automatic_connection">自动连接</string>
+    <string name="usb_auto_confirm_title">自动确认 USB 权限</string>
+    <string name="usb_auto_confirm_subtitle">有线连接 iPhone 时自动确认系统 USB 权限弹窗（需要无障碍服务）</string>
+    <string name="usb_auto_confirm_desc">在出现 CarPlay USB 权限弹窗时自动勾选默认并点击确定</string>
     <string name="automatic_map_enabled_open_the_cluster_map_card_or_select">自动地图已启用。打开仪表盘地图卡片或选择“地图主题”。</string>
     <string name="automatic_map_setup_adb">自动地图设置 · ADB</string>
     <string name="availability_depends_on_your_head_unit_s_startup_settings">是否可用取决于车机的启动设置。</string>

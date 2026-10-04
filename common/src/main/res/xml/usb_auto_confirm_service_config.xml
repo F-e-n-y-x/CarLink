@@ -5,4 +5,5 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="50"
     android:canRetrieveWindowContent="true"
-    android:accessibilityFlags="flagDefault" />
+    android:packageNames="com.android.systemui,android"
+    android:accessibilityFlags="flagReportViewIds" />

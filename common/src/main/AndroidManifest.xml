@@ -116,7 +116,6 @@
         <service
             android:name="com.shilapi.xcertplay.UsbAutoConfirmService"
             android:exported="true"
-            android:label="@string/usb_auto_confirm_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />

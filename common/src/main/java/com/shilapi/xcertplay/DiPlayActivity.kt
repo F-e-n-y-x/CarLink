@@ -494,25 +494,29 @@ class DiPlayActivity : ComponentActivity() {
                 permissions = { listOf(CarHotspotSetup.Permission.BOOT_LAUNCH) }) {
                 AirPlayPersistence.saveAutoStartOnBoot(this, it)
             }
+            toggle(
+                card,
+                getString(R.string.usb_auto_confirm_title),
+                getString(R.string.usb_auto_confirm_subtitle),
+                UsbAutoConfirmService.isEnabled(this),
+            ) {
+                UsbAutoConfirmService.openSettings(this)
+            }
             val autoConfirmActive = UsbAutoConfirmService.isEnabled(this)
             val autoHideActive = HomeScreenMonitor.hasAccess(this)
             val allReady = autoConfirmActive && autoHideActive
-            card.addView(
-                button(
-                    if (allReady) getString(R.string.btn_permissions_ready)
-                    else getString(R.string.btn_auto_apply_permissions),
-                    !allReady,
-                ) {
-                    autoApplyPermissions()
-                },
-                matchButton(10, 60),
-            )
-            card.addView(
-                label(getString(R.string.usb_auto_confirm_summary), 14, MUTED).apply {
-                    setPadding(0, dp(6), 0, dp(10))
-                },
-            )
-            card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(6, 60))
+            if (!allReady) {
+                card.addView(
+                    button(
+                        getString(R.string.btn_auto_apply_permissions),
+                        true,
+                    ) {
+                        autoApplyPermissions()
+                    },
+                    matchButton(10, 56),
+                )
+            }
+            card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
         bydAdbSettings(content)
         section(content, getString(R.string.display_and_performance), R.drawable.ic_dp_display) { card ->
