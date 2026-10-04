@@ -477,6 +477,7 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         NavigationWidgetUpdater.attach(applicationContext)
+        CarPlayCallKeys.install(applicationContext)
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
@@ -1025,6 +1026,9 @@ class CarPlayHostActivity : ComponentActivity() {
             }
             return true
         }
+
+        // During a CarPlay call the wheel's call key answers on the iPhone instead of opening BYD's phone app.
+        if (CarPlayCallKeys.onKey(this, event.keyCode, event.action == KeyEvent.ACTION_DOWN, controller)) return true
 
         // Keep DiPlay's existing steering-wheel/voice-key Siri handling intact.
         if (!CarPlayMediaButton.opensSiri(event.keyCode)) return super.dispatchKeyEvent(event)

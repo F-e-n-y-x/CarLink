@@ -65,11 +65,16 @@ object BydNavigationOutputs {
         }
         BydClusterMapPause.initialize(app)
         BydClusterSong.attach(app)
+        BydCarPlayCall.attach(app)
     }
 
     internal fun onFrame(frame: Iap2Frame) {
         if (frame.messageId == ClusterSongState.NOW_PLAYING_UPDATE) {
             BydClusterSong.onFrame(frame)
+            return
+        }
+        if (frame.messageId == CarPlayCallState.CALL_STATE_UPDATE) {
+            BydCarPlayCall.onFrame(frame)
             return
         }
         if (frame.messageId != BydHudRouteState.ROUTE_GUIDANCE_UPDATE &&
@@ -120,6 +125,12 @@ object BydNavigationOutputs {
     /** The dashboard song setting changed; applies at once. */
     fun clusterSongChanged(enabled: Boolean) = BydClusterSong.settingChanged(enabled)
 
+    /** The CarPlay call setting changed; applies at once. */
+    fun carPlayCallsChanged(enabled: Boolean) = BydCarPlayCall.settingChanged(enabled)
+
+    /** The iPhone's current call, for the steering wheel's call keys. */
+    fun carPlayCall(): CarPlayCallCard? = BydCarPlayCall.current()
+
     /** The dashboard song's "only when it changes" setting changed; applies at once. */
     fun clusterSongOnChangeChanged() = BydClusterSong.onChangeSettingChanged()
 
@@ -128,7 +139,7 @@ object BydNavigationOutputs {
 
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
     fun endNow() {
-        standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
+        standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end(); BydCarPlayCall.end()
         synchronized(overlayLock) { overlayRoute.clear() }
         refreshTurnOverlay()
     }

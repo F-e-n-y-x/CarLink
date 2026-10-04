@@ -621,6 +621,8 @@
     <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图，并在 CarPlay 屏幕上移动选择。它只接收按键，不读取屏幕内容。</string>
     <string name="cluster_song_on_change">仅在切歌时显示</string>
     <string name="cluster_song_on_change_description">新歌曲在仪表盘上显示 5 秒，然后清空卡片。暂停和继续播放不会再次显示。</string>
+    <string name="carplay_calls_on_dashboard">仪表盘显示 CarPlay 通话</string>
+    <string name="carplay_calls_on_dashboard_description">来电和通话中的 CarPlay 通话会在仪表盘上显示来电者，并在仪表盘和抬头显示器上显示通话时长，与比亚迪原厂 CarPlay 应用相同。通话期间车辆还会降低风扇风速。立即生效。需要主机开启网络 ADB。</string>
     <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>

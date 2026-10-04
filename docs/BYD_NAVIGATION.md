@@ -109,6 +109,26 @@ With **Settings → BYD navigation → CarPlay joystick on the wheel** turned on
 
 The wheel's dashboard-menu key would be the natural back key, but BYD takes it before the input filter (keycode 309, consumed while queueing), and even read from the input device the dashboard still opens its own menu on the same press. So the custom key goes back instead.
 
+### CarPlay calls: wheel call keys and the dashboard (DiLink 3)
+
+BYD's own CarPlay app (`com.byd.carplay.ui`) answers CarPlay calls from the wheel and shows them on the instrument cluster and the HUD. It relies on `sys.carplay.*` properties that only BYD's root CarPlay daemon can set, so with DiPlay BYD's window manager treats the call key as a Bluetooth phone key. Read from the firmware (`PhoneWindowManager.interceptKeyBeforeQueueing`, `BinderCarplayServer.CarplayNotifyInstrumentCallState`):
+
+- the call key (313) is handled while queueing, before the input filter: BYD opens its Bluetooth phone screen on release, but the key still reaches the focused app and the wheel key service;
+- the hang-up key (314) and the multifunction "menu" key (309) reach no app; on release BYD sends `com.byd.btcall.action.CLOSE_BLUETOOTHSETTING` with the key code to the current user;
+- the CarPlay voice keys (327 short, 328 long) reach the wheel key service before BYD's window manager keeps them.
+
+DiPlay follows the iPhone's calls from iAP2 CallStateUpdate (0x4155, already subscribed). During a CarPlay call:
+
+- the call key answers a ringing call with CarPlay's telephony HID Hook Switch, and is kept during a connected call. It works through the wheel key service and on the CarPlay screen; since BYD has already opened its phone screen by then, DiPlay brings CarPlay back to the front;
+- the hang-up and menu keys end or decline the call (telephony HID Drop), through BYD's broadcast; no setting or service is needed;
+- with a CarPlay session, the CarPlay voice keys open Siri through the wheel key service. DiLink 3's play/pause key (331) toggles CarPlay playback.
+
+Outside a CarPlay call every call key keeps BYD's action, so the Bluetooth phone works as before.
+
+**Settings → BYD navigation → CarPlay calls on the dashboard** (optional, needs ADB over network) also writes what BYD's CarPlay app writes, through the adb shell (`BydCarPlayCallTool`, feature ids resolved on the car): the instrument's call state and caller (device 1007, `INSTRUMENT_CALL_STATE_SET`, `INSTRUMENT_CALL_INFO_SET` as UTF-16LE up to 60 bytes), the call time every second (`INSTRUMENT_CALL_TIME_HOUR/MINUTE/SECOND_SET`), the car's call state (device 1023, `SET_CALL_STATE_SET`, `SET_CMD_BTCALL_STATE_SET`: 2 ringing, 1 dialing, 3 active, 5 ended) and the audio system's CarPlay call status (device 1002, `AUDIO_CARPLAY_CALL_STATUS`: 0 in a call, 1 idle). The call time comes from a small watcher under the adb shell that also ends the call on the car if DiPlay's process goes away mid-call. Not yet checked in a car.
+
+The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.

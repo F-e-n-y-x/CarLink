@@ -2,6 +2,8 @@
 
 Add changes after 0.2.12 here.
 
+- DiLink 3: during a CarPlay call the wheel's call key answers, the hang-up and menu keys end or decline, and the CarPlay voice keys open Siri, instead of BYD's Bluetooth phone; DiLink 3's play/pause key (331) toggles CarPlay. Optional "CarPlay calls on the dashboard" (needs ADB) shows the caller and call time on the cluster and HUD like BYD's CarPlay app.
+
 # DiPlay 0.2.12 — 2026-10-04
 
 - Add Existing Wi-Fi / Same LAN wireless CarPlay with scoped IPv4/IPv6 discovery and network-change cleanup (#223).

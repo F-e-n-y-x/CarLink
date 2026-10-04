@@ -533,6 +533,23 @@ class CarPlayController(
         }
     }
 
+    /** Answers the ringing call on the iPhone (telephony Hook Switch), as the wheel's call button does. */
+    fun answerCall(): Boolean = sendTelephony(TELEPHONY_HOOK_SWITCH)
+
+    /** Ends the current call or declines the ringing one (telephony Drop). */
+    fun endCall(): Boolean = sendTelephony(TELEPHONY_DROP)
+
+    private fun sendTelephony(index: Int): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute { session.sendTelephony(index) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun sendMediaButton(index: Int): Boolean {
         if (closed) return false
         val session = activeSession ?: return false
@@ -2571,6 +2588,9 @@ class CarPlayController(
 
     companion object {
         const val CONNECTION_DIAGNOSTIC_PREFIX = "CONNECTION_DIAGNOSTIC"
+        // Indices in the telephony HID report (AirPlayHid.telephonyDescriptor).
+        private const val TELEPHONY_HOOK_SWITCH = 1
+        private const val TELEPHONY_DROP = 3
         private val diagnosticAttempts = AtomicInteger()
         private const val IAP2_IPHONE_UUID = "00000000-deca-fade-deca-deafdecacafe"
         private const val HOTSPOT_START_TIMEOUT_MILLIS = 60_000L

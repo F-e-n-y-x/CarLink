@@ -593,4 +593,6 @@
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
+    <string name="carplay_calls_on_dashboard">Llamadas de CarPlay en el cuadro</string>
+    <string name="carplay_calls_on_dashboard_description">Las llamadas de CarPlay entrantes y en curso muestran a quien llama en el cuadro de instrumentos, con la duración en el cuadro y en el head-up display, como la app CarPlay de BYD. El coche también baja el ventilador durante la llamada. Se aplica al instante. Requiere ADB por red en la unidad principal.</string>
 </resources>

@@ -605,4 +605,6 @@
     <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці та для руху екраном CarPlay. Лише отримує натискання кнопок і не читає екран.</string>
     <string name="cluster_song_on_change">Пісня лише при зміні</string>
     <string name="cluster_song_on_change_description">Нова пісня видна на приборці 5 секунд, потім картка порожніє. Пауза й продовження її не показують.</string>
+    <string name="carplay_calls_on_dashboard">Дзвінки CarPlay на приборці</string>
+    <string name="carplay_calls_on_dashboard_description">Вхідні та поточні дзвінки CarPlay показують абонента на приборці, а тривалість — на приборці й проєкційному дисплеї, як у штатному застосунку CarPlay від BYD. Під час дзвінка авто також знижує оберти вентилятора. Застосовується одразу. Потрібен ADB через мережу на головному пристрої.</string>
 </resources>
