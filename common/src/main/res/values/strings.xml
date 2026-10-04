@@ -430,6 +430,13 @@
     <string name="turn_card_vertical">Turn card · vertical</string>
     <string name="reset_turn_card_to_centre">Reset turn card to centre</string>
     <string name="turn_card_overlay_size">Custom turn card size</string>
+    <string name="turn_card_overlay_opacity">Custom turn card opacity</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">Arrive %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$dh %2$dmin</string>
+    <string name="turn_card_info_duration_m">%1$dmin</string>
+    <string name="turn_card_info_km">%1$.1f km</string>
     <string name="turn_card_overlay_horizontal">Custom turn card · left / right</string>
     <string name="turn_card_overlay_vertical">Custom turn card · up / down</string>
     <string name="turn_card_overlay_small">Small</string>
