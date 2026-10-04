@@ -1137,7 +1137,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyMediaChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(12, 60))
     }
 
     private fun navigationChannelControl(parent: LinearLayout) {
@@ -1154,7 +1154,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyNavigationChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(10, 60))
         parent.addView(label(getString(R.string.contrib_audio_home_nav_channel_note), 14, MUTED).apply {
             setPadding(0, dp(8), 0, dp(18))
         })
@@ -2914,7 +2914,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun button(title: String, primary: Boolean, click: () -> Unit) = Button(this).apply {
         text = title; isAllCaps = false; textSize = 18f; setTextColor(if (primary) BG else TEXT)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else SURFACE, if (primary) ACCENT else BORDER), null)
+        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else BUTTON, if (primary) ACCENT else BORDER), null)
         setPadding(dp(16), 0, dp(16), 0); minHeight = dp(56); stateListAnimator = null
         setOnClickListener { click() }
     }
@@ -2929,6 +2929,8 @@ class DiPlayActivity : ComponentActivity() {
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
         private val BG = Color.rgb(12, 17, 27)
         private val SURFACE = Color.rgb(21, 30, 44)
+        // One step lighter than a card, so a button reads as a button even where its 1 px border is faint.
+        private val BUTTON = Color.rgb(31, 43, 61)
         private val BORDER = Color.rgb(42, 56, 75)
         private val ACCENT = Color.rgb(166, 200, 255)
         private val TEXT = Color.rgb(241, 245, 252)
