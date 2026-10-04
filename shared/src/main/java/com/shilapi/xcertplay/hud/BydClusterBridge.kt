@@ -32,14 +32,8 @@ internal object BydClusterBridge {
     private var ticksSinceSend = 0
     private var guidanceLogged = false
 
-    // DiLink 3 cluster mode: switched over adb off the guidance lock, in request order.
-    private val clusterModeShell = BydAdbShell(TAG)
-    private val clusterModeExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "diplay-byd-cluster-mode").apply { isDaemon = true }
-    }
     private var guidanceActive = false
     private var mapShown = false
-    private var requestedMode: BydDiLink3ClusterMode.Mode? = null
 
     fun initialize(appContext: Context) = synchronized(lock) {
         if (context != null) return@synchronized
@@ -166,15 +160,7 @@ internal object BydClusterBridge {
     private fun applyClusterModeLocked() {
         if (adapter?.needsSimpleNavigationMode != true) return
         val appContext = context ?: return
-        val mode = BydDiLink3ClusterMode.desired(mapShown, guidanceActive, requestedMode) ?: return
-        if (mode == requestedMode) return
-        requestedMode = mode
-        clusterModeExecutor.execute {
-            val output = clusterModeShell.run(appContext, mode.command)
-            if (output != null) Log.i(TAG, "DiLink 3 cluster mode=$mode accepted=${BydDiLink3ClusterMode.accepted(output)}")
-            // Retry once ADB is approved; BydAdbShell throttles attempts. A refused call is not retried.
-            if (output == null) synchronized(lock) { if (requestedMode == mode) requestedMode = null }
-        }
+        BydDiLink3ClusterOutput.setDesired(appContext, mapShown, guidanceActive)
     }
 
     private fun putDiLink3Text(intent: Intent, frame: BydClusterFrame) {
@@ -190,29 +176,8 @@ internal object BydClusterBridge {
     /** DiLink 3 only: creates the cluster projection display in the background so the map window can find it. */
     fun prepareProjectionDisplay(appContext: Context) {
         if (BydAmapAdapter.find { installed(appContext, it) } != BydAmapAdapter.DILINK3) return
-        clusterModeExecutor.execute {
-            if (projectionDisplayPresent(appContext)) return@execute
-            for ((index, command) in BydDiLink3ClusterMode.CREATE_DISPLAY.withIndex()) {
-                if (index == BydDiLink3ClusterMode.CREATE_DISPLAY.lastIndex) {
-                    // Guidance or the map window may have chosen a mode meanwhile; reapply it instead.
-                    val chosen = synchronized(lock) { requestedMode }
-                    if (chosen != null) {
-                        clusterModeShell.run(appContext, chosen.command)
-                        break
-                    }
-                }
-                val output = clusterModeShell.run(appContext, command) ?: return@execute
-                if (!BydDiLink3ClusterMode.accepted(output)) {
-                    Log.w(TAG, "DiLink 3 cluster display step ${index + 1} refused")
-                    break
-                }
-                if (index < BydDiLink3ClusterMode.CREATE_DISPLAY.lastIndex) Thread.sleep(CREATE_DISPLAY_STEP_MILLIS)
-            }
-            Log.i(TAG, "DiLink 3 cluster display present=${projectionDisplayPresent(appContext)}")
-        }
+        BydDiLink3ClusterOutput.prepareDisplay(appContext) { projectionDisplayPresent(appContext) }
     }
-
-    private const val CREATE_DISPLAY_STEP_MILLIS = 3_000L
 
     private fun projectionDisplayPresent(appContext: Context): Boolean =
         appContext.getSystemService(android.hardware.display.DisplayManager::class.java)

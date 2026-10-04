@@ -173,3 +173,12 @@ What the iPhone expects, as observed with iOS 27 and checked against Apple's Car
 The player is Media3 ExoPlayer, which parses media in the app. The head unit's own MP4 parser (`libmmparser_lite.so` in `media.extractor`) aborted on progressive Safari video on a DiLink 5.0 Tang.
 
 What plays: video from Safari and from video player apps works in the car, including pause, seeking and the wheel keys. Apple TV sends HLS encrypted with `cbcs` (SAMPLE-AES) and keys for FairPlay, Widevine and PlayReady only; over AirPlay the iPhone brokers just the FairPlay key (`unhandledURL`, `streamingKey`), which needs a licensed FairPlay receiver, so Apple TV+ does not play here. When the car's player cannot play an item, DiPlay tells the iPhone as Apple's receiver does (`{type: error, error: {domain, code}, uuid}`), shows a short note and returns to CarPlay. Netflix does not support AirPlay. In testing YouTube played audio only.
+
+DiLink 3 cluster-mode changes keep a separate recovery journal before any
+`AutoContainer` command. If display creation fails after projection starts, DiPlay
+attempts projection-off immediately. A failed restoration stays pending and retries
+using already approved local ADB; reopening DiPlay also recovers an interrupted
+output even when navigation output has since been disabled. A new mode waits for
+that recovery. Android cannot guarantee restoration before force-stop; recovery
+runs after the app opens again. This journal does not change the stock-map package
+hold or the verified windshield HUD receiver checks.

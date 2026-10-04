@@ -8,6 +8,7 @@ object BydNavigationOutputs {
     /** Recover a journaled interrupted output when the app opens, even before a phone reconnects. */
     fun onAppOpened(context: Context) {
         BydOemClusterNavi.restoreIfNeeded(context)
+        BydDiLink3ClusterOutput.restoreIfNeeded(context)
         if (BydStandaloneHudOutput.available(context)) start(context)
         // Read the battery early, so a reading is ready when CarPlay identifies (see batteryStatus).
         if (BydOutputSettings.batteryToIphoneActive(context)) BydBatteryStatus.start(context)
