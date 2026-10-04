@@ -934,7 +934,6 @@ class CarPlayController(
     private fun runWireless(generation: Int) {
         try {
             debugLog("wireless bring-up generation=$generation starting")
-            debugLog("wireless diagnostic revision=lan-discovery-fix3")
             closeWirelessStack()
             if (
                 closed ||

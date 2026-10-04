@@ -10,7 +10,6 @@ import android.net.NetworkRequest
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.content.pm.PackageManager
 import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
@@ -125,9 +124,7 @@ class ExistingWifiManagerTest {
             assertNotNull(result.accessPointBssid)
             val line = diagnostics.single { line -> line.contains("Existing Wi-Fi attached") }
             val exported = DiagnosticRedactor.redact(line)!!
-            assertTrue(exported.contains("configCheck=verified"))
-            assertTrue(exported.contains("wifiInfoSource=station"))
-            assertTrue(exported.contains("apHint=present"))
+            assertTrue(exported.contains("networkNameReadable=true"))
             assertFalse(exported.contains("Pocket Wi-Fi"))
             assertFalse(exported.contains("pocket-password"))
             assertFalse(exported.contains("aa:bb:cc:dd:ee:ff"))
@@ -139,14 +136,10 @@ class ExistingWifiManagerTest {
     @Test fun restrictedStationAndCapabilitiesKeepManualFallbackAndOmitPlaceholder() {
         `when`(info.ssid).thenReturn(WifiManager.UNKNOWN_SSID)
         `when`(info.bssid).thenReturn("02:00:00:00:00:00")
-        `when`(context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION))
-            .thenReturn(PackageManager.PERMISSION_DENIED)
         manager().use {
             assertNull(start(it).accessPointBssid)
             val line = DiagnosticRedactor.redact(diagnostics.single { line -> line.contains("Existing Wi-Fi attached") })!!
-            assertTrue(line.contains("configCheck=manual_unverified"))
-            assertTrue(line.contains("apHint=omitted"))
-            assertTrue(line.contains("fineLocation=false"))
+            assertTrue(line.contains("networkNameReadable=false"))
         }
     }
 

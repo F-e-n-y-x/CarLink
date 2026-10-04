@@ -62,7 +62,6 @@ class CarPlayBonjourDualStackTest {
                 additionalAddresses = listOf(ipv4))
             bonjour.start()
             assertTrue(bonjour.diagnosticSnapshot().contains("mdnsFamilies=IPv6,IPv4"))
-            assertTrue(bonjour.diagnosticSnapshot().contains("mdnsBindings=IPv6:matched,IPv4:matched"))
             listOf(v6, v4).forEach { dns ->
                 verify(dns).registerService(any(ServiceInfo::class.java))
                 verify(dns).addServiceListener(eq("_carplay-ctrl._tcp.local."), any(ServiceListener::class.java))
@@ -97,7 +96,7 @@ class CarPlayBonjourDualStackTest {
         }
     }
 
-    @Test fun dualLanThenSingleP2pThenDualLanAcceptsHttpOnTheActualAirPlayPort() {
+    @Test fun dualLanThenSingleP2pThenDualLanServesAirPlayInfo() {
         val controller = Robolectric.buildService(CarPlayVpnService::class.java).create()
         val events = java.util.concurrent.CopyOnWriteArrayList<String>()
         var activeSessions = 0
@@ -114,8 +113,8 @@ class CarPlayBonjourDualStackTest {
                 for (address in listOf(InetAddress.getByName("::1")) + extras) {
                     java.net.Socket(address, service.boundPort()!!).use { socket ->
                         socket.soTimeout = 3000
-                        socket.getOutputStream().write("GET /diplay-network-check HTTP/1.1\r\nHost: test\r\n\r\n".toByteArray())
-                        val input = socket.getInputStream().bufferedReader()
+                        socket.getOutputStream().write("GET /info HTTP/1.1\r\nHost: test\r\n\r\n".toByteArray())
+                        val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
                         assertEquals("HTTP/1.1 200 OK", input.readLine())
                         var length = 0
                         while (true) {
@@ -126,14 +125,14 @@ class CarPlayBonjourDualStackTest {
                         val body = CharArray(length)
                         var offset = 0
                         while (offset < length) { val read = input.read(body, offset, length - offset); assertTrue(read > 0); offset += read }
-                        assertTrue(String(body).startsWith("DiPlay AirPlay TCP reachable."))
+                        assertTrue(String(body).startsWith("bplist00"))
                     }
                 }
                 assertTrue(service.isAttached())
                 service.detach()
             }
             assertEquals(0, activeSessions)
-            assertEquals(5, events.count { it.startsWith("airplay network-check received") })
+            assertEquals(5, events.count { it.startsWith("airplay rx GET /info") })
         } finally { controller.destroy() }
     }
 

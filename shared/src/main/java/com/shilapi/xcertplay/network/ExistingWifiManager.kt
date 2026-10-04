@@ -1,9 +1,6 @@
 package com.shilapi.xcertplay.network
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
@@ -28,7 +25,6 @@ class ExistingWifiManager(
     private val onDiagnostic: (String) -> Unit = {},
     private val onNetworkChanged: () -> Unit = {},
 ) : WirelessHotspotManager {
-    private val appContext = context.applicationContext
     private val connectivity = context.applicationContext.getSystemService(ConnectivityManager::class.java)
         ?: throw IllegalStateException("ConnectivityManager is unavailable")
     private val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
@@ -112,14 +108,6 @@ class ExistingWifiManager(
                         else -> throw IOException("Existing Wi-Fi requires an open or WPA2-Personal network")
                     }
                 }
-                val configCheck = if (liveSsid == null) "manual_unverified" else "verified"
-                val infoSource = when {
-                    info == null -> "unavailable"
-                    info === stationInfo -> "station"
-                    else -> "network"
-                }
-                val fineLocation = appContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                val locationEnabled = appContext.getSystemService(LocationManager::class.java)?.isLocationEnabled
                 synchronized(lock) {
                     check(!closed) { "ExistingWifiManager is closed" }
                     selected = network
@@ -139,10 +127,7 @@ class ExistingWifiManager(
                 }
                 onDiagnostic("Existing Wi-Fi attached iface=$name host=${address.hostAddress} " +
                     "networkNameReadable=${liveSsid != null} channel=$channel security=${security()} " +
-                    "receiverIdentity=saved configCheck=$configCheck wifiInfoSource=$infoSource " +
-                    "apHint=${if (apBssid == null) "omitted" else "present"} " +
-                    "fineLocation=$fineLocation locationEnabled=${locationEnabled ?: "unknown"} " +
-                    "observedSecurity=$observedSecurity")
+                    "receiverIdentity=saved")
                 return WirelessHotspotInfo(ssid, passphrase, security(), channel, frequency,
                     // The router's BSSID is not this receiver's AirPlay device identity.
                     null, name, address, when {

@@ -5,16 +5,6 @@ import org.junit.Test
 import java.nio.file.Files
 
 class DiagnosticRedactorTest {
-    @Test fun bootstrapStructureAndMdnsCountersSurviveExport() {
-        val lines = listOf(
-            "iap2 wire tx=0x5703 fields=1/9,2/12,3/1,4/1 networkMatch=true apBytes=omitted",
-            "iap2 wire tx=0x4301 fields=1/80,2/4,3/18,4/65,5/6 networkMatch=true wifiFields=0,1,2,3,4 endpointMatch=true zoneOnWire=false receiverMatch=true portMatch=true",
-            "mdnsWire family=IPv4 state=joined ownQuery=4 ownResponse=3 peerQuery=5 peerResponse=8 peerAirplay=2 peerControl=0 malformed=0",
-            "airplay network-check received family=IPv4",
-        )
-        lines.forEach { assertEquals(it, DiagnosticRedactor.redact(it)) }
-    }
-
     @Test fun additionalTroubleshootingMetadataSurvivesSavedReportWithoutPayloads() {
         val lines = listOf(
             "wireless startup elapsedMs=10000 authenticated=true wifiConfigs=2 startRequests=1 tcpAccepted=0 sessionActive=false waitingFor=WiFi_discovery_or_AirPlay_TCP startRequestAgeMs=9000 firstTcpAfterStartMs=none",
@@ -129,9 +119,6 @@ class DiagnosticRedactorTest {
             "Wi-Fi P2P create rejected code=0 reason=generic error",
             "Wi-Fi P2P ready mode=FIXED_2_GHZ band=2.4 GHz channel=6 frequencyMHz=2437",
             "Wi-Fi P2P channel requestedMHz=2437 actualMHz=2412 matched=false",
-            "iap2 tx=0x5703 accessory-wifi-configuration apHint=present channel=149 security=2",
-            "iap2 tx=0x4301 carplay-start-session families=IPv6-linklocal port=7000 channel=149 security=2",
-            "wireless snapshot mdnsBindings=IPv6:matched,IPv4:matched",
             "wireless hotspot backend=Wi-Fi P2P iface=p2p0 host=192.168.49.1 band=5 GHz channel=36 frequency=5180MHz",
         )
         for (line in lines) assertNotNull(line, DiagnosticRedactor.redact(line))
