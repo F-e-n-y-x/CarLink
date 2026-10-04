@@ -78,6 +78,7 @@ class AirPlaySession(
     @Volatile var clusterStream = 0
         private set
     private var clusterStreamSetups = 0
+    @Volatile private var mainScreenToken: Any? = null
 
     private val closed = AtomicBoolean(false)
     private val notified = AtomicBoolean(false)
@@ -130,6 +131,7 @@ class AirPlaySession(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        mainScreenToken = null
         safeClose(socket)
         try {
             media.onSessionClosed(this)
@@ -139,6 +141,9 @@ class AirPlaySession(
         teardown()
         if (notified.compareAndSet(false, true)) listener.onSessionEnded(this)
     }
+
+    /** Stable identity of the usable primary screen; replaced on SETUP, absent after teardown/close. */
+    internal fun mainScreenSessionToken(): Any? = if (closed.get()) null else mainScreenToken
 
     /**
      * Asks the iPhone to draw CarPlay's cluster UI on the alt screen (showUI with the display's URL,
@@ -555,6 +560,7 @@ class AirPlaySession(
                     if (port != null) {
                         activeStreams.add(type)
                         if (type == STREAM_TYPE_ALT_SCREEN) clusterStream = ++clusterStreamSetups
+                        else mainScreenToken = Any()
                         result.add(linkedMapOf("type" to type, "dataPort" to port))
                     }
                 }
@@ -626,6 +632,8 @@ class AirPlaySession(
         )
         trace("airplay TEARDOWN raw${request.body.size}Hex=${request.body.toHex()}")
 
+        // Restore wheel input before releasing media resources, which may take time to close.
+        if (types == null || STREAM_TYPE_MAIN_SCREEN in types) mainScreenToken = null
         if (types == null) {
             activeStreams.toList().forEach { media.onTeardown(this, it) }
             activeStreams.clear()

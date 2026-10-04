@@ -46,7 +46,7 @@ class WheelKeyService : AccessibilityService() {
     }
     // This read is nonblocking: no ADB, input-device query or network lock in the periodic poll.
     internal var mapRoute: () -> Any? = { CarPlayBackgroundSession.snapshot()?.controller?.dashboardMapRoute() }
-    internal var session: () -> Any? = { CarPlayBackgroundSession.snapshot()?.controller }
+    internal var session: () -> Any? = { CarPlayBackgroundSession.snapshot()?.controller?.activeAirPlaySessionToken() }
     internal var knob: (AirPlayKnobState) -> Boolean = { CarPlayBackgroundSession.snapshot()?.controller?.sendKnob(it) == true }
     internal var routeActive: () -> Boolean = { CarPlayGlance.snapshot().maneuverType != null }
 
