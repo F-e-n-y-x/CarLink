@@ -50,6 +50,11 @@ On API 31+, observed open/secured mismatches and unsupported security types fail
 an SAE station connection can still be a WPA2/WPA3 mixed AP and does not prove WPA3-only.
 Unknown channel data stays zero (auto); it is never invented from user preferences.
 
+JmDNS registry family selection uses `getInetAddress()`. Its deprecated `getInterface()`
+can return another address of the same interface on Android, causing a false binding
+mismatch and discarding valid IPv4 discovery results. TXT feature bits now share the
+same source as `/info`, including the audio-disabled configuration.
+
 Related work: [upstream PR #22](https://github.com/shihabal3amri/DiPlay/pull/22) also
 proposes external Wi-Fi as part of an Android 7 port. This change targets the current
 mainline network/discovery stack and does not import that port or its protocol changes.
@@ -69,6 +74,32 @@ SSID mismatch, missing/ambiguous Wi-Fi, network loss/address change, callback cl
 credential persistence and setup cancellation. The controller test verifies this mode
 bypasses hotspot control even with automatic hotspot startup saved and the AP off.
 Existing hotspot and Wi-Fi Direct tests are run alongside these.
+
+For a failed bootstrap, the report includes the actual sent 0x5703/0x4301 parameter
+IDs and lengths, value-match booleans, and whether a scope suffix escaped into the
+wire address. No network credentials, identifiers, raw messages or their hashes are
+exported. P2P's optional AP parameter remains omitted; no alternate bootstrap sequence
+is introduced for Same LAN.
+
+During the first 90 seconds, a passive observer joins mDNS on each selected family.
+`mdnsWire` distinguishes local and peer queries/responses and counts only the fixed
+AirPlay/CarPlay service types. It sends nothing and closes with discovery. Peer counts
+do not identify a particular iPhone; local packets do not prove reception by a peer.
+Unavailable observers report an error class, so zero traffic is not confused with a
+failed join. These diagnostics replace reliance on inaccessible Android kernel counters.
+
+After recording a failed Same LAN attempt, an iPhone browser can open
+`http://<Android Wi-Fi IPv4>:<AirPlay port>/diplay-network-check` (normally port 7000).
+The response tests the actual AirPlay listener without pairing or activating a session.
+The report marks this as `airplay network-check received`; the resulting TCP accept
+must not be interpreted as an automatic CarPlay connection. IPv4 success alone does
+not establish IPv6 link-local reachability.
+
+When investigating a mode-switch regression, test P2P first in a fresh app process,
+then Same LAN, then P2P again. Record the iPhone's actual Wi-Fi membership on a failed
+P2P attempt: Android's legacy P2P client count may omit iPhones. If P2P already fails
+before Same LAN, compare the previously successful APK without clearing app data or
+pairing; otherwise there is no controlled evidence of a binary regression.
 
 Local tests cannot establish the iPhone’s final behavior on this topology. With an
 appropriately provisioned test build, check that both devices remain on the portable

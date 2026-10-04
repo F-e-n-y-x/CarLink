@@ -5,6 +5,16 @@ import org.junit.Test
 import java.nio.file.Files
 
 class DiagnosticRedactorTest {
+    @Test fun bootstrapStructureAndMdnsCountersSurviveExport() {
+        val lines = listOf(
+            "iap2 wire tx=0x5703 fields=1/9,2/12,3/1,4/1 networkMatch=true apBytes=omitted",
+            "iap2 wire tx=0x4301 fields=1/80,2/4,3/18,4/65,5/6 networkMatch=true wifiFields=0,1,2,3,4 endpointMatch=true zoneOnWire=false receiverMatch=true portMatch=true",
+            "mdnsWire family=IPv4 state=joined ownQuery=4 ownResponse=3 peerQuery=5 peerResponse=8 peerAirplay=2 peerControl=0 malformed=0",
+            "airplay network-check received family=IPv4",
+        )
+        lines.forEach { assertEquals(it, DiagnosticRedactor.redact(it)) }
+    }
+
     @Test fun additionalTroubleshootingMetadataSurvivesSavedReportWithoutPayloads() {
         val lines = listOf(
             "wireless startup elapsedMs=10000 authenticated=true wifiConfigs=2 startRequests=1 tcpAccepted=0 sessionActive=false waitingFor=WiFi_discovery_or_AirPlay_TCP startRequestAgeMs=9000 firstTcpAfterStartMs=none",

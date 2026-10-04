@@ -53,8 +53,8 @@ class CarPlayBonjourDualStackTest {
         setup()
         val v4 = mock(JmDNS::class.java)
         val v6 = mock(JmDNS::class.java)
-        `when`(v4.getInterface()).thenReturn(ipv4)
-        `when`(v6.getInterface()).thenReturn(ipv6)
+        `when`(v4.inetAddress).thenReturn(ipv4)
+        `when`(v6.inetAddress).thenReturn(ipv6)
         mockStatic(JmDNS::class.java).use { factory ->
             factory.`when`<JmDNS> { JmDNS.create(ipv6, "carplay-020000000002") }.thenReturn(v6)
             factory.`when`<JmDNS> { JmDNS.create(ipv4, "carplay-020000000002") }.thenReturn(v4)
@@ -73,6 +73,68 @@ class CarPlayBonjourDualStackTest {
             verify(v4).close()
             verify(lock).release()
         }
+    }
+
+    @Test fun registryAddressControlsFamilyEvenWhenDeprecatedInterfaceReturnsTheOtherFamily() {
+        setup()
+        val dns = mock(JmDNS::class.java)
+        `when`(dns.inetAddress).thenReturn(ipv4)
+        `when`(dns.getInterface()).thenReturn(ipv6) // Android's arbitrary interface address.
+        val info = mock(ServiceInfo::class.java)
+        `when`(info.inetAddresses).thenReturn(arrayOf(InetAddress.getByName("192.0.2.20")))
+        `when`(info.port).thenReturn(7000)
+        val event = mock(javax.jmdns.ServiceEvent::class.java)
+        `when`(event.dns).thenReturn(dns)
+        `when`(event.info).thenReturn(info)
+        `when`(event.name).thenReturn("test-phone")
+        CarPlayBonjour(context, config, identity, ipv6.hostAddress, true,
+            additionalAddresses = listOf(ipv4)).use { bonjour ->
+            val listener = ReflectionHelpers.getField<ServiceListener>(bonjour, "interfaceListener")
+            listener.serviceResolved(event)
+            val queue = ReflectionHelpers.getField<java.util.concurrent.LinkedBlockingQueue<*>>(bonjour, "interfaceServices")
+            assertEquals(1, queue.size)
+            verify(dns, never()).getInterface()
+        }
+    }
+
+    @Test fun dualLanThenSingleP2pThenDualLanAcceptsHttpOnTheActualAirPlayPort() {
+        val controller = Robolectric.buildService(CarPlayVpnService::class.java).create()
+        val events = java.util.concurrent.CopyOnWriteArrayList<String>()
+        var activeSessions = 0
+        try {
+            val service = controller.get()
+            for (extras in listOf(listOf(InetAddress.getByName("127.0.0.1")), emptyList(),
+                                  listOf(InetAddress.getByName("127.0.0.1")))) {
+                assertEquals(CarPlayVpnService.AttachResult.Started, service.attachWireless(
+                    InetAddress.getByName("::1"), config.copy(port = 0), identity, PairingStore(), null,
+                    object : AirPlaySessionListener {
+                        override fun onDebugLog(message: String) { events.add(message) }
+                        override fun onSessionActive(session: com.shilapi.xcertplay.airplay.AirPlaySession) { activeSessions++ }
+                    }, object : AirPlayMediaHandler {}, extras))
+                for (address in listOf(InetAddress.getByName("::1")) + extras) {
+                    java.net.Socket(address, service.boundPort()!!).use { socket ->
+                        socket.soTimeout = 3000
+                        socket.getOutputStream().write("GET /diplay-network-check HTTP/1.1\r\nHost: test\r\n\r\n".toByteArray())
+                        val input = socket.getInputStream().bufferedReader()
+                        assertEquals("HTTP/1.1 200 OK", input.readLine())
+                        var length = 0
+                        while (true) {
+                            val line = input.readLine()
+                            if (line.isEmpty()) break
+                            if (line.startsWith("Content-Length:")) length = line.substringAfter(':').trim().toInt()
+                        }
+                        val body = CharArray(length)
+                        var offset = 0
+                        while (offset < length) { val read = input.read(body, offset, length - offset); assertTrue(read > 0); offset += read }
+                        assertTrue(String(body).startsWith("DiPlay AirPlay TCP reachable."))
+                    }
+                }
+                assertTrue(service.isAttached())
+                service.detach()
+            }
+            assertEquals(0, activeSessions)
+            assertEquals(5, events.count { it.startsWith("airplay network-check received") })
+        } finally { controller.destroy() }
     }
 
     @Test fun probesSelectMatchingLocalFamilyAndApplyIpv6InterfaceScope() {

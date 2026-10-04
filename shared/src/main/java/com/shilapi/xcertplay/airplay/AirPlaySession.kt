@@ -388,6 +388,14 @@ class AirPlaySession(
     }
 
     private fun handle(request: RtspMessage.Request): RtspMessage.Response {
+        if (request.method == "GET" && request.path == "/diplay-network-check") {
+            // A browser can verify the actual AirPlay TCP port without pairing or media setup.
+            // This event is deliberately distinct from a successful CarPlay session.
+            debugLog("airplay network-check received family=${if (socket.inetAddress is java.net.Inet6Address) "IPv6" else "IPv4"}")
+            return RtspMessage.Response(headers = mapOf("Content-Type" to "text/plain; charset=utf-8",
+                "Cache-Control" to "no-store"),
+                body = "DiPlay AirPlay TCP reachable. This is a network check, not a CarPlay session.\n".toByteArray())
+        }
         when (request.method) {
             "SETUP" -> return handleSetup(request)
             "RECORD" -> {

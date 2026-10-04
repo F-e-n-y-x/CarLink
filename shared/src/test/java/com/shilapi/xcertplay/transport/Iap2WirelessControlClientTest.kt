@@ -136,12 +136,38 @@ class Iap2WirelessControlClientTest {
         assertEquals("families=IPv4 port=49152 channel=36 security=3", Iap2WirelessControlClient.startSessionSummary(config))
     }
 
-    private fun endpoint(ap: ByteArray? = null): Iap2WirelessCarPlayEndpoint = Iap2WirelessCarPlayEndpoint(
+    @Test fun sameLanHintDoesNotLeakIntoSubsequentP2pFrames() {
+        val p2p = endpoint()
+        val before = Iap2WirelessControlClient.accessoryWiFiConfiguration(p2p).encodedFrame()
+        val lan = endpoint(byteArrayOf(2, 3, 4, 5, 6, 7))
+        repeat(2) {
+            assertEquals(listOf(0, 1, 2, 3, 4), parameters(Iap2WirelessControlClient.accessoryWiFiConfiguration(lan).payload).map { it.id })
+        }
+        assertArrayEquals(before, Iap2WirelessControlClient.accessoryWiFiConfiguration(endpoint()).encodedFrame())
+        assertEquals(listOf(1, 2, 3, 4), parameters(Iap2WirelessControlClient.accessoryWiFiConfiguration(endpoint()).payload).map { it.id })
+    }
+
+    @Test fun wireInspectionDetectsWrongNetworkFieldsAndScopedAddressesWithoutLeakingValues() {
+        val config = endpoint()
+        val valid = Iap2WirelessControlClient.carPlayStartSession(config)
+        val good = Iap2WirelessControlClient.bootstrapWireDiagnostic(valid, config)
+        assertTrue(good.contains("networkMatch=true"))
+        assertTrue(good.contains("endpointMatch=true zoneOnWire=false receiverMatch=true portMatch=true"))
+        assertFalse(good.contains("secret123"))
+        assertFalse(good.contains("192.168.2.1"))
+        val wrong = Iap2WirelessMessages.accessoryWiFiConfiguration("other", "different", 1, 0)
+        assertTrue(Iap2WirelessControlClient.bootstrapWireDiagnostic(wrong, config).contains("networkMatch=false"))
+        val scoped = endpoint(addresses = listOf("fe80::1234%wlan0"))
+        assertTrue(Iap2WirelessControlClient.bootstrapWireDiagnostic(
+            Iap2WirelessControlClient.carPlayStartSession(scoped), scoped).contains("zoneOnWire=true"))
+    }
+
+    private fun endpoint(ap: ByteArray? = null, addresses: List<String> = listOf("192.168.2.1")): Iap2WirelessCarPlayEndpoint = Iap2WirelessCarPlayEndpoint(
         ssid = "LIVI",
         passphrase = "secret123",
         channel = 36,
         security = Iap2WirelessSecurity.WPA3_TRANSITION,
-        ipAddresses = listOf("192.168.2.1"),
+        ipAddresses = addresses,
         airPlayPort = 49152,
         deviceIdentifier = "dev-1",
         publicKey = "aabbcc",

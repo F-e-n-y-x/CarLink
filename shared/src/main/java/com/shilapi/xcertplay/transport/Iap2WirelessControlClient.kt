@@ -5,6 +5,8 @@ import com.shilapi.xcertplay.iap2.message.Iap2WirelessMessages
 import com.shilapi.xcertplay.iap2.message.Iap2WirelessSessionParameters
 import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
+import com.shilapi.xcertplay.iap2.wire.Iap2ParameterList
+import com.shilapi.xcertplay.iap2.wire.Iap2WireCodec
 import com.shilapi.xcertplay.mfi.Iap2MfiAuthenticationClient
 import kotlin.math.min
 
@@ -136,7 +138,7 @@ class Iap2WirelessControlClient(
                                 "iap2 0x5703 ignored: maximum Wi-Fi configuration sends reached",
                             )
                         } else {
-                            send(accessoryWiFiConfiguration(endpoint), deadlineNanos)
+                            sendBootstrap(accessoryWiFiConfiguration(endpoint), endpoint, deadlineNanos, onProgress)
                             stage = later(
                                 stage,
                                 if (postTransport) {
@@ -158,7 +160,7 @@ class Iap2WirelessControlClient(
                     CARPLAY_AVAILABILITY -> {
                         onProgress("iap2 rx=0x4300 carplay-availability")
                         onProgress(carPlayAvailabilityDiagnostic(incoming))
-                        send(carPlayStartSession(endpoint), deadlineNanos)
+                        sendBootstrap(carPlayStartSession(endpoint), endpoint, deadlineNanos, onProgress)
                         stage = later(stage, Iap2WirelessControlStage.CARPLAY_START_SENT)
                         carPlayStartSessionsSent++
                         onProgress("iap2 tx=0x4301 carplay-start-session ${startSessionSummary(endpoint)}")
@@ -189,7 +191,7 @@ class Iap2WirelessControlClient(
                                     "maximum Wi-Fi configuration sends reached",
                             )
                         } else {
-                            send(accessoryWiFiConfiguration(endpoint), deadlineNanos)
+                            sendBootstrap(accessoryWiFiConfiguration(endpoint), endpoint, deadlineNanos, onProgress)
                             stage = later(
                                 stage,
                                 Iap2WirelessControlStage.POST_TRANSPORT_WIFI_CONFIG_SENT,
@@ -227,7 +229,46 @@ class Iap2WirelessControlClient(
         session.send(frame, requireRemaining(deadlineNanos))
     }
 
+    private fun sendBootstrap(frame: Iap2Frame, endpoint: Iap2WirelessCarPlayEndpoint,
+                              deadlineNanos: Long, onProgress: (String) -> Unit) {
+        send(frame, deadlineNanos)
+        onProgress(bootstrapWireDiagnostic(frame, endpoint))
+    }
+
     companion object {
+        /** Inspect the bytes actually handed to the CSM sender; never log values or hashes. */
+        internal fun bootstrapWireDiagnostic(frame: Iap2Frame, endpoint: Iap2WirelessCarPlayEndpoint): String = try {
+            val outer = Iap2ParameterList.parse(frame.payload).asList()
+            val wifi = if (frame.messageId == 0x5703) outer else
+                Iap2ParameterList.parse(outer.single { it.id == 1 }.payload).asList()
+            fun matches(id: Int, value: ByteArray) = wifi.singleOrNull { it.id == id }?.payload?.contentEquals(value) == true
+            val configuration = frame.messageId == 0x5703
+            val networkMatch = matches(if (configuration) 1 else 0, Iap2WireCodec.string(endpoint.ssid)) &&
+                matches(if (configuration) 2 else 1, Iap2WireCodec.string(endpoint.passphrase)) &&
+                matches(if (configuration) 4 else 2, byteArrayOf(endpoint.channel.toByte())) &&
+                matches(if (configuration) 3 else 4, byteArrayOf(endpoint.security.wireValue.toByte()))
+            val shape = outer.joinToString(",") { "${it.id}/${it.payload.size}" }
+            val detail = if (configuration) {
+                "apBytes=${wifi.singleOrNull { it.id == 0 }?.payload?.size ?: "omitted"}"
+            } else {
+                val addresses = wifi.filter { it.id == 3 }.map { it.payload }
+                val endpointMatch = addresses.size == endpoint.ipAddresses.size && addresses.zip(endpoint.ipAddresses).all {
+                    (wire, text) -> wire.contentEquals(Iap2WireCodec.string(text))
+                }
+                val receiverMatch = outer.singleOrNull { it.id == 3 }?.payload
+                    ?.contentEquals(Iap2WireCodec.string(endpoint.deviceIdentifier)) == true &&
+                    outer.singleOrNull { it.id == 4 }?.payload
+                        ?.contentEquals(Iap2WireCodec.string(endpoint.publicKey)) == true
+                val portMatch = outer.singleOrNull { it.id == 2 }?.payload
+                    ?.contentEquals(Iap2WireCodec.u32(endpoint.airPlayPort.toLong())) == true
+                "wifiFields=${wifi.joinToString(",") { it.id.toString() }} endpointMatch=$endpointMatch " +
+                    "zoneOnWire=${addresses.any { '%'.code.toByte() in it }} receiverMatch=$receiverMatch portMatch=$portMatch"
+            }
+            "iap2 wire tx=0x${frame.messageId.toString(16)} fields=$shape networkMatch=$networkMatch $detail"
+        } catch (error: Exception) {
+            "iap2 wire tx=0x${frame.messageId.toString(16)} inspect=failed failureClass=${error.javaClass.simpleName}"
+        }
+
         private const val REQUEST_ACCESSORY_WIFI_CONFIGURATION = 0x5702
         private const val ACCESSORY_WIFI_CONFIGURATION = 0x5703
         private const val CARPLAY_AVAILABILITY = 0x4300

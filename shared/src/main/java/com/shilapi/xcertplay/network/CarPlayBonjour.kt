@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import com.shilapi.xcertplay.airplay.AirPlayConfig
 import com.shilapi.xcertplay.airplay.AirPlayIdentity
+import com.shilapi.xcertplay.airplay.AirPlayInfoPlist
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.IOException
@@ -72,12 +73,18 @@ fun CarPlayBonjourEvent.diagnosticSummary(): String = when (this) {
 
 /** Pure protocol values shared by the Android runtime and JVM tests. */
 object CarPlayBonjourProtocol {
+    internal fun featuresTxt(features: Long): String {
+        val low = "0x${(features and 0xffffffffL).toString(16)}"
+        val high = features ushr 32
+        return if (high == 0L) low else "$low,0x${high.toString(16)}"
+    }
+
     fun airPlayTxtRecords(
         config: AirPlayConfig,
         identity: AirPlayIdentity,
     ): Map<String, String> = linkedMapOf(
         "deviceid" to config.deviceId,
-        "features" to "0x44540380,0x61",
+        "features" to featuresTxt(AirPlayInfoPlist.features(config)),
         "flags" to "0x4",
         "model" to config.model,
         "srcvers" to config.sourceVersion,
@@ -145,6 +152,7 @@ class CarPlayBonjour(
     private val lifecycleLock = Any()
     private val localAdvertisedAddress = advertisedHostAddress()
     private val advertisedAddresses = (listOfNotNull(localAdvertisedAddress) + additionalAddresses).distinct()
+    private val wireDiagnostics = WirelessMdnsDiagnostics(advertisedAddresses)
     @Volatile private var publishedFamilies = "none"
     @Volatile private var publishedBindings = "none"
     private val addedCount = AtomicInteger()
@@ -159,7 +167,8 @@ class CarPlayBonjour(
         "bonjourAdded=${addedCount.get()} bonjourResolved=${resolvedCount.get()} " +
             "bonjourAddressMismatch=${addressMismatchCount.get()} connectProbes=${probeCount.get()} " +
             "connectProbe2xx=${successfulProbeCount.get()} lastProbe=${lastProbe.get()} " +
-            "mdnsFamilies=$publishedFamilies mdnsBindings=$publishedBindings"
+            "mdnsFamilies=$publishedFamilies mdnsBindings=$publishedBindings\n" +
+            wireDiagnostics.snapshot()
     private val multicastLock = (context.applicationContext ?: context)
         .getSystemService(WifiManager::class.java)
         .createMulticastLock("carplay-bonjour").apply { setReferenceCounted(false) }
@@ -184,7 +193,7 @@ class CarPlayBonjour(
         }
 
         override fun serviceRemoved(event: ServiceEvent) {
-            seenServices.remove("${event.name}|${event.dns.getInterface() is Inet4Address}")
+            seenServices.remove("${event.name}|${event.dns.inetAddress is Inet4Address}")
         }
 
         override fun serviceResolved(event: ServiceEvent) {
@@ -192,7 +201,7 @@ class CarPlayBonjour(
             val info = event.info
             // Each registry browses its own multicast family; keep the probe on that family.
             val address = info.inetAddresses.firstOrNull {
-                (it is Inet4Address) == (event.dns.getInterface() is Inet4Address)
+                (it is Inet4Address) == (event.dns.inetAddress is Inet4Address)
             }?.let(::applyLocalScope)
             if (address == null || info.port !in 1..65535) {
                 discoveryEvents.offer(CarPlayBonjourEvent.Discovery(
@@ -268,11 +277,14 @@ class CarPlayBonjour(
                         "Interface mDNS requires a local advertised address"
                     }
                     // A JmDNS instance joins only its address family's multicast group.
+                    wireDiagnostics.start()
                     val bindings = mutableListOf<String>()
                     for (address in advertisedAddresses) {
                         val dns = JmDNS.create(address, "carplay-${config.deviceId.replace(":", "")}")
                         interfaceMdns.add(dns)
-                        val bound = runCatching { dns.getInterface() }.getOrNull()
+                        // getInterface() returns an arbitrary address of the multicast interface
+                        // on Android. JmDNS explicitly deprecates it; it is not the registry family.
+                        val bound = runCatching { dns.inetAddress }.getOrNull()
                         val matches = bound != null && bound.address.contentEquals(address.address) &&
                             (address !is Inet6Address || (bound as? Inet6Address)?.scopeId == address.scopeId)
                         bindings.add("${if (address is Inet4Address) "IPv4" else "IPv6"}:" +
@@ -317,6 +329,7 @@ class CarPlayBonjour(
                 interfaceMdns.clear()
                 publishedFamilies = "none"
                 publishedBindings = "none"
+                wireDiagnostics.close()
                 if (multicastLock.isHeld) multicastLock.release()
                 throw error
             }
@@ -346,6 +359,7 @@ class CarPlayBonjour(
             interfaceMdns.clear()
             publishedFamilies = "none"
             publishedBindings = "none"
+            wireDiagnostics.close()
             workerToJoin = worker
             worker = null
             workerToJoin?.interrupt()
