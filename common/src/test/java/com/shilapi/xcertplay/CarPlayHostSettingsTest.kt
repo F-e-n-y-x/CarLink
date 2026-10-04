@@ -271,6 +271,54 @@ class CarPlayHostSettingsTest {
         assertEquals(false, method.invoke(activity, Intent(UsbManager.ACTION_USB_DEVICE_DETACHED).putExtra(UsbManager.EXTRA_DEVICE, device)))
     }
 
+    @Test fun cancelRestoresSafeAreaResetAfterTheWindowChangesSize() {
+        val original = SafeAreaRect(20, 20, 1800, 900)
+        AirPlayPersistence.saveSafeAreaRect(activity, 1920, 942, original)
+        invoke("openSettingsMenu")
+        resizeWindow(1920, 942)
+        invoke("resetSafeAreaForCurrentSize")
+        assertNull(AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
+
+        invoke("cancelSettingsEdits")
+
+        assertEquals(original, AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
+    }
+
+    @Test fun cancelRemovesNewSafeAreaSavedAtAnotherWindowSize() {
+        invoke("openSettingsMenu")
+        resizeWindow(1920, 942)
+        invoke("openSafeAreaEditor")
+        val editor = field("safeAreaEditorView") as SafeAreaEditorView
+        editor.setRect(SafeAreaRect(20, 20, 1800, 900), 1920, 942)
+        invoke("saveSafeAreaEditor")
+        assertNotNull(AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
+
+        invoke("cancelSettingsEdits")
+
+        assertNull(AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
+    }
+
+    @Test fun savingKeepsSafeAreaEditsMadeAfterAWindowResize() {
+        invoke("openSettingsMenu")
+        resizeWindow(1920, 942)
+        invoke("openSafeAreaEditor")
+        val edited = SafeAreaRect(20, 20, 1800, 900)
+        (field("safeAreaEditorView") as SafeAreaEditorView).setRect(edited, 1920, 942)
+        invoke("saveSafeAreaEditor")
+
+        invoke("saveSettingsAndReconnect")
+
+        assertFalse(field("menuOpen") as Boolean)
+        assertEquals(edited, AirPlayPersistence.loadSafeAreaRect(activity, 1920, 942))
+    }
+
+    private fun resizeWindow(width: Int, height: Int) {
+        val sizeClass = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
+        val size = sizeClass.getDeclaredConstructor(Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }.newInstance(width, height)
+        setField("activeDisplaySize", size)
+    }
+
     private fun gesture(fingers: Int, x: Float = 400f, y: Float = 700f) {
         touch(MotionEvent.ACTION_DOWN, 1, 100f)
         for (count in 2..fingers) touch(MotionEvent.ACTION_POINTER_DOWN, count, 100f)
