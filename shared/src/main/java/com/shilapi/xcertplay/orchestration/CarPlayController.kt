@@ -443,6 +443,21 @@ class CarPlayController(
     }
 
     /** Sends one CarPlay media-button press (an [com.shilapi.xcertplay.airplay.AirPlayHid] media index). */
+    /** The iPhone is streaming the dashboard (cluster) map right now. */
+    fun dashboardMapStreaming(): Boolean = !closed && (activeSession?.clusterStream ?: 0) > 0
+
+    /** One zoom step for the dashboard map, as the car's own zoom controls send it. */
+    fun zoomDashboardMap(zoomIn: Boolean): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        return try {
+            touchExecutor.execute { session.changeMapZoomLevel(zoomIn) }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** Opens Siri on the iPhone, as the car's voice button does in CarPlay. */
     fun requestSiri(): Boolean {
         if (closed) return false

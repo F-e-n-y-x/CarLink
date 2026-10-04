@@ -546,4 +546,27 @@
     <string name="diagnostic_report_saved_in_app">El informe se guardó de forma privada en DiPlay porque no había una ubicación pública disponible. Compártelo o míralo aquí. No se envía nada automáticamente.</string>
     <string name="view_diagnostic_report">Ver informe</string>
     <string name="diagnostic_report_copy_hint">Mantén pulsado el texto del informe para seleccionarlo y copiarlo. Puedes usar esta opción si no hay una aplicación para compartir.</string>
+    <string name="wheel_map_zoom">Zoom del mapa del panel con el volante</string>
+    <string name="wheel_map_zoom_description">El botón personalizable de BYD cambia los botones de volumen entre el volumen y el zoom del mapa del panel mientras el panel de instrumentos muestra el mapa de CarPlay. Durante una llamada siempre controlan el volumen. En algunos coches el volumen de la consola envía los mismos botones, así que también hace zoom mientras el zoom está activo. Usa el servicio de botones del volante de DiPlay; el aviso en el panel necesita ADB.</string>
+    <string name="wheel_keys_service_on">Servicio de botones del volante: activado</string>
+    <string name="wheel_keys_service_starting">Servicio de botones del volante: permitido, iniciando…</string>
+    <string name="wheel_keys_service_off">Servicio de botones del volante: desactivado</string>
+    <string name="wheel_keys_enable_adb">Activar el servicio de botones del volante · ADB</string>
+    <string name="wheel_keys_adb_failed">ADB no está disponible: %1$s</string>
+    <string name="wheel_keys_open_settings">Abrir ajustes de accesibilidad</string>
+    <string name="wheel_keys_no_settings">Esta unidad no tiene pantalla de ajustes de accesibilidad. Usa el botón de ADB.</string>
+    <string name="wheel_zoom_behaviour">Botón de modo</string>
+    <string name="wheel_zoom_behaviour_toggle">cambia hasta volver a pulsarlo</string>
+    <string name="wheel_zoom_behaviour_timed">zoom durante 5 segundos</string>
+    <string name="wheel_key_role_mode">modo</string>
+    <string name="wheel_key_role_zoom_in">acercar</string>
+    <string name="wheel_key_role_zoom_out">alejar</string>
+    <string name="wheel_key_assign">Botón para %1$s: %2$s · toca para cambiarlo</string>
+    <string name="wheel_key_press">Pulsa ahora el botón del volante para %1$s…</string>
+    <string name="wheel_zoom_mode_on">Los botones de volumen ahora hacen zoom en el mapa del panel</string>
+    <string name="wheel_zoom_mode_off">Los botones de volumen vuelven a controlar el volumen</string>
+    <string name="wheel_zoom_note_zoom">Zoom del mapa</string>
+    <string name="wheel_zoom_note_volume">Volumen</string>
+    <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
+    <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
 </resources>

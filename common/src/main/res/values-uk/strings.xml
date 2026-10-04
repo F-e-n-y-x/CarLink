@@ -558,4 +558,27 @@
     <string name="diagnostic_report_saved_in_app">Звіт збережено приватно в DiPlay, оскільки загальнодоступне місце збереження недоступне. Поділіться ним або перегляньте його тут. Нічого не надсилається автоматично.</string>
     <string name="view_diagnostic_report">Переглянути звіт</string>
     <string name="diagnostic_report_copy_hint">Натисніть і утримуйте текст звіту, щоб виділити та скопіювати його. Це можна використати, якщо немає застосунку для надсилання.</string>
+    <string name="wheel_map_zoom">Масштаб карти на приборці кнопками керма</string>
+    <string name="wheel_map_zoom_description">Кастомна кнопка BYD перемикає кнопки гучності між звуком і масштабом карти на приборці, поки там карта CarPlay. Під час дзвінка кнопки завжди керують звуком. На деяких авто гучність на консолі надсилає ті самі кнопки, тож у режимі масштабу вона теж змінює масштаб. Працює через службу кнопок керма DiPlay; напис на приборці потребує ADB.</string>
+    <string name="wheel_keys_service_on">Служба кнопок керма: увімкнена</string>
+    <string name="wheel_keys_service_starting">Служба кнопок керма: дозволена, запускається…</string>
+    <string name="wheel_keys_service_off">Служба кнопок керма: вимкнена</string>
+    <string name="wheel_keys_enable_adb">Увімкнути службу кнопок керма · ADB</string>
+    <string name="wheel_keys_adb_failed">ADB недоступний: %1$s</string>
+    <string name="wheel_keys_open_settings">Відкрити спеціальні можливості</string>
+    <string name="wheel_keys_no_settings">На цьому головному пристрої немає екрана спеціальних можливостей. Скористайтеся кнопкою ADB.</string>
+    <string name="wheel_zoom_behaviour">Кнопка режиму</string>
+    <string name="wheel_zoom_behaviour_toggle">перемикає до наступного натискання</string>
+    <string name="wheel_zoom_behaviour_timed">масштаб на 5 секунд</string>
+    <string name="wheel_key_role_mode">режим</string>
+    <string name="wheel_key_role_zoom_in">наблизити</string>
+    <string name="wheel_key_role_zoom_out">віддалити</string>
+    <string name="wheel_key_assign">Кнопка «%1$s»: %2$s · натисніть, щоб змінити</string>
+    <string name="wheel_key_press">Натисніть зараз кнопку керма для «%1$s»…</string>
+    <string name="wheel_zoom_mode_on">Кнопки гучності тепер змінюють масштаб карти на приборці</string>
+    <string name="wheel_zoom_mode_off">Кнопки гучності знову керують звуком</string>
+    <string name="wheel_zoom_note_zoom">Масштаб карти</string>
+    <string name="wheel_zoom_note_volume">Гучність</string>
+    <string name="wheel_key_service_label">Кнопки керма DiPlay</string>
+    <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці. Лише отримує натискання кнопок і не читає екран.</string>
 </resources>

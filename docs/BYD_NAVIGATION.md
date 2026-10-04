@@ -60,6 +60,21 @@ Ordinary apps cannot read the mode: BYD's `INSTRUMENT_NAVI_TYPE` needs a BYD sig
 
 DiPlay runs the read through the head unit's own adbd on `127.0.0.1:5555` ("ADB over network" in developer options) with its own RSA key. The car asks once to allow that key; DiPlay offers it only after an explicit settings action, never during background validation or while driving. The TLS pairing flavour of wireless debugging is not supported.
 
+### Dashboard map zoom from the steering wheel (optional)
+
+CarPlay lets the car zoom the cluster map: the accessory sends the command `changeMapZoomLevel` with the cluster screen's UUID and a `zoomDirection` (`{"type": "changeMapZoomLevel", "params": {"uuid": <alt screen UUID>, "zoomDirection": N}}`), the same family as `stopUI`/`showUI`. With Apple Maps on a Tang, `zoomDirection` 0 zooms in and 1 zooms out (2, 3 and -1 also zoomed out). The iPhone does not answer these commands on the event channel, so the values were checked on the dashboard.
+
+The Tang's wheel has no spare keys for this, and BYD's window manager takes the wheel keys before any app can see them: volume (`KEYCODE` 291 / 292, scan 115 / 114, device `simulate-keys`) changes the volume, the custom key (305, scan 300) runs the action chosen for it in BYD's settings (screen rotation on our car). An accessibility service that filters key events receives keys earlier, in Android's input filter, and may keep them. With **Settings → BYD navigation → Zoom the dashboard map with the wheel** turned on and DiPlay's wheel key service running:
+
+- while the dashboard streams the CarPlay map, the custom key switches the volume keys to map zoom (volume up zooms in, volume down out) and back; the mode key can instead turn zoom on for five seconds after the last zoom press;
+- the mode shows briefly as a toast and, where the song shows on the dashboard, as "🔍 Map zoom" (with BYD's Bluetooth-music icon) or "🔊 Volume" for three seconds (this note uses the dashboard song's ADB access);
+- without the dashboard map the custom key keeps its BYD action and zoom mode ends; during a call (Android in a call or communication audio mode, which DiPlay sets for CarPlay calls) the volume keys always control the volume;
+- every key can be reassigned in the settings by pressing it, for wheels with other codes.
+
+On the Tang the console's volume control sends exactly the same codes, scan codes and input device as the wheel's volume keys, so while zoom mode is on it zooms too. The phone (313) and short voice (304) keys are taken by BYD earlier or have their own action and are not used.
+
+BYD's settings have no accessibility page. The "Turn on the wheel key service · ADB" button adds DiPlay's service to `enabled_accessibility_services` through the head unit's own adbd (the car asks once to allow DiPlay's key) and keeps services already listed. The service only receives key events; it declares no window-content access.
+
 ## ADB vehicle-data settings and firmware scope
 
 Settings → Location contains **Advanced vehicle data**, collapsed by default, with two saved modes.
