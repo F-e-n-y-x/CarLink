@@ -1,112 +1,91 @@
 package com.shilapi.xcertplay.hud
 
+import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
-/**
- * Optional, needs ADB over network.
- *
- * On DiLink 4.0 the car's own map ([STOCK_MAP]) draws onto the very same cluster projection surface
- * DiPlay mirrors to, and the two together are reported to make the cluster reboot after a while.
- * Killing that app is not enough: it comes straight back. So while DiPlay mirrors the cluster the
- * map is *disabled*, and enabled again the moment the mirror stops. How it is disabled — the whole
- * package, or only its cluster projection — is the driver's choice, see [BydOemClusterHold].
- *
- * Every command runs over the same loopback adbd the other BYD features use, so the car's approval
- * dialog cannot appear while driving, and a refused or absent adbd is simply logged.
- */
+/** Opt-in stock-map hold for the validated private-display route. All state belongs to worker. */
 object BydOemClusterNavi {
-    private const val TAG = "DiPlay-BYD-OemCluster"
-    private const val PREFS = "diplay_oem_cluster"
-    private const val KEY_HELD = "stock_map_held"
-
-    /** The car's own map, held down while DiPlay owns the cluster. */
     internal const val STOCK_MAP = "com.byd.automap"
-
-    /** The one activity that app draws the cluster with; disabling it alone stops the projection. */
     internal const val STOCK_MAP_CLUSTER_ACTIVITY = "$STOCK_MAP.extra.MeterActivity"
-
+    private const val TAG = "DiPlay-BYD-OemCluster"
+    private const val JOURNAL = "restore_journal"
     private val shell = BydAdbShell(TAG)
-
-    /** A single thread, so a hold is always fully applied before its release. */
-    private val worker = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "diplay-oem-cluster").apply { isDaemon = true }
+    private val worker = Executors.newSingleThreadScheduledExecutor {
+        Thread(it, "diplay-oem-cluster").apply { isDaemon = true }
     }
+    private var session: OemClusterHoldSession? = null
 
-    /** Whether the car ships a map that draws on the cluster at all. */
     fun applicable(context: Context): Boolean =
         runCatching { context.packageManager.getPackageInfo(STOCK_MAP, 0) }.isSuccess
 
-    /** Disables the car's map for as long as DiPlay mirrors the cluster, the chosen way. */
-    fun hold(context: Context) {
+    /** Blocking, for the ADB routing worker only; never call from the Android main thread. */
+    fun holdForLaunch(context: Context, lease: String, current: () -> Boolean): Boolean {
         val app = context.applicationContext
-        val hold = BydOutputSettings.oemClusterHold(app)
-        if (hold == BydOemClusterHold.OFF) {
-            // The switch may have been turned off while a hold was still in place; undo it.
-            if (held(app)) release(app)
-            return
-        }
-        if (!applicable(app)) return
+        return runCatching {
+            worker.submit<Boolean> {
+                val mode = BydOutputSettings.oemClusterHold(app)
+                (mode == BydOemClusterHold.OFF || applicable(app)) &&
+                    state(app).acquire(mode, lease, current)
+            }.get()
+        }.onFailure { Log.w(TAG, "Stock-map hold refused", it) }.getOrDefault(false)
+    }
+
+    /** Always enqueue, even when acquire has not saved its journal yet. */
+    fun release(context: Context, lease: String? = null) {
+        val app = context.applicationContext
         worker.execute {
-            var refused = false
-            disableCommands(hold).forEach { command ->
-                val output = shell.run(app, command)
-                val bad = output == null || failed(output)
-                refused = refused || bad
-                Log.i(TAG, "hold $command refused=$bad ${output?.trim()?.take(160).orEmpty()}")
-            }
-            // A missing or refused adb leaves the flag alone, so a later run tries again.
-            if (!refused) remember(app, true)
+            val pendingLease = lease ?: runCatching { journal(app)?.lease }.getOrNull()
+            val restored = runCatching { state(app).release(pendingLease) }
+                .onFailure { Log.w(TAG, "Stock-map restore will retry", it) }.getOrDefault(false)
+            if (!restored) worker.schedule({ release(app, pendingLease) }, 30, TimeUnit.SECONDS)
         }
     }
 
-    /** Puts the car's map back. Harmless when nothing was held. */
-    fun release(context: Context) {
-        val app = context.applicationContext
-        if (!held(app)) return
-        worker.execute {
-            // Enable both, whichever was disabled: enabling is idempotent, so the setting may change
-            // between a hold and its release without stranding one of them.
-            var reachable = true
-            enableCommands().forEach { command ->
-                val output = shell.run(app, command)
-                if (output == null) reachable = false
-                Log.i(TAG, "release $command ${output?.trim()?.take(160).orEmpty()}")
-            }
-            // Keep the flag when adb was unreachable, so the next open retries the release.
-            if (reachable) remember(app, false)
+    fun restoreIfNeeded(context: Context) = release(context)
+
+    private fun state(app: Context): OemClusterHoldSession = session ?: OemClusterHoldSession(
+        readState = { target -> runCatching {
+            if (target == OemClusterHoldSession.Target.PACKAGE)
+                app.packageManager.getApplicationEnabledSetting(STOCK_MAP)
+            else app.packageManager.getComponentEnabledSetting(ComponentName(STOCK_MAP, STOCK_MAP_CLUSTER_ACTIVITY))
+        }.getOrNull() },
+        setState = { target, value ->
+            val output = shell.run(app, command(target, value) + "; printf '\nDIPLAY_PM_RC:%s\n' \"\$?\"")
+            output != null && Regex("(?m)^DIPLAY_PM_RC:0\\s*$").containsMatchIn(output) &&
+                !Regex("(?i)error|exception|permission\\s*deni(?:al|ed)").containsMatchIn(output)
+        },
+        loadJournal = { journal(app) },
+        saveJournal = { next ->
+            val edit = prefs(app).edit()
+            if (next == null) edit.remove(JOURNAL)
+            else edit.putString(JOURNAL, "${next.target.name}:${next.originalState}:${next.lease}")
+            edit.commit()
+        },
+    ).also { session = it }
+
+    private fun journal(context: Context): OemClusterHoldSession.Journal? {
+        val value = prefs(context).getString(JOURNAL, null) ?: return null
+        val parts = value.split(':')
+        check(parts.size == 3 && parts[1].toIntOrNull() in 0..4) { "Invalid stock-map recovery journal" }
+        return OemClusterHoldSession.Journal(OemClusterHoldSession.Target.valueOf(parts[0]), parts[1].toInt(), parts[2])
+    }
+
+    internal fun command(target: OemClusterHoldSession.Target, state: Int): String {
+        val operation = when (state) {
+            0 -> "default-state"
+            1 -> "enable"
+            2 -> "disable"
+            3 -> "disable-user"
+            4 -> "disable-until-used"
+            else -> error("Invalid OEM component state")
         }
+        val component = if (target == OemClusterHoldSession.Target.PACKAGE) STOCK_MAP
+            else "$STOCK_MAP/$STOCK_MAP_CLUSTER_ACTIVITY"
+        return "pm $operation --user 0 $component"
     }
 
-    private fun disableCommands(hold: BydOemClusterHold): List<String> = when (hold) {
-        BydOemClusterHold.OFF -> emptyList()
-        BydOemClusterHold.COMPONENT -> listOf("pm disable-user --user 0 $STOCK_MAP_CLUSTER_ACTIVITY")
-        BydOemClusterHold.PACKAGE -> listOf("pm disable-user --user 0 $STOCK_MAP")
-    }
-
-    private fun enableCommands(): List<String> = listOf(
-        "pm enable --user 0 $STOCK_MAP",
-        "pm enable --user 0 $STOCK_MAP_CLUSTER_ACTIVITY",
-    )
-
-    /**
-     * Releases a hold that never got undone, because the app died or the car was switched off while
-     * mirroring. Run once when the app opens, before any new session.
-     */
-    fun restoreIfNeeded(context: Context) {
-        val app = context.applicationContext
-        if (!held(app)) return
-        Log.i(TAG, "releasing a stock map left disabled by an earlier run")
-        release(app)
-    }
-
-    private fun held(context: Context): Boolean = prefs(context).getBoolean(KEY_HELD, false)
-
-    private fun remember(context: Context, held: Boolean) = prefs(context).edit().putBoolean(KEY_HELD, held).apply()
-
-    private fun failed(output: String): Boolean =
-        output.contains("error", ignoreCase = true) || output.contains("Exception")
-
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = context.getSharedPreferences("diplay_oem_cluster", Context.MODE_PRIVATE)
 }

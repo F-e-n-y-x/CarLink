@@ -10,16 +10,15 @@ internal class BydStandaloneSession(
     private var showing = needsRecovery
     private var recovering = needsRecovery
     private var lastPacket: String? = null
+    private var guidanceShowing = false
     private var lastSendNs = 0L
 
     fun update(icon: Int, exit: Int, distanceMeters: Int, road: String? = null) {
         if (recovering) clear()
         val packet = BydStandalonePackets.guidance(icon, exit, distanceMeters, road)
-        // Keep the last maneuver on screen instead of blanking the HUD. An unmappable maneuver
-        // (unknown Apple type -> icon 0, rejected by BydFactoryTurnCode) must not erase valid
-        // guidance; real route ends arrive through tick's frame == null path and still clear.
-        if (packet == null) return
+        if (packet == null) { clear(); return }
         publish(packet)
+        guidanceShowing = true
     }
 
     /**
@@ -27,7 +26,7 @@ internal class BydStandaloneSession(
      * Navigation owns its own records, so both can share the HUD without overwriting each other.
      */
     fun showText(text: String) {
-        if (recovering) clear()
+        if (recovering || guidanceShowing) clear()
         publish(BydStandalonePackets.text(text))
     }
 
@@ -38,6 +37,7 @@ internal class BydStandaloneSession(
         // sendBroadcast returning is dispatch success, not hardware acknowledgement.
         rememberPendingClear(false)
         showing = false
+        guidanceShowing = false
         recovering = false
         lastPacket = null
         lastSendNs = 0L

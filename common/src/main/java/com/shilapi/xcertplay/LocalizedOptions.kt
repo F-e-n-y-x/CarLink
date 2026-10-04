@@ -4,7 +4,6 @@ import android.content.Context
 import com.shilapi.xcertplay.airplay.CarPlaySize
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydClusterNaviMode
-import com.shilapi.xcertplay.hud.BydOemClusterHold
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 import com.shilapi.xcertplay.transport.EvChargingConnectors
 
@@ -33,12 +32,6 @@ internal fun BydClusterNaviMode.localizedLabel(context: Context): String = conte
     BydClusterNaviMode.FULL -> R.string.navi_mode_full
 })
 
-internal fun BydOemClusterHold.localizedLabel(context: Context): String = context.getString(when (this) {
-    BydOemClusterHold.OFF -> R.string.oem_cluster_hold_off
-    BydOemClusterHold.COMPONENT -> R.string.oem_cluster_hold_component
-    BydOemClusterHold.PACKAGE -> R.string.oem_cluster_hold_package
-})
-
 internal fun EvChargingConnectors.localizedLabel(context: Context): String = context.getString(when (this) {
     EvChargingConnectors.CCS2_TYPE2 -> R.string.connectors_ccs2_type2
     EvChargingConnectors.GB_T -> R.string.connectors_gb_t
@@ -51,3 +44,9 @@ internal fun ManualHotspotValidation.Error.messageResource(): Int = when (this) 
     ManualHotspotValidation.Error.INVALID_CHARACTER -> R.string.hotspot_error_invalid_character
     ManualHotspotValidation.Error.PASSWORD_LENGTH -> R.string.hotspot_error_password_length
 }
+
+internal fun com.shilapi.xcertplay.hud.BydOemClusterHold.localizedLabel(context: Context): String = context.getString(when (this) {
+    com.shilapi.xcertplay.hud.BydOemClusterHold.OFF -> R.string.oem_cluster_hold_off
+    com.shilapi.xcertplay.hud.BydOemClusterHold.COMPONENT -> R.string.oem_cluster_hold_component
+    com.shilapi.xcertplay.hud.BydOemClusterHold.PACKAGE -> R.string.oem_cluster_hold_package
+})

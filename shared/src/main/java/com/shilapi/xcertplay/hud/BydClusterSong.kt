@@ -9,17 +9,13 @@ import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 
-/**
- * What the dashboard's music card shows. [line] is the title on its own: with a music app that
- * pushes lyrics through the title it is the lyric line, and it is what narrow outputs such as the
- * HUD should use, since the " — Artist" part of [text] would eat most of that one row.
- */
+/** What the dashboard's music card shows. */
 internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text)
 
 /**
  * The CarPlay song for the dashboard, from iAP2 NowPlayingUpdate (0x5001): title (1) and artist (12)
- * in MediaItemAttributes, playback status in PlaybackAttributes. Updates carry only what changed; a
- * new title replaces the item, so a missing artist then means none.
+ * in MediaItemAttributes, playback status in PlaybackAttributes. Updates carry only what changed;
+ * omitted fields retain their previous values, while an explicitly cleared title forgets the item.
  */
 internal class ClusterSongState {
     private var title: String? = null
@@ -35,8 +31,9 @@ internal class ClusterSongState {
             val nextTitle = runCatching { item.optionalString(TITLE) }.getOrNull()
             if (nextTitle != null) {
                 title = nextTitle
-                artist = runCatching { item.optionalString(ARTIST) }.getOrNull()
-            } else {
+                if (nextTitle.isBlank()) artist = null
+            }
+            if (nextTitle?.isBlank() != true) {
                 runCatching { item.optionalString(ARTIST) }.getOrNull()?.let { artist = it }
             }
         }
@@ -139,11 +136,6 @@ internal object BydClusterSong {
         stop(app)
     }
 
-    /**
-     * The line known so far, for outputs beyond the dashboard card, such as the HUD. A music app may
-     * advance this line by line while it plays, so callers should send it again rather than skip it
-     * as unchanged; the output decides what counts as a repeat.
-     */
     fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {

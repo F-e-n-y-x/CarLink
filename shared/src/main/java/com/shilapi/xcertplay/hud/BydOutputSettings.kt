@@ -19,9 +19,7 @@ object BydOutputSettings {
     private const val KEY_CLUSTER_SONG = "cluster_song"
     private const val KEY_HUD_SONG = "hud_song"
     private const val KEY_OEM_CLUSTER_HOLD = "oem_cluster_hold"
-
-    /** An earlier build had a boolean switch under this key; it fixes the default when present. */
-    private const val LEGACY_KEY_OEM_CLUSTER_FREEZE = "oem_cluster_freeze"
+    private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
     val lowChargePresets = listOf(10, 15, 20, 25, 30)
 
@@ -38,8 +36,13 @@ object BydOutputSettings {
     /** Tell the iPhone the car's charge and range (needs ADB over network); applies on the next connection. */
     fun batteryToIphone(context: Context): Boolean = prefs(context).getBoolean(KEY_BATTERY_TO_IPHONE, false)
 
-    fun setBatteryToIphone(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_BATTERY_TO_IPHONE, enabled).apply()
+    fun setBatteryToIphone(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_BATTERY_TO_IPHONE, enabled).commit()
+    }
+
+    /** Default mode uses the DiLink 5.0 addresses; legacy mode exposes only fields its saved probe confirmed. */
+    fun batteryToIphoneActive(context: Context): Boolean =
+        batteryToIphone(context) && supportedInSelectedMode(context) { it.batterySupported }
 
     /** The charging inlets the iPhone is told about; applies on the next connection. */
     fun chargingConnectors(context: Context): EvChargingConnectors =
@@ -47,19 +50,25 @@ object BydOutputSettings {
             ?.let { saved -> EvChargingConnectors.entries.firstOrNull { it.name == saved } }
             ?: EvChargingConnectors.CCS2_TYPE2
 
-    fun setChargingConnectors(context: Context, connectors: EvChargingConnectors) =
-        prefs(context).edit().putString(KEY_CHARGING_CONNECTORS, connectors.name).apply()
+    fun setChargingConnectors(context: Context, connectors: EvChargingConnectors) {
+        prefs(context).edit().putString(KEY_CHARGING_CONNECTORS, connectors.name).commit()
+    }
 
     /** Send wheel speed and gear with the car's GPS (needs ADB over network); applies on the next connection. */
     fun wheelSpeedToIphone(context: Context): Boolean = prefs(context).getBoolean(KEY_WHEEL_SPEED_TO_IPHONE, false)
 
-    fun setWheelSpeedToIphone(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_WHEEL_SPEED_TO_IPHONE, enabled).apply()
+    fun setWheelSpeedToIphone(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WHEEL_SPEED_TO_IPHONE, enabled).commit()
+    }
+
+    fun wheelSpeedToIphoneActive(context: Context): Boolean =
+        wheelSpeedToIphone(context) && supportedInSelectedMode(context) { it.motionSupported }
     /** Offer iOS 27 video in car, played only while the gear reads P (needs ADB over network). */
     fun videoWhileParked(context: Context): Boolean = prefs(context).getBoolean(KEY_VIDEO_WHILE_PARKED, false)
 
-    fun setVideoWhileParked(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_VIDEO_WHILE_PARKED, enabled).apply()
+    fun setVideoWhileParked(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VIDEO_WHILE_PARKED, enabled).commit()
+    }
 
     /** Show the CarPlay song in the dashboard's music card (needs ADB over network); applies at once. */
     fun clusterSong(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG, false)
@@ -67,39 +76,40 @@ object BydOutputSettings {
     fun setClusterSong(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CLUSTER_SONG, enabled).apply()
 
-    /**
-     * Show on the HUD what the CarPlay music reports as the track line, once there is no guidance.
-     * Many third-party players advance that line with the lyrics, Apple Music leaves it at the title.
-     * Needs no ADB: it goes through the same clusterdebug broadcast as the navigation.
-     * The line is sent whole; the cluster's own marquee scrolls whatever does not fit, exactly as it
-     * does for road names, so the app never scrolls it a second time.
-     */
-    fun hudSong(context: Context): Boolean = prefs(context).getBoolean(KEY_HUD_SONG, false)
-
-    fun setHudSong(context: Context, enabled: Boolean) =
-        prefs(context).edit().putBoolean(KEY_HUD_SONG, enabled).apply()
+    fun videoWhileParkedActive(context: Context): Boolean =
+        videoWhileParked(context) && supportedInSelectedMode(context) { it.gearSupported }
 
     /**
-     * How the car's own map is kept off the cluster while DiPlay mirrors there, and put back when the
-     * mirror stops; see [BydOemClusterHold]. On DiLink 4.0 both draw on the same cluster surface and
-     * the pair can reboot it. Only meaningful where [BydOemClusterNavi] applies; needs ADB.
-     *
-     * Defaults to [BydOemClusterHold.COMPONENT]: that stops the projection but, unlike a whole-package
-     * disable, leaves the rest of the app — and the cluster's own navigation mode — alone. A build
-     * that only had an on/off switch wrote [LEGACY_KEY_OEM_CLUSTER_FREEZE]; that choice is carried
-     * over so an update never silently changes what the driver picked.
+     * Use addresses saved by the legacy head-unit probe. Existing installations with a saved probe
+     * migrate to this mode; a fresh installation stays on the default DiLink 5.0 path.
      */
-    fun oemClusterHold(context: Context): BydOemClusterHold {
-        val prefs = prefs(context)
-        BydOemClusterHold.fromName(prefs.getString(KEY_OEM_CLUSTER_HOLD, null))?.let { return it }
-        if (!prefs.contains(LEGACY_KEY_OEM_CLUSTER_FREEZE)) return BydOemClusterHold.COMPONENT
-        return if (prefs.getBoolean(LEGACY_KEY_OEM_CLUSTER_FREEZE, true)) {
-            BydOemClusterHold.PACKAGE
+    fun legacyVehicleProbe(context: Context): Boolean {
+        val settings = prefs(context)
+        return if (settings.contains(KEY_LEGACY_VEHICLE_PROBE)) {
+            settings.getBoolean(KEY_LEGACY_VEHICLE_PROBE, false)
         } else {
-            BydOemClusterHold.OFF
+            BydVehicleFieldStore.load(context) != null
         }
     }
 
+    fun setLegacyVehicleProbe(context: Context, enabled: Boolean) {
+        check(prefs(context).edit().putBoolean(KEY_LEGACY_VEHICLE_PROBE, enabled).commit()) {
+            "Could not persist BYD vehicle-data mode"
+        }
+    }
+
+    /** Optional title/lyrics when navigation is absent; only the verified HUD output can send it. */
+    fun hudSong(context: Context): Boolean = prefs(context).getBoolean(KEY_HUD_SONG, false)
+    fun setHudSong(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_HUD_SONG, enabled).apply()
+
+    /** OEM changes require an explicit selection; fresh installations leave the stock map alone. */
+    fun oemClusterHold(context: Context): BydOemClusterHold {
+        val settings = prefs(context)
+        BydOemClusterHold.fromName(settings.getString(KEY_OEM_CLUSTER_HOLD, null))?.let { return it }
+        return if (settings.getBoolean("oem_cluster_freeze", false)) BydOemClusterHold.PACKAGE
+            else BydOemClusterHold.OFF
+    }
     fun setOemClusterHold(context: Context, hold: BydOemClusterHold) =
         prefs(context).edit().putString(KEY_OEM_CLUSTER_HOLD, hold.name).apply()
 
@@ -109,16 +119,33 @@ object BydOutputSettings {
     fun setLowChargePercent(context: Context, percent: Int) =
         prefs(context).edit().putInt(KEY_LOW_CHARGE_PERCENT, percent).apply()
 
-    /** Whether the head unit has a BYD navigation receiver, so settings can hide a switch that cannot work. */
+    fun standaloneHudAvailable(context: Context): Boolean = BydStandaloneHudOutput.available(context)
+    fun standaloneHudDiagnosticReport(context: Context): String = BydStandaloneHudOutput.diagnostics(context)
+
+    /** Whether the head unit has a BYD navigation receiver. This says nothing about ADB vehicle data. */
+    fun navigationAvailable(context: Context): Boolean =
+        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service")
+
+    /** Whether the head unit has a BYD navigation receiver or is a BYD head unit, so settings can show navigation/map options. */
     fun available(context: Context): Boolean =
-        BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") ||
-            installed(context, "com.ts.car.someip.service") ||
-            // DiLink 4.0 ships the stock map as com.byd.automap, whose MeterActivity runs on the
-            // cluster projection display, instead of com.byd.amapservice.
-            installed(context, "com.byd.automap")
+        navigationAvailable(context) ||
+            installed(context, "com.byd.carsettings") ||
+            installed(context, "com.byd.appmgr") ||
+            installed(context, "com.byd.deviceinfo") ||
+            installed(context, "com.byd.service") ||
+            android.os.Build.FINGERPRINT.contains("BYD", ignoreCase = true) ||
+            android.os.Build.BRAND.contains("BYD", ignoreCase = true) ||
+            android.os.Build.MANUFACTURER.contains("BYD", ignoreCase = true) ||
+            android.os.Build.PRODUCT.contains("BYD", ignoreCase = true) ||
+            android.os.Build.DEVICE.contains("BYD", ignoreCase = true)
 
     private fun installed(context: Context, pkg: String): Boolean =
         runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+
+    private fun supportedInSelectedMode(
+        context: Context,
+        supported: (BydVehicleCapabilities) -> Boolean,
+    ): Boolean = !legacyVehicleProbe(context) || BydVehicleFieldStore.load(context)?.let(supported) == true
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }

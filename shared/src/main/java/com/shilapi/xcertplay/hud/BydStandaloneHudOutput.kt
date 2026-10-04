@@ -3,9 +3,12 @@ package com.shilapi.xcertplay.hud
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import android.util.Log
+import java.security.MessageDigest
 
 /** Ordinary-app IPC to the real stock receiver. No shell, local socket or permission grant. */
 internal class BydStandaloneHudOutput private constructor(context: Context) {
@@ -29,37 +32,52 @@ internal class BydStandaloneHudOutput private constructor(context: Context) {
         runCatching { session.clear() }.onFailure { Log.w(TAG, "Startup clear will retry", it) }
     }
 
-    fun update(icon: Int, exit: Int, distanceMeters: Int, road: String?) =
+    fun update(icon: Int, exit: Int, distanceMeters: Int, road: String) =
         session.update(icon, exit, distanceMeters, road)
-    /** One plain line on the HUD, used for the CarPlay song/lyrics line. No maneuver records. */
     fun showText(text: String) = session.showText(text)
     fun clear() = session.clear()
 
     companion object {
         private const val TAG = "BYD-Standalone-Live"
         private val TARGET = ComponentName("com.byd.clusterdebug", "com.byd.clusterdebug.BroadcastReceiverCAN")
-        private val TRUSTED_PACKAGE_PREFIXES = listOf("com.shihab.diplay", "com.andrerinas.headunitrevived")
+        @Volatile var syntheticHold = false
 
         fun create(context: Context): BydStandaloneHudOutput? =
             if (available(context)) BydStandaloneHudOutput(context) else null
 
-        /**
-         * The stock receiver is an open backdoor, so presence of the package is the only gate.
-         *
-         * Self-check is a prefix match on the DiPlay / HeadUnitReloaded application id: every
-         * variant (release, debug, per-car build) is armed without re-listing package constants
-         * whenever the application id changes. It only keeps other apps that embed this library
-         * from driving OEM hardware; the car still decides what to draw.
-         */
+        fun diagnostics(context: Context): String = buildString {
+            appendLine("standaloneHudAvailable=${available(context)} sdk=${Build.VERSION.SDK_INT}")
+            appendLine("firmware=${Build.FINGERPRINT}")
+            runCatching {
+                val info = context.packageManager.getPackageInfo(TARGET.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                val receiver = context.packageManager.getReceiverInfo(TARGET, 0)
+                appendLine("receiver=${TARGET.flattenToString()} version=${info.longVersionCode} system=${info.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) != 0}")
+                appendLine("receiverEnabled=${receiver.enabled} exported=${receiver.exported} permission=${receiver.permission}")
+                info.signingInfo?.apkContentsSigners?.forEach { signer ->
+                    appendLine("signerSha256=" + MessageDigest.getInstance("SHA-256").digest(signer.toByteArray())
+                        .joinToString("") { "%02x".format(it.toInt() and 255) })
+                }
+            }.onFailure { appendLine("receiverMetadataUnavailable=${it.javaClass.simpleName}") }
+        }
+
+        /** Enable production and diagnostic packages only on the physically tested firmware. */
         fun available(context: Context): Boolean {
-            val own = context.packageName
-            if (Build.VERSION.SDK_INT < 28 ||
-                TRUSTED_PACKAGE_PREFIXES.none { own == it || own.startsWith("$it.") }) return false
-            // Just try whenever the package is installed. No fingerprint, signature or
-            // version checks: whether it actually renders is verified on the car, not here.
+            if (Build.VERSION.SDK_INT < 28 || context.packageName !in setOf(
+                    "com.andrerinas.headunitrevived", "com.shihab.diplay",
+                    "com.andrerinas.headunitrevived.bydhudtest", "com.shihab.diplay.hudtest")) return false
+            if (Build.FINGERPRINT != "BYD-AUTO/IVI/IVI:13/TP1A.220624.014/eng.build20260722.221155:user/release-keys") return false
             return runCatching {
-                context.packageManager.getPackageInfo(TARGET.packageName, 0)
-            }.isSuccess
+                val manager = context.packageManager
+                val info = manager.getPackageInfo(TARGET.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                val receiver = manager.getReceiverInfo(TARGET, 0)
+                val signers = info.signingInfo?.apkContentsSigners ?: return false
+                info.longVersionCode == 10601004L &&
+                    info.applicationInfo!!.flags and ApplicationInfo.FLAG_SYSTEM != 0 &&
+                    receiver.enabled && receiver.exported && receiver.permission.isNullOrEmpty() &&
+                    signers.size == 1 && MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray())
+                        .joinToString("") { "%02x".format(it.toInt() and 255) } ==
+                        "efe3ca8ada0d10c655c3df9910ad2ebc121a47d9a6358434eb24074309933efc"
+            }.getOrDefault(false)
         }
     }
 }
