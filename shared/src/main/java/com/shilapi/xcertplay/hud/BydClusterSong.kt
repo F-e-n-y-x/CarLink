@@ -117,12 +117,11 @@ internal object BydClusterSong {
     /** NowPlayingUpdate frames; the song is followed even while the setting is off, so it can show at once. */
     fun onFrame(frame: Iap2Frame) {
         val app = context ?: return
-        val song = synchronized(state) {
+        synchronized(state) {
             val previous = state.current()
             state.accept(frame)
-            state.current().also { if (it == previous) return }
-        }
-        if (BydOutputSettings.clusterSong(app)) {
+            val song = state.current()
+            if (song == previous || !BydOutputSettings.clusterSong(app)) return
             if (song == null) stop(app) else show(app, song)
         }
     }
@@ -130,14 +129,19 @@ internal object BydClusterSong {
     /** The setting changed: show the current song now, or stop the card DiPlay set. */
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
-        if (enabled) synchronized(state) { state.current() }?.let { show(app, it) } else stop(app)
+        synchronized(state) {
+            val song = state.current().takeIf { enabled }
+            if (song == null) stop(app) else show(app, song)
+        }
     }
 
     /** The session ended: forget the song and stop the card DiPlay set. */
     fun end() {
         val app = context ?: return
-        synchronized(state) { state.clear() }
-        stop(app)
+        synchronized(state) {
+            state.clear()
+            stop(app)
+        }
     }
 
     /**
@@ -168,12 +172,19 @@ internal object BydClusterSong {
     fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {
-        synchronized(state) { wanted = song }
+        synchronized(state) {
+            // Song updates still advance the cache while a short wheel note has priority.
+            if (note != null) return
+            wanted = song
+        }
         writer.execute { write(app, song) }
     }
 
     private fun stop(app: Context) {
-        synchronized(state) { wanted = null }
+        synchronized(state) {
+            note = null
+            wanted = null
+        }
         writer.execute { clear(app) }
     }
 
