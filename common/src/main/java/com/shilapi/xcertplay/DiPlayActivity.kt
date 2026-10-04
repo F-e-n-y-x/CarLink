@@ -655,14 +655,18 @@ class DiPlayActivity : ComponentActivity() {
                             if (content.url != next.url) reconnectForClusterMap()
                         }
                         if (customCard) {
-                            val overlaySizes = CarPlayClusterDisplay.OverlaySize.entries
-                            choice(card, getString(R.string.turn_card_overlay_size), listOf(
-                                getString(R.string.turn_card_overlay_small),
-                                getString(R.string.turn_card_overlay_medium),
-                                getString(R.string.turn_card_overlay_large),
-                            ), overlaySizes.indexOf(AirPlayPersistence.loadClusterTurnCardOverlaySize(this)).coerceAtLeast(0), reconnects = false) {
-                                AirPlayPersistence.saveClusterTurnCardOverlaySize(this, overlaySizes[it])
-                            }
+                            card.addView(overlaySliderRow(
+                                getString(R.string.turn_card_overlay_size),
+                                ClusterTurnCardOverlay.sizePercents,
+                                AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(this),
+                            ) { it -> getString(R.string.turn_card_overlay_size_option, it) }
+                                .also { it.onSave = { v -> AirPlayPersistence.saveClusterTurnCardOverlaySizePercent(this, v) } })
+                            card.addView(overlaySliderRow(
+                                getString(R.string.turn_card_overlay_opacity),
+                                ClusterTurnCardOverlay.opacityPercents,
+                                AirPlayPersistence.loadClusterTurnCardOpacityPercent(this),
+                            ) { it -> getString(R.string.turn_card_overlay_opacity_option, it) }
+                                .also { it.onSave = { v -> AirPlayPersistence.saveClusterTurnCardOpacityPercent(this, v) } })
                             card.addView(overlaySliderRow(
                                 getString(R.string.turn_card_overlay_horizontal),
                                 ClusterTurnCardOverlay.xPercents,

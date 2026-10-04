@@ -23,8 +23,6 @@ object CarPlayClusterDisplay {
         MAP_WITH_CUSTOM_CARD(MAP_URL),
     }
 
-    enum class OverlaySize { SMALL, MEDIUM, LARGE }
-
     fun usesCustomTurnCard(content: Content): Boolean = content == Content.MAP_WITH_CUSTOM_CARD
 
     fun usesOfficialTurnCard(content: Content): Boolean =

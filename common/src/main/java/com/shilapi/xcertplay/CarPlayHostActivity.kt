@@ -832,8 +832,10 @@ class CarPlayHostActivity : ComponentActivity() {
             presentation.setTurnCardOverlay(
                 AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
                 AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
-                AirPlayPersistence.loadClusterTurnCardOverlaySize(this),
+                AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(this),
             )
+            presentation.setTurnCardOpacity(AirPlayPersistence.loadClusterTurnCardOpacityPercent(this))
+            presentation.setTurnCardNightMode(darkMode)
             presentation.setTurnCardGuidance(if (overlay) clusterTurnGuidance else null)
         }
     }

@@ -508,6 +508,13 @@
     <string name="launcher_map_sharing">مشاركة الخريطة المباشرة مع المشغّلات الأخرى</string>
     <string name="launcher_map_sharing_description">يمكن للمشغّلات التي تدعم DiPlay عرض خريطة لوحة العدادات المباشرة داخل شاشتها الرئيسية. معطّل افتراضيًا، لأن أي تطبيق على وحدة القيادة يمكنه عندها طلب الخريطة. راجع docs/LAUNCHER_INTEGRATION.md.</string>
     <string name="turn_card_overlay_size">حجم بطاقة الانعطاف المخصصة</string>
+    <string name="turn_card_overlay_opacity">شفافية بطاقة الانعطاف المخصصة</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">الوصول %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$dس %2$dد</string>
+    <string name="turn_card_info_duration_m">%1$dد</string>
+    <string name="turn_card_info_km">%1$.1f كم</string>
     <string name="turn_card_overlay_horizontal">بطاقة الانعطاف المخصصة · يسار / يمين</string>
     <string name="turn_card_overlay_vertical">بطاقة الانعطاف المخصصة · أعلى / أسفل</string>
     <string name="turn_card_overlay_small">صغير</string>
