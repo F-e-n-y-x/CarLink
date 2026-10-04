@@ -659,8 +659,17 @@ class CarPlayHostActivity : ComponentActivity() {
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(clusterTurnOverlayListener)
         mainHandler.removeCallbacks(refreshTurnOverlay)
         mainHandler.post(refreshTurnOverlay)
+        var systemBarsChanged = false
+        if (!menuOpen) {
+            val savedHideTopBar = AirPlayPersistence.loadHideTopBar(this)
+            val savedHideBottomBar = AirPlayPersistence.loadHideBottomBar(this)
+            systemBarsChanged = hideTopBar != savedHideTopBar || hideBottomBar != savedHideBottomBar
+            hideTopBar = savedHideTopBar
+            hideBottomBar = savedHideBottomBar
+        }
         maybeStartCarPlay()
         applyFullscreenMode()
+        if (systemBarsChanged) refreshDisplaySizeAfterLayout()
     }
 
     // Experimental: the CarPlay instrument-cluster stream on the BYD cluster projection display.
@@ -2190,36 +2199,28 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
         )
-        section.addView(
-            settingsSwitchRow(
-                label = getString(R.string.hide_top_bar),
-                checked = hideTopBar,
-                description = getString(R.string.hide_the_status_bar),
-            ) { checked ->
+        addSystemBarControls(
+            hideTopBar = hideTopBar,
+            hideBottomBar = hideBottomBar,
+            onHideTopBarChanged = { checked ->
                 hideTopBar = checked
                 applyFullscreenMode()
                 refreshDisplaySizeAfterLayout()
             },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(10) },
-        )
-        section.addView(
-            settingsSwitchRow(
-                label = getString(R.string.hide_bottom_bar),
-                checked = hideBottomBar,
-                description = getString(R.string.hide_the_navigation_bar),
-            ) { checked ->
+            onHideBottomBarChanged = { checked ->
                 hideBottomBar = checked
                 applyFullscreenMode()
                 refreshDisplaySizeAfterLayout()
             },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(10) },
-        )
+        ) { label, checked, onChanged ->
+            section.addView(
+                settingsSwitchRow(getString(label), checked, getString(label), onChanged),
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = dp(10) },
+            )
+        }
         return section
     }
 
