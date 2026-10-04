@@ -546,6 +546,14 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
+    <string name="adb_cluster_activity_label">仪表地图</string>
+    <string name="adb_cluster_activity_mode">DiLink 4 仪表视频（ADB，实验性）</string>
+    <string name="adb_cluster_activity_description">通过内置ADB直接在已验证仪表副屏启动地图。请先授权ADB，再重新连接iPhone。</string>
+    <string name="adb_cluster_authorize">授权 ADB / 重试仪表移动</string>
+    <string name="adb_cluster_open">重试仪表地图</string>
+    <string name="adb_cluster_routing">正在通过ADB启动仪表地图…</string>
+    <string name="adb_cluster_routed">仪表窗口已移动，等待 iPhone 地图</string>
+    <string name="adb_cluster_route_failed">仪表启动失败，请导出诊断。</string>
     <string name="open_diplay_settings_hint">CarPlay 中用 %1$d 指下滑打开 DiPlay 设置。</string>
     <string name="carplay_controls">CarPlay 操作</string>
     <string name="settings_gesture_fingers">打开设置 · %1$d 指下滑（点按切换）</string>
@@ -566,4 +574,8 @@
     <string name="diagnostic_report_saved_in_app">由于公共保存位置不可用，报告已私密保存到 DiPlay。您可以在此分享或查看报告。不会自动发送任何内容。</string>
     <string name="view_diagnostic_report">查看报告</string>
     <string name="diagnostic_report_copy_hint">长按报告文本即可选择并复制。如果没有可用的分享应用，可以使用此方式。</string>
+    <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
+    <string name="cluster_safe_area_reset">重置仪表安全区域</string>
+    <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
+    <string name="cluster_safe_area_live_hint">在此拖动绿色边界，仪表会同步显示区域框。保存后重新连接生效；取消保留当前区域。</string>
 </resources>
