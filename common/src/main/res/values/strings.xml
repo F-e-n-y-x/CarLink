@@ -430,6 +430,13 @@
     <string name="turn_card_vertical">Turn card · vertical</string>
     <string name="reset_turn_card_to_centre">Reset turn card to centre</string>
     <string name="turn_card_overlay_size">Custom turn card size</string>
+    <string name="turn_card_overlay_opacity">Custom turn card opacity</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">Arrive %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$dh %2$dmin</string>
+    <string name="turn_card_info_duration_m">%1$dmin</string>
+    <string name="turn_card_info_km">%1$.1f km</string>
     <string name="turn_card_overlay_horizontal">Custom turn card · left / right</string>
     <string name="turn_card_overlay_vertical">Custom turn card · up / down</string>
     <string name="turn_card_overlay_small">Small</string>
@@ -567,8 +574,6 @@
     <string name="diagnostic_report_saved_in_app">Your report was saved privately in DiPlay because a public save location was unavailable. Share it or view it here. Nothing is sent automatically.</string>
     <string name="view_diagnostic_report">View report</string>
     <string name="diagnostic_report_copy_hint">Touch and hold the report text to select and copy it. You can use this if no sharing app is available.</string>
-    <string name="turn_card_arrival">Arrival %1$s</string>
-    <string name="turn_card_minutes_left">%1$d min left</string>
     <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
     <string name="cluster_safe_area_reset">Reset cluster safe area</string>
     <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>

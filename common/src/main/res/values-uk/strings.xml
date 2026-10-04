@@ -521,6 +521,13 @@
     <string name="widget_not_connected">CarPlay не підключено</string>
     <string name="dashboard_content_map_with_custom_turn_card">Карта з власною карткою маневру</string>
     <string name="turn_card_overlay_size">Розмір власної картки</string>
+    <string name="turn_card_overlay_opacity">Прозорість власної картки</string>
+    <string name="turn_card_overlay_opacity_option">%1$d %%</string>
+    <string name="turn_card_overlay_size_option">%1$d %%</string>
+    <string name="turn_card_info_arrival">Прибуття %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$d год %2$d хв</string>
+    <string name="turn_card_info_duration_m">%1$d хв</string>
+    <string name="turn_card_info_km">%1$.1f км</string>
     <string name="turn_card_overlay_horizontal">Власна картка · ліворуч / праворуч</string>
     <string name="turn_card_overlay_vertical">Власна картка · вгору / вниз</string>
     <string name="turn_card_overlay_small">Мала</string>

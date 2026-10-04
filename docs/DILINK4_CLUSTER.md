@@ -42,9 +42,8 @@ placement. A manual replug may still be needed after changing connection setting
 For this mode, an unset dashboard-content choice defaults to **Map with turn card**
 (the phone's built-in card). Saved choices are preserved. **Map with custom turn
 card** uses DiPlay's existing maneuver overlay, with live placement/size controls.
-It can show arrival time and remaining distance supplied by the phone, falling
-back to remaining minutes when arrival time is unavailable. Missing totals stay
-blank. Guidance clears at route end/expiry/disconnect and hides with an inactive
+It reuses upstream’s info strip for phone-supplied arrival time, duration and
+remaining distance. Missing totals stay blank. Guidance clears at route end/expiry/disconnect and hides with an inactive
 stream. Map orientation is controlled by the phone's cluster stream.
 
 ## Scope and credit

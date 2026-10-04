@@ -30,7 +30,8 @@ class ClusterActivityOutputTest {
     @Test fun overlayStateSurvivesHandoffAndOnlyItsOwnerCanClearIt() {
         val host = Any()
         val newerHost = Any()
-        val guidance = com.shilapi.xcertplay.hud.ClusterTurnGuidance(2, 0, 80, "Road", 4200, 630)
+        val guidance = com.shilapi.xcertplay.hud.ClusterTurnGuidance(2, 0, 80, "Road",
+            remainingMeters = 4200L, remainingSeconds = 630L)
         ClusterActivityOutput.bind(host, 4) { }
         ClusterActivityOutput.setTurnCard(guidance, 20, 50,
             com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.OverlaySize.LARGE)
