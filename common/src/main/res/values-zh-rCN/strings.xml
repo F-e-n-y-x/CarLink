@@ -88,7 +88,7 @@
     <string name="allow_the_connection_permission_to_continue">请授予连接权限以继续</string>
     <string name="an_independent_carplay_receiver_for_android_head_units_wir">面向 Android 车机的独立 CarPlay 接收器。有线和无线连接均在车机上运行，并使用本地认证。普通 iPhone 无需越狱、Mac、转接器或登录即可连接。\n\n此预览版使用实验性配件身份，仍在测试与不同 iPhone 和车机的兼容性。本产品未经 Apple 认证。</string>
     <string name="android_9_compatibility">Android 9 兼容性</string>
-    <string name="app_name">DiPlay</string>
+    <string name="app_name">DiPlay DiLink 4.0</string>
     <string name="app_permissions">应用权限</string>
     <string name="app_settings">应用设置</string>
     <string name="apply_and_reconnect">应用并重新连接</string>
@@ -112,6 +112,7 @@
     <string name="car_hotspot_details">车机热点详情</string>
     <string name="car_hotspot_is_off">车机热点未开启</string>
     <string name="car_marker_horizontal">车辆标记 · 水平</string>
+    <string name="mirror_content_always_centred">仪表会自己对画面做遮罩（小窗导航就是同一幅画的中间裁剪），因此内容固定居中，位置设置不适用。</string>
     <string name="car_marker_vertical">车辆标记 · 垂直</string>
     <string name="carplay">CarPlay</string>
     <string name="carplay_at_home_in_your_car">让 CarPlay 融入车机。</string>
@@ -119,7 +120,7 @@
     <string name="carplay_control_running">CarPlay 控制通道运行中</string>
     <string name="carplay_control_window_ended">CarPlay 控制会话已结束</string>
     <string name="carplay_icon">CarPlay 图标</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘上的 CarPlay 地图 · 实验性</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘显示地图</string>
     <string name="carplay_service_already_running">CarPlay 服务已在运行</string>
     <string name="carplay_session_already_running">CarPlay 会话已在运行</string>
     <string name="carplay_session_ended_reconnecting">CarPlay 会话已结束；正在重新连接</string>
@@ -240,8 +241,12 @@
     <string name="mfi_certificate_signing_target">MFi 证书与签名目标</string>
     <string name="model">型号</string>
     <string name="music_buffer">音乐缓冲</string>
+    <string name="legacy_audio_path">经典音频路径</string>
+    <string name="legacy_audio_path_description">按旧版方式播放音频，用于和当前路径对比排查。下次连接生效。</string>
+    <string name="declare_audio_output_latency">声明输出延迟</string>
+    <string name="declare_audio_output_latency_description">按音乐缓冲的大小告诉手机提前垫数据（与音乐缓冲联动）。实验性，下次连接生效。</string>
     <string name="resolution_native">原生</string>
-    <string name="navigation_on_hud_and_instrument_cluster">HUD 和仪表盘导航</string>
+    <string name="navigation_on_hud_and_instrument_cluster">HUD 显示导航信息</string>
     <string name="navigation_stream_type">导航音频流类型</string>
     <string name="nearby_devices">附近的设备</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">“附近的设备”权限用于连接 iPhone；麦克风权限用于 Siri 和通话。较旧的 Android 版本还需要位置权限来设置无线连接。USB 模式可能会请求建立本地 VPN 连接。</string>
@@ -300,6 +305,7 @@
     <string name="running">运行中</string>
     <string name="s_0_3x">0.3x</string>
     <string name="s_1000_ms_most_stable">1000 毫秒 · 更稳定</string>
+    <string name="s_2000_ms_tolerates_longest_gaps">2000 毫秒 · 容忍最长断流</string>
     <string name="s_1_0x">1.0x</string>
     <string name="s_1_choose_your_connection">1 · 选择连接方式</string>
     <string name="s_1_connect_a_computer_with_adb_installed_to_the_car_using">1. 用装有 ADB 的电脑，通过现有的 USB 或无线调试连接连接到车机。如有调试授权提示请批准。\n\n2. 在电脑终端中运行此命令：</string>
@@ -340,7 +346,7 @@
     <string name="show_password">显示密码</string>
     <string name="show_phone_navigation_arrows_distance_and_street_names_on">在支持的比亚迪显示屏上显示手机导航箭头、距离和道路名称。不同车型的兼容性有所差异。</string>
     <string name="show_the_side_map_only_when_its_card_is_open_and_switch_to">仅在地图卡片展开时显示侧方地图，并在“地图主题”中切换为完整地图。更改主题或卡片不会中断 CarPlay 连接。</string>
-    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">在仪表盘上显示 iPhone 地图。通过方向盘操作仪表盘菜单，选择小屏导航或全屏导航。</string>
+    <string name="shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c">仪表盘和屏幕同时显示地图。</string>
     <string name="start_carplay_automatically_after_device_boot">设备启动后自动启动 CarPlay</string>
     <string name="starting">正在启动</string>
     <string name="starting_airplay_service">正在启动 AirPlay 服务</string>
@@ -425,8 +431,8 @@
     <string name="adb_checking_may_ask">正在检查 ADB 访问…如果车机询问，请允许 DiPlay 并勾选“始终允许”。</string>
     <string name="adb_check_failed">ADB 检查失败，请重试。</string>
     <string name="adb_access_ready">ADB 访问已就绪。</string>
-    <string name="adb_dashboard_sends_map">仪表盘：%1$s，因此 iPhone 会发送地图。</string>
-    <string name="adb_dashboard_does_not_send_map">仪表盘：%1$s，因此 iPhone 不发送地图。</string>
+    <string name="adb_dashboard_sends_map">仪表盘当前导航模式：%1$s（该模式会显示投屏），因此 iPhone 发送地图。</string>
+    <string name="adb_dashboard_does_not_send_map">仪表盘当前导航模式：%1$s（该模式不显示投屏，仪表只画自己的箭头），因此 iPhone 不发送地图。</string>
     <string name="adb_not_approved">DiPlay 尚未获得授权。点按“检查 ADB 访问”，然后在车机屏幕上允许 DiPlay。</string>
     <string name="adb_off">网络 ADB 已关闭。请在车机的开发者选项中开启。</string>
     <string name="adb_pairing_only">此车机仅提供需要配对的无线调试，DiPlay 暂不支持。</string>
@@ -453,6 +459,13 @@
     <string name="video_while_parked_description">iOS 27：在 iPhone 上投送到 CarPlay 的视频会在车辆处于 P 挡时在车机屏幕上播放。挂出 P 挡时播放器会关闭；没有 ADB 时视频保持关闭，iPhone 只播放声音。普通 HTTPS 视频（例如来自 Safari）可以播放；受 FairPlay 保护的视频（例如 Apple TV+）需要获得授权的接收器，在这里无法播放。会重新连接 CarPlay。需要车机开启网络 ADB。</string>
     <string name="cluster_song">仪表盘显示歌曲 · 需要 ADB</string>
     <string name="cluster_song_description">CarPlay 正在播放的歌曲名和歌手会显示在仪表盘的音乐卡片中，并同步播放和暂停状态。卡片以比亚迪的“其他”音源显示，因为仪表盘不会绘制 CarPlay 自身的音源。立即生效。需要车机开启网络 ADB。</string>
+    <string name="oem_cluster_map">投屏时隐藏原车地图 · 需要 ADB</string>
+    <string name="oem_cluster_map_description">车机自带的高德地图和 DiPlay 投的是同一块仪表投影屏，两者同时投屏时间长了可能导致仪表重启。这里选择 DiPlay 投屏期间怎么压制原车地图，投屏一停止立即恢复。整包禁用会连带用不了仪表自己的导航模式（小屏/全屏导航），所以在部分车机上「只隐藏它的仪表投屏」更稳妥。需要车机开启网络 ADB。</string>
+    <string name="oem_cluster_hold_off">不处理（与原车地图同屏）</string>
+    <string name="oem_cluster_hold_component">只隐藏它的仪表投屏</string>
+    <string name="oem_cluster_hold_package">禁用整个原车高德</string>
+    <string name="song_on_hud">HUD 显示歌词</string>
+    <string name="song_on_hud_description">在 HUD 上显示 CarPlay 上报的曲目行，第三方音乐应用通常会把歌词逐行推送到这一行。注意：该模式歌词会占用导航的文字提示，谨慎使用。</string>
     <string name="video_back_to_carplay">返回 CarPlay</string>
     <string name="video_play">播放</string>
     <string name="video_pause">暂停</string>

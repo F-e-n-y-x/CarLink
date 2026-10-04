@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.shihab.diplay"
+        applicationId = "com.shihab.diplay.dilink4"
         minSdk = 28
         targetSdk = 37
         versionCode = 29
@@ -39,8 +39,18 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".hudtest"
-            versionNameSuffix = "-hud-test"
+            // No suffix: this build *is* the DiLink 4.0 variant, published under its own package.
+            // Minify here so the standalone car-test APK (assembleStandaloneDebug) ships shrunk: the
+            // unminified debug build wastes ~10 MB on library DEX (BouncyCastle / AndroidX / Compose).
+            // Optimization passes are left off (matching release) to avoid aggressive transforms;
+            // shrinking + obfuscation already recover the bulk of the size.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            optimization { enable = false }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
         release {
             optimization {
@@ -55,6 +65,23 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    // Drop resources that do not belong in a car-test APK.
+    // - navigation_test.pcm (0.37 MB): only used by the in-app test-tone demo (playTestTone),
+    //   which already degrades gracefully if the asset is missing.
+    // - org/bouncycastle/pqc/** (≈1.2 MB): post-quantum crypto lookup tables the MFi path
+    //   never uses; the BouncyCastle classes stay in the DEX, only the data tables are dropped.
+    packaging {
+        // 诊断/缩减：默认 AGP 把 .so 以 STORED 不压缩存储并按 4KB 页对齐，本工程在该配置下会把
+        // 整个 lib 段推到 ~38MB 偏移、中间留 24MB 零空洞。改为压缩存储（legacy packaging）消除对齐，
+        // APK 体积从 ~41MB 降到 ~15MB。代价：安装时解压 .so（对 sideload 车测包无影响）。
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += listOf("**/navigation_test.pcm", "org/bouncycastle/pqc/**")
+        }
     }
 }
 
