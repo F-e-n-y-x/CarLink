@@ -66,6 +66,35 @@ class CarHotspotTetheringTest {
             enable(start = { throw InvocationTargetException(IllegalStateException()) }))
     }
 
+    @Test fun missingBinderMethodFallsBackToAdb() {
+        var on = false
+        val result = CarHotspotTethering.enable(
+            1_000, { false }, { true }, { on },
+            startFallback = { on = true; true },
+            start = { throw NoSuchMethodException() },
+        )
+        assertEquals(Result.READY, result)
+    }
+
+    @Test fun securityExceptionFallsBackToAdb() {
+        var on = false
+        val result = CarHotspotTethering.enable(
+            1_000, { false }, { true }, { on },
+            startFallback = { on = true; true },
+            start = { throw InvocationTargetException(SecurityException()) },
+        )
+        assertEquals(Result.READY, result)
+    }
+
+    @Test fun failedAdbFallbackReportsOriginalDiagnostic() {
+        val result = CarHotspotTethering.enable(
+            20, { false }, { true }, { false },
+            startFallback = { false },
+            start = { throw NoSuchMethodException() },
+        )
+        assertEquals(Result.UNSUPPORTED, result)
+    }
+
     @Test fun cancelledRequestDoesNotStartTheHotspot() {
         assertEquals(Result.CANCELLED, enable(cancelled = { true }))
     }
