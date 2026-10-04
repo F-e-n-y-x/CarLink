@@ -11,6 +11,7 @@ import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotStatus
 import com.shilapi.xcertplay.network.ManualHotspotManager
+import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
 import com.shilapi.xcertplay.orchestration.CarPlayController
@@ -35,7 +36,8 @@ import org.robolectric.annotation.Implements
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE, shadows = [CarHotspotFallbackTest.ApState::class,
-    CarHotspotFallbackTest.ManualAttachment::class, CarHotspotAdbGrantTest.WritePermission::class])
+    CarHotspotFallbackTest.ManualAttachment::class, CarHotspotFallbackTest.ExistingAttachment::class,
+    CarHotspotAdbGrantTest.WritePermission::class])
 class CarHotspotFallbackTest {
     private val app get() = RuntimeEnvironment.getApplication()
 
@@ -81,6 +83,15 @@ class CarHotspotFallbackTest {
         assertStartupFailure("Hotspot startup was cancelled", generation = 1)
     }
 
+    @Test fun existingWifiBypassesHotspotControlEvenWithAutoStartupSavedAndApOff() {
+        ApState.enabled = false
+        CarHotspotAdbGrantTest.WritePermission.allowed = false
+        controller(WirelessHotspotMode.EXISTING_WIFI).use {
+            assertEquals(WirelessHotspotBackend.EXISTING_WIFI, start(it).backend)
+        }
+        assertEquals(0, ManualAttachment.starts)
+    }
+
     private fun assertStartupFailure(message: String, generation: Int = 0) {
         controller().use { controller ->
             val error = assertThrows(IOException::class.java) { start(controller, generation) }
@@ -96,9 +107,10 @@ class CarHotspotFallbackTest {
         catch (error: InvocationTargetException) { throw error.targetException }
     }
 
-    private fun controller(): CarPlayController = CarPlayController(app,
+    private fun controller(mode: WirelessHotspotMode = WirelessHotspotMode.MANUAL): CarPlayController = CarPlayController(app,
         CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, transport = CarPlayTransport.WIRELESS,
-            wirelessHotspotMode = WirelessHotspotMode.MANUAL, manualHotspotSsid = "Car hotspot",
+            wirelessHotspotMode = mode, manualHotspotSsid = "Car hotspot",
+            existingWifiSsid = "Pocket", existingWifiPassphrase = "pocket-password",
             manualHotspotPassphrase = "12345678", identification = Iap2IdentificationConfig(
                 name = "test", modelIdentifier = "test", manufacturer = "test", serialNumber = "test",
                 firmwareVersion = "1", hardwareVersion = "1", carPlayUsbInterfaceNumber = 3)),
@@ -132,5 +144,12 @@ class CarHotspotFallbackTest {
         }
 
         companion object { var starts = 0 }
+    }
+
+    @Implements(ExistingWifiManager::class, isInAndroidSdk = false)
+    class ExistingAttachment {
+        @Implementation fun start(timeoutMillis: Long): WirelessHotspotInfo =
+            WirelessHotspotInfo("Pocket", "pocket-password", Iap2WirelessSecurity.WPA_WPA2, 36,
+                5180, null, "wlan0", InetAddress.getByName("192.0.2.10"), "5 GHz", WirelessHotspotBackend.EXISTING_WIFI)
     }
 }

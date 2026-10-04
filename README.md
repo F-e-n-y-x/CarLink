@@ -42,6 +42,10 @@ If a problem remains, reproduce it on **0.2.11**, then use **Settings → Diagno
 
 ## Documentation
 
+[Existing Wi-Fi / Same LAN](docs/EXISTING_WIFI.md) keeps the iPhone and head unit
+on an external router. See the guide for setup, build requirements and the
+BYD DiLink 4.0 / Android 10 clean-install validation result.
+
 - [Install and connect](docs/INSTALL.md)
 - [Compatibility and troubleshooting](docs/COMPATIBILITY.md)
 - [Privacy and diagnostic reports](docs/PRIVACY.md)
