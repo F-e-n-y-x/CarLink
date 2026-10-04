@@ -156,33 +156,6 @@ class CarPlayVpnService : VpnService() {
 
     fun isAttached(): Boolean = active.get() && attachment != null
 
-    /**
-     * Updates the AirPlay configuration and closes active sessions without tearing down
-     * the underlying NCM/VPN network bridge or ServerSocket.
-     */
-    @Synchronized
-    fun updateAirPlayAttachment(
-        newConfig: AirPlayConfig,
-        newMedia: AirPlayMediaHandler? = null,
-        newListener: AirPlaySessionListener? = null,
-    ): Boolean {
-        if (!active.get() || attachment == null) return false
-        val current = attachment ?: return false
-        val server = serverSocket
-        val updatedConfig = if (server != null) {
-            newConfig.copy(port = server.localPort)
-        } else {
-            newConfig
-        }
-        attachment = current.copy(
-            config = updatedConfig,
-            media = newMedia ?: current.media,
-            listener = newListener ?: current.listener,
-        )
-        closeSessionsLocked()
-        return true
-    }
-
     /** Port the AirPlay listener actually bound, which may differ from the configured port. */
     fun boundPort(): Int? = attachment?.config?.port
 

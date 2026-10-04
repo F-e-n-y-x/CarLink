@@ -359,8 +359,6 @@ class CarPlayHostActivity : ComponentActivity() {
     private var handshakeResetInProgress = false
     private var startAfterHandshakeReset = false
     private var restartGeneration = 0
-    private var fastStreamRestartInProgress = false
-    private val fastStreamRestartTimeout = Runnable { onFastStreamRestartTimedOut() }
     private var reconnectScheduled = false
     private var sessionLog: SessionLogFile? = null
     private var gestureFingerCount = THREE_FINGER_COUNT
@@ -3230,11 +3228,6 @@ class CarPlayHostActivity : ComponentActivity() {
                     activeAirPlaySession = session
                     CarPlayBackgroundSession.active = true
                     reconnectAttempts = 0
-                    if (fastStreamRestartInProgress) {
-                        fastStreamRestartInProgress = false
-                        mainHandler.removeCallbacks(fastStreamRestartTimeout)
-                        appendLog("Fast stream restart connected successfully")
-                    }
                     logThemeState(ThemeModeDiagnostics.Source.SESSION_ACTIVE, resources.configuration)
                     syncAirPlayDarkMode(ThemeModeDiagnostics.Source.SESSION_ACTIVE)
                     if (menuOpen) return@runOnUiThread
@@ -3250,10 +3243,6 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
-                    if (fastStreamRestartInProgress) {
-                        appendLog("AirPlay stream ended (fast restart in progress); awaiting new stream")
-                        return@runOnUiThread
-                    }
                     setConnectionStage(getString(R.string.carplay_session_ended_reconnecting))
                     appendLog("AirPlay session ended; reconnecting from scratch")
                     reconnectAfterLoss("AirPlay session ended")
@@ -3453,7 +3442,6 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = CarPlaySessionDisplay(
             airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
             displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
-            displayScaleTenths, uiScalePercent,
         )
         sessionDisplay = display
         videoView?.let { updateVideoLayout(it.width, it.height) }
@@ -3589,67 +3577,11 @@ class CarPlayHostActivity : ComponentActivity() {
             appendLog(message)
             Log.i(TAG, message)
             videoView?.let { updateVideoLayout(it.width, it.height) }
-        } else if (canFastRestartAirPlayStream()) {
-            fastRestartAirPlayStream(
-                size,
-                "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}",
-            )
         } else {
             restartCarPlay(
                 "Display changed ${previous.width}x${previous.height} -> ${size.width}x${size.height}",
             )
         }
-    }
-
-    private fun canFastRestartAirPlayStream(): Boolean {
-        val currentController = controller ?: return false
-        val currentSink = sink ?: return false
-        if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return false
-        return currentController.canFastRestartStream()
-    }
-
-    private fun fastRestartAirPlayStream(size: DisplaySize, reason: String) {
-        val currentController = controller ?: return
-        val currentSink = sink ?: return
-        appendLog(reason)
-        setConnectionStage(reason)
-        Log.i(TAG, "fastRestartAirPlayStream: $reason at ${size.width}x${size.height}")
-
-        val newAirPlayConfig = createAirPlayConfig(size)
-        val newDisplay = CarPlaySessionDisplay(
-            newAirPlayConfig.main.widthPixels,
-            newAirPlayConfig.main.heightPixels,
-            displayRotation(),
-            hideTopBar,
-            hideBottomBar,
-            size.width,
-            size.height,
-            displayScaleTenths,
-            uiScalePercent,
-        )
-        sessionDisplay = newDisplay
-        currentSink.updateVideoDimensions(newAirPlayConfig.main.widthPixels, newAirPlayConfig.main.heightPixels)
-        videoView?.let { updateVideoLayout(it.width, it.height) }
-        CarPlayBackgroundSession.updateDisplay(size.width, size.height, newDisplay)
-
-        fastStreamRestartInProgress = true
-        mainHandler.removeCallbacks(fastStreamRestartTimeout)
-        mainHandler.postDelayed(fastStreamRestartTimeout, FAST_STREAM_RESTART_TIMEOUT_MILLIS)
-
-        val started = currentController.fastRestartAirPlayStream(newAirPlayConfig)
-        if (!started) {
-            appendLog("Fast stream restart unsupported, falling back to full restart")
-            fastStreamRestartInProgress = false
-            mainHandler.removeCallbacks(fastStreamRestartTimeout)
-            restartCarPlay(reason)
-        }
-    }
-
-    private fun onFastStreamRestartTimedOut() {
-        if (!fastStreamRestartInProgress || shuttingDown.get()) return
-        appendLog("Fast stream restart timed out; falling back to full restart")
-        fastStreamRestartInProgress = false
-        restartCarPlay("Fast stream restart timed out")
     }
 
     @Suppress("DEPRECATION")
@@ -3659,7 +3591,6 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = sessionDisplay ?: return false
         if (display.rotation != displayRotation()) return true
         if (display.hideTopBar != hideTopBar || display.hideBottomBar != hideBottomBar) return true
-        if (display.displayScaleTenths != displayScaleTenths || display.uiScalePercent != uiScalePercent) return true
         if (newSize != null && newSize.width > 0 && newSize.height > 0) {
             val baseAspect = display.width.toDouble() / display.height
             val currentAspect = newSize.width.toDouble() / newSize.height
@@ -3757,8 +3688,6 @@ class CarPlayHostActivity : ComponentActivity() {
         if (!CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress) return
         val size = activeDisplaySize ?: return
-        fastStreamRestartInProgress = false
-        mainHandler.removeCallbacks(fastStreamRestartTimeout)
         appendLog(reason)
         activeScreenStreamTypes.clear()
         setConnectionStage(reason)
@@ -3848,8 +3777,6 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun shutdown(terminateProcess: Boolean, reason: String, completion: () -> Unit = {}) {
         if (!shuttingDown.compareAndSet(false, true)) { completion(); return }
-        fastStreamRestartInProgress = false
-        mainHandler.removeCallbacks(fastStreamRestartTimeout)
         restartGeneration += 1
         mainHandler.removeCallbacks(applyDisplaySize)
         val oldController = controller
@@ -4136,7 +4063,6 @@ class CarPlayHostActivity : ComponentActivity() {
         const val RECONNECT_DELAY_MILLIS = 2_000L
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L
         const val CONTROLLER_CLOSE_TIMEOUT_MILLIS = 4_000L
-        const val FAST_STREAM_RESTART_TIMEOUT_MILLIS = 4_000L
         const val AUDIO_CAPTURE_MARKER = "audio-capture.enabled"
         const val AUDIO_CAPTURE_DIRECTORY = "audio-captures"
         const val PROTOCOL_TRACE_PREFIX = "TRACE "
@@ -4174,8 +4100,6 @@ internal data class CarPlaySessionDisplay(
     // Compare unscaled startup window dimensions, not the scaled video canvas.
     val windowWidth: Int,
     val windowHeight: Int,
-    val displayScaleTenths: Int = 10,
-    val uiScalePercent: Int = 100,
 )
 
 /** Process-local hand-off for keeping the CarPlay session alive while no Activity is visible. */
@@ -4234,13 +4158,6 @@ internal object CarPlayBackgroundSession {
         this.owner = owner
         this.controller = controller
         this.sink = sink
-        this.width = width
-        this.height = height
-        this.display = display
-    }
-
-    @Synchronized
-    fun updateDisplay(width: Int, height: Int, display: CarPlaySessionDisplay) {
         this.width = width
         this.height = height
         this.display = display

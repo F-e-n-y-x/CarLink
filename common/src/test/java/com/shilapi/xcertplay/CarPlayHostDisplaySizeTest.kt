@@ -312,41 +312,6 @@ class CarPlayHostDisplaySizeTest {
         }
     }
 
-    @Test fun fastRestartAirPlayStreamUpdatesSessionDisplayAndDimensionsWithoutRebuildingStack() {
-        val display = CarPlaySessionDisplay(1536, 792, Surface.ROTATION_0, true, true, 1920, 990)
-        val sink = AndroidMediaSink()
-        val controller = object : CarPlayController(activity,
-            CarPlayRuntimeConfig(mfiTarget = MfiTarget.LOCAL, identification = Iap2IdentificationConfig(
-                name = "test", modelIdentifier = "test", manufacturer = "test", serialNumber = "test",
-                firmwareVersion = "1", hardwareVersion = "1", carPlayUsbInterfaceNumber = 3)),
-            AirPlayConfig(deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:01",
-                sourceVersion = "1", main = AirPlayDisplayConfig(widthPixels = 1536, heightPixels = 792)),
-            AirPlayIdentity.generate(), PairingStore(), object : AirPlaySessionListener {},
-            object : AirPlayMediaHandler {}, {}) {
-            override fun canFastRestartStream(): Boolean = true
-            override fun fastRestartAirPlayStream(newAirPlayConfig: AirPlayConfig): Boolean = true
-        }
-        try {
-            allowStartup()
-            setField("controller", controller)
-            setField("sink", sink)
-            setField("sessionDisplay", display)
-            val method = activity.javaClass.getDeclaredMethod("fastRestartAirPlayStream", sizeClass, String::class.java)
-                .apply { isAccessible = true }
-            method.invoke(activity, size(1920, 1080), "test display change")
-            val updatedDisplay = getField("sessionDisplay") as? CarPlaySessionDisplay
-            assertNotNull(updatedDisplay)
-            assertEquals(1920, updatedDisplay?.windowWidth)
-            assertEquals(1080, updatedDisplay?.windowHeight)
-            // fast stream restart does not increment restartGeneration
-            assertEquals(0, getField("restartGeneration"))
-            assertTrue(getField("fastStreamRestartInProgress") as Boolean)
-        } finally {
-            controller.close()
-            controller.awaitClosed(1000)
-            sink.close()
-        }
-    }
 
     private fun startSession(
         rotation: Int = Surface.ROTATION_0,
