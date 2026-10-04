@@ -12,6 +12,20 @@ Normal route end, disconnect, disabling navigation output and stale guidance tri
 
 Enable BYD navigation in settings. In DiAuto it is opt-in under Navigation; in DiPlay it is enabled by default when available. Debug-only receivers/demos require Android's DUMP permission and are absent from release manifests. Development starter and vendor-access experiments are not part of the production navigation path.
 
+## DiLink 3.0 cluster guidance and map (experimental, needs ADB)
+
+DiLink 3.0 head units (Android 10, Qualcomm 6125, "1for2" cluster) have no SOME/IP service and ship the stock AMap adapter as `com.example.amapservice` instead of `com.byd.amapservice`. DiPlay sends it the same navigation broadcasts. That adapter shows preformatted text rather than the numeric extras, so DiPlay also sends `SEG_REMAIN_DIS_AUTO` ("250 m"), `ROUTE_REMAIN_DIS_AUTO` ("5.4 km"), `ROUTE_REMAIN_TIME_AUTO` ("10 min") and `ETA_TEXT` ("15:55"); without them the cluster shows -1. The cluster keeps its stock view until it is switched, so DiPlay also runs, through its adb shell, the calls the stock ClusterDebug app uses (`service call AutoContainer 2 i32 1000 i32 <command> s16 ""`):
+
+- While CarPlay guidance is active: 39, "simple navigation", for the native turn card.
+- While "CarPlay map on dashboard" shows its map window on the cluster: 17, "half-screen projection". The map window uses DiLink 3's projection display, `fission_bg_xdjaVirtualSurface` (1920x720, owned by `com.xdja.containerservice`). The map takes priority over the turn card.
+- When both end: 18, "projection off", only if DiPlay changed the mode.
+
+Approve DiPlay's ADB access once with "Check ADB access"; without it the broadcasts are still sent but the cluster keeps its stock view. The DiLink 5 "Dashboard map only in Small and Full navi" option does not apply: DiLink 3 does not report the wheel-menu mode.
+
+The projection display does not exist after the car starts until the cluster has projected once. When DiPlay opens with BYD navigation on and the display is missing, it runs 16 (projection on), 35 (Di4.0 mode, which creates the display) and 18, as BYD DashCast does; the cluster shows an empty projection area for about six seconds. The display then stays until the car restarts. The map window selects this display through the same exact-name and 1920x720 check as DiLink 4.0. If a CarPlay session started before the display existed, DiPlay shows the map window when the display appears and reconnects once so the iPhone sends the 1920x720 cluster stream.
+
+Basis: on a BYD Han EV (GCC, DiLink 3.0 / Android 10), over shell: 16 then 35 created `fission_bg_xdjaVirtualSurface` (display 1, 1920x720, `FLAG_PRESENTATION`, not private, owner `com.xdja.containerservice`), and an ordinary app launched there appeared in the cluster's projection area with speed and readouts still visible (17 and 16 looked the same); 18 restored the gauges and the display remained. A broadcast with these extras followed by 39 showed the turn arrow, road, distances and ETA on the cluster; the windshield HUD showed nothing. The windshield HUD stayed blank in every test while driving, in both 39 and 18 cluster layouts. This was true even though the adapter wrote the instrument CAN guidance registers, including remaining time and ETA (those parse only from Chinese-format text such as "10分钟" and "预计今天15:55到达", which the cluster then shows in Chinese, so DiPlay keeps English text). The car reports a W-HUD (`SET_HUD_CONFIG` 1) with HUD navigation enabled (`SET_DYNAMIC_NAVI_FUNCTION_STATUS_FEEDBACK` 1), but its settings page shows only the ADAS option. DiPlay therefore claims no HUD guidance on DiLink 3. DiPlay's own map window there is not yet confirmed. A force-stopped DiPlay can leave the cluster switched until DiPlay next restores it.
+
 ## CarPlay map on the instrument cluster (experimental)
 
 DiPlay can ask the iPhone for CarPlay's second, instrument-cluster screen and show it in the BYD cluster's map area. The iPhone renders this map itself; DiPlay decodes the stream onto the cluster projection display. No root or persistent helper is needed. The optional DiLink 5.1 automatic mode described below needs a one-time permission setup.
@@ -178,3 +192,19 @@ What the iPhone expects, as observed with iOS 27 and checked against Apple's Car
 The player is Media3 ExoPlayer, which parses media in the app. The head unit's own MP4 parser (`libmmparser_lite.so` in `media.extractor`) aborted on progressive Safari video on a DiLink 5.0 Tang.
 
 What plays: video from Safari and from video player apps works in the car, including pause, seeking and the wheel keys. Apple TV sends HLS encrypted with `cbcs` (SAMPLE-AES) and keys for FairPlay, Widevine and PlayReady only; over AirPlay the iPhone brokers just the FairPlay key (`unhandledURL`, `streamingKey`), which needs a licensed FairPlay receiver, so Apple TV+ does not play here. When the car's player cannot play an item, DiPlay tells the iPhone as Apple's receiver does (`{type: error, error: {domain, code}, uuid}`), shows a short note and returns to CarPlay. Netflix does not support AirPlay. In testing YouTube played audio only.
+
+DiLink 3 cluster-mode changes keep a separate recovery journal before any
+`AutoContainer` command. If display creation fails after projection starts, DiPlay
+attempts projection-off immediately. A failed restoration stays pending and retries
+using already approved local ADB; reopening DiPlay also recovers an interrupted
+output even when navigation output has since been disabled. A new mode waits for
+that recovery. Android cannot guarantee restoration before force-stop; recovery
+runs after the app opens again. This journal does not change the stock-map package
+hold or the verified windshield HUD receiver checks.
+
+Before releasing DiLink 3 support, retest on the car: first display creation after
+boot, guidance-only mode, map priority over guidance, normal disconnect, temporary
+ADB loss during creation and shutdown, and reopening after an interrupted output.
+Confirm that gauges return after recovery and that existing DiLink 5 routing still
+wins on its supported hardware. Unit tests exercise the failure/recovery paths;
+the repaired branch still needs an end-to-end vehicle test.

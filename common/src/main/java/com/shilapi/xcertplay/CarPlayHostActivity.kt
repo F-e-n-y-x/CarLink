@@ -489,6 +489,8 @@ class CarPlayHostActivity : ComponentActivity() {
             finish(); return
         }
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        getSystemService(android.hardware.display.DisplayManager::class.java)
+            ?.registerDisplayListener(clusterDisplayListener, mainHandler)
         initializeSessionLog()
         lastConfiguration = Configuration(resources.configuration)
         darkMode = savedInstanceState?.getBoolean("carplay_night_active")
@@ -928,12 +930,33 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private var adbClusterConfigured = false
+    // Whether the running session's cluster stream was sized for a physical cluster display.
+    private var clusterStreamOnDisplay = false
+
+    // DiLink 3 creates its cluster display only after DiPlay first projects to the cluster, which can
+    // finish after the session has already asked for the virtual fallback stream.
+    private val clusterDisplayListener = object : android.hardware.display.DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) {
+            if (isDestroyed || !AirPlayPersistence.loadClusterMapEnabled(this@CarPlayHostActivity)) return
+            val display = ClusterMapPresentation.findDisplay(this@CarPlayHostActivity, effectiveClusterTheme())
+            if (display?.displayId != displayId) return
+            appendLog("Cluster map: display ${display.name} appeared")
+            ensureClusterPresentation()
+            if (controller != null && !clusterStreamOnDisplay) {
+                reconnectAfterLoss("Cluster display appeared; requesting its stream")
+            }
+        }
+        override fun onDisplayRemoved(displayId: Int) = Unit
+        override fun onDisplayChanged(displayId: Int) = Unit
+    }
 
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
         adbClusterConfigured = false
+        clusterStreamOnDisplay = false
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
         if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute()) {
             adbClusterConfigured = true
+            clusterStreamOnDisplay = true
             return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
                 AirPlayPersistence.loadClusterMarkerVerticalStep(this),
@@ -947,6 +970,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (display != null) {
             val size = ClusterMapPresentation.sizeOf(display)
             if (size.x > 0 && size.y > 0) {
+                clusterStreamOnDisplay = true
                 if (DiLink51ClusterLayout.supported()) {
                     val plan = DiLink51ClusterLayout.plan(size.x, size.y, theme) ?: return null
                     return DiLink51ClusterLayout.streamConfig().also {
@@ -1127,6 +1151,8 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.overlaySettingsListener = null
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(null)
         clusterMonitor?.stop()
+        getSystemService(android.hardware.display.DisplayManager::class.java)
+            ?.unregisterDisplayListener(clusterDisplayListener)
         mainHandler.removeCallbacks(hideIdleCenterMap)
         homeMonitor?.stop()
         CenterMapOverlay.hide()

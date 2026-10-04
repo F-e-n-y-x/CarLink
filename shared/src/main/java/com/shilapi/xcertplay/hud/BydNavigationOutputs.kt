@@ -8,10 +8,13 @@ object BydNavigationOutputs {
     /** Recover a journaled interrupted output when the app opens, even before a phone reconnects. */
     fun onAppOpened(context: Context) {
         BydOemClusterNavi.restoreIfNeeded(context)
+        BydDiLink3ClusterOutput.restoreIfNeeded(context)
         com.shilapi.xcertplay.network.WifiScanPause.restoreIfNeeded(context)
         if (BydStandaloneHudOutput.available(context)) start(context)
         // Read the battery early, so a reading is ready when CarPlay identifies (see batteryStatus).
         if (BydOutputSettings.batteryToIphoneActive(context)) BydBatteryStatus.start(context)
+        // DiLink 3 creates its cluster map display only once the cluster has projected.
+        if (BydOutputSettings.enabled(context)) BydClusterBridge.prepareProjectionDisplay(context.applicationContext)
     }
     fun setDiagnosticHold(hold: Boolean) { BydStandaloneHudOutput.syntheticHold = hold }
     @Volatile private var useStandalone = false
@@ -27,7 +30,10 @@ object BydNavigationOutputs {
     private val cluster = NavigationOutputWorker("diplay-cluster-output", BydClusterBridge::clear)
 
     /** The host reports whether its CarPlay map window is on the cluster (see [BydClusterMapPause]). */
-    fun setClusterMapShown(shown: Boolean) { BydClusterMapPause.clusterMapShown = shown }
+    fun setClusterMapShown(shown: Boolean) {
+        BydClusterMapPause.clusterMapShown = shown
+        BydClusterBridge.setMapShown(shown)
+    }
 
     /** The running CarPlay session: told every second whether the cluster currently shows the map. */
     fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }
