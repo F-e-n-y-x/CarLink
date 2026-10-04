@@ -1,4 +1,13 @@
 <resources>
+    <string name="existing_wifi_title">现有 Wi-Fi / 同一局域网</string>
+    <string name="existing_wifi_description">使用已有路由器或随身 Wi-Fi。让 iPhone 和车机保持连接同一网络，并通过它上网。</string>
+    <string name="existing_wifi_hint">现有 Wi-Fi · 两台设备保持连接同一 Wi-Fi，蓝牙保持开启，无需开启车机热点。</string>
+    <string name="existing_wifi_instructions">先在系统设置中将车机和 iPhone 连接同一外部 Wi-Fi，再准确填写它的名称和 WPA2 密码；仅开放网络可留空密码。路由器使用 WPA2 或 WPA2/WPA3 混合模式，并关闭客户端隔离。DiPlay 保持此 Wi-Fi 连接，不创建热点。</string>
+    <string name="existing_wifi_details">外部 Wi-Fi 详情</string>
+    <string name="existing_wifi_ssid">外部 Wi-Fi 名称（SSID）</string>
+    <string name="existing_wifi_password">外部 Wi-Fi 密码</string>
+    <string name="existing_wifi_attaching">正在接入现有 Wi-Fi</string>
+    <string name="existing_wifi_ready">现有 Wi-Fi 就绪：%1$s · %2$s · 信道 %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">首选 Wi-Fi Direct 信道</string>
     <string name="wifi_direct_channel_summary">首选信道：%1$s</string>
     <string name="wifi_direct_channel_choice">信道 %1$d · %2$s</string>
@@ -546,6 +555,14 @@
     <string name="center_map_no_permission_screen">此车机没有该权限的设置界面，请通过 ADB 允许。</string>
     <string name="launcher_map_sharing">与其他启动器共享实时地图</string>
     <string name="launcher_map_sharing_description">支持 DiPlay 的启动器可以在自己的主屏幕中显示实时仪表盘地图。默认关闭，因为开启后车机上的任何应用都可以请求该地图。详见 docs/LAUNCHER_INTEGRATION.md。</string>
+    <string name="adb_cluster_activity_label">仪表地图</string>
+    <string name="adb_cluster_activity_mode">DiLink 4 仪表视频（ADB，实验性）</string>
+    <string name="adb_cluster_activity_description">通过内置ADB直接在已验证仪表副屏启动地图。请先授权ADB，再重新连接iPhone。</string>
+    <string name="adb_cluster_authorize">授权 ADB / 重试仪表移动</string>
+    <string name="adb_cluster_open">重试仪表地图</string>
+    <string name="adb_cluster_routing">正在通过ADB启动仪表地图…</string>
+    <string name="adb_cluster_routed">仪表窗口已移动，等待 iPhone 地图</string>
+    <string name="adb_cluster_route_failed">仪表启动失败，请导出诊断。</string>
     <string name="open_diplay_settings_hint">CarPlay 中用 %1$d 指下滑打开 DiPlay 设置。</string>
     <string name="carplay_controls">CarPlay 操作</string>
     <string name="settings_gesture_fingers">打开设置 · %1$d 指下滑（点按切换）</string>
@@ -564,6 +581,7 @@
     <string name="byd_adb_features">比亚迪功能 · 需要 ADB</string>
     <string name="location_reporting_reconnects">更改此设置会重新连接当前 CarPlay 会话。</string>
     <string name="diagnostic_report_saved_in_app">由于公共保存位置不可用，报告已私密保存到 DiPlay。您可以在此分享或查看报告。不会自动发送任何内容。</string>
+    <string name="diagnostic_report_saved_to_path">报告已保存到：\n%1$s\n\n您也可以在此分享或查看报告。不会自动发送任何内容。</string>
     <string name="view_diagnostic_report">查看报告</string>
     <string name="diagnostic_report_copy_hint">长按报告文本即可选择并复制。如果没有可用的分享应用，可以使用此方式。</string>
     <string name="wheel_map_zoom">用方向盘按键缩放仪表盘地图</string>
@@ -589,4 +607,15 @@
     <string name="wheel_zoom_note_volume">音量</string>
     <string name="wheel_key_service_label">DiPlay 方向盘按键</string>
     <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图。它只接收按键，不读取屏幕内容。</string>
+    <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
+    <string name="cluster_safe_area_reset">重置仪表安全区域</string>
+    <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
+    <string name="cluster_safe_area_live_hint">在此拖动绿色边界，仪表会同步显示区域框。保存后重新连接生效；取消保留当前区域。</string>
+    <string name="oem_cluster_map">隐藏原车仪表地图</string>
+    <string name="oem_cluster_map_description">可选：DiPlay 投屏期间暂停原车地图的仪表投屏。关闭时不修改原车地图。组件模式只隐藏仪表投屏，整包模式会禁用整个原车地图，停止投屏后恢复原状态。需要已授权的本地 ADB，重新连接后生效。</string>
+    <string name="oem_cluster_hold_off">关闭</string>
+    <string name="oem_cluster_hold_component">只隐藏仪表投屏</string>
+    <string name="oem_cluster_hold_package">禁用整个原车地图</string>
+    <string name="song_on_hud">HUD 显示曲名或歌词</string>
+    <string name="song_on_hud_description">无导航指引时显示手机提供的曲名或歌词，导航方向和道路名称优先。</string>
 </resources>

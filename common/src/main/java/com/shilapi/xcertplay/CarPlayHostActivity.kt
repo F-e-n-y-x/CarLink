@@ -163,6 +163,8 @@ class CarPlayHostActivity : ComponentActivity() {
         manualHotspotBand = manualHotspotBand,
         manualHotspotChannel = manualHotspotChannel,
         manualHotspotSecurity = manualHotspotSecurity,
+        existingWifiSsid = existingWifiSsid,
+        existingWifiPassphrase = existingWifiPassphrase,
         locationReportingEnabled = locationReportingEnabled,
     )
 
@@ -269,6 +271,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var resolutionPreviewView: TextView? = null
     private var hotspotStatusView: TextView? = null
     private var manualHotspotFields: View? = null
+    private var existingWifiFields: View? = null
+    private var existingWifiErrorView: TextView? = null
     private var manualHotspotErrorView: TextView? = null
     private var iconPreviewView: ImageView? = null
     private var iconStatusView: TextView? = null
@@ -347,6 +351,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var wirelessPermissionsReady = false
     private var wirelessHotspotMode = WirelessHotspotMode.WIFI_P2P
     private var manualHotspotSsid = ""
+    private var existingWifiSsid = ""
+    private var existingWifiPassphrase = ""
     private var manualHotspotPassphrase = ""
     private var manualHotspotBand = ManualHotspotBand.AUTO
     private var manualHotspotChannel = 0
@@ -579,6 +585,8 @@ class CarPlayHostActivity : ComponentActivity() {
         remoteMfiToken = AirPlayPersistence.loadRemoteMfiToken(this)
         locationReportingEnabled = AirPlayPersistence.loadLocationReportingEnabled(this)
         wirelessHotspotMode = AirPlayPersistence.loadWirelessHotspotMode(this)
+        existingWifiSsid = AirPlayPersistence.loadExistingWifiSsid(this)
+        existingWifiPassphrase = AirPlayPersistence.loadExistingWifiPassphrase(this)
         manualHotspotSsid = AirPlayPersistence.loadManualHotspotSsid(this)
         manualHotspotPassphrase = AirPlayPersistence.loadManualHotspotPassphrase(this)
         manualHotspotBand = AirPlayPersistence.loadManualHotspotBand(this)
@@ -644,6 +652,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
     private fun requiredWirelessPermissions(): List<String> = when {
+        wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) listOf(Manifest.permission.BLUETOOTH_CONNECT) else emptyList()
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> listOf(
             Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.NEARBY_WIFI_DEVICES,
@@ -777,6 +787,16 @@ class CarPlayHostActivity : ComponentActivity() {
             dismissClusterPresentation()
             return
         }
+        if (AdbClusterRouter.enabled(this)) {
+            ClusterActivityOutput.bind(this, taskId) { onClusterSurface(it) }
+            ClusterActivityOutput.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
+            applyClusterTurnOverlay()
+            runCatching { ClusterActivityOutput.ensure(this) }.onFailure {
+                appendLog("Cluster activity: launch failed ${it.javaClass.simpleName}: ${it.message}")
+            }
+            return
+        }
+        ClusterActivityOutput.stop(this)
         val theme = effectiveClusterTheme()
         if (DiLink51ClusterLayout.supported()) {
             ensureDiLink51ClusterPresentation(theme)
@@ -802,10 +822,10 @@ class CarPlayHostActivity : ComponentActivity() {
             presentation.setStreamActive(SCREEN_TYPE_ALT in activeScreenStreamTypes)
             applyClusterTurnOverlay()
             Log.i(ClusterMapPresentation.TAG, "cluster presentation shown display=${display.displayId} name=${display.name}")
-            appendLog("Cluster map: presentation shown display=${display.displayId}")
+            appendLog("Cluster map: presentation shown display=${display.displayId} name=${display.name}")
         } catch (error: RuntimeException) {
             Log.w(ClusterMapPresentation.TAG, "cluster presentation failed", error)
-            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+            appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
         }
     }
 
@@ -836,7 +856,7 @@ class CarPlayHostActivity : ComponentActivity() {
             } catch (error: RuntimeException) {
                 clusterLayers.remove(fullMap)
                 clusterPresentation = null
-                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}")
+                appendLog("Cluster map: presentation failed ${error.javaClass.simpleName}: ${error.message}")
                 return
             }
         }
@@ -849,6 +869,11 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun applyClusterTurnOverlay() {
         val overlay = CarPlayClusterDisplay.usesCustomTurnCard(AirPlayPersistence.loadClusterContent(this))
+        ClusterActivityOutput.setTurnCard(if (overlay) clusterTurnGuidance else null,
+            AirPlayPersistence.loadClusterTurnCardOverlayXPercent(this),
+            AirPlayPersistence.loadClusterTurnCardOverlayYPercent(this),
+            AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(this),
+            AirPlayPersistence.loadClusterTurnCardOpacityPercent(this), darkMode)
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         for (presentation in presentations) {
             presentation.setTurnCardOverlay(
@@ -863,6 +888,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun dismissClusterPresentation() {
+        ClusterActivityOutput.stop(this)
         val presentations = (clusterLayers.values + listOfNotNull(clusterPresentation)).distinct()
         clusterLayers.clear()
         clusterPresentation = null
@@ -876,16 +902,36 @@ class CarPlayHostActivity : ComponentActivity() {
         if (clusterSurface === surface) return
         // A direct handoff lets MediaCodec.setOutputSurface preserve its reference frames.
         // Clearing first would destroy the decoder and can leave stream 111 waiting for an IDR.
-        if (!DiLink51ClusterLayout.supported() || surface == null) {
+        if ((!DiLink51ClusterLayout.supported() && !AdbClusterRouter.enabled(this)) || surface == null) {
             clusterSurface?.let { old -> sink?.clearSurface(SCREEN_TYPE_ALT, old) }
         }
         clusterSurface = surface
         // Never fall back to the main surface: two decoders must not draw into one Surface.
-        if (surface != null) sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        if (surface != null) {
+            if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute() &&
+                !adbClusterConfigured && controller != null) {
+                ClusterActivityOutput.setStreamActive(false)
+                reconnectAfterLoss("DiLink 4 cluster confirmed; requesting its native stream")
+            } else sink?.setSurface(SCREEN_TYPE_ALT, surface)
+        }
+        updateClusterMapShown()
     }
 
+    private var adbClusterConfigured = false
+
     private fun clusterDisplayConfig(): AirPlayDisplayConfig? {
+        adbClusterConfigured = false
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return null
+        if (AdbClusterRouter.enabled(this) && ClusterActivityOutput.hasConfirmedRoute()) {
+            adbClusterConfigured = true
+            return DiLink4ClusterDisplay.streamConfig(AirPlayPersistence.loadClusterContent(this),
+                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                AirPlayPersistence.loadClusterSafeAreaRect(this)).also {
+                MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
+                appendLog("Cluster activity: requesting stream 111 at ${it.widthPixels}x${it.heightPixels}; safeArea=${it.safeArea} drawOutside=${it.safeAreaDrawOutside}; ADB task routing")
+            }
+        }
         val theme = effectiveClusterTheme()
         val display = ClusterMapPresentation.findDisplay(this, theme)
         if (display != null) {
@@ -897,6 +943,14 @@ class CarPlayHostActivity : ComponentActivity() {
                         MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
                         appendLog("Cluster map: fixed 1920x720 stream; layout=$theme viewport=$plan")
                     }
+                }
+                if (DiLink4ClusterDisplay.matches(display.name, size.x, size.y)) {
+                    return DiLink4ClusterDisplay.streamConfig(
+                        AirPlayPersistence.loadClusterContent(this),
+                        AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
+                        AirPlayPersistence.loadClusterMarkerVerticalStep(this),
+                        AirPlayPersistence.loadClusterSafeAreaRect(this),
+                    ).also { MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels }
                 }
                 return CarPlayClusterDisplay.config(
                     size.x,
@@ -1023,7 +1077,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // The dashboard map pause must not stop the stream while a copy of the map is on screen.
     private fun updateClusterMapShown() {
-        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown(clusterPresentation != null && !MapMirrors.any)
+        com.shilapi.xcertplay.hud.BydNavigationOutputs.setClusterMapShown((clusterPresentation != null ||
+            (ClusterActivityOutput.hasConfirmedRoute() && clusterSurface != null)) && !MapMirrors.any)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -1853,6 +1908,7 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveRemoteMfiServer(this, remoteMfiServer)
         AirPlayPersistence.saveRemoteMfiToken(this, remoteMfiToken)
         AirPlayPersistence.saveWirelessHotspotMode(this, wirelessHotspotMode)
+        AirPlayPersistence.saveExistingWifiCredentials(this, existingWifiSsid, existingWifiPassphrase)
         AirPlayPersistence.saveManualHotspotSsid(this, manualHotspotSsid)
         AirPlayPersistence.saveManualHotspotPassphrase(this, manualHotspotPassphrase)
         AirPlayPersistence.saveManualHotspotBand(this, manualHotspotBand)
@@ -2685,6 +2741,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 add(WirelessHotspotMode.WIFI_P2P to getString(R.string.wi_fi_p2p_5_ghz))
             }
             add(WirelessHotspotMode.MANUAL to getString(R.string.built_in_car_hotspot))
+            add(WirelessHotspotMode.EXISTING_WIFI to getString(R.string.existing_wifi_title))
         }
         var selectedId = View.NO_ID
         for ((mode, label) in modes) {
@@ -2835,11 +2892,29 @@ class CarPlayHostActivity : ComponentActivity() {
         )
         manualHotspotFields = manualFields
         manualHotspotErrorView = error
+        val existingFields = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(menuText(getString(R.string.existing_wifi_instructions), 14f, MENU_SECONDARY))
+            addView(settingsInputRow(getString(R.string.existing_wifi_ssid), existingWifiSsid) {
+                existingWifiSsid = it
+                existingWifiErrorView?.visibility = View.GONE
+            })
+            addView(settingsInputRow(getString(R.string.existing_wifi_password), existingWifiPassphrase, password = true) {
+                existingWifiPassphrase = it
+                existingWifiErrorView?.visibility = View.GONE
+            })
+        }
+        existingWifiErrorView = menuText("", 14f, MENU_DANGER).apply { visibility = View.GONE }
+        existingFields.addView(existingWifiErrorView)
+        section.addView(existingFields)
+        existingWifiFields = existingFields
         updateManualHotspotFields()
         return section
     }
 
     private fun updateManualHotspotFields() {
+        existingWifiFields?.visibility = if (wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI) View.VISIBLE else View.GONE
+        existingWifiErrorView?.visibility = View.GONE
         val visible = wirelessHotspotMode == WirelessHotspotMode.MANUAL
         manualHotspotFields?.visibility = if (visible) View.VISIBLE else View.GONE
         if (!visible) manualHotspotErrorView?.visibility = View.GONE
@@ -2868,6 +2943,12 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun validateManualHotspotSettings(): Boolean {
+        if (wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI) {
+            val error = com.shilapi.xcertplay.orchestration.ManualHotspotValidation.error(existingWifiSsid, existingWifiPassphrase)
+            existingWifiErrorView?.text = error?.let { getString(it.messageResource()) }.orEmpty()
+            existingWifiErrorView?.visibility = if (error == null) View.GONE else View.VISIBLE
+            return error == null
+        }
         if (wirelessHotspotMode != WirelessHotspotMode.MANUAL) return true
         val error = when {
             manualHotspotSsid.isBlank() -> getString(R.string.hotspot_ssid_is_required)
@@ -2896,6 +2977,7 @@ class CarPlayHostActivity : ComponentActivity() {
         WirelessHotspotMode.WIFI_P2P -> getString(R.string.wi_fi_p2p_5_ghz)
         WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> getString(R.string.localonlyhotspot)
         WirelessHotspotMode.MANUAL -> getString(R.string.manual_hotspot)
+        WirelessHotspotMode.EXISTING_WIFI -> getString(R.string.existing_wifi_title)
     }
 
     private fun menuText(
@@ -3424,6 +3506,7 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
+                    ClusterActivityOutput.setStreamActive(false)
                     setConnectionStage(getString(R.string.carplay_session_ended_reconnecting))
                     appendLog("AirPlay session ended; reconnecting from scratch")
                     reconnectAfterLoss("AirPlay session ended")
@@ -3438,6 +3521,7 @@ class CarPlayHostActivity : ComponentActivity() {
                         return@runOnUiThread
                     }
                     activeScreenStreamTypes.clear()
+                    ClusterActivityOutput.setStreamActive(false)
                     setConnectionStage(getString(R.string.transport_error_reconnecting))
                     appendLog("CarPlay transport error: $message; reconnecting from scratch")
                     reconnectAfterLoss("CarPlay transport error: $message")
@@ -3877,6 +3961,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val size = activeDisplaySize ?: return
         appendLog(reason)
         activeScreenStreamTypes.clear()
+        ClusterActivityOutput.setStreamActive(false)
         setConnectionStage(reason)
         Log.i(TAG, "$reason; rebuilding stack at ${size.width}x${size.height}")
         val generation = ++restartGeneration
@@ -4152,6 +4237,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 Log.i(ClusterMapPresentation.TAG, "cluster stream active=$active")
                 appendLog("Cluster map: stream active=$active")
                 clusterPresentation?.setStreamActive(active)
+                ClusterActivityOutput.setStreamActive(active)
                 MapMirrors.setStreamActive(active)
                 if (active) {
                     mainHandler.removeCallbacks(hideIdleCenterMap)
@@ -4276,9 +4362,12 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.WaitingForMfi -> getString(R.string.waiting_for_mfi_coprocessor)
         CarPlayStatus.RequestingMfiPermission -> getString(R.string.requesting_mfi_usb_permission)
         CarPlayStatus.MfiReady -> getString(R.string.mfi_authentication_ready)
-        CarPlayStatus.StartingHotspot -> getString(R.string.starting_wireless_hotspot)
+        CarPlayStatus.StartingHotspot -> getString(if (wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI)
+            R.string.existing_wifi_attaching else R.string.starting_wireless_hotspot)
         is CarPlayStatus.HotspotReady ->
-            getString(R.string.status_hotspot_ready, backend, ssid, band, if (channel == 0) getString(R.string.auto_value) else channel.toString())
+            if (wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI) {
+                getString(R.string.existing_wifi_ready, ssid, band, channel, address)
+            } else getString(R.string.status_hotspot_ready, backend, ssid, band, if (channel == 0) getString(R.string.auto_value) else channel.toString())
         CarPlayStatus.WaitingForPairedIphone -> getString(R.string.waiting_for_paired_iphone)
         CarPlayStatus.ConnectingBluetooth -> getString(R.string.connecting_bluetooth)
         CarPlayStatus.RunningWireless -> getString(R.string.wireless_carplay_control_running)

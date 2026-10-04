@@ -10,8 +10,8 @@ import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/** What the dashboard's music card shows; [source] picks another BYD music-source icon for a note. */
-internal data class ClusterSong(val text: String, val playing: Boolean, val source: Int? = null)
+/** Dashboard song; [line] preserves title-only HUD text, [source] selects a note's music icon. */
+internal data class ClusterSong(val text: String, val playing: Boolean, val line: String = text, val source: Int? = null)
 
 /**
  * The CarPlay song for the dashboard, from iAP2 NowPlayingUpdate (0x5001): title (1) and artist (12)
@@ -41,7 +41,7 @@ internal class ClusterSongState {
         runCatching { body.optionalGroup(PLAYBACK)?.optionalU8(STATUS) }.getOrNull()?.let { status ->
             playing = status == STATUS_PLAYING || status == STATUS_SEEK_FORWARD || status == STATUS_SEEK_BACKWARD
         }
-        val next = text(title, artist)?.let { ClusterSong(it, playing) }
+        val next = text(title, artist)?.let { ClusterSong(it, playing, title!!.trim()) }
         if (next == last) return null
         last = next
         return next
@@ -150,7 +150,7 @@ internal object BydClusterSong {
         val token = Any()
         val card = synchronized(state) {
             note = token
-            ClusterSong(text, state.current()?.playing ?: true, source).also { wanted = it }
+            ClusterSong(text, state.current()?.playing ?: true, source = source).also { wanted = it }
         }
         writer.execute { write(app, card) }
         writer.schedule({ endNote(app, token) }, NOTE_MILLIS, TimeUnit.MILLISECONDS)
@@ -165,6 +165,7 @@ internal object BydClusterSong {
         }
         if (song == null) clear(app) else write(app, song)
     }
+    fun current(): ClusterSong? = synchronized(state) { state.current() }
 
     private fun show(app: Context, song: ClusterSong) {
         synchronized(state) { wanted = song }

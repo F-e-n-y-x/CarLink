@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="existing_wifi_title">Наявна Wi-Fi / Одна LAN</string>
+    <string name="existing_wifi_description">Використовуйте наявний роутер або портативну Wi-Fi. iPhone та автомобіль залишаються в одній мережі з доступом до Інтернету.</string>
+    <string name="existing_wifi_hint">Наявна Wi-Fi · Підключіть обидва пристрої до однієї Wi-Fi та увімкніть Bluetooth. Точка доступу автомобіля не потрібна.</string>
+    <string name="existing_wifi_instructions">У системних налаштуваннях підключіть автомобіль та iPhone до однієї зовнішньої Wi-Fi. Введіть її точне ім’я та пароль WPA2; залиште пароль порожнім лише для відкритої мережі. Використовуйте WPA2 або змішаний режим WPA2/WPA3 і вимкніть ізоляцію клієнтів на роутері. DiPlay зберігає це підключення та не створює точку доступу.</string>
+    <string name="existing_wifi_details">Дані зовнішньої Wi-Fi</string>
+    <string name="existing_wifi_ssid">Назва зовнішньої Wi-Fi (SSID)</string>
+    <string name="existing_wifi_password">Пароль зовнішньої Wi-Fi</string>
+    <string name="existing_wifi_attaching">Підключення до наявної Wi-Fi</string>
+    <string name="existing_wifi_ready">Наявна Wi-Fi готова: %1$s · %2$s · канал %3$d · %4$s</string>
     <string name="wifi_direct_channel_title">Бажаний канал Wi-Fi Direct</string>
     <string name="wifi_direct_channel_summary">Бажаний канал: %1$s</string>
     <string name="wifi_direct_channel_choice">Канал %1$d · %2$s</string>
@@ -556,6 +565,7 @@
     <string name="hotspot_control_failed">Не вдалося ввімкнути точку доступу. Відкрийте налаштування авто.</string>
     <string name="byd_adb_features">Функції BYD · потрібен ADB</string>
     <string name="diagnostic_report_saved_in_app">Звіт збережено приватно в DiPlay, оскільки загальнодоступне місце збереження недоступне. Поділіться ним або перегляньте його тут. Нічого не надсилається автоматично.</string>
+    <string name="diagnostic_report_saved_to_path">Звіт збережено в:\n%1$s\n\nВи також можете поділитися ним або переглянути його тут. Нічого не надсилається автоматично.</string>
     <string name="view_diagnostic_report">Переглянути звіт</string>
     <string name="diagnostic_report_copy_hint">Натисніть і утримуйте текст звіту, щоб виділити та скопіювати його. Це можна використати, якщо немає застосунку для надсилання.</string>
     <string name="wheel_map_zoom">Масштаб карти на приборці кнопками керма</string>
