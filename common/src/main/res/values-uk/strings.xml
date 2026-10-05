@@ -605,4 +605,16 @@
     <string name="wheel_key_service_description">Дає DiPlay використовувати вибрані в налаштуваннях кнопки керма для масштабу карти CarPlay на приборці та для руху екраном CarPlay. Лише отримує натискання кнопок і не читає екран.</string>
     <string name="cluster_song_on_change">Пісня лише при зміні</string>
     <string name="cluster_song_on_change_description">Нова пісня видна на приборці 5 секунд, потім картка порожніє. Пауза й продовження її не показують.</string>
+    <string name="carplay_dock">Панель програм CarPlay</string>
+    <string name="carplay_dock_automatic">Автоматично</string>
+    <string name="carplay_dock_driver_side">З боку водія</string>
+    <string name="carplay_dock_bottom">Знизу</string>
+    <string name="carplay_dock_hint">Де CarPlay показує програми, годинник і стан. Між «З боку водія» і «Знизу» перемикається одразу; «Автоматично» залишає вибір iPhone і діє після перепідключення.</string>
+    <string name="split_screen_areas">CarPlay у розділеному екрані</string>
+    <string name="split_screen_areas_description">Коли головний пристрій показує DiPlay у розділеному екрані, CarPlay перемальовується під це вікно, а не зменшується з чорними смугами, і повертається на весь екран без перепідключення. Розмір вікна запам’ятовується першого разу, тож з наступного підключення картинка точно за розміром. Якщо панель програм на «Автоматично», CarPlay тоді ставить її знизу. Застосовується з наступного підключення.</string>
+    <string name="carplay_rotation">Повертати CarPlay разом з екраном без перепідключення</string>
+    <string name="carplay_rotation_description">Для головних пристроїв, у яких екран повертається. CarPlay отримує квадратну картинку з горизонтальним і вертикальним екраном, тож поворот екрана перемальовує CarPlay замість перепідключення. Квадратну картинку важче декодувати; власна безпечна зона до неї не застосовується. Застосовується з наступного підключення.</string>
+    <string name="carplay_rotation_picture">Квадратна картинка</string>
+    <string name="carplay_rotation_smoother">Плавніше (1920)</string>
+    <string name="carplay_rotation_sharper">Чіткіше (розмір екрана)</string>
 </resources>

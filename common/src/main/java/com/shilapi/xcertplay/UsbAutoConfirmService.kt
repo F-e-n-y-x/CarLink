@@ -119,11 +119,12 @@ class UsbAutoConfirmService : AccessibilityService() {
             return false
         }
 
-        fun openSettings(context: Context) {
+        fun openSettings(context: Context): Boolean = runCatching {
             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-        }
+            true
+        }.getOrDefault(false)
     }
 }

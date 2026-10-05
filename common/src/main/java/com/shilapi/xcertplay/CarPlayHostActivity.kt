@@ -103,6 +103,7 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToInt
 
 /**
  * Full-screen CarPlay host. It renders decoded video through a [TextureView], forwards touch to
@@ -346,6 +347,11 @@ class CarPlayHostActivity : ComponentActivity() {
     private var maximumDetectedWidthPixels = 0
     private var maximumDetectedHeightPixels = 0
     private var rightHandDrive = false
+    private var carPlayDock = CarPlayDock.AUTOMATIC
+    /** The view areas the next session declares (see createAirPlayConfig). */
+    private var pendingViewAreas: CarPlayViewAreas? = null
+    /** The dock the running session declared; null before the first connection. */
+    private var sessionDock: CarPlayDock? = null
     private var hideTopBar = true
     private var hideBottomBar = true
     private var safeAreaDrawOutside = true
@@ -540,6 +546,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun loadPersistedSettings() {
+        carPlayDock = CarPlayDock.load(this)
         carPlayNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         ambientLightThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         ambientDelaySeconds = AirPlayPersistence.loadAmbientDelaySeconds(this)
@@ -634,11 +641,13 @@ class CarPlayHostActivity : ComponentActivity() {
             PackageManager.PERMISSION_GRANTED
 
     private fun requestVpnConsent() {
+        if (awaitingVpnConsent) return
         val consent = CarPlayVpnService.prepare(this)
         if (consent == null) {
             vpnReady = true
             maybeStartCarPlay()
         } else {
+            vpnReady = false
             awaitingVpnConsent = true
             vpnConsent.launch(consent)
         }
@@ -684,12 +693,19 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (isIphoneUsbAttachment(intent) && wirelessEnabled) {
-            shutdown(false, "switching to USB") {
+        if (isIphoneUsbAttachment(intent)) {
+            if (wirelessEnabled) {
+                if (menuOpen) cancelSettingsEdits()
                 AirPlayPersistence.saveWirelessEnabled(this, false)
-                startActivity(Intent(this, CarPlayHostActivity::class.java))
+                wirelessEnabled = false
+                wirelessPermissionsReady = true
+                if (controller != null) {
+                    restartCarPlay("switching to USB")
+                }
+                requestStartupPrerequisites()
+            } else if (controller == null) {
+                requestStartupPrerequisites()
             }
-            finish()
         }
     }
 
@@ -1525,6 +1541,13 @@ class CarPlayHostActivity : ComponentActivity() {
             ).apply { topMargin = dp(26) },
         )
         content.addView(
+            buildDockSection(),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(26) },
+        )
+        content.addView(
             settingsCategoryHeader(getString(R.string.display_video)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1879,6 +1902,7 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.saveOemLabel(this, oemLabel)
         AirPlayPersistence.saveDebugLogsEnabled(this, debugLogsEnabled)
         AirPlayPersistence.saveRightHandDrive(this, rightHandDrive)
+        CarPlayDock.save(this, carPlayDock)
         AirPlayPersistence.saveHideTopBar(this, hideTopBar)
         AirPlayPersistence.saveHideBottomBar(this, hideBottomBar)
         AirPlayPersistence.saveSafeAreaDrawOutside(this, safeAreaDrawOutside)
@@ -2361,6 +2385,59 @@ class CarPlayHostActivity : ComponentActivity() {
         iconPreviewView = preview
         iconStatusView = status
         updateAirPlayIconPreview()
+        return section
+    }
+
+    // Between the driver's side and the bottom the dock moves at once (and is saved at once) when the
+    // running session declared both; to or from automatic waits for Save, which reconnects.
+    private fun buildDockSection(): View {
+        val section = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        section.addView(
+            menuText(getString(R.string.carplay_dock), 20f, MENU_SECONDARY),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ),
+        )
+        val group = RadioGroup(this).apply {
+            orientation = RadioGroup.HORIZONTAL
+        }
+        val labels = mapOf(
+            CarPlayDock.AUTOMATIC to R.string.carplay_dock_automatic,
+            CarPlayDock.DRIVER_SIDE to R.string.carplay_dock_driver_side,
+            CarPlayDock.BOTTOM to R.string.carplay_dock_bottom,
+        )
+        val buttons = CarPlayDock.entries.associateWith { dock ->
+            RadioButton(this).apply {
+                id = View.generateViewId()
+                text = getString(labels.getValue(dock))
+                setTextColor(Color.WHITE)
+                isChecked = carPlayDock == dock
+            }.also { group.addView(it) }
+        }
+        group.setOnCheckedChangeListener { _, checkedId ->
+            val next = buttons.entries.firstOrNull { it.value.id == checkedId }?.key ?: return@setOnCheckedChangeListener
+            carPlayDock = next
+            val from = sessionDock
+            val areas = sessionDisplay?.viewAreas
+            val target = next.edge?.let { areas?.withDock(it) }
+            if (from != null && areas != null && target != null && CarPlayDock.movesLive(from, next) &&
+                controller?.showViewArea(target) == true
+            ) {
+                areas.use(target)
+                CarPlayDock.save(this, next)
+            }
+        }
+        section.addView(
+            group,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(8) },
+        )
+        section.addView(menuText(getString(R.string.carplay_dock_hint), 16f, MENU_SECONDARY))
         return section
     }
 
@@ -2938,7 +3015,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 hotspotStatus.copy(state = getString(R.string.connecting_bluetooth))
             CarPlayStatus.RunningWireless ->
                 hotspotStatus.copy(state = getString(R.string.running))
-            CarPlayStatus.WirelessActive ->
+            CarPlayStatus.WirelessActive, CarPlayStatus.WirelessActiveFallback ->
                 hotspotStatus.copy(state = getString(R.string.active))
             CarPlayStatus.AttachingNetwork ->
                 hotspotStatus.copy(state = getString(R.string.starting_airplay_service))
@@ -3169,6 +3246,41 @@ class CarPlayHostActivity : ComponentActivity() {
             ),
             safeAreaDrawOutside = safeAreaDrawOutside,
         )
+        // A fixed dock, split-screen support or a turning screen declares several areas the car switches
+        // between live. A session that starts in split screen sizes its canvas to that window, so it keeps
+        // the plain canvas and one area for it.
+        val inSplitScreen = isMultiWindowActive()
+        val dock = CarPlayDock.load(this).also { sessionDock = it }
+        val splitWindow: (Boolean) -> Pair<Float, Float>? = { portrait ->
+            if (SplitScreenSettings.enabled(this) && !inSplitScreen) SplitScreenSettings.window(this, portrait) else null
+        }
+        val longPixels = maxOf(display.widthPixels, display.heightPixels)
+        val shortPixels = minOf(display.widthPixels, display.heightPixels)
+        val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
+            CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), hevcEnabled, hevcSoftwareDecoderEnabled)
+        } else null
+        val canvas = if (square == null) display else {
+            // The square keeps the plain canvas's pixel density, so CarPlay's scale (and "CarPlay size")
+            // stays the same in both orientations; it has no room for the custom safe area.
+            val longMm = if (display.widthPixels >= display.heightPixels) display.widthPhysicalMm else display.heightPhysicalMm
+            val squareMm = longMm?.let { (it.toLong() * square / longPixels).toInt() }
+            display.copy(widthPixels = square, heightPixels = square, widthPhysicalMm = squareMm,
+                heightPhysicalMm = squareMm, viewArea = null, safeArea = null)
+        }
+        val viewAreas = if (square == null) {
+            CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
+                CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
+            ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels)
+        } else {
+            val areaShort = (shortPixels.toLong() * square / longPixels).toInt() and 1.inv()
+            CarPlayViewAreas.build(square, square, listOf(
+                CarPlayViewAreas.Screen(square, areaShort, portrait = false),
+                CarPlayViewAreas.Screen(areaShort, square, portrait = true),
+            ), dock, splitWindow, startPortrait = size.height > size.width)
+        }
+        pendingViewAreas = viewAreas
+        val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
+        if (square != null) appendLog("Turning screen: square canvas ${square}x$square, areas ${viewAreas?.areas}")
         val requestSummary = "Display request selected=${CarPlayUiScale.label(requestedPercent)} percent=$requestedPercent " +
             "surface=${size.width}x${size.height} resolution=${requestedResolutionPercent}% " +
             "base=${requestedResolutionDisplay.widthPixels}x${requestedResolutionDisplay.heightPixels} " +
@@ -3187,7 +3299,7 @@ class CarPlayHostActivity : ComponentActivity() {
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
             btMac = DiPlayBluetooth.localAddress(this) ?: DiPlayBootstrap.deviceId(airPlayIdentity),
             sourceVersion = "950.7.1",
-            main = display,
+            main = declared,
             cluster = clusterDisplayConfig(),
             rightHandDrive = rightHandDrive,
             hevc = hevcEnabled,
@@ -3663,6 +3775,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = CarPlaySessionDisplay(
             airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
             displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
+            viewAreas = pendingViewAreas,
         )
         sessionDisplay = display
         videoView?.let { updateVideoLayout(it.width, it.height) }
@@ -3752,7 +3865,9 @@ class CarPlayHostActivity : ComponentActivity() {
             return
         }
         pendingDisplaySize = size
-        mainHandler.postDelayed(applyDisplaySize, DISPLAY_CHANGE_DEBOUNCE_MILLIS)
+        // With a turning screen's square canvas nothing reconnects, so the turn need not wait for the size to settle.
+        mainHandler.postDelayed(applyDisplaySize,
+            if (sessionDisplay?.viewAreas?.turnsWithScreen == true) 0L else DISPLAY_CHANGE_DEBOUNCE_MILLIS)
     }
 
     private fun isMultiWindowActive(): Boolean {
@@ -3762,6 +3877,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun applyDisplaySize(size: DisplaySize) {
         val display = sessionDisplay
+        if (display != null && applyViewArea(size, display)) return
         val layoutChanged = displayLayoutChanged(size)
         if (shuttingDown.get()) return
         if (size == activeDisplaySize && !layoutChanged) {
@@ -3803,6 +3919,59 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Entering or leaving the head unit's split screen, or turning the screen with a square canvas, moves
+     * CarPlay to the matching view area instead of reconnecting. The split window is remembered per screen
+     * orientation for the next session's area. False when the change is something else (a camera window,
+     * a turn without a square canvas), which the usual path handles.
+     */
+    private fun applyViewArea(size: DisplaySize, display: CarPlaySessionDisplay): Boolean {
+        val areas = display.viewAreas ?: return false
+        if (controller == null || menuOpen || handshakeResetInProgress || shuttingDown.get()) return false
+        val split = isMultiWindowActive()
+        // A full window's own shape tells the screen's orientation; during a turn the display metrics and
+        // rotation can lag behind the window. A split-screen window can have either shape, so it asks the
+        // display, which is settled then.
+        val portrait = if (split) screenPortrait() else size.height > size.width
+        val previous = activeDisplaySize
+        if (areas.turnsWithScreen && display.rotation != displayRotation() && size == previous) {
+            // The turn arrived before the window's new size: note it and wait for the size, which picks
+            // the area, instead of letting the old rotation look like a changed layout.
+            sessionDisplay = display.copy(rotation = displayRotation())
+            Log.i(TAG, "Screen turned before the window resized (${size.width}x${size.height}); waiting for its size")
+            return true
+        }
+        val turned = previous != null && !split && (previous.height > previous.width) != portrait
+        if (turned && !areas.turnsWithScreen) return false
+        val longWindow = maxOf(display.windowWidth, display.windowHeight).toFloat()
+        val shortWindow = minOf(display.windowWidth, display.windowHeight).toFloat()
+        if (split && longWindow > 0 && shortWindow > 0) {
+            if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / shortWindow, size.height / longWindow)
+            else SplitScreenSettings.saveWindow(this, false, size.width / longWindow, size.height / shortWindow)
+        }
+        val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
+        // The same whole-screen area without a turn (a camera window, say) keeps the usual handling.
+        if (!turned && target == areas.current && areas.kindOf(target) == CarPlayViewAreas.Kind.FULL_SCREEN) return false
+        activeDisplaySize = size
+        sessionDisplay = display.copy(rotation = displayRotation())
+        val sent = if (target == areas.current) true else controller?.showViewArea(target) == true
+        if (sent) areas.use(target)
+        videoView?.let { updateVideoLayout(it.width, it.height) }
+        val message = "Window ${previous?.width}x${previous?.height} -> ${size.width}x${size.height} " +
+            "split=$split portrait=$portrait turned=$turned: view area $target sent=$sent"
+        appendLog(message)
+        Log.i(TAG, message)
+        return true
+    }
+
+    /** Whether the screen itself is portrait now (DiPlay's own window may be a split-screen part of it). */
+    @Suppress("DEPRECATION")
+    private fun screenPortrait(): Boolean {
+        val metrics = android.util.DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+        return metrics.heightPixels > metrics.widthPixels
+    }
+
     @Suppress("DEPRECATION")
     private fun displayRotation(): Int = videoView?.display?.rotation ?: windowManager.defaultDisplay.rotation
 
@@ -3825,6 +3994,18 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun contentRect(viewWidth: Int, viewHeight: Int): CarPlayVideoLayout {
         val display = sessionDisplay ?: return CarPlayVideoLayout(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+        // In the head unit's split screen, or on a turning screen's square canvas, CarPlay draws in part of
+        // the canvas; that area fills the window and the rest falls outside it. Video and touches both
+        // follow this. An area of the whole canvas keeps the usual fit.
+        display.viewAreas?.let { areas ->
+            val area = areas.areas[areas.current]
+            if (area.width != display.width || area.height != display.height) {
+                val scaleX = viewWidth.toFloat() / area.width
+                val scaleY = viewHeight.toFloat() / area.height
+                return CarPlayVideoLayout(-area.originX * scaleX, -area.originY * scaleY,
+                    display.width * scaleX, display.height * scaleY)
+            }
+        }
         return CarPlayVideoLayout.fit(display.width, display.height, viewWidth, viewHeight)
     }
 
@@ -4326,7 +4507,7 @@ class CarPlayHostActivity : ComponentActivity() {
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
     private fun CarPlayStatus.describe(): String = when (this) {
         CarPlayStatus.DiscoveringMfi -> getString(R.string.preparing_mfi_authentication)
@@ -4342,7 +4523,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayStatus.WaitingForPairedIphone -> getString(R.string.waiting_for_paired_iphone)
         CarPlayStatus.ConnectingBluetooth -> getString(R.string.connecting_bluetooth)
         CarPlayStatus.RunningWireless -> getString(R.string.wireless_carplay_control_running)
-        CarPlayStatus.WirelessActive -> getString(R.string.wireless_carplay_active)
+        CarPlayStatus.WirelessActive, CarPlayStatus.WirelessActiveFallback -> getString(R.string.wireless_carplay_active)
         CarPlayStatus.DiscoveringIphone -> getString(R.string.discovering_iphone)
         CarPlayStatus.WaitingForIphone -> getString(R.string.waiting_for_iphone_over_usb)
         CarPlayStatus.RequestingIphonePermission -> getString(R.string.requesting_iphone_usb_permission)
@@ -4409,6 +4590,8 @@ internal data class CarPlaySessionDisplay(
     // Compare unscaled startup window dimensions, not the scaled video canvas.
     val windowWidth: Int,
     val windowHeight: Int,
+    /** The view areas this session declared, or null for the whole screen as one area. */
+    val viewAreas: CarPlayViewAreas? = null,
 )
 
 /** Process-local hand-off for keeping the CarPlay session alive while no Activity is visible. */

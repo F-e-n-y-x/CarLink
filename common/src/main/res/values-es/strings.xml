@@ -593,4 +593,16 @@
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
+    <string name="carplay_dock">Dock de CarPlay</string>
+    <string name="carplay_dock_automatic">Automático</string>
+    <string name="carplay_dock_driver_side">Lado del conductor</string>
+    <string name="carplay_dock_bottom">Abajo</string>
+    <string name="carplay_dock_hint">Dónde muestra CarPlay sus apps, la hora y el estado. Entre «Lado del conductor» y «Abajo» cambia al instante; «Automático» deja la elección al iPhone y se aplica tras reconectar.</string>
+    <string name="split_screen_areas">CarPlay en la pantalla dividida</string>
+    <string name="split_screen_areas_description">Cuando la unidad muestra DiPlay en pantalla dividida, CarPlay se redibuja para esa ventana en lugar de reducirse con franjas negras, y vuelve a pantalla completa sin reconectar. El tamaño de la ventana se aprende la primera vez, así que desde la siguiente conexión la imagen encaja exactamente. Con el dock en Automático, CarPlay lo coloca abajo. Se aplica en la próxima conexión.</string>
+    <string name="carplay_rotation">Girar CarPlay con la pantalla sin reconectar</string>
+    <string name="carplay_rotation_description">Para unidades cuya pantalla gira. CarPlay recibe una imagen cuadrada con una pantalla horizontal y otra vertical, así que girar la pantalla redibuja CarPlay en lugar de reconectar. Una imagen cuadrada cuesta más decodificar; el área segura personalizada no se le aplica. Se aplica en la próxima conexión.</string>
+    <string name="carplay_rotation_picture">Imagen cuadrada</string>
+    <string name="carplay_rotation_smoother">Más fluida (1920)</string>
+    <string name="carplay_rotation_sharper">Más nítida (tamaño de la pantalla)</string>
 </resources>
