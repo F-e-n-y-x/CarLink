@@ -303,6 +303,64 @@ class CarPlayHostSettingsTest {
         assertNull(shadowOf(activity).nextStartedActivity)
     }
 
+    @Test fun iphoneAttachmentSwitchesToWiredTransportWithoutFinishing() {
+        org.robolectric.shadows.ShadowVpnService.setPrepareResult(null)
+        attachController()
+        AirPlayPersistence.saveWirelessEnabled(activity, true)
+        invoke("loadPersistedSettings")
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x05ac)
+        val intent = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        activity.javaClass.getDeclaredMethod("onNewIntent", Intent::class.java)
+            .apply { isAccessible = true }.invoke(activity, intent)
+        assertFalse(AirPlayPersistence.loadWirelessEnabled(activity))
+        assertFalse(field("wirelessEnabled") as Boolean)
+        assertTrue(field("vpnReady") as Boolean)
+        assertFalse((field("shuttingDown") as AtomicBoolean).get())
+        assertFalse(activity.isFinishing)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test fun switchingToUsbRequestsVpnConsentAndDoesNotRepeatPendingConsent() {
+        org.robolectric.shadows.ShadowVpnService.setPrepareResult(Intent("test.VPN_CONSENT"))
+        attachController()
+        AirPlayPersistence.saveWirelessEnabled(activity, true)
+        invoke("loadPersistedSettings")
+        setField("vpnReady", true) // Previously granted permission may have been revoked.
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x05ac)
+        val intent = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        val method = activity.javaClass.getDeclaredMethod("onNewIntent", Intent::class.java).apply { isAccessible = true }
+        method.invoke(activity, intent)
+        assertTrue(field("awaitingVpnConsent") as Boolean)
+        assertFalse(field("vpnReady") as Boolean)
+        assertNull(field("controller"))
+        assertEquals("test.VPN_CONSENT", shadowOf(activity).nextStartedActivityForResult.intent.action)
+        method.invoke(activity, intent)
+        assertNull(shadowOf(activity).nextStartedActivityForResult)
+        assertFalse(activity.isFinishing)
+    }
+
+    @Test fun usbAttachmentClosesSettingsAndRestartsInPlace() {
+        org.robolectric.shadows.ShadowVpnService.setPrepareResult(null)
+        attachController()
+        AirPlayPersistence.saveWirelessEnabled(activity, true)
+        invoke("loadPersistedSettings")
+        invoke("openSettingsMenu")
+        assertTrue(field("menuOpen") as Boolean)
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x05ac)
+        val intent = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        activity.javaClass.getDeclaredMethod("onNewIntent", Intent::class.java).apply { isAccessible = true }
+            .invoke(activity, intent)
+        assertFalse(field("menuOpen") as Boolean)
+        assertFalse(field("wirelessEnabled") as Boolean)
+        assertTrue(field("vpnReady") as Boolean)
+        assertNull(field("controller"))
+        assertEquals(1, field("restartGeneration"))
+        assertFalse(activity.isFinishing)
+    }
+
     @Test fun onlyIphoneAttachmentSelectsWiredTransport() {
         val method = activity.javaClass.getDeclaredMethod("isIphoneUsbAttachment", Intent::class.java)
             .apply { isAccessible = true }
