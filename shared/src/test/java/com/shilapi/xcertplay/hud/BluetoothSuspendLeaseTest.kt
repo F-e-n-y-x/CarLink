@@ -198,4 +198,14 @@ class BluetoothSuspendLeaseTest {
         assertEquals(listOf(false), f.commands)
         assertTrue(lease.isSuspended())
     }
+
+    @Test fun lifecycleRecoveryDoesNotInvalidateAnAlreadyQueuedHandshakeRecovery() {
+        val f = Fixture().apply { recorded = true; radio = false }; val lease = f.lease()
+        val handshake = lease.beforeHandshake()
+        val lifecycle = lease.recoveryOnAppOpen()!!
+        assertTrue("non-owning lifecycle cleanup must not retire the handshake", lease.restore(handshake))
+        assertTrue(lease.restore(lifecycle))
+        assertEquals(listOf(true), f.commands)
+        assertFalse(f.recorded)
+    }
 }

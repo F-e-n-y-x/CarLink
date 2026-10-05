@@ -20,6 +20,8 @@ import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.thread
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], manifest = Config.NONE)
@@ -133,6 +135,34 @@ class BluetoothSuspendLifecycleTest {
         assertNull("current owner must survive the old controller close", lease.recoveryOnAppOpen())
         current.close()
         assertNotNull(lease.recoveryOnAppOpen())
+    }
+
+    @Test fun oldControllerCloseCannotSupersedeQueuedWirelessHandshakeRecovery() {
+        val adapter = app.getSystemService(BluetoothManager::class.java).adapter
+        shadowOf(adapter).setState(BluetoothAdapter.STATE_OFF)
+        val journal = Journal().apply { recorded = true }
+        val lease = BluetoothSuspendLease(journal, { adapter.isEnabled }, {
+            shadowOf(adapter).setState(if (it) BluetoothAdapter.STATE_ON else BluetoothAdapter.STATE_OFF)
+        }, { adapter.isEnabled == it })
+        leaseField.set(null, lease)
+        val old = controller()
+        lease.begin(old)
+        val entered = CountDownLatch(1); val proceed = CountDownLatch(1)
+        val blocker = worker.submit { entered.countDown(); assertTrue(proceed.await(5, TimeUnit.SECONDS)) }
+        assertTrue(entered.await(2, TimeUnit.SECONDS))
+        val result = AtomicReference<Boolean>()
+        val handshake = thread { result.set(BydBluetoothSuspend.resumeAndWait(app, adapter, 3_000)) }
+        try {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (handshake.state != Thread.State.TIMED_WAITING && System.nanoTime() < deadline) Thread.sleep(5)
+            assertEquals("handshake must have queued recovery before the old close", Thread.State.TIMED_WAITING, handshake.state)
+            old.close()
+            assertTrue(old.awaitClosed(1_000))
+        } finally { proceed.countDown(); handshake.join(4_000); blocker.get(2, TimeUnit.SECONDS) }
+        assertFalse(handshake.isAlive)
+        assertEquals("late old close must not abort a valid new handshake", true, result.get())
+        assertTrue(adapter.isEnabled)
+        assertFalse(journal.recorded)
     }
 
     private class Journal : BluetoothRestoreJournal {

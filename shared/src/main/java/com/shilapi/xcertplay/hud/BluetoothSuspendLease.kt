@@ -33,7 +33,9 @@ internal class BluetoothSuspendLease(
     /** Opening settings during a live session must not release that session's lease. */
     fun recoveryOnAppOpen(): Long? = synchronized(stateLock) {
         if (owner != null) return null
-        ++generation
+        // Non-owning cleanup has the same recovery goal as an already queued handshake.
+        // Reuse its ticket so a late old-controller close cannot make that handshake fail.
+        generation
     }
 
     /** A new wireless handshake also retires an older pending disable. */
