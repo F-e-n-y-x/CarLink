@@ -24,7 +24,6 @@ import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketException
-import java.net.UnknownHostException
 import java.security.SecureRandom
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
@@ -504,21 +503,11 @@ class WifiP2pGroupManager(
 
     private fun interfaceAddress(interfaceName: String): InetAddress? {
         val networkInterface = networkInterface(interfaceName) ?: return null
-        var ipv4: InetAddress? = null
-        for (address in Collections.list(networkInterface.inetAddresses)) {
-            if (address is Inet6Address && address.isLinkLocalAddress) {
-                if (address.scopeId == networkInterface.index) return address
-                try {
-                    return Inet6Address.getByAddress(null, address.address, networkInterface)
-                } catch (_: UnknownHostException) {
-                    continue
-                }
-            }
-            if (address is Inet4Address && !address.isLoopbackAddress && ipv4 == null) {
-                ipv4 = address
-            }
-        }
-        return ipv4
+        val address = HotspotAddressPolicy.select(Collections.list(networkInterface.inetAddresses))
+            ?: return null
+        if (address !is Inet6Address || address.scopeId == networkInterface.index) return address
+        return runCatching { Inet6Address.getByAddress(null, address.address, networkInterface) }
+            .getOrDefault(address)
     }
 
     private fun awaitInterfaceAddress(
@@ -526,13 +515,14 @@ class WifiP2pGroupManager(
         interfaceName: String,
         startupDeadlineNanos: Long,
     ): InetAddress? {
-        // Group creation precedes IPv6 link-local configuration on some head units.
-        // Give IPv6 a bounded chance to appear before falling back to IPv4.
         val addressDeadline = minOf(startupDeadlineNanos, deadlineAfter(2_000))
+        var pending: InetAddress? = null
         while (true) {
             ensureStartActive(attempt)
             val address = interfaceAddress(interfaceName)
-            if (address is Inet6Address || remainingNanos(addressDeadline) <= 0) return address
+            if (address is Inet4Address) return address
+            if (address != null) pending = address
+            if (remainingNanos(addressDeadline) <= 0) return pending
             Thread.sleep(100)
         }
     }
