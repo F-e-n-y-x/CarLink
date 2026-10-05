@@ -70,7 +70,8 @@ class DiLink3ClusterRecoveryTest {
         // Exercise the same serial-worker operation used by the periodic retry.
         worker.submit { ReflectionHelpers.callInstanceMethod<Void>(output, "applyLatest") }
             .get(5, TimeUnit.SECONDS)
-        assertEquals(listOf(BydDiLink3ClusterMode.Mode.PROJECTION.command, stock, stock), Shell.commands.toList())
+        assertEquals(listOf(BydDiLink3ClusterMode.Mode.PROJECTION.entryCommand,
+            BydDiLink3ClusterMode.Mode.PROJECTION.command, stock, stock), Shell.commands.toList())
         assertFalse(prefs.contains("restore_stock_mode"))
     }
 
