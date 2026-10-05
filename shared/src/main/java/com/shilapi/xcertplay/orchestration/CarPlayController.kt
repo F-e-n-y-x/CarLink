@@ -1487,6 +1487,8 @@ class CarPlayController(
                     it.close()
                 }
                 wirelessConnectionProof.activate(generation, session)
+                // Keep wirelessActiveReported false until maybeCompleteWirelessHandoff() closes
+                // the Bluetooth bootstrap after the tunneled iAP2 channel is ready.
                 sessionListener.onSessionActive(session)
             }
 
@@ -1582,19 +1584,23 @@ class CarPlayController(
                             closed ||
                             phase != Phase.WIRELESS ||
                             generation != wirelessGeneration.get() ||
-                            wirelessActiveReported.get()
+                            wirelessActiveReported.get() ||
+                            wirelessTunnelReady.get()
                         ) {
                             return@Thread
                         }
-                        if (wirelessConnectionProof.hasRenderedFrame(generation)) {
-                            // Some iPhones/firmware combinations establish video but never
-                            // request the type-130 iAP2 tunnel. Do not tear down a proven live
-                            // CarPlay session just because that optional control channel did not
-                            // arrive; that teardown causes the visible reconnect loop.
+                        val sessionIsActive =
+                            activeSession != null && wirelessConnectionProof.hasActiveSession(generation)
+                        if (wirelessConnectionProof.hasRenderedFrame(generation) || sessionIsActive) {
+                            // An active AirPlay session without tunnel iAP2 is still usable. Complete
+                            // the fallback handoff and release Bluetooth resources rather than
+                            // leaving the bootstrap connection open indefinitely.
+                            if (!wirelessActiveReported.compareAndSet(false, true)) return@Thread
                             debugLog(
-                                "wireless handoff tunnel iAP2 unavailable after first video frame; " +
-                                    "preserving the active CarPlay session",
+                                "wireless handoff tunnel iAP2 unavailable after active session; " +
+                                    "preserving AirPlay and closing Bluetooth bootstrap",
                             )
+                            closeBluetoothBootstrapTransport()
                             onStatus(CarPlayStatus.WirelessActive)
                             return@Thread
                         }
