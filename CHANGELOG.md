@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add a Smaller dashboard-map scale (125 %) so more of the map fits on the cluster.
+
 - Fix the DiLink 3 cluster map staying empty: send full-screen projection (16) before half-screen projection (17), because after projection off (18) the cluster ignores 17 on its own.
 
 # DiPlay 0.2.12 — 2026-10-04

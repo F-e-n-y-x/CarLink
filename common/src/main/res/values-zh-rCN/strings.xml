@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">标准 · 最清晰</string>
     <string name="cluster_size_larger">更大 · 默认</string>
     <string name="cluster_size_largest">最大</string>
+    <string name="cluster_size_smallest">更小 · 内容更多更精细</string>
     <string name="marker_left">左</string>
     <string name="marker_right">右</string>
     <string name="marker_up">上</string>
