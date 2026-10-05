@@ -43,6 +43,98 @@ internal class CarPlayCallWatchOwnership(private val directory: File = File("/da
     fun retireOrRetry(path: String, action: () -> Unit): Boolean =
         runCatching { retire(path, action); true }.getOrDefault(false)
 
+    /** Reserve recovery ownership without entering any vehicle setter. Do not steal a live record. */
+    fun prepare(path: String, appPid: String, alive: (String) -> Boolean = { true }): Boolean = locked {
+        require(appPid.matches(Regex("[0-9]+")))
+        val token = token(path)
+        val previous = owner.readTextOrNull()
+        if (previous != null && previous != token.path) {
+            val old = token(previous)
+            if (old.exists()) {
+                val fields = parts(old)
+                val oldPid = fields.getOrNull(2)
+                // A child may never have initialized. A dead app's pristine reservation
+                // is safe to retire under the claim lock, without resetting any hardware.
+                if (fields.firstOrNull() != "prepared" || oldPid == null ||
+                    !oldPid.matches(Regex("[0-9]+")) || alive(oldPid)) return@locked false
+                ready(old).delete()
+                old.delete()
+            }
+        }
+        if (previous == token.path && token.exists()) {
+            return@locked token.readText().trim() == "prepared 0 $appPid"
+        }
+        token.writeText("prepared 0 $appPid")
+        owner.writeText(token.path)
+        ready(token).delete()
+        true
+    }
+
+    /** Only the initialized watcher child calls this, and only for its original app process. */
+    fun markWatcherReady(path: String, appPid: String, watcherPid: String): Boolean = locked {
+        val token = token(path)
+        if (owner.readTextOrNull() != token.path || parts(token).getOrNull(2) != appPid) return@locked false
+        require(watcherPid.matches(Regex("[0-9]+")))
+        ready(token).writeText("$appPid $watcherPid")
+        true
+    }
+
+    fun watcherReady(path: String, appPid: String, alive: (String) -> Boolean): Boolean = locked {
+        watcherReadyLocked(token(path), appPid, alive)
+    }
+
+    /** The readiness check and pristine-to-dirty transition are atomic with watcher death cleanup. */
+    fun claimReady(path: String, appPid: String, alive: (String) -> Boolean, action: (File) -> Unit): Boolean = locked {
+        val token = token(path)
+        if (!watcherReadyLocked(token, appPid, alive) || parts(token).firstOrNull() == "cleanup") return@locked false
+        token.writeText("cleanup 0 $appPid")
+        action(token)
+        true
+    }
+
+    /** Cancellation of an unprotected prepared call never writes idle values over another call. */
+    fun cancelPrepared(path: String): Boolean = locked {
+        val token = token(path)
+        if (token.exists() && parts(token).firstOrNull() != "prepared") return@locked false
+        if (!token.exists() && owner.readTextOrNull() == token.path) return@locked false
+        if (owner.readTextOrNull() == token.path) owner.delete()
+        ready(token).delete()
+        token.delete()
+        true
+    }
+
+    /** Inspect the phase under the same lock that guards a concurrent first hardware write. */
+    fun retireStaged(path: String, action: () -> Unit): Boolean = locked {
+        val token = token(path)
+        val ours = owner.readTextOrNull() == token.path
+        if (ours) {
+            val fields = parts(token)
+            if (fields.firstOrNull() != "prepared") {
+                token.writeText("cleanup 0 ${fields.getOrNull(2).orEmpty()}")
+                action()
+            }
+            owner.delete()
+        }
+        ready(token).delete()
+        token.delete()
+        ours
+    }
+
+    fun clearWatcherReady(path: String, watcherPid: String) = locked {
+        val token = token(path)
+        if (ready(token).readTextOrNull()?.trim()?.split(' ')?.getOrNull(1) == watcherPid) ready(token).delete()
+    }
+
+    private fun watcherReadyLocked(token: File, appPid: String, alive: (String) -> Boolean): Boolean {
+        if (owner.readTextOrNull() != token.path || parts(token).getOrNull(2) != appPid) return false
+        val fields = ready(token).readTextOrNull()?.trim()?.split(' ') ?: return false
+        val pid = fields.getOrNull(1) ?: return false
+        return fields.firstOrNull() == appPid && pid.matches(Regex("[0-9]+")) && runCatching { alive(pid) }.getOrDefault(false)
+    }
+
+    private fun parts(token: File): List<String> = token.readTextOrNull()?.trim()?.split(' ') ?: emptyList()
+    private fun ready(token: File) = File(token.path + ".ready")
+
     private fun token(path: String): File {
         val file = File(path).canonicalFile
         require(file.parentFile == directory.canonicalFile &&

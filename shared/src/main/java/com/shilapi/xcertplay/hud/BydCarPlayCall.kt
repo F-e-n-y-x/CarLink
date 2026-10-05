@@ -8,6 +8,8 @@ import com.shilapi.xcertplay.iap2.body.Iap2BodyReader
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /** What the car shows for the CarPlay call: the phase and the caller, and since when it is connected. */
 data class CarPlayCallCard(val phase: Phase, val name: String, val activeSinceMillis: Long? = null) {
@@ -110,13 +112,17 @@ object BydCarPlayCall {
     private const val TAG = "DiPlay-BYD-Call"
 
     private val shell = BydAdbShell(TAG)
-    private val writer = Executors.newSingleThreadExecutor { Thread(it, "diplay-carplay-call").apply { isDaemon = true } }
+    private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-carplay-call").apply { isDaemon = true } }
     private val state = CarPlayCallState()
     @Volatile private var context: Context? = null
     private var shown: CarPlayCallCard? = null // writer thread
     private var watcherRunning = false // writer thread
     private var cleanupPending = false // writer thread; no fresh call mutation until owned cleanup succeeds
     private var watcherToken: String? = null // writer thread; unique for each displayed call lifetime
+    private var prepared = false // writer thread; no vehicle setter has been submitted for this token
+    private var retry: ScheduledFuture<*>? = null // one bounded retry for an unchanged call
+    private var retryCard: CarPlayCallCard? = null
+    private var retryUsed = false
 
     fun attach(appContext: Context) {
         context = appContext.applicationContext
@@ -139,57 +145,130 @@ object BydCarPlayCall {
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
         val card = if (enabled) current() else null
-        writer.execute { apply(app, card) }
+        writer.execute { resetRetry(card); apply(app, card) }
     }
 
     /** The session ended: forget the calls and end the one DiPlay showed. */
     fun end() {
         synchronized(state) { state.clear() }
         val app = context ?: return
-        writer.execute { apply(app, null) }
+        writer.execute { resetRetry(null); apply(app, null) }
+    }
+
+    private fun resetRetry(card: CarPlayCallCard?) {
+        retry?.cancel(false)
+        retry = null
+        retryCard = card
+        retryUsed = false
     }
 
     private fun apply(app: Context, wanted: CarPlayCallCard?) {
         if (wanted != null && !BydOutputSettings.carPlayCalls(app)) return
         // Only the newest state matters; older queued ones are skipped.
         if (wanted != current() && !(wanted == null && !BydOutputSettings.carPlayCalls(app))) return
+        if (retryCard != wanted) resetRetry(wanted)
         if (wanted == shown && !cleanupPending) return
         if (wanted == null || cleanupPending) {
             val token = watcherToken ?: return
-            if (!run(app, "end - $token")) {
+            if (!run(app, "${if (prepared) "cancel" else "end"} - $token")) {
                 cleanupPending = true
-                ensureWatcher(app, token)
+                // A dirty token may already represent a partial setter, so keep recovery
+                // retryable even if the child must be restarted. Pristine cancellation has
+                // no idle writes and needs no vehicle API initialization.
+                if (!prepared) ensureWatcher(app, token)
+                scheduleRetry(app, wanted)
                 return
             }
-            shown = null
-            watcherToken = null
-            watcherRunning = false
-            cleanupPending = false
+            clearLocalOwnership()
             if (wanted == null) return
+        }
+        val token = watcherToken ?: CarPlayCallWatchOwnership.newToken(app.packageName).also {
+            watcherToken = it
+            prepared = true
+        }
+        val appPid = android.os.Process.myPid().toString()
+        if (prepared && !run(app, "prepare - $token $appPid")) {
+            cancelUnprotected(app, token, wanted)
+            return
+        }
+        if (!ensureWatcher(app, token)) {
+            if (prepared) cancelUnprotected(app, token, wanted)
+            else {
+                cleanupPending = true
+                // A previously shown call has lost its watcher. Recover it before any
+                // phase update; a refused/unknown end keeps the token for later retries.
+                if (run(app, "end - $token")) clearLocalOwnership()
+                scheduleRetry(app, wanted)
+            }
+            return
+        }
+        // The readiness handshake can outlast a setting or session change.
+        if (!BydOutputSettings.carPlayCalls(app) || wanted != current()) {
+            if (prepared) cancelUnprotected(app, token, null)
+            else if (run(app, "end - $token")) clearLocalOwnership()
+            else cleanupPending = true
+            return
         }
         val name = Base64.encodeToString(wanted.name.toByteArray(Charsets.UTF_8), Base64.NO_WRAP).ifEmpty { "-" }
         val phase = wanted.phase.name.lowercase()
-        val token = watcherToken ?: CarPlayCallWatchOwnership.newToken(app.packageName)
         val since = wanted.activeSinceMillis?.let { it / 1000 } ?: 0
-        // A missing reply may follow a partial write. Retain recovery ownership before
-        // delivery, even when no call has yet been marked shown.
-        watcherToken = token
+        // Submission may partially write even when its reply is missing. From here on,
+        // cancellation is forbidden: only an owned end may release this dirty token.
+        prepared = false
         cleanupPending = true
-        if (run(app, "$phase $name $token $since")) {
+        if (run(app, "$phase $name $token $since $appPid")) {
             shown = wanted
             cleanupPending = false
         } else {
             shown = null
+            scheduleRetry(app, wanted)
         }
-        ensureWatcher(app, token)
     }
 
-    private fun ensureWatcher(app: Context, token: String) {
-        if (!watcherRunning) {
-            val apk = app.applicationInfo.sourceDir
-            val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} ${android.os.Process.myPid()}"
-            watcherRunning = shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &") != null
+    private fun cancelUnprotected(app: Context, token: String, wanted: CarPlayCallCard?) {
+        if (run(app, "cancel - $token")) clearLocalOwnership() else cleanupPending = true
+        scheduleRetry(app, wanted)
+    }
+
+    private fun clearLocalOwnership() {
+        shown = null
+        watcherToken = null
+        watcherRunning = false
+        cleanupPending = false
+        prepared = false
+    }
+
+    private fun scheduleRetry(app: Context, wanted: CarPlayCallCard?) {
+        if (retryUsed || retry?.isDone == false) return
+        retryUsed = true
+        retry = writer.schedule({
+            retry = null
+            // One retry covers an unchanged card (onFrame deliberately deduplicates it).
+            // Later state/setting events retain the ordinary retry path; no endless timer.
+            if (wanted == null || (BydOutputSettings.carPlayCalls(app) && current() == wanted)) apply(app, wanted)
+        }, 1, TimeUnit.SECONDS)
+    }
+
+    private fun ensureWatcher(app: Context, token: String): Boolean {
+        val appPid = android.os.Process.myPid().toString()
+        if (watcherRunning && probe(app, token, appPid)) return true
+        watcherRunning = false
+        val apk = app.applicationInfo.sourceDir
+        val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} $appPid"
+        // nohup's parent reply/exit status says nothing about child initialization.
+        shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
+        repeat(3) { attempt ->
+            if (probe(app, token, appPid)) { watcherRunning = true; return true }
+            if (attempt < 2) Thread.sleep(100)
         }
+        return false
+    }
+
+    private fun probe(app: Context, token: String, appPid: String): Boolean {
+        val apk = app.applicationInfo.sourceDir
+        val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} probe - $token $appPid") ?: return false
+        val lines = output.lineSequence().map { it.trim() }.toList()
+        return "watch=0" in lines && lines.none { it.startsWith("watch=") && it != "watch=0" }
     }
 
     private fun run(app: Context, args: String): Boolean {
@@ -242,15 +321,27 @@ object BydCarPlayCallTool {
     @JvmStatic
     fun main(args: Array<String>) {
         try {
-            val device = device()
             when (args.getOrNull(0)) {
-                "watch" -> watch(device, args.getOrNull(1) ?: return,
+                "prepare" -> check(ownership.prepare(args.getOrNull(2) ?: return, args.getOrNull(3) ?: return, ::appMayBeAlive)) {
+                    "another call still owns recovery"
+                }
+                "cancel" -> check(ownership.cancelPrepared(args.getOrNull(2) ?: return)) { "call is no longer pristine" }
+                "probe" -> {
+                    val ready = ownership.watcherReady(args.getOrNull(2) ?: return, args.getOrNull(3) ?: return, ::alive)
+                    println(if (ready) "watch=0" else "watch=ERR")
+                    return
+                }
+                "watch" -> watch(device(), args.getOrNull(1) ?: return,
                     args.getOrNull(2) ?: return, args.getOrNull(3) ?: return)
-                "end" -> ownership.retire(args.getOrNull(2) ?: return) { end(device) }
-                else -> ownership.claim(args.getOrNull(2) ?: return) { token ->
-                    call(device, args[0], args.getOrNull(1))
-                    val since = args.getOrNull(3)?.toLongOrNull() ?: 0
-                    token.writeText("${args[0]} $since")
+                "end" -> ownership.retireStaged(args.getOrNull(2) ?: return) { end(device()) }
+                else -> {
+                    val device = device()
+                    val appPid = args.getOrNull(4) ?: return
+                    check(ownership.claimReady(args.getOrNull(2) ?: return, appPid, ::alive) { token ->
+                        call(device, args[0], args.getOrNull(1))
+                        val since = args.getOrNull(3)?.toLongOrNull() ?: 0
+                        token.writeText("${args[0]} $since $appPid")
+                    }) { "initialized owned watcher is not ready" }
                 }
             }
             println("write=0")
@@ -298,28 +389,52 @@ object BydCarPlayCallTool {
 
     private fun watch(device: Device, tokenPath: String, packageName: String, processId: String) {
         val token = java.io.File(tokenPath)
-        val started = System.currentTimeMillis()
-        var cleanupWanted = false
-        while (token.exists() && System.currentTimeMillis() - started < MAX_WATCH_MILLIS) {
-            if (!running(packageName, processId)) cleanupWanted = true
-            val current = ownership.update(tokenPath) {
-                val parts = runCatching { it.readText().trim().split(' ') }.getOrDefault(emptyList())
-                val since = parts.getOrNull(1)?.toLongOrNull() ?: 0
-                if (parts.firstOrNull() == "cleanup") cleanupWanted = true
-                if (!cleanupWanted && parts.firstOrNull() == "active" && since > 0) {
-                    val seconds = (System.currentTimeMillis() / 1000 - since).coerceIn(0, 99L * 3600 + 3599)
-                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_HOUR_SET", (seconds / 3600).toInt())
-                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_MINUTE_SET", (seconds / 60 % 60).toInt())
-                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_SECOND_SET", (seconds % 60).toInt())
+        val watcherPid = android.os.Process.myPid().toString()
+        // Reaching here proves device initialization succeeded in the child. Marking
+        // readiness still requires the pristine/dirty record owned by this exact app PID.
+        if (!ownership.markWatcherReady(tokenPath, processId, watcherPid)) return
+        try {
+            val started = System.currentTimeMillis()
+            var cleanupWanted = false
+            while (token.exists() && System.currentTimeMillis() - started < MAX_WATCH_MILLIS) {
+                if (!running(packageName, processId)) cleanupWanted = true
+                val current = ownership.update(tokenPath) {
+                    val parts = runCatching { it.readText().trim().split(' ') }.getOrDefault(emptyList())
+                    val since = parts.getOrNull(1)?.toLongOrNull() ?: 0
+                    if (parts.firstOrNull() == "cleanup") cleanupWanted = true
+                    if (!cleanupWanted && parts.firstOrNull() == "active" && since > 0) {
+                        val seconds = (System.currentTimeMillis() / 1000 - since).coerceIn(0, 99L * 3600 + 3599)
+                        device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_HOUR_SET", (seconds / 3600).toInt())
+                        device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_MINUTE_SET", (seconds / 60 % 60).toInt())
+                        device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_SECOND_SET", (seconds % 60).toInt())
+                    }
                 }
+                if (!current) { ownership.retireStaged(tokenPath) {}; return }
+                // A prepared app death retires without any idle/setter writes. A dirty
+                // token retains compensation intent after refusal and retries while alive.
+                if (cleanupWanted && runCatching { ownership.retireStaged(tokenPath) { end(device) }; true }.getOrDefault(false)) return
+                Thread.sleep(1000)
             }
-            if (!current) { ownership.retire(tokenPath) {}; return }
-            // A failed idle setter keeps the token/owner and is retried while this watcher
-            // lives, including after the app dies. Do not abandon the first partial write.
-            if (cleanupWanted && ownership.retireOrRetry(tokenPath) { end(device) }) return
-            Thread.sleep(1000)
+            ownership.retireStaged(tokenPath) { end(device) }
+        } finally {
+            ownership.clearWatcherReady(tokenPath, watcherPid)
         }
-        ownership.retire(tokenPath) { end(device) }
+    }
+
+    private fun alive(processId: String): Boolean = runCatching {
+        android.system.Os.kill(processId.toInt(), 0)
+        true
+    }.getOrDefault(false)
+
+    private fun appMayBeAlive(processId: String): Boolean = try {
+        android.system.Os.kill(processId.toInt(), 0)
+        true
+    } catch (error: android.system.ErrnoException) {
+        // Shell may lack permission to signal the app UID. Only ESRCH establishes death;
+        // EPERM and other errors must not authorize stealing even a pristine reservation.
+        error.errno != android.system.OsConstants.ESRCH
+    } catch (_: Throwable) {
+        true
     }
 
     private fun running(packageName: String, processId: String): Boolean = runCatching {

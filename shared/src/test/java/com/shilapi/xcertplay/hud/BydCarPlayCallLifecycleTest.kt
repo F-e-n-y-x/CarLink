@@ -35,15 +35,25 @@ class BydCarPlayCallLifecycleTest {
         ReflectionHelpers.setField(BydCarPlayCall, "watcherToken", null)
         ReflectionHelpers.setField(BydCarPlayCall, "watcherRunning", false)
         ReflectionHelpers.setField(BydCarPlayCall, "cleanupPending", false)
+        ReflectionHelpers.setField(BydCarPlayCall, "prepared", false)
         BydCarPlayCall.attach(app)
         BydOutputSettings.setCarPlayCalls(app, false)
         Shell.commands.clear()
         Shell.rejectPhase = null
         Shell.endFailures = 0
         Shell.omitCompletion = false
+        Shell.rejectWatcher = false
+        Shell.omitReadiness = false
+        Shell.omitCancelCompletion = false
+        Shell.emptyWatcherReply = false
     }
 
-    @After fun cleanup() { BydCarPlayCall.end(); drain() }
+    @After fun cleanup() {
+        Shell.endFailures = 0
+        Shell.omitCompletion = false
+        Shell.omitCancelCompletion = false
+        BydCarPlayCall.end(); drain()
+    }
 
     @Test fun defaultOffTracksCallWithoutAnyShellOrWatcherMutation() {
         BydCarPlayCall.onFrame(ringing("a")); drain()
@@ -151,6 +161,105 @@ class BydCarPlayCallLifecycleTest {
         assertNotNull(ReflectionHelpers.getField<Any?>(BydCarPlayCall, "shown"))
     }
 
+    @Test fun refusedWatcherLaunchCannotBeMarkedRunningOrWriteCallFields() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.rejectWatcher = true
+        BydCarPlayCall.onFrame(ringing("unprotected")); drain()
+        assertFalse(ReflectionHelpers.getField<Boolean>(BydCarPlayCall, "watcherRunning"))
+        assertTrue(Shell.commands.none { it.contains(" ringing ") })
+    }
+
+    @Test fun aMissingChildReadinessRecordCannotPermitVehicleMutation() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.omitReadiness = true
+        BydCarPlayCall.onFrame(ringing("not-ready")); drain()
+        assertTrue(Shell.commands.none { it.contains(" ringing ") })
+    }
+
+    @Test fun anEmptyBackgroundLaunchReplyStillNeedsTheChildReadinessRecord() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.emptyWatcherReply = true
+        Shell.omitReadiness = true
+        BydCarPlayCall.onFrame(ringing("empty-launch")); drain()
+        assertFalse(ReflectionHelpers.getField<Boolean>(BydCarPlayCall, "watcherRunning"))
+        assertTrue(Shell.commands.none { it.contains(" ringing ") })
+        assertTrue(Shell.commands.any { it.contains(" cancel - ") })
+    }
+
+    @Test fun vehicleWritesFollowPreparationAndInitializedChildAcknowledgement() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.onFrame(ringing("ordered")); drain()
+        val prepare = Shell.commands.indexOfFirst { it.contains(" prepare - ") }
+        val launch = Shell.commands.indexOfFirst { it.startsWith("nohup") }
+        val probe = Shell.commands.indexOfFirst { it.contains(" probe - ") }
+        val show = Shell.commands.indexOfFirst { it.contains(" ringing ") }
+        assertTrue(prepare >= 0 && prepare < launch && launch < probe && probe < show)
+        val pid = android.os.Process.myPid().toString()
+        assertTrue(Shell.commands[show].endsWith(" $pid"))
+    }
+
+    @Test fun failedWatcherHasOneRealWriterRetryEvenWhenTheCallFrameNeverChanges() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.rejectWatcher = true
+        BydCarPlayCall.onFrame(ringing("unchanged")); drain()
+        assertTrue(Shell.commands.none { it.contains(" ringing ") })
+        Shell.rejectWatcher = false
+        awaitRetry()
+        assertEquals(1, Shell.commands.count { it.contains(" ringing ") })
+        assertNotNull(ReflectionHelpers.getField<Any?>(BydCarPlayCall, "shown"))
+    }
+
+    @Test fun missingPristineCancelAcknowledgementRetainsItsTokenUntilConfirmedRetry() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.rejectWatcher = true
+        Shell.omitCancelCompletion = true
+        BydCarPlayCall.onFrame(ringing("cancel-pending")); drain()
+        val original = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        assertTrue(ReflectionHelpers.getField<Boolean>(BydCarPlayCall, "prepared"))
+        Shell.omitCancelCompletion = false
+        Shell.rejectWatcher = false
+        awaitRetry()
+        val firstCancel = Shell.commands.indexOfFirst { it.endsWith(" cancel - $original") }
+        val retryCancel = Shell.commands.indexOfLast { it.endsWith(" cancel - $original") }
+        val newPrepare = Shell.commands.indexOfLast { it.contains(" prepare - ") }
+        assertTrue(firstCancel >= 0 && retryCancel > firstCancel && newPrepare > retryCancel)
+        assertTrue(Shell.commands.none { it.endsWith(" end - $original") })
+        assertEquals(1, Shell.commands.count { it.contains(" ringing ") })
+    }
+
+    @Test fun disablingTheOptionCancelsTheUnchangedCallRetryWithoutHardwareWrites() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        Shell.rejectWatcher = true
+        BydCarPlayCall.onFrame(ringing("disabled")); drain()
+        BydOutputSettings.setCarPlayCalls(app, false)
+        BydCarPlayCall.settingChanged(false); drain()
+        Shell.rejectWatcher = false
+        Thread.sleep(1200); drain()
+        assertTrue(Shell.commands.none { it.contains(" ringing ") || it.contains(" end - ") })
+    }
+
+    @Test fun refusedEndGetsOnlyOneAutomaticRetryUntilAnExplicitNewCleanupEvent() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.onFrame(ringing("end-retry")); drain()
+        val path = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        Shell.endFailures = 10
+        BydCarPlayCall.end(); drain()
+        awaitRetry()
+        Thread.sleep(1200); drain()
+        assertEquals(2, Shell.commands.count { it.endsWith(" end - $path") })
+        Shell.endFailures = 0
+        BydCarPlayCall.end(); drain()
+        assertEquals(3, Shell.commands.count { it.endsWith(" end - $path") })
+        assertNull(ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken"))
+    }
+
+    private fun awaitRetry() {
+        val future = ReflectionHelpers.getField<java.util.concurrent.ScheduledFuture<*>?>(BydCarPlayCall, "retry")
+            ?: error("Expected a bounded retry")
+        future.get(5, TimeUnit.SECONDS)
+        drain()
+    }
+
     private fun tokenFrom(command: String): String =
         Regex("/data/local/tmp/diplay-carplay-call-[A-Za-z0-9_.]+-[0-9a-f-]{36}")
             .find(command)!!.value
@@ -159,18 +268,28 @@ class BydCarPlayCallLifecycleTest {
     class Shell {
         @Implementation fun run(context: Context, command: String): String? {
             commands.add(command)
+            if (command.startsWith("nohup") && rejectWatcher) return "nohup: watcher launch refused"
+            if (command.startsWith("nohup") && emptyWatcherReply) return ""
+            if (command.contains(" cancel - ") && omitCancelCompletion) return ""
+            if (command.contains(" probe ")) return if (rejectWatcher || omitReadiness) "watch=ERR" else "watch=0"
             if (rejectPhase?.let { command.contains(" $it ") } == true) return "write=ERR call write refused"
             if (command.contains(" end - ") && endFailures > 0) {
                 endFailures--
                 return "write=ERR cleanup refused"
             }
-            return if (omitCompletion) "state=0" else "state=0\nwrite=0"
+            val phaseOrEnd = command.contains(" end - ") ||
+                listOf("ringing", "dialing", "active").any { command.contains(" $it ") }
+            return if (omitCompletion && phaseOrEnd) "state=0" else "state=0\nwrite=0"
         }
         companion object {
             val commands = CopyOnWriteArrayList<String>()
             @Volatile var rejectPhase: String? = null
             @Volatile var endFailures = 0
             @Volatile var omitCompletion = false
+            @Volatile var rejectWatcher = false
+            @Volatile var omitReadiness = false
+            @Volatile var omitCancelCompletion = false
+            @Volatile var emptyWatcherReply = false
         }
     }
 }
