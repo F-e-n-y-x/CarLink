@@ -123,6 +123,7 @@ internal class ClusterMapPresentation(
         waitingLabel = TextView(context).apply {
             text = context.getString(R.string.cluster_waiting_for_map)
             setTextColor(if (plan != null && dark) Color.WHITE else Color.DKGRAY)
+            if (plan == null) setBackgroundColor(Color.rgb(233, 238, 246))
             textSize = 26f
             gravity = Gravity.CENTER
         }
@@ -131,7 +132,9 @@ internal class ClusterMapPresentation(
         root.addView(turnCardView, FrameLayout.LayoutParams(-1, -1))
         // Start with the placeholder visible; SurfaceView would otherwise cover the light
         // backdrop with an empty black surface before the first stream notification.
-        videoView?.alpha = if (streamActive) 1f else 0f
+        // SurfaceView ignores fractional alpha before API 34. Keep its decoder surface
+        // visible and fade an opaque ordinary View over it instead.
+        if (videoView !is SurfaceView) videoView?.alpha = if (streamActive) 1f else 0f
         waitingLabel?.apply {
             alpha = if (streamActive) 0f else 1f
             visibility = if (streamActive) View.GONE else View.VISIBLE
@@ -140,8 +143,8 @@ internal class ClusterMapPresentation(
     }
 
     /**
-     * Cross-fades the placeholder and the video when the cluster stream starts or stops, so the
-     * dashboard never hard-cuts between "waiting" and the live map.
+     * Cross-fades the waiting placeholder over the live map. TextureView can also fade the
+     * video; legacy SurfaceView stays visible under the placeholder to preserve its surface.
      */
     fun setStreamActive(active: Boolean) {
         if (streamActive == active) return
@@ -154,7 +157,7 @@ internal class ClusterMapPresentation(
         if (video == null || label == null) return
         label.visibility = View.VISIBLE
         // Animate from the current opacity so a stream reversal does not jump or restart.
-        video.animate().alpha(if (active) 1f else 0f).setDuration(300).start()
+        if (video !is SurfaceView) video.animate().alpha(if (active) 1f else 0f).setDuration(300).start()
         label.animate().alpha(if (active) 0f else 1f).setDuration(300).withEndAction {
             if (streamActive == active) label.visibility = if (active) View.GONE else View.VISIBLE
         }.start()
