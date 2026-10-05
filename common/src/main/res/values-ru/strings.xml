@@ -689,4 +689,8 @@
     <string name="setup_badge_adb">Требуется ADB по сети</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_done_description">Подключите iPhone сейчас. Этот мастер можно снова открыть в настройках.</string>
+    <string name="bt_suspend_delay">Задержка паузы Bluetooth</string>
+    <string name="bt_suspend_delay_option">%1$d с после подключения</string>
+    <string name="bt_suspend_during_carplay">Приостановить Bluetooth автомобиля при CarPlay · нужен ADB</string>
+    <string name="bt_suspend_during_carplay_description">Телефон держит hands-free связь с автомобилем, поэтому входящий звонок звонит и в телефоне автомобиля, и в CarPlay. При включении: Bluetooth автомобиля приостанавливается через ADB на время сеанса CarPlay — звонки идут только в CarPlay; пока Bluetooth выключен, звонки CarPlay идут через динамик и микрофон автомобиля. Включается обратно после сеанса и перед следующим беспроводным соединением. Сопряжение не затрагивается. Применится при следующем подключении.</string>
 </resources>

@@ -1,5 +1,6 @@
 # DiPlay 0.2.14 — 2026-10-07
 
+- Optional delayed pause of the car Bluetooth during CarPlay (ADB, default off). While it is paused, CarPlay calls play on the cabin speaker and microphone because there is no phone SCO.
 - Group Settings by driver goal with search, adaptive layouts, quick controls and reconnect notices (#369).
 - Add an independent Interface size control, preserving CarPlay geometry and following real density/window changes (#378).
 - Add a default automatic-connection choice, scheduled day/night mode and launcher return to active CarPlay (#373, #365, #376).

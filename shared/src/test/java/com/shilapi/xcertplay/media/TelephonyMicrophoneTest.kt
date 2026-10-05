@@ -48,6 +48,7 @@ class TelephonyMicrophoneTest {
     @Before fun setUp() {
         ConfigurableAudioEffect.resetStatus()
         shadowOf(context).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS)
+        context.getSharedPreferences("diplay_bt_suspend", 0).edit().clear().commit()
         manager = context.getSystemService(AudioManager::class.java)
         sink = AndroidMediaSink(context = context)
         for (type in listOf(AudioEffect.EFFECT_TYPE_AEC, AudioEffect.EFFECT_TYPE_NS)) {
@@ -91,6 +92,18 @@ class TelephonyMicrophoneTest {
         assertEquals(AudioManager.MODE_RINGTONE, manager.mode)
         assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
         assertEquals(AudioRecord.STATE_UNINITIALIZED, record.state)
+    }
+
+    @Test fun aCallWhileCarBluetoothIsOffUsesTheCabinMicrophone() {
+        context.getSharedPreferences("diplay_bt_suspend", 0).edit().putBoolean("suspended_by_us", true).commit()
+        manager.mode = AudioManager.MODE_NORMAL
+        sink.onMicrophoneStarted(telephony, config("telephony"))
+        val record = awaitCapture()
+        assertEquals(AudioManager.MODE_NORMAL, manager.mode)
+        assertEquals(MediaRecorder.AudioSource.MIC, record.audioSource)
+        assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
+        sink.onMicrophoneStopped(telephony)
+        assertEquals(AudioManager.MODE_NORMAL, manager.mode)
     }
 
     @Test fun speechRecognitionDoesNotChangeModeOrEnableTelephonyEffects() {

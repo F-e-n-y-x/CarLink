@@ -689,4 +689,8 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="bt_suspend_delay">تأخير إيقاف البلوتوث</string>
+    <string name="bt_suspend_delay_option">%1$d ث بعد الاتصال</string>
+    <string name="bt_suspend_during_carplay">إيقاف بلوتوث السيارة أثناء CarPlay · يتطلب ADB</string>
+    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا عبر ADB طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي.</string>
 </resources>
