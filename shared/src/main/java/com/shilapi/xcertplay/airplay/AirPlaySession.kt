@@ -529,8 +529,11 @@ class AirPlaySession(
             "TEARDOWN" -> return handleTeardown(request)
         }
 
-        if (config.mainBufferedAudio && request.method in BUFFERED_AUDIO_METHODS) {
-            val body = runCatching { asMap(BplistCodec.decode(request.body)) }.getOrNull() ?: emptyMap()
+        if (config.bufferedAudioOutputEnabled && request.method in BUFFERED_AUDIO_METHODS) {
+            val body = if (request.body.isEmpty() && request.method == "GETANCHOR") emptyMap() else {
+                runCatching { asMap(BplistCodec.decode(request.body)) }.getOrNull()
+                    ?: return RtspMessage.Response(status = 400)
+            }
             val response = media.onBufferedAudioControl(this, request.method, body)
             if (request.method != "GETANCHOR") debugLog("airplay ${request.method} $body -> ${response ?: "ok"}")
             return if (response == null) RtspMessage.Response(status = 200) else RtspMessage.Response(
@@ -699,7 +702,7 @@ class AirPlaySession(
                     }
                 }
                 STREAM_TYPE_MAIN_BUFFERED_AUDIO -> {
-                    val streamResponse = if (config.mainBufferedAudio) media.onBufferedAudio(this, stream) else null
+                    val streamResponse = if (config.bufferedAudioOutputEnabled) media.onBufferedAudio(this, stream) else null
                     debugLog("airplay buffered audio stream accepted=${streamResponse != null} " +
                         "dataPort=${streamResponse?.get("dataPort") ?: "none"}")
                     if (streamResponse != null) {
@@ -961,7 +964,7 @@ internal fun setupEnabledFeatures(config: AirPlayConfig, proposed: List<*>?): Li
     features.add("viewAreas")
     if (config.cluster != null) features.add("altScreen")
     if (config.videoInCar && proposed.orEmpty().contains(VideoInCar.FEATURE)) features.add(VideoInCar.FEATURE)
-    if (config.mainBufferedAudio && proposed.orEmpty().contains(MAIN_BUFFERED_FEATURE)) features.add(MAIN_BUFFERED_FEATURE)
+    if (config.bufferedAudioOutputEnabled && proposed.orEmpty().contains(MAIN_BUFFERED_FEATURE)) features.add(MAIN_BUFFERED_FEATURE)
     return features
 }
 

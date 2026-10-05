@@ -186,8 +186,6 @@ class CarPlayMediaEngine(
     override fun onBufferedAudio(session: AirPlaySession, stream: Map<String, Any?>): Map<String, Any?>? {
         val type = BufferedAudioStream.STREAM_TYPE
         val streamKey = StreamKey(session, type, "media")
-        streams.remove(streamKey)?.close()
-        bufferedStreams.remove(session)
         val key = stream["shk"] as? ByteArray
         if (key == null || key.size != 32) {
             Log.w(TAG, "buffered audio SETUP without a 32-byte shk; declined")
@@ -198,14 +196,24 @@ class CarPlayMediaEngine(
             Log.w(TAG, "buffered audio format ${stream["audioFormat"]} is not AAC-LC; declined")
             return null
         }
+        if (stream["ct"]?.let { it !is Number || it.toInt() != 4 } == true ||
+            stream["spf"]?.let { it !is Number || it.toInt() != 1024 } == true) {
+            Log.w(TAG, "buffered audio requires AAC and 1024 samples per frame; declined")
+            return null
+        }
+        val peer = session.remoteAddress ?: return null
         val buffered = try {
-            BufferedAudioStream(key, format, sink, session::logDebug).also { it.start() }
+            BufferedAudioStream(key, format, sink, session::logDebug, expectedPeer = peer)
         } catch (error: Exception) {
             Log.w(TAG, "buffered audio listener failed", error)
             return null
         }
+        // A rejected replacement must not destroy the stream that is still playing.
+        streams.remove(streamKey)?.close()
+        bufferedStreams.remove(session)
         streams[streamKey] = buffered
         bufferedStreams[session] = BufferedStream(buffered, stream["streamConnectionID"])
+        buffered.start()
         Log.i(TAG, "buffered audio stream client=${stream["clientID"]} rate=${format.sampleRate} port=${buffered.port}")
         return linkedMapOf(
             "type" to type,
@@ -223,10 +231,12 @@ class CarPlayMediaEngine(
         val rtpTime = (body["rtpTime"] as? Number)?.toLong()
         val rate = (body["rate"] as? Number)?.toInt()
         return when (method) {
-            "SETRATE", "SETRATEANCHORTIME" -> buffered.setRate(rtpTime, rate ?: 1, session.syncedNtp())
+            "SETRATE", "SETRATEANCHORTIME" -> {
+                if (rate == null || rate !in 0..1) null else buffered.setRate(rtpTime, rate, session.syncedNtp())
+            }
             "GETANCHOR" -> buffered.anchor()
             "FLUSHBUFFERED" -> {
-                buffered.flush((body["flushUntilTS"] as? Number)?.toLong())
+                (body["flushUntilTS"] as? Number)?.toLong()?.let { buffered.flush(it) }
                 null
             }
             else -> null
@@ -380,7 +390,9 @@ class CarPlayMediaEngine(
             if (pendingMicrophone.remove(key) != null) sink.onMicrophoneStopped(streamId)
             audioMeta.remove(key)
             audioCaptures.remove(key)?.close()
-            sink.onAudioStopped(streamId)
+            // BufferedAudioStream owns serialized sink cleanup; stopping it first from here
+            // could interleave with its in-flight delivery and recreate a stale renderer.
+            if (key.type != BufferedAudioStream.STREAM_TYPE) sink.onAudioStopped(streamId)
             streams.remove(key)?.close()
         }
         if (isScreenStreamType(type)) sink.onScreenStreamActive(type, false)

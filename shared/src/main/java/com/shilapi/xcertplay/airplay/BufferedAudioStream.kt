@@ -6,6 +6,7 @@ import java.io.DataInputStream
 import java.math.BigInteger
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.InetAddress
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -26,16 +27,24 @@ internal class BufferedAudioStream(
     private val sink: MediaSink,
     private val log: (String) -> Unit = {},
     private val nanoTime: () -> Long = System::nanoTime,
+    private val expectedPeer: InetAddress = InetAddress.getLoopbackAddress(),
 ) : Closeable {
     internal class Frame(val sequence: Int, val timestamp: Long, val rtp: ByteArray)
 
     private val id = AudioStreamId(format.payloadType, format.audioType)
     private val closed = AtomicBoolean(false)
+    private val started = AtomicBoolean(false)
     private val server = ServerSocket(0)
+    private val boundPort = server.localPort
     @Volatile private var client: Socket? = null
     private val lock = Object()
     private val queue = ArrayDeque<Frame>()
+    // Retain the small renderer preload until its estimated audible position passes it. A pause
+    // destroys that renderer, so these frames must be available when playback resumes.
+    private val fed = ArrayDeque<Frame>()
+    // Includes queued and not-yet-audible fed frames, bounded by both bytes and frame count.
     private var queuedBytes = 0L
+    private val maxBufferedFrames = (format.sampleRate * MAX_BUFFER_MILLIS / (SAMPLES_PER_FRAME * 1000)).toInt()
 
     // Playback state, guarded by [lock].
     private var rate = 0
@@ -45,17 +54,23 @@ internal class BufferedAudioStream(
     private var feedStartTimestamp: Long? = null
     private var feedStartNs = 0L
     private var fedSamples = 0L
+    private var outputGeneration = 0L
 
-    val port: Int get() = server.localPort
+    val port: Int get() = boundPort
 
     fun start() {
+        if (closed.get() || !started.compareAndSet(false, true)) return
         Thread({ receive() }, "airplay-buffered-rx").apply { isDaemon = true; start() }
         Thread({ feed() }, "airplay-buffered-feed").apply { isDaemon = true; start() }
     }
 
     private fun receive() {
+        var accepted: Socket? = null
         try {
-            val socket = server.accept().also { client = it }
+            val socket = acceptPeer() ?: return
+            accepted = socket
+            // One stream has one TCP sender. Release the listening socket after ownership is set.
+            server.close()
             log("Buffered audio: connected")
             val input = DataInputStream(socket.getInputStream().buffered())
             var failures = 0
@@ -63,7 +78,12 @@ internal class BufferedAudioStream(
             var windowStart = nanoTime()
             while (!closed.get()) {
                 val length = input.readUnsignedShort()
-                val body = ByteArray(maxOf(0, length - LENGTH_BYTES))
+                if (length < LENGTH_BYTES + RTP_HEADER + TAG_BYTES + NONCE_BYTES) {
+                    log("Buffered audio: invalid frame length $length; closed")
+                    close()
+                    return
+                }
+                val body = ByteArray(length - LENGTH_BYTES)
                 input.readFully(body)
                 val frame = open(key, body)
                 if (frame == null) {
@@ -81,6 +101,14 @@ internal class BufferedAudioStream(
                 }
                 if (frame.rtp.size <= RTP_HEADER) continue
                 synchronized(lock) {
+                    while (!closed.get() &&
+                        flushUntil?.let { before(frame.timestamp, it) } != true &&
+                        (queuedBytes + frame.rtp.size > AUDIO_BUFFER_BYTES || queue.size + fed.size >= maxBufferedFrames)) {
+                        // TCP backpressure preserves music rather than dropping an arbitrary part
+                        // of a track. Close, playback and flush all wake the bounded receiver.
+                        lock.wait()
+                    }
+                    if (closed.get()) return
                     if (flushUntil?.let { before(frame.timestamp, it) } == true) return@synchronized
                     queue.addLast(frame)
                     queuedBytes += frame.rtp.size
@@ -89,34 +117,68 @@ internal class BufferedAudioStream(
             }
         } catch (error: Exception) {
             if (!closed.get()) log("Buffered audio: connection ended (${error.javaClass.simpleName})")
+        } finally {
+            runCatching { accepted?.close() }
+            synchronized(lock) { if (client === accepted) client = null }
         }
+    }
+
+    private fun acceptPeer(): Socket? {
+        while (!closed.get()) {
+            val socket = server.accept()
+            val accepted = synchronized(lock) {
+                if (closed.get()) {
+                    runCatching { socket.close() }
+                    return null
+                }
+                if (socket.inetAddress != expectedPeer) {
+                    runCatching { socket.close() }
+                    log("Buffered audio: rejected sender outside the control session")
+                    false
+                } else {
+                    client = socket
+                    true
+                }
+            }
+            if (accepted) return socket
+        }
+        return null
     }
 
     /** Hands frames to the sink while playing, keeping about [LEAD_MILLIS] of audio ahead of real time. */
     private fun feed() {
         try {
             while (!closed.get()) {
-                val frame = synchronized(lock) {
+                synchronized(lock) {
+                    if (closed.get()) return
+                    retireFedLocked()
                     if (rate == 0 || queue.isEmpty() || leadMillisLocked() >= LEAD_MILLIS) {
                         lock.wait(FEED_POLL_MILLIS)
-                        null
                     } else {
-                        queue.pollFirst()?.also { queuedBytes -= it.rtp.size }?.also { frame ->
+                        queue.pollFirst()?.also { frame ->
+                            fed.addLast(frame)
+                            val generation = outputGeneration
                             if (feedStartTimestamp == null) {
                                 feedStartTimestamp = frame.timestamp
                                 feedStartNs = nanoTime()
                                 fedSamples = 0
                                 sink.onAudioStarted(id, format, frame.timestamp.toInt())
                             }
+                            // A sink may synchronously report state back to its owner. Respect a
+                            // reentrant pause/flush/close just as a control call on another thread.
+                            if (closed.get() || rate == 0 || generation != outputGeneration) return@synchronized
                             fedSamples += SAMPLES_PER_FRAME
+                            // The same lock orders every sink callback against pause/flush/close.
+                            // Otherwise a stale RTP callback can recreate a renderer after stop.
+                            sink.onAudioRtp(id, format, frame.rtp, frame.timestamp.toInt())
                         }
                     }
-                } ?: continue
-                sink.onAudioRtp(id, format, frame.rtp, frame.timestamp.toInt())
+                }
             }
         } catch (_: InterruptedException) {
         } catch (error: Exception) {
             if (!closed.get()) Log.w(TAG, "buffered audio feed failed", error)
+            close()
         }
     }
 
@@ -131,14 +193,18 @@ internal class BufferedAudioStream(
      * [START_LATENCY_MILLIS] from [nowNtp]; rate 0 pauses where playback is. Returns the new anchor.
      */
     fun setRate(rtpTime: Long?, newRate: Int, nowNtp: BigInteger): Map<String, Any?>? = synchronized(lock) {
+        if (closed.get()) return@synchronized null
         if (newRate > 0) {
             val start = rtpTime ?: positionLocked() ?: queue.peekFirst()?.timestamp
-            if (rtpTime != null) dropBeforeLocked(rtpTime)
+            restoreFedLocked()
+            if (start != null) dropBeforeLocked(start)
             restartOutputLocked()
             anchorRtp = start
             anchorNtp = nowNtp.add(millisToNtp(START_LATENCY_MILLIS))
         } else {
-            positionLocked()?.let { anchorRtp = it }
+            val position = positionLocked()
+            restoreFedLocked()
+            position?.let { anchorRtp = it; dropBeforeLocked(it) }
             anchorNtp = nowNtp
             restartOutputLocked()
         }
@@ -152,6 +218,8 @@ internal class BufferedAudioStream(
 
     /** FLUSHBUFFERED: drop what was sent before [untilTimestamp] and restart the output there. */
     fun flush(untilTimestamp: Long?) = synchronized(lock) {
+        if (closed.get()) return@synchronized
+        restoreFedLocked()
         if (untilTimestamp != null) dropBeforeLocked(untilTimestamp)
         restartOutputLocked()
         lock.notifyAll()
@@ -191,32 +259,54 @@ internal class BufferedAudioStream(
         while (queue.peekFirst()?.let { before(it.timestamp, timestamp) } == true) {
             queuedBytes -= queue.pollFirst()!!.rtp.size
         }
+        lock.notifyAll()
+    }
+
+    private fun retireFedLocked() {
+        val position = positionLocked() ?: return
+        while (fed.peekFirst()?.let { frame ->
+            val end = (frame.timestamp + SAMPLES_PER_FRAME) and U32
+            end == position || before(end, position)
+        } == true) {
+            queuedBytes -= fed.removeFirst().rtp.size
+        }
+        lock.notifyAll()
+    }
+
+    private fun restoreFedLocked() {
+        while (fed.isNotEmpty()) queue.addFirst(fed.removeLast())
     }
 
     /** Stops what the sink still holds, so a pause or a track change is heard at once. */
     private fun restartOutputLocked() {
-        if (feedStartTimestamp != null) sink.onAudioStopped(id)
+        outputGeneration++
+        if (feedStartTimestamp != null) runCatching { sink.onAudioStopped(id) }
+            .onFailure { log("Buffered audio: output cleanup failed (${it.javaClass.simpleName})") }
         feedStartTimestamp = null
         fedSamples = 0
     }
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
-        runCatching { client?.close() }
         runCatching { server.close() }
         synchronized(lock) {
+            runCatching { client?.close() }
+            client = null
             queue.clear()
+            fed.clear()
             queuedBytes = 0
+            rate = 0
+            restartOutputLocked()
             lock.notifyAll()
         }
-        sink.onAudioStopped(id)
     }
 
     companion object {
         private const val TAG = "xcertplay-usb"
         const val STREAM_TYPE = 103
-        /** What the SETUP response offers; the iPhone sends at most this much ahead. */
+        /** Advertised and locally enforced; a full buffer applies TCP backpressure. */
         const val AUDIO_BUFFER_BYTES = 8 * 1024 * 1024
+        private const val MAX_BUFFER_MILLIS = 120_000L
         internal const val LEAD_MILLIS = 1_000L
         /** About when the first fed sample is heard: the media renderer's start level and the decoder. */
         internal const val START_LATENCY_MILLIS = 400L
@@ -237,6 +327,9 @@ internal class BufferedAudioStream(
          */
         internal fun open(key: ByteArray, body: ByteArray): Frame? {
             if (body.size < RTP_HEADER + TAG_BYTES + NONCE_BYTES) return null
+            // This wire format has exactly a 12-byte RTP v2 header; extensions, padding and CSRCs
+            // cannot be interpreted as ciphertext or passed to the AAC renderer.
+            if ((body[0].toInt() and 0xff) != 0x80) return null
             val sealedEnd = body.size - NONCE_BYTES
             val nonce = ByteArray(12).also { body.copyInto(it, 4, sealedEnd, body.size) }
             val payload = runCatching {

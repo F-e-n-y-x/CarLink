@@ -6,7 +6,8 @@ Apple calls it "Enhanced buffering" ([WWDC23, Optimize CarPlay for vehicle syste
 
 - **Which apps:** Apple Music uses it; the SETUP names the client (`clientID=com.apple.Music`). Spotify kept the normal stream in my tests. Apps that do not use it are unaffected.
 - **How much ahead:** the iPhone sent about 1 minute 43 seconds of music within 8 seconds, then topped it up as playback went on. During a Wi-Fi Direct reconnection the queue fell from 25 to 14 seconds and nothing was heard.
-- **Playback:** the frames go to DiPlay's normal media renderer about one second ahead of playback, so audio focus, ducking under navigation and Siri, and the audio channel settings apply as for any music.
+- **Playback:** the frames go to DiPlay's normal media renderer about one second ahead of playback, so audio focus, ducking under navigation and Siri, and the audio channel settings apply as for any music. Frames in that preload are retained until the estimated audible position passes them, so pausing and destroying the renderer does not discard the next second of music.
+- **Limits and cancellation:** the advertised 8 MiB limit is enforced locally, including the outstanding renderer preload, with an additional two-minute frame-count limit. A full buffer applies TCP backpressure. Only the control session's peer address can claim the TCP stream. Pause, flush and close serialize with sink delivery, including a reentrant pause during renderer start; closing also cancels an accepted or waiting TCP sender. Invalid short framing closes this stream. A malformed control body, unsupported rate or unsupported packetization cannot start playback.
 
 ## How it works
 
@@ -37,7 +38,9 @@ Apple Music's lossless setting does not reach the car this way. With only PCM 48
 
 - music played from the car, with pause, resume and track changes;
 - navigation prompts ducked the music, a call paused it and it resumed afterwards, Siri worked over it (tested together with #295, which Siri needs on main); Spotify used the normal stream;
-- unit tests cover the offer, frame opening, the anchor format, wrap-safe timestamps and the start/pause/flush flow.
+- unit tests cover the offer and disabled-output SETUP gate, authenticated frame opening and malformed headers, split/coalesced TCP framing, byte/frame limits, anchor format, wrap-safe timestamps, pause/resume preload retention, in-flight pause/flush/close ordering, accepted/waiting socket cancellation, and rejected SETUP replacements.
+
+The hardware results above were supplied by the original author before the review corrections. The corrected bounded-buffer and pause/resume paths have source-level regression coverage; they have not been rerun on physical hardware by the reviewer. Recheck Apple Music pause/resume, seek/track change, navigation ducking and call/Siri interruption on the corrected build before treating this experimental option as generally supported.
 
 ## Limits
 
