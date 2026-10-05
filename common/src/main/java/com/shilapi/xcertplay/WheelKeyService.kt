@@ -331,12 +331,16 @@ class WheelKeyService : AccessibilityService() {
             if (!shouldContinue()) return false
             val current = checkedShell("settings get secure enabled_accessibility_services", shell) ?: return false
             val lists = allowedServices(current, component(context).flattenToString()) ?: return false
-            val commands = mutableListOf<String>()
-            // Rebind only a stopped service; a healthy service is not temporarily removed.
-            if (!connected()) lists.first?.let { commands += "settings put secure enabled_accessibility_services '$it'" }
-            commands += "settings put secure enabled_accessibility_services '${lists.second}'"
-            commands += "settings put secure accessibility_enabled 1"
-            for (command in commands) {
+            // Binding may finish after the read. Check again immediately before a destructive rebind,
+            // after the continuation callback, without blocking the service's main-thread callback.
+            lists.first?.let {
+                if (!shouldContinue()) return false
+                if (!connected() && checkedShell("settings put secure enabled_accessibility_services '$it'", shell) == null) return false
+            }
+            for (command in listOf(
+                "settings put secure enabled_accessibility_services '${lists.second}'",
+                "settings put secure accessibility_enabled 1",
+            )) {
                 if (!shouldContinue() || checkedShell(command, shell) == null) return false
             }
             return enabledInSettings(context) &&

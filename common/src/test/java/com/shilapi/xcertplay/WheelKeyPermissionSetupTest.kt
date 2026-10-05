@@ -69,6 +69,23 @@ class WheelKeyPermissionSetupTest {
         } finally { service.onDestroy() }
     }
 
+    @Test fun serviceBindingAfterTheReadIsNotRemovedForRebinding() {
+        val service = Robolectric.buildService(WheelKeyService::class.java).create().get()
+        reading = "$other:$ours"
+        var continuationChecks = 0
+        try {
+            assertTrue(WheelKeyService.applyServiceSettings(context, ::shell) {
+                if (++continuationChecks == 2) {
+                    service.javaClass.getDeclaredMethod("onServiceConnected").apply { isAccessible = true }.invoke(service)
+                }
+                true
+            })
+            val writes = commands.filter { it.contains("settings put secure enabled_accessibility_services") }
+            assertEquals(1, writes.size)
+            assertTrue(writes.single().contains("'$other:$ours'"))
+        } finally { service.onDestroy() }
+    }
+
     @Test fun shellFailureStopsFurtherWritesAndDoesNotClaimSuccess() {
         reply = "DIPLAY_WHEEL_EXIT:1"
         assertFalse(WheelKeyService.applyServiceSettings(context, ::shell))
