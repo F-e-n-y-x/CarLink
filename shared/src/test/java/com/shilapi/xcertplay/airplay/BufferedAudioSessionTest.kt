@@ -142,16 +142,21 @@ class BufferedAudioSessionTest {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val reentered = AtomicBoolean(false)
+        val holdTimedOut = AtomicBoolean(false)
         lateinit var engine: CarPlayMediaEngine
         lateinit var old: AirPlaySession
         engine = CarPlayMediaEngine(object : MediaSink {
             override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) {
                 entered.countDown()
-                release.await(3, TimeUnit.SECONDS)
+                if (!release.await(30, TimeUnit.SECONDS)) {
+                    holdTimedOut.set(true)
+                    return
+                }
                 reentered.set(engine.onBufferedAudioControl(old, "GETANCHOR", emptyMap()) == null)
             }
         })
         old = session(media = engine)
+        val registrations = bufferedRegistrations(engine)
         val replacement = session(media = engine)
         val third = session(media = engine)
         val executor = Executors.newSingleThreadExecutor()
@@ -160,13 +165,18 @@ class BufferedAudioSessionTest {
             Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
                 sendFrame(socket, 0, 1024)
                 engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
-                assertTrue(entered.await(3, TimeUnit.SECONDS))
+                assertTrue(entered.await(10, TimeUnit.SECONDS))
+                // feedback/anchor acquire the stream lock held by this callback. Observe only
+                // the concurrent registry so the test does not release delivery by timing out.
+                assertTrue(registrations.containsKey(old))
                 val pending = executor.submit<Map<String, Any?>?> { engine.onBufferedAudio(replacement, validSetup()) }
-                waitFor { engine.onFeedback(old) == null }
+                waitFor(10) { !registrations.containsKey(old) }
+                assertTrue("Held sink callback timed out before controlled release", !holdTimedOut.get())
                 assertTrue("Replacement must finish old delivery before publishing its port", !pending.isDone)
                 assertNull(engine.onBufferedAudio(third, validSetup()))
                 release.countDown()
-                assertTrue(pending.get(3, TimeUnit.SECONDS) != null)
+                assertTrue(pending.get(10, TimeUnit.SECONDS) != null)
+                assertTrue("Held sink callback timed out before controlled release", !holdTimedOut.get())
                 assertTrue("Engine lock blocked an old sink callback during retirement", reentered.get())
             }
         } finally {
@@ -180,11 +190,12 @@ class BufferedAudioSessionTest {
         val stopped = CountDownLatch(1)
         val release = CountDownLatch(1)
         val delivered = CountDownLatch(1)
+        val holdTimedOut = AtomicBoolean(false)
         val engine = CarPlayMediaEngine(object : MediaSink {
             override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) { delivered.countDown() }
             override fun onAudioStopped(id: AudioStreamId) {
                 stopped.countDown()
-                release.await(3, TimeUnit.SECONDS)
+                holdTimedOut.set(!release.await(30, TimeUnit.SECONDS))
             }
         })
         val old = session(media = engine)
@@ -196,13 +207,15 @@ class BufferedAudioSessionTest {
             Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
                 sendFrame(socket, 0, 1024)
                 engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
-                assertTrue(delivered.await(3, TimeUnit.SECONDS))
+                assertTrue(delivered.await(10, TimeUnit.SECONDS))
                 val pending = executor.submit<Map<String, Any?>?> { engine.onBufferedAudio(replacement, validSetup()) }
-                assertTrue(stopped.await(3, TimeUnit.SECONDS))
+                assertTrue(stopped.await(10, TimeUnit.SECONDS))
                 replacement.close()
+                assertTrue("Held output cleanup timed out before controlled release", !holdTimedOut.get())
                 assertNull(engine.onBufferedAudio(third, validSetup()))
                 release.countDown()
-                assertNull(pending.get(3, TimeUnit.SECONDS))
+                assertNull(pending.get(10, TimeUnit.SECONDS))
+                assertTrue("Held output cleanup timed out before controlled release", !holdTimedOut.get())
                 assertNull(engine.onBufferedAudio(replacement, validSetup()))
                 assertTrue(engine.onBufferedAudio(third, validSetup()) != null)
             }
@@ -254,8 +267,12 @@ class BufferedAudioSessionTest {
         DataOutputStream(socket.getOutputStream()).apply { writeShort(body.size + 2); write(body); flush() }
     }
 
-    private fun waitFor(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(3)
+    private fun bufferedRegistrations(engine: CarPlayMediaEngine): java.util.concurrent.ConcurrentHashMap<*, *> =
+        CarPlayMediaEngine::class.java.getDeclaredField("bufferedStreams").apply { isAccessible = true }
+            .get(engine) as java.util.concurrent.ConcurrentHashMap<*, *>
+
+    private fun waitFor(seconds: Long = 3, condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
         while (!condition() && System.nanoTime() < deadline) Thread.sleep(10)
         assertTrue("condition not met in time", condition())
     }
