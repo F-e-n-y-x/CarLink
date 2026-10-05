@@ -213,6 +213,7 @@ class WheelKeyServiceTest {
         assertEquals(null to "$car:$ours", WheelKeyService.allowedServices("$car\n", ours))
         assertEquals(car to "$car:$ours", WheelKeyService.allowedServices("$ours:$car", ours))
         assertEquals("" to ours, WheelKeyService.allowedServices(ours, ours))
-        for (empty in listOf(null, "", "null", " \n")) assertEquals(null to ours, WheelKeyService.allowedServices(empty, ours))
+        for (empty in listOf("", "null", " \n")) assertEquals(null to ours, WheelKeyService.allowedServices(empty, ours))
+        assertNull(WheelKeyService.allowedServices(null, ours))
     }
 }

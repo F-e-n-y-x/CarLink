@@ -303,18 +303,48 @@ class WheelKeyService : AccessibilityService() {
          */
         fun enableOverAdb(context: Context, mayAsk: Boolean = true): LocalAdb.Access = LocalAdb(AdbKeys.load(context)).use { adb ->
             val access = adb.connect(mayAsk)
-            if (access == LocalAdb.Access.READY) {
-                val current = adb.shell("settings get secure enabled_accessibility_services")
-                val (without, with) = allowedServices(current, component(context).flattenToString())
-                // Listed but not running: Android stops binding a service after its process crashed, until
-                // the list changes, so take it out and put it back.
-                without?.let { adb.shell("settings put secure enabled_accessibility_services '$it'") }
-                adb.shell("settings put secure enabled_accessibility_services '$with'")
-                adb.shell("settings put secure accessibility_enabled 1")
-                Log.i(TAG, "wheel key service allowed over adb${if (without != null) " (listed, rebound)" else ""}")
+            if (access != LocalAdb.Access.READY) return@use access
+            if (!mayAsk && !needsRestore(context)) return@use if (connected()) access else LocalAdb.Access.UNREACHABLE
+            val allowed = applyServiceSettings(context, adb::shell) {
+                mayAsk || WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context)
             }
-            access
+            if (allowed) Log.i(TAG, "wheel key service allowed over adb")
+            if (allowed) access else LocalAdb.Access.UNREACHABLE
         }
+
+        private const val GRANT_EXIT = "DIPLAY_WHEEL_EXIT"
+        private fun checkedShell(command: String, shell: (String) -> String?): String? {
+            val lines = shell("( $command ); result=\$?; printf '\\n$GRANT_EXIT:%s\\n' \"\$result\"")
+                ?.trimEnd()?.lines() ?: return null
+            if (lines.lastOrNull() != "$GRANT_EXIT:0") return null
+            return lines.dropLast(1).joinToString("\n").trim()
+        }
+
+        /** Failed reads and shell commands must not replace the accessibility list or claim success. */
+        internal fun applyServiceSettings(context: Context, shell: (String) -> String?,
+            shouldContinue: () -> Boolean = { true }): Boolean = synchronized(UsbPermissionSetup.accessibilityLock) {
+            applyServiceSettingsLocked(context, shell, shouldContinue)
+        }
+
+        private fun applyServiceSettingsLocked(context: Context, shell: (String) -> String?,
+            shouldContinue: () -> Boolean): Boolean {
+            if (!shouldContinue()) return false
+            val current = checkedShell("settings get secure enabled_accessibility_services", shell) ?: return false
+            val lists = allowedServices(current, component(context).flattenToString()) ?: return false
+            val commands = mutableListOf<String>()
+            // Rebind only a stopped service; a healthy service is not temporarily removed.
+            if (!connected()) lists.first?.let { commands += "settings put secure enabled_accessibility_services '$it'" }
+            commands += "settings put secure enabled_accessibility_services '${lists.second}'"
+            commands += "settings put secure accessibility_enabled 1"
+            for (command in commands) {
+                if (!shouldContinue() || checkedShell(command, shell) == null) return false
+            }
+            return enabledInSettings(context) &&
+                Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
+        }
+
+        internal fun needsRestore(context: Context): Boolean = !connected() &&
+            (WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context))
 
         /**
          * Android takes the service off the allowed list when the app is force-stopped (BYD's system does
@@ -324,12 +354,11 @@ class WheelKeyService : AccessibilityService() {
          */
         fun restoreIfNeeded(context: Context) {
             val app = context.applicationContext
-            if (!WheelZoomSettings.enabled(app) && !WheelZoomSettings.joystick(app)) return
-            if (connected() || !restoring.compareAndSet(false, true)) return
+            if (!needsRestore(app) || !restoring.compareAndSet(false, true)) return
             Thread({
                 try {
                     Thread.sleep(RESTORE_GRACE_MILLIS)
-                    if (!connected()) Log.i(TAG, "wheel key service not running; restoring over adb: ${enableOverAdb(app, mayAsk = false)}")
+                    if (needsRestore(app)) Log.i(TAG, "wheel key service not running; restoring over adb: ${enableOverAdb(app, mayAsk = false)}")
                 } catch (error: Exception) {
                     Log.w(TAG, "wheel key service restore failed", error)
                 } finally {
@@ -342,10 +371,13 @@ class WheelKeyService : AccessibilityService() {
          * The allowed-services setting without and with [ours]: the first is null when [ours] is not listed,
          * the second keeps every other service in its place.
          */
-        internal fun allowedServices(current: String?, ours: String): Pair<String?, String> {
-            val listed = current?.trim()?.takeUnless { it.isEmpty() || it == "null" }
-                ?.split(':')?.filter { it.isNotBlank() }.orEmpty()
-            val others = listed.filter { it != ours }.distinct()
+        internal fun allowedServices(current: String?, ours: String): Pair<String?, String>? {
+            val value = current?.trim() ?: return null
+            val component = Regex("[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+")
+            if (!component.matches(ours)) return null
+            val listed = value.takeUnless { it.isEmpty() || it == "null" }?.split(':').orEmpty()
+            if (listed.any { !component.matches(it) }) return null
+            val others = listed.filter { it != ours }
             val without = if (ours in listed) others.joinToString(":") else null
             return without to (others + ours).joinToString(":")
         }
