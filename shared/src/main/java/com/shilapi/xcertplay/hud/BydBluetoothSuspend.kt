@@ -1,81 +1,120 @@
 package com.shilapi.xcertplay.hud
 
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
-/**
- * Optional, needs ADB over network: while CarPlay runs, the phone keeps its hands-free link to
- * the car's system Bluetooth, so an incoming call rings on both the car's Bluetooth phone and
- * CarPlay. Suspending the car's Bluetooth for the session routes calls through CarPlay alone;
- * it is resumed when the session ends and woken before the next wireless handshake, so the
- * Bluetooth pairing itself is never touched.
- */
+/** Optional radio pause using already-authorized local ADB; pairing is never changed. */
 object BydBluetoothSuspend {
     private const val TAG = "DiPlay-BT-Suspend"
     private const val PREFS = "diplay_bt_suspend"
-    private const val KEY_SUSPENDED_BY_US = "suspended_by_us"
-
+    private const val KEY_RESTORE_ENABLED = "restore_initially_enabled"
+    private const val STATE_TIMEOUT_MILLIS = 8_000L
     private val shell = BydAdbShell(TAG)
-    private val worker = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { task ->
+    private val worker = Executors.newSingleThreadScheduledExecutor { task ->
         Thread(task, "diplay-bt-suspend").apply { isDaemon = true }
     }
-    @Volatile private var pending: java.util.concurrent.ScheduledFuture<*>? = null
+    private val gate = Any()
+    private var lease: BluetoothSuspendLease? = null
+    private var pending: ScheduledFuture<*>? = null
 
-    /**
-     * Disable the car's Bluetooth over adb after [delayMillis]. Suspending the instant the
-     * session reports active races the phone's Wi-Fi association: some units drop CarPlay
-     * entirely when Bluetooth vanishes that early, so the default waits ten seconds.
-     */
-    fun suspend(context: Context, delayMillis: Long = 10_000L) {
-        val app = context.applicationContext
-        if (isSuspendedByUs(app)) return
-        pending?.cancel(false)
-        pending = worker.schedule({
-            if (isSuspendedByUs(app)) return@schedule
-            val done = shell.run(app, "svc bluetooth disable") != null
-            if (!done) {
-                Log.w(TAG, "could not suspend the car Bluetooth; is ADB over network on?")
-                return@schedule
-            }
-            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(KEY_SUSPENDED_BY_US, true).apply()
-            Log.i(TAG, "car Bluetooth suspended ${delayMillis}ms after the session became active")
-        }, delayMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
-    }
-
-    /** Re-enable the car's Bluetooth if we suspended it; safe to call repeatedly. */
-    fun resume(context: Context) {
-        val app = context.applicationContext
-        pending?.cancel(false)
-        pending = null
-        if (!isSuspendedByUs(app)) return
-        val done = shell.run(app, "svc bluetooth enable") != null
-        if (done) {
-            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(KEY_SUSPENDED_BY_US, false).apply()
-            Log.i(TAG, "car Bluetooth resumed")
+    private fun lease(context: Context): BluetoothSuspendLease = synchronized(gate) {
+        lease ?: run {
+            val app = context.applicationContext
+            val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            BluetoothSuspendLease(
+                journal = object : BluetoothRestoreJournal {
+                    override fun pending(): Boolean = prefs.getBoolean(KEY_RESTORE_ENABLED, false)
+                    override fun write(pending: Boolean): Boolean = prefs.edit()
+                        .putBoolean(KEY_RESTORE_ENABLED, pending).commit()
+                },
+                readEnabled = { radioEnabled(app) },
+                requestEnabled = { enabled ->
+                    // A non-null shell reply is not evidence that the radio changed state.
+                    shell.run(app, if (enabled) "svc bluetooth enable" else "svc bluetooth disable")
+                },
+                awaitEnabled = { enabled -> awaitRadio(app, enabled) },
+            ).also { lease = it }
         }
     }
 
-    /**
-     * Before a wireless handshake the adapter must be on: wake the Bluetooth we suspended and
-     * wait briefly for it. Returns false when it did not come back in time; the normal
-     * "Bluetooth is not enabled" path then reports it.
-     */
-    fun resumeAndWait(context: Context, adapter: BluetoothAdapter?, timeoutMillis: Long = 8_000): Boolean {
-        val app = context.applicationContext
-        if (!isSuspendedByUs(app)) return true
-        resume(app)
-        val deadline = android.os.SystemClock.elapsedRealtime() + timeoutMillis
-        while (android.os.SystemClock.elapsedRealtime() < deadline) {
-            if (adapter?.isEnabled == true) return true
-            android.os.SystemClock.sleep(250)
+    fun suspend(context: Context, owner: Any, delayMillis: Long = 10_000L) {
+        synchronized(gate) {
+            val state = lease(context)
+            val ticket = state.begin(owner) ?: return
+            pending?.cancel(false)
+            pending = worker.schedule({
+                if (state.suspend(ticket)) Log.i(TAG, "car Bluetooth pause verified")
+                else Log.w(TAG, "car Bluetooth pause cancelled or unavailable; recovery retained if needed")
+            }, delayMillis.coerceAtLeast(0), TimeUnit.MILLISECONDS)
         }
-        return adapter?.isEnabled == true
     }
 
-    fun isSuspendedByUs(context: Context): Boolean =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY_SUSPENDED_BY_US, false)
+    /** Retire only this controller's work; a late old-controller close cannot release a new one. */
+    fun resume(context: Context, owner: Any) {
+        synchronized(gate) {
+            val state = lease(context)
+            val ticket = state.end(owner) ?: state.recoveryOnAppOpen() ?: return
+            pending?.cancel(false)
+            pending = null
+            worker.execute { restore(state, ticket) }
+        }
+    }
+
+    fun onAppOpened(context: Context) {
+        synchronized(gate) {
+            val state = lease(context)
+            val ticket = state.recoveryOnAppOpen() ?: return
+            pending?.cancel(false)
+            pending = null
+            worker.execute { restore(state, ticket) }
+        }
+    }
+
+    /** Bounded recovery before wireless bootstrap; never enables a radio that was already OFF. */
+    fun resumeAndWait(context: Context, adapter: BluetoothAdapter?, timeoutMillis: Long = STATE_TIMEOUT_MILLIS): Boolean {
+        val task = synchronized(gate) {
+            val state = lease(context)
+            val ticket = state.beforeHandshake()
+            pending?.cancel(false)
+            pending = null
+            worker.submit<Boolean> { state.restore(ticket) }
+        }
+        return runCatching {
+            task.get(timeoutMillis.coerceAtLeast(1), TimeUnit.MILLISECONDS) && adapter?.isEnabled == true
+        }.getOrDefault(false)
+    }
+
+    fun isSuspendedByUs(context: Context): Boolean {
+        val app = context.applicationContext
+        return app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_RESTORE_ENABLED, false) && radioEnabled(app) == false
+    }
+
+    private fun restore(state: BluetoothSuspendLease, ticket: Long) {
+        if (!state.restore(ticket)) Log.w(TAG, "Bluetooth recovery incomplete or superseded")
+    }
+
+    private fun radioEnabled(context: Context): Boolean? = runCatching {
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter ?: return@runCatching null
+        when (adapter.state) {
+            BluetoothAdapter.STATE_ON -> true
+            BluetoothAdapter.STATE_OFF -> false
+            else -> null
+        }
+    }.getOrNull()
+
+    private fun awaitRadio(context: Context, enabled: Boolean): Boolean {
+        val deadline = SystemClock.elapsedRealtime() + STATE_TIMEOUT_MILLIS
+        while (SystemClock.elapsedRealtime() < deadline) {
+            if (radioEnabled(context) == enabled) return true
+            SystemClock.sleep(100)
+        }
+        return radioEnabled(context) == enabled
+    }
 }

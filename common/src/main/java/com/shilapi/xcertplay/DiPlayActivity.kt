@@ -3511,7 +3511,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             toggle(card, getString(R.string.bt_suspend_during_carplay), getString(R.string.bt_suspend_during_carplay_description),
                 AirPlayPersistence.loadBtSuspendDuringCarplay(this), enabled = !adbSwitchChangePending) {
                 AirPlayPersistence.saveBtSuspendDuringCarplay(this, it)
-                if (it) checkAdbAccess(mayAsk = true)
+                if (it) checkAdbState(mayAsk = true)
             }
             if (AirPlayPersistence.loadBtSuspendDuringCarplay(this)) {
                 val delays = listOf(5, 10, 15, 30)

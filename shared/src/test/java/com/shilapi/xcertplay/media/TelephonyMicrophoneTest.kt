@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay.media
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -49,6 +51,7 @@ class TelephonyMicrophoneTest {
         ConfigurableAudioEffect.resetStatus()
         shadowOf(context).grantPermissions(Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS)
         context.getSharedPreferences("diplay_bt_suspend", 0).edit().clear().commit()
+        shadowOf(context.getSystemService(BluetoothManager::class.java).adapter).setState(BluetoothAdapter.STATE_ON)
         manager = context.getSystemService(AudioManager::class.java)
         sink = AndroidMediaSink(context = context)
         for (type in listOf(AudioEffect.EFFECT_TYPE_AEC, AudioEffect.EFFECT_TYPE_NS)) {
@@ -95,7 +98,8 @@ class TelephonyMicrophoneTest {
     }
 
     @Test fun aCallWhileCarBluetoothIsOffUsesTheCabinMicrophone() {
-        context.getSharedPreferences("diplay_bt_suspend", 0).edit().putBoolean("suspended_by_us", true).commit()
+        context.getSharedPreferences("diplay_bt_suspend", 0).edit().putBoolean("restore_initially_enabled", true).commit()
+        shadowOf(context.getSystemService(BluetoothManager::class.java).adapter).setState(BluetoothAdapter.STATE_OFF)
         manager.mode = AudioManager.MODE_NORMAL
         sink.onMicrophoneStarted(telephony, config("telephony"))
         val record = awaitCapture()
@@ -104,6 +108,14 @@ class TelephonyMicrophoneTest {
         assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
         sink.onMicrophoneStopped(telephony)
         assertEquals(AudioManager.MODE_NORMAL, manager.mode)
+    }
+
+    @Test fun anUnverifiedPauseFlagDoesNotSwitchCallAudioRouting() {
+        context.getSharedPreferences("diplay_bt_suspend", 0).edit()
+            .putBoolean("suspended_by_us", true).putBoolean("restore_initially_enabled", true).commit()
+        sink.onMicrophoneStarted(telephony, config("telephony"))
+        assertEquals(MediaRecorder.AudioSource.VOICE_COMMUNICATION, awaitCapture().audioSource)
+        assertEquals(AudioManager.MODE_IN_COMMUNICATION, manager.mode)
     }
 
     @Test fun speechRecognitionDoesNotChangeModeOrEnableTelephonyEffects() {
