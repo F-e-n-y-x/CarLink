@@ -47,6 +47,7 @@ import com.shilapi.xcertplay.network.LocalOnlyHotspotManager
 import com.shilapi.xcertplay.network.ManualHotspotManager
 import com.shilapi.xcertplay.network.ExistingWifiManager
 import com.shilapi.xcertplay.network.WifiP2pGroupManager
+import com.shilapi.xcertplay.network.WifiScanPause
 import com.shilapi.xcertplay.network.WirelessHotspotInfo
 import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.shilapi.xcertplay.network.WirelessHotspotManager
@@ -166,6 +167,7 @@ class CarPlayController(
         require(!config.locationReportingEnabled || locationProvider != null) {
             "A location provider is required when location reporting is enabled"
         }
+        WifiScanPause.restoreIfNeeded(context.applicationContext)
         BydNavigationOutputs.start(context.applicationContext)
         BydNavigationOutputs.setClusterStreamControl(::applyClusterUi)
     }
@@ -210,6 +212,7 @@ class CarPlayController(
     @Volatile private var mux: Iap2UsbMuxHost? = null
     @Volatile private var csm: Iap2Session? = null
     @Volatile private var activeSession: AirPlaySession? = null
+    @Volatile private var requestedDashboardUrl: String? = airPlayConfig.cluster?.initialUrl
     private val clusterUiLock = Any()
     private var clusterUiStream: Pair<AirPlaySession, Int>? = null
     private var clusterUiShown = true
@@ -237,6 +240,7 @@ class CarPlayController(
         activeSession?.sendRemoteControlMessage(streamId, message) ?: false
 
     @Volatile private var hotspot: WirelessHotspotManager? = null
+    @Volatile private var wifiScanPause: WifiScanPause? = null
     @Volatile private var bonjour: CarPlayBonjour? = null
     private val wirelessResourceLock = Any()
     private val wirelessFailureReported = AtomicBoolean(false)
@@ -278,7 +282,8 @@ class CarPlayController(
 
     private val sessionListener = object : AirPlaySessionListener {
         override fun onSessionActive(session: AirPlaySession) {
-            if (activeSession !== session) {
+            val replacement = activeSession !== session
+            if (replacement) {
                 BydNavigationOutputs.start(appContext)
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(true)
                 // The gear may have changed since /info.
@@ -288,6 +293,7 @@ class CarPlayController(
                 }
             }
             activeSession = session
+            if (replacement) restoreDashboardContent(session)
             debugLog(
                 "AirPlay session active controller=${session.controllerId ?: "unknown"} " +
                     "peer=${session.host}",
@@ -387,6 +393,14 @@ class CarPlayController(
 
     fun isClosed(): Boolean = closed
 
+    /** Nonblocking identity for wheel controls: only an unclosed phone with an accepted primary stream. */
+    fun activeAirPlaySessionToken(): Any? {
+        if (closed) return null
+        val session = activeSession ?: return null
+        val token = session.mainScreenSessionToken() ?: return null
+        return token.takeIf { !closed && activeSession === session && session.mainScreenSessionToken() === token }
+    }
+
     fun hasActiveAirPlayAttachment(): Boolean = synchronized(lifecycleLock) {
         !closed && vpnService?.isAttached() == true
     }
@@ -451,8 +465,14 @@ class CarPlayController(
     fun sendKnob(state: AirPlayKnobState, momentary: Boolean = true): Boolean {
         if (closed) return false
         val session = activeSession ?: return false
+        val token = session.mainScreenSessionToken() ?: return false
+        if (closed || activeSession !== session) return false
         return try {
-            touchExecutor.execute { session.sendKnob(state, momentary) }
+            touchExecutor.execute {
+                if (!closed && activeSession === session && session.mainScreenSessionToken() === token) {
+                    session.sendKnob(state, momentary)
+                }
+            }
             true
         } catch (_: Exception) {
             false
@@ -474,13 +494,14 @@ class CarPlayController(
     /** A visible physical map and its session/stream generation; null for a paused/virtual/turn-card route. */
     fun dashboardMapRoute(): Any? {
         val session = activeSession ?: return null
-        val stream = session.clusterStream
+        val content = session.clusterContentRoute() ?: return null
+        val stream = content.first
         val route = session to stream
         val visibility = clusterUiVisibility
         val shown = visibility?.takeIf { it.first == route }?.second ?: true
-        if (!DashboardMapEligibility.permits(airPlayConfig.cluster?.initialUrl,
+        if (!DashboardMapEligibility.permits(content.second,
                 dashboardMapOutputVisible, stream, shown, closed)) return null
-        return Triple(session, stream, dashboardMapEpoch.get())
+        return Triple(session, stream, dashboardMapEpoch.get() to content.third)
     }
 
     /** Whether the wheel can currently control the visible dashboard map. */
@@ -551,6 +572,8 @@ class CarPlayController(
                 try {
                     if (config.transport == CarPlayTransport.WIRELESS) {
                         closeBestEffort("wireless stack") { closeWirelessStack(service) }
+                        closeBestEffort("Wi-Fi scan pause") { wifiScanPause?.close() }
+                        wifiScanPause = null
                     } else {
                         closeBestEffort("CSM") { csm?.close() }
                         csm = null
@@ -587,6 +610,63 @@ class CarPlayController(
         }
     }
 
+    /**
+     * Switches what the dashboard shows to another of the iPhone's cluster contents without reconnecting;
+     * a paused map stays paused and comes back with the new content. Completion reports delivery
+     * or a retained paused selection; the settings UI can reconnect when delivery fails.
+     */
+    fun showDashboardContent(url: String, onComplete: (Boolean) -> Unit) {
+        val session = activeSession
+        val stream = session?.clusterStream ?: 0
+        if (closed || session == null || stream <= 0) {
+            onComplete(false)
+            return
+        }
+        try {
+            touchExecutor.execute {
+                val sent = synchronized(clusterUiLock) {
+                    if (closed || activeSession !== session || session.clusterStream != stream) {
+                        return@synchronized false
+                    }
+                    // A cluster stream DiPlay has not paused yet starts with the map drawn.
+                    val shown = clusterUiShown || clusterUiStream != session to stream
+                    val delivered = session.setClusterUrl(url, send = shown)
+                    val sent = delivered && !closed && activeSession === session && session.clusterStream == stream
+                    // The wheel zoom follows what the dashboard shows now, so zoom mode starts over.
+                    if (sent) {
+                        requestedDashboardUrl = url
+                        dashboardMapEpoch.incrementAndGet()
+                    }
+                    debugLog("Dashboard content: $url sent=$sent")
+                    sent
+                }
+                onComplete(sent)
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            onComplete(false)
+        }
+    }
+
+    /** A new phone inherits the last accepted selection; all command work stays off its listener. */
+    private fun restoreDashboardContent(session: AirPlaySession) {
+        try {
+            touchExecutor.execute {
+                synchronized(clusterUiLock) {
+                    if (closed || activeSession !== session) return@synchronized
+                    val url = requestedDashboardUrl ?: return@synchronized
+                    val stream = session.clusterStream
+                    val shown = clusterUiShown || clusterUiStream != session to stream
+                    val restored = session.restoreClusterUrl(url, send = shown)
+                    if (restored && !closed && activeSession === session && session.clusterStream == stream && stream > 0) {
+                        dashboardMapEpoch.incrementAndGet()
+                    }
+                }
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            // Closing the controller also discards the pending restore.
+        }
+    }
+
     // Each new cluster stream starts with the map drawn (its initialURL); send only real changes.
     private fun applyClusterUi(shown: Boolean) = synchronized(clusterUiLock) {
         val session = activeSession ?: return@synchronized
@@ -596,7 +676,7 @@ class CarPlayController(
             clusterUiShown = true
             clusterUiVisibility = (session to stream) to true
         }
-        if (shown == clusterUiShown) return@synchronized
+        if (shown == clusterUiShown && (!shown || session.clusterUrl() != null)) return@synchronized
         if (session.setClusterUiShown(shown)) {
             clusterUiShown = shown
             clusterUiVisibility = (session to stream) to shown
@@ -1033,6 +1113,7 @@ class CarPlayController(
             if (isStaleWirelessRun(generation)) {
                 return
             }
+            pauseWifiScans(hotspotInfo.backend)
             val startedHotspot = hotspot
             wirelessConnectionProof.begin(generation) {
                 if (!isStaleWirelessRun(generation)) startedHotspot?.onCarPlayConfirmed()
@@ -2025,6 +2106,12 @@ class CarPlayController(
 
     private fun isStaleWirelessRun(generation: Int): Boolean =
         closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get()
+
+    // Kept across reconnects within this controller: resuming between attempts would start a scan.
+    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(this) {
+        if (closed || !WifiScanPause.eligible(backend)) return@synchronized
+        (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
+    }
 
     private fun selectWirelessBluetoothDevice(adapter: BluetoothAdapter): BluetoothDevice {
         val bonded = adapter.bondedDevices.orEmpty()

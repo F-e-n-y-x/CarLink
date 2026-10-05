@@ -38,6 +38,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
+import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
@@ -64,6 +65,7 @@ class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var page = "home"
     private var clusterSafeAreaDialog: Dialog? = null
+    private var clusterContentRequestVersion = 0L
     private var pendingCarHotspotSetup = false
     private var setupError: String? = null
     private var status: TextView? = null
@@ -547,9 +549,13 @@ class DiPlayActivity : ComponentActivity() {
                     .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
             }, matchButton(0, 56).apply { bottomMargin = dp(24) })
             carPlaySizeControl(card)
-            resolutionSettingControl(card, R.string.resolution, R.string.custom_resolution_hint,
-                30..100, 100, R.string.custom_resolution_summary, { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
-                save = { AirPlayPersistence.saveDisplayScalePercent(this, it) })
+            resolutionSettingControl(
+                card, R.string.resolution, R.string.custom_resolution_hint,
+                CarPlayDisplayScale.MIN_PERCENT..CarPlayDisplayScale.MAX_PERCENT, 100,
+                R.string.custom_resolution_summary,
+                { AirPlayPersistence.loadDisplayScalePercent(this) }, reconnects = true,
+                save = { AirPlayPersistence.saveDisplayScalePercent(this, it) },
+            )
             val bufferPresets = com.shilapi.xcertplay.media.MediaAudioBuffer.presets
             choice(card, getString(R.string.music_buffer), listOf(getString(R.string.s_300_ms_default), getString(R.string.s_500_ms), getString(R.string.s_1000_ms_most_stable)),
                 bufferPresets.indexOf(AirPlayPersistence.loadMediaBufferMillis(this)).coerceAtLeast(0)) {
@@ -709,9 +715,27 @@ class DiPlayActivity : ComponentActivity() {
                             getString(R.string.dashboard_content_map_with_custom_turn_card),
                         ), contents.indexOf(content).coerceAtLeast(0), reconnects = false) {
                             val next = contents[it]
+                            val request = ++clusterContentRequestVersion
                             AirPlayPersistence.saveClusterContent(this, next)
                             render()
-                            if (content.url != next.url) reconnectForClusterMap()
+                            if (content.url != next.url) {
+                                // The iPhone's own contents switch live. DiPlay's card over the map, and the
+                                // DiLink 5.1 layout (always the map), are set up at connection, so they reconnect.
+                                val controller = CarPlayBackgroundSession.snapshot()?.controller
+                                if (customCard || CarPlayClusterDisplay.usesCustomTurnCard(next) ||
+                                    DiLink51ClusterLayout.supported() || controller == null) {
+                                    reconnectForClusterMap()
+                                } else controller.showDashboardContent(next.url) { applied ->
+                                    runOnUiThread {
+                                        if (!applied && request == clusterContentRequestVersion &&
+                                            !isFinishing && !isDestroyed &&
+                                            AirPlayPersistence.loadClusterContent(this) == next &&
+                                            CarPlayBackgroundSession.snapshot()?.controller === controller) {
+                                            reconnectForClusterMap()
+                                        }
+                                    }
+                                }
+                            }
                         }
                         if (customCard) {
                             card.addView(overlaySliderRow(
@@ -779,7 +803,7 @@ class DiPlayActivity : ComponentActivity() {
                                 if (it) checkAdbState(mayAsk = true)
                             }
                         }
-                        wheelMapZoomControls(card)
+                        wheelKeyControls(card)
                     }
                 }
             }
@@ -1487,15 +1511,21 @@ class DiPlayActivity : ComponentActivity() {
         connect(AirPlayPersistence.loadWirelessEnabled(this))
     }
 
-    /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
-    /** Steering-wheel keys for the dashboard map zoom: the switch, the key service and the keys. */
-    private fun wheelMapZoomControls(card: LinearLayout) {
+    /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
+    private fun wheelKeyControls(card: LinearLayout) {
         toggle(card, getString(R.string.wheel_map_zoom), getString(R.string.wheel_map_zoom_description),
             WheelZoomSettings.enabled(this)) {
             WheelZoomSettings.setEnabled(this, it)
             render()
         }
-        if (!WheelZoomSettings.enabled(this)) return
+        toggle(card, getString(R.string.wheel_joystick), getString(R.string.wheel_joystick_description),
+            WheelZoomSettings.joystick(this)) {
+            WheelZoomSettings.setJoystick(this, it)
+            render()
+        }
+        val zoom = WheelZoomSettings.enabled(this)
+        val joystick = WheelZoomSettings.joystick(this)
+        if (!zoom && !joystick) return
         val connected = WheelKeyService.connected()
         card.addView(label(getString(when {
             connected -> R.string.wheel_keys_service_on
@@ -1519,18 +1549,36 @@ class DiPlayActivity : ComponentActivity() {
                     .onFailure { toast(getString(R.string.wheel_keys_no_settings)) }
             }, matchButton(10, 56))
         }
-        val behaviours = WheelZoomSettings.Behaviour.entries
-        choice(card, getString(R.string.wheel_zoom_behaviour),
-            listOf(getString(R.string.wheel_zoom_behaviour_toggle), getString(R.string.wheel_zoom_behaviour_timed)),
-            behaviours.indexOf(WheelZoomSettings.behaviour(this)), reconnects = false) {
-            WheelZoomSettings.setBehaviour(this, behaviours[it])
+        if (zoom) {
+            val behaviours = WheelZoomSettings.Behaviour.entries
+            choice(card, getString(R.string.wheel_zoom_behaviour),
+                listOf(getString(R.string.wheel_zoom_behaviour_toggle), getString(R.string.wheel_zoom_behaviour_timed)),
+                behaviours.indexOf(WheelZoomSettings.behaviour(this)), reconnects = false) {
+                WheelZoomSettings.setBehaviour(this, behaviours[it])
+            }
+        }
+        if (joystick) {
+            toggle(card, getString(R.string.wheel_joystick_auto_off), getString(R.string.wheel_joystick_auto_off_description),
+                WheelZoomSettings.joystickAutoOff(this)) { WheelZoomSettings.setJoystickAutoOff(this, it) }
         }
         for (role in WheelZoomSettings.Role.entries) {
-            val name = getString(when (role) {
+            // A key can serve both: the mode key goes back in the joystick, the zoom keys move it.
+            val zoomName = when (role) {
                 WheelZoomSettings.Role.MODE -> R.string.wheel_key_role_mode
                 WheelZoomSettings.Role.ZOOM_IN -> R.string.wheel_key_role_zoom_in
                 WheelZoomSettings.Role.ZOOM_OUT -> R.string.wheel_key_role_zoom_out
-            })
+                else -> null
+            }.takeIf { zoom }
+            val joystickName = when (role) {
+                WheelZoomSettings.Role.MODE -> R.string.wheel_key_role_back
+                WheelZoomSettings.Role.ZOOM_IN, WheelZoomSettings.Role.PREVIOUS -> R.string.wheel_key_role_previous
+                WheelZoomSettings.Role.ZOOM_OUT, WheelZoomSettings.Role.NEXT -> R.string.wheel_key_role_next
+                WheelZoomSettings.Role.JOYSTICK -> R.string.wheel_key_role_joystick
+                WheelZoomSettings.Role.SELECT -> R.string.wheel_key_role_select
+            }.takeIf { joystick }
+            val names = listOfNotNull(zoomName, joystickName)
+            if (names.isEmpty()) continue
+            val name = names.joinToString(" · ") { getString(it) }
             lateinit var assign: android.widget.Button
             assign = button(getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()), false) {
                 val started = WheelKeyService.learn(role, cancelled = {
@@ -1545,6 +1593,7 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
 
+    /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
     private fun clusterSongSwitch(card: LinearLayout) {
         toggle(card, getString(R.string.cluster_song),
             getString(R.string.cluster_song_description),
