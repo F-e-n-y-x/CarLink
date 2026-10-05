@@ -303,6 +303,22 @@ class CarPlayHostSettingsTest {
         assertNull(shadowOf(activity).nextStartedActivity)
     }
 
+    @Test fun iphoneAttachmentSwitchesToWiredTransportWithoutFinishing() {
+        val controller = attachController()
+        AirPlayPersistence.saveWirelessEnabled(activity, true)
+        invoke("loadPersistedSettings")
+        val device = mock(UsbDevice::class.java)
+        `when`(device.vendorId).thenReturn(0x05ac)
+        val intent = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
+        activity.javaClass.getDeclaredMethod("onNewIntent", Intent::class.java)
+            .apply { isAccessible = true }.invoke(activity, intent)
+        assertFalse(AirPlayPersistence.loadWirelessEnabled(activity))
+        assertFalse(field("wirelessEnabled") as Boolean)
+        assertFalse((field("shuttingDown") as AtomicBoolean).get())
+        assertFalse(activity.isFinishing)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
     @Test fun onlyIphoneAttachmentSelectsWiredTransport() {
         val method = activity.javaClass.getDeclaredMethod("isIphoneUsbAttachment", Intent::class.java)
             .apply { isAccessible = true }

@@ -502,6 +502,11 @@ class CarPlayHostActivity : ComponentActivity() {
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
         airPlayIdentity = AirPlayPersistence.loadIdentity(this)
         loadPersistedSettings()
+        if (isIphoneUsbAttachment(intent) && wirelessEnabled) {
+            AirPlayPersistence.saveWirelessEnabled(this, false)
+            wirelessEnabled = false
+            wirelessPermissionsReady = true
+        }
         locationPermissionAvailable = hasFineLocationPermission()
         setContentView(buildContentView())
         applyFullscreenMode()
@@ -691,12 +696,19 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (isIphoneUsbAttachment(intent) && wirelessEnabled) {
-            shutdown(false, "switching to USB") {
+        if (isIphoneUsbAttachment(intent)) {
+            if (wirelessEnabled) {
                 AirPlayPersistence.saveWirelessEnabled(this, false)
-                startActivity(Intent(this, CarPlayHostActivity::class.java))
+                wirelessEnabled = false
+                wirelessPermissionsReady = true
+                if (controller != null) {
+                    restartCarPlay("switching to USB")
+                } else {
+                    requestStartupPrerequisites()
+                }
+            } else if (controller == null) {
+                requestStartupPrerequisites()
             }
-            finish()
         }
     }
 

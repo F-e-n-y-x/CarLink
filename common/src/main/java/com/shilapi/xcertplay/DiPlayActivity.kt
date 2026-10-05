@@ -495,18 +495,16 @@ class DiPlayActivity : ComponentActivity() {
                 permissions = { listOf(CarHotspotSetup.Permission.BOOT_LAUNCH) }) {
                 AirPlayPersistence.saveAutoStartOnBoot(this, it)
             }
+            val autoConfirmActive = UsbAutoConfirmService.isEnabled(this)
             toggle(
                 card,
                 getString(R.string.usb_auto_confirm_title),
                 getString(R.string.usb_auto_confirm_subtitle),
-                UsbAutoConfirmService.isEnabled(this),
+                autoConfirmActive,
             ) {
-                UsbAutoConfirmService.openSettings(this)
+                promptEnableUsbAutoConfirm()
             }
-            val autoConfirmActive = UsbAutoConfirmService.isEnabled(this)
-            val autoHideActive = HomeScreenMonitor.hasAccess(this)
-            val allReady = autoConfirmActive && autoHideActive
-            if (!allReady) {
+            if (!autoConfirmActive) {
                 card.addView(
                     button(
                         getString(R.string.btn_auto_apply_permissions),
@@ -514,8 +512,12 @@ class DiPlayActivity : ComponentActivity() {
                     ) {
                         autoApplyPermissions()
                     },
-                    matchButton(10, 56),
+                    matchButton(8, 54),
                 )
+            } else {
+                card.addView(label(getString(R.string.usb_auto_confirm_active_hint), 14, Color.rgb(127, 205, 154)).apply {
+                    setPadding(0, dp(4), 0, dp(8))
+                })
             }
             card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
@@ -902,6 +904,14 @@ class DiPlayActivity : ComponentActivity() {
             }
             adbStatus = label(getString(if (access == LocalAdb.Access.READY)
                 R.string.adb_access_ready else R.string.adb_not_approved), 14, MUTED).also(card::addView)
+            val allReady = UsbAutoConfirmService.isEnabled(this) && HomeScreenMonitor.hasAccess(this)
+            if (!allReady) {
+                card.addView(button(getString(R.string.btn_auto_apply_permissions), false) { autoApplyPermissions() }, matchButton(8, 54))
+            } else {
+                card.addView(label(getString(R.string.btn_permissions_ready), 14, Color.rgb(127, 205, 154)).apply {
+                    setPadding(0, dp(6), 0, dp(4))
+                })
+            }
         }
     }
 
@@ -1386,6 +1396,31 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun promptEnableUsbAutoConfirm() {
+        if (UsbAutoConfirmService.isEnabled(this)) {
+            toast(getString(R.string.usb_auto_confirm_status_on))
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.usb_auto_confirm_title))
+            .setMessage(getString(R.string.usb_auto_confirm_dialog_msg))
+            .setPositiveButton(getString(R.string.btn_auto_apply_permissions)) { _, _ ->
+                autoApplyPermissions()
+            }
+            .setNeutralButton(getString(R.string.btn_open_accessibility_setting)) { _, _ ->
+                if (!UsbAutoConfirmService.openSettings(this)) {
+                    toast(getString(R.string.wheel_keys_no_settings))
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                render()
+            }
+            .setOnCancelListener {
+                render()
+            }
+            .show()
     }
 
     private fun autoApplyPermissions() {

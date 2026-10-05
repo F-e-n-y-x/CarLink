@@ -556,6 +556,8 @@
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
     <string name="usb_auto_confirm_status_on">USB Dialog Auto-Confirm: Enabled</string>
+    <string name="usb_auto_confirm_dialog_msg">Auto-confirm requires the Accessibility Service. Many car head units do not expose the system accessibility settings.\n\nWould you like to automatically enable it via local ADB now?</string>
+    <string name="usb_auto_confirm_active_hint">✓ Accessibility Service is active (USB prompt will be auto-confirmed)</string>
     <string name="btn_auto_apply_permissions">Apply for Accessibility &amp; ADB Permissions</string>
     <string name="btn_permissions_ready">Accessibility &amp; Auto-Hide: All Active ✓</string>
     <string name="auto_grant_title">Configuring Permissions via Local ADB...</string>
