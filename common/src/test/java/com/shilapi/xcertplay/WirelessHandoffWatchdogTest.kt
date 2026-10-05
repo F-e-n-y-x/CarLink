@@ -145,6 +145,18 @@ class WirelessHandoffWatchdogTest {
         verify(bootstrap, never()).close()
     }
 
+    @Test fun priorServiceFailureCannotBeReplacedByVideoFallback() {
+        proofCall("rendered", 0, session)
+        controller.javaClass.getDeclaredMethod("fail", Throwable::class.java, Int::class.javaObjectType)
+            .apply { isAccessible = true }.invoke(controller, java.io.IOException("AirPlay service disconnected"), 0)
+        assertTrue(flag("wirelessFailureReported").get())
+        timeout()
+        assertTrue(statuses.single() is CarPlayStatus.Failed)
+        assertFalse(flag("wirelessActiveReported").get())
+        assertEquals(0, hotspotCloses)
+        verify(bootstrap, never()).close()
+    }
+
     private fun timeout() {
         controller.javaClass.getDeclaredMethod("handleWirelessHandoffTimeout", Int::class.javaPrimitiveType)
             .apply { isAccessible = true }.invoke(controller, 0)
