@@ -8,6 +8,8 @@ The panel builds on the view areas described in [VIEW_AREAS.md](VIEW_AREAS.md). 
 
 CarPlay has no notion of the panel's contents; the iPhone only knows the car asked it to use a smaller area.
 
+Panel placement uses physical video coordinates, so switching the UI to a right-to-left language does not move it over CarPlay. When a new host Activity adopts a live session with the panel open, it restores the panel and its refresh callback without changing the view area.
+
 ## Tested
 
 2024 BYD Tang (DiLink 5.0, 2560×1440 rotating centre screen) with an iPhone on iOS 27, over wireless CarPlay (lab build of the same design): CarPlay moved to the left two thirds (landscape) or the top two thirds (portrait) and back within a fraction of a second, without reconnecting; touches in CarPlay's area landed correctly; the panel showed a clock and the car's battery and range. With an automatic dock, CarPlay puts its dock at the bottom once several areas are declared; the dock setting places it.

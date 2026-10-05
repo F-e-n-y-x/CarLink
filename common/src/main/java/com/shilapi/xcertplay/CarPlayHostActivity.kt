@@ -1416,7 +1416,8 @@ class CarPlayHostActivity : ComponentActivity() {
         panel.layoutParams = FrameLayout.LayoutParams(
             Math.round(content.left + (strip.originX + strip.width) * scaleX) - left,
             Math.round(content.top + (strip.originY + strip.height) * scaleY) - top,
-            Gravity.TOP or Gravity.START,
+            // Stream coordinates are physical pixels, independent of the UI's reading direction.
+            Gravity.TOP or Gravity.LEFT,
         ).apply { leftMargin = left; topMargin = top }
     }
 
@@ -3922,6 +3923,14 @@ class CarPlayHostActivity : ComponentActivity() {
         updateClusterMapShown()
         sink = snapshot.sink
         sessionDisplay = snapshot.display
+        resetSidePanel()
+        if (snapshot.display.viewAreas?.let { it.kindOf(it.current) == CarPlayViewAreas.Kind.SIDE_PANEL } == true) {
+            // The live stream can outlast its Activity. Restore the Android view covering its
+            // unused strip instead of leaving a blank third when a new host adopts the session.
+            sidePanelShown = true
+            sidePanel?.visibility = View.VISIBLE
+            sidePanelTick.run()
+        }
         MapMirrors.reapply()
         CarPlayBackgroundSession.store(snapshot.controller, snapshot.sink, snapshot.width, snapshot.height,
             this, snapshot.display) { completion ->
