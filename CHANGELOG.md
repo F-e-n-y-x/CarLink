@@ -1,5 +1,7 @@
 # Unreleased
 
+- Keep the custom dashboard turn card across a wireless session replacement within its existing stale window; repeated NoRouteSet packets do not extend that window. Arrival, explicit stop and wired disconnect still clear the card.
+
 - Fix the DiLink 3 cluster map staying empty: send full-screen projection (16) before half-screen projection (17), because after projection off (18) the cluster ignores 17 on its own.
 
 # DiPlay 0.2.12 — 2026-10-04
