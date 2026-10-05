@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.content.Context
 import android.media.MediaCodecList
 import android.media.MediaFormat
+import android.os.Build
 import android.util.Log
 
 /**
@@ -29,8 +30,8 @@ object CarPlayRotation {
 
     fun setPicture(context: Context, picture: Picture) = prefs(context).edit().putString(KEY_PICTURE, picture.name).apply()
 
-    /** The square's side for a screen [longSide] pixels long: the largest a decoder takes, or null. */
-    fun squareSide(longSide: Int, picture: Picture, hevc: Boolean): Int? {
+    /** The largest square the selected decoder takes, or null to retain the plain canvas. */
+    fun squareSide(longSide: Int, picture: Picture, hevc: Boolean, preferSoftwareHevcDecoder: Boolean = false): Int? {
         val limit = picture.maxSide?.let { minOf(it, longSide) } ?: longSide
         val mime = if (hevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
         val decoders = runCatching {
@@ -38,14 +39,24 @@ object CarPlayRotation {
                 !info.isEncoder && info.supportedTypes.any { it.equals(mime, ignoreCase = true) }
             }
         }.getOrDefault(emptyList())
-        val side = (listOf(limit) + SIDES.filter { it < limit }).firstOrNull { candidate ->
-            decoders.any { info ->
-                runCatching { info.getCapabilitiesForType(mime).videoCapabilities?.isSizeSupported(candidate, candidate) == true }
-                    .getOrDefault(false)
-            }
+        // Match AndroidMediaSink's explicit software-HEVC preference or default decoder. A later
+        // software codec must not approve a canvas the default hardware decoder cannot configure.
+        val software = if (hevc && preferSoftwareHevcDecoder && Build.VERSION.SDK_INT >= 29)
+            decoders.firstOrNull { it.isSoftwareOnly } else null
+        val decoder = software ?: decoders.firstOrNull()
+        val hardware = decoder?.let {
+            if (Build.VERSION.SDK_INT >= 29) it.isHardwareAccelerated
+            else !it.name.startsWith("OMX.google.") && !it.name.startsWith("c2.android.")
+        } == true
+        val video = if (decoder != null && (hardware || software != null))
+            runCatching { decoder.getCapabilitiesForType(mime).videoCapabilities }.getOrNull() else null
+        val alignedLimit = limit and 1.inv()
+        val side = (listOf(alignedLimit) + SIDES.filter { it < alignedLimit }).firstOrNull { candidate ->
+            candidate >= 2 && runCatching { video?.isSizeSupported(candidate, candidate) == true }.getOrDefault(false)
         }
-        Log.i(TAG, "square ${side ?: "unsupported"} for a $longSide px screen, picture $picture, hevc=$hevc")
-        return side?.let { it and 1.inv() }
+        Log.i(TAG, "square ${side ?: "unsupported"} for a $longSide px screen, picture $picture, hevc=$hevc " +
+            "decoder=${decoder?.name} softwareSelected=${software != null}")
+        return side
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

@@ -3421,7 +3421,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
         val shortPixels = minOf(display.widthPixels, display.heightPixels)
         val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
-            CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), hevcEnabled)
+            CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), hevcEnabled, hevcSoftwareDecoderEnabled)
         } else null
         val canvas = if (square == null) display else {
             // The square keeps the plain canvas's pixel density, so CarPlay's scale (and "CarPlay size")

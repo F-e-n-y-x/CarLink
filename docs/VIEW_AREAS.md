@@ -38,7 +38,7 @@ When the screen turns, DiPlay moves CarPlay to the other area and lays out the c
 
 - **Pixel density:** the square keeps the plain canvas's density, so CarPlay's scale (and the "CarPlay size" setting) is the same in both orientations.
 - **Safe area:** the custom safe area does not apply to the square.
-- **Cost:** a square is heavier to encode and decode. "Sharper" asks for the screen's long side (as large as a decoder takes). "Smoother" caps it at 1920: on a Tang, 2560 ran at about 30–40 frames per second, 1920 at up to 60, with a slightly softer picture.
+- **Cost:** a square is heavier to encode and decode. "Sharper" asks for the screen's long side (as large as the selected decoder takes). "Smoother" caps it at 1920: on a Tang, 2560 ran at about 30–40 frames per second, 1920 at up to 60, with a slightly softer picture. An unsupported default hardware decoder keeps the plain canvas; another decoder's capability cannot silently force software decoding. An explicitly selected software HEVC decoder is checked instead when that existing option is enabled.
 - **Starting in split screen:** a session that starts there keeps the plain canvas.
 
 ## Tested
