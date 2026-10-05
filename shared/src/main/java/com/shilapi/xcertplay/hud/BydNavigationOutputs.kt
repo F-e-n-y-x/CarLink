@@ -24,6 +24,7 @@ object BydNavigationOutputs {
     private val overlayRoute = BydHudRouteState(
         staleRouteNs = 120_000_000_000L,
         emptyListHideNs = 8_000_000_000L,
+        keepAcrossNoRoute = true,
     )
     private val standalone = NavigationOutputWorker("diplay-standalone-output", BydStandaloneNavigationBridge::clear)
     private val hud = NavigationOutputWorker("diplay-hud-output", BydHudBridge::clear)
@@ -129,7 +130,7 @@ object BydNavigationOutputs {
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
     fun endNow() {
         standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
-        synchronized(overlayLock) { overlayRoute.clear() }
-        refreshTurnOverlay()
+        // Keep the overlay route across a session drop (wireless handoff). The overlay's
+        // own 120 s staleness window retires a truly ended route.
     }
 }

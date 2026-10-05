@@ -31,6 +31,12 @@ internal class BydHudRouteState(
     private val nanoTime: () -> Long = System::nanoTime,
     private val staleRouteNs: Long = STALE_ROUTE_NS,
     private val emptyListHideNs: Long = EMPTY_LIST_HIDE_NS,
+    /**
+     * The dashboard overlay keeps the last instruction across a wireless session drop: the iPhone
+     * often sends NoRouteSet (0) while the tunnel is tearing down, which is not a real arrival.
+     * Arrived (2) still ends the route. The overlay's own stale window retires a truly ended one.
+     */
+    private val keepAcrossNoRoute: Boolean = false,
 ) {
     private data class Maneuver(val type: Int, val drivingSide: Int, val afterRoad: String)
 
@@ -125,7 +131,9 @@ internal class BydHudRouteState(
             }
         }
 
-        // Only NoRouteSet (0) and Arrived (2) end the route.
+        // Only NoRouteSet (0) and Arrived (2) end the route. A wireless handoff often sends
+        // NoRouteSet while the session is still coming back — keep the overlay instruction then.
+        if (state == 0 && keepAcrossNoRoute) return BydHudRouteChange.NONE
         if (state == 0 || state == 2) {
             return if (clear()) BydHudRouteChange.CLEAR else BydHudRouteChange.NONE
         }

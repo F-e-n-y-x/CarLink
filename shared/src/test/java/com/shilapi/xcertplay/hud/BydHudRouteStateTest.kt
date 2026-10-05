@@ -49,6 +49,27 @@ class BydHudRouteStateTest {
     }
 
     @Test
+    fun `overlay keeps the last instruction across a NoRouteSet handoff`() {
+        val state = populatedState(keepAcrossNoRoute = true)
+        val before = state.current()
+
+        val change = state.accept(BydHudRouteState.ROUTE_GUIDANCE_UPDATE, tlvs(tlv(0x01, 0)))
+
+        assertEquals(BydHudRouteChange.NONE, change)
+        assertEquals(before, state.current())
+    }
+
+    @Test
+    fun `overlay still clears on arrival even when NoRouteSet is ignored`() {
+        val state = populatedState(keepAcrossNoRoute = true)
+
+        val change = state.accept(BydHudRouteState.ROUTE_GUIDANCE_UPDATE, tlvs(tlv(0x01, 2)))
+
+        assertEquals(BydHudRouteChange.CLEAR, change)
+        assertNull(state.current())
+    }
+
+    @Test
     fun `malformed frame does not alter active guidance`() {
         val state = populatedState()
         val before = state.current()
@@ -146,8 +167,11 @@ class BydHudRouteStateTest {
     private fun utf8z(value: String): IntArray =
         (value.toByteArray(Charsets.UTF_8).map { it.toInt() and 0xff } + 0).toIntArray()
 
-    private fun populatedState(nanoTime: () -> Long = System::nanoTime): BydHudRouteState =
-        BydHudRouteState(nanoTime).also { state ->
+    private fun populatedState(
+        nanoTime: () -> Long = System::nanoTime,
+        keepAcrossNoRoute: Boolean = false,
+    ): BydHudRouteState =
+        BydHudRouteState(nanoTime, keepAcrossNoRoute = keepAcrossNoRoute).also { state ->
         state.accept(
             BydHudRouteState.ROUTE_GUIDANCE_MANEUVER_UPDATE,
             tlvs(tlv(0x01, 0, 1), tlv(0x03, 2), tlv(0x08, 0)),
