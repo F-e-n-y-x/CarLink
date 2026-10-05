@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">Стандартный · максимальная чёткость</string>
     <string name="cluster_size_larger">Крупнее · по умолчанию</string>
     <string name="cluster_size_largest">Самый крупный</string>
+    <string name="cluster_size_smallest">Меньше · больше карты и мельче детали</string>
     <string name="marker_left">Влево</string>
     <string name="marker_right">Вправо</string>
     <string name="marker_up">Вверх</string>
