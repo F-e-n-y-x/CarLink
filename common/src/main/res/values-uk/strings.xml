@@ -622,6 +622,8 @@
     <string name="side_panel_description">CarPlay може переходити на дві третини екрана, а DiPlay показує в решті свою панель: з боку пасажира на горизонтальному екрані, знизу на вертикальному (годинник і заряд, якщо його зчитано). Показуйте й ховайте її з меню під час сесії. Застосовується з наступного підключення.</string>
     <string name="side_panel_show">Бічна панель</string>
     <string name="side_panel_full_screen">⤢ На весь екран</string>
+    <string name="main_buffered_audio">Буферизована музика (експериментально)</string>
+    <string name="main_buffered_audio_description">Застосунки, які це підтримують (наприклад, Apple Music), надсилають музику приблизно на дві хвилини наперед, тож короткі провали Wi-Fi не чути. Інші застосунки працюють як раніше. Перепідключає CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобіля в CarPlay</string>
     <string name="car_button_icon">Значок</string>
     <string name="car_button_icon_custom">Власний значок</string>

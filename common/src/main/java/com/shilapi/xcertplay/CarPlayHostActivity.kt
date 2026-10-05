@@ -3442,6 +3442,7 @@ class CarPlayHostActivity : ComponentActivity() {
             oemLabel = oemLabel,
             icons = listOf(loadAirPlayIcon()),
             videoInCar = com.shilapi.xcertplay.hud.BydOutputSettings.videoWhileParkedActive(this),
+            mainBufferedAudio = AirPlayPersistence.loadMainBufferedAudio(this),
         )
     }
 

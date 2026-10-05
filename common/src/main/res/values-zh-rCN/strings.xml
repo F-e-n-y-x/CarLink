@@ -670,6 +670,8 @@
     <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
     <string name="side_panel_show">侧边面板</string>
     <string name="side_panel_full_screen">⤢ 全屏</string>
+    <string name="main_buffered_audio">缓冲音乐（实验性）</string>
+    <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
     <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
     <string name="car_button_icon">图标</string>
     <string name="car_button_icon_custom">自定义图标</string>
