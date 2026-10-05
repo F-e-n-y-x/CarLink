@@ -35,7 +35,6 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.shilapi.xcertplay.airplay.AirPlayInfoPlist
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
@@ -547,6 +546,11 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it) }
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
             carPlayDockControl(card)
+            toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
+                SplitScreenSettings.enabled(this)) {
+                SplitScreenSettings.setEnabled(this, it)
+                reconnectForClusterMap()
+            }
             addSystemBarControls(
                 hideTopBar = AirPlayPersistence.loadHideTopBar(this),
                 hideBottomBar = AirPlayPersistence.loadHideBottomBar(this),
@@ -2468,9 +2472,11 @@ class DiPlayActivity : ComponentActivity() {
             val from = CarPlayDock.load(this)
             val to = docks[it]
             CarPlayDock.save(this, to)
-            val edge = to.edge
-            if (CarPlayDock.movesLive(from, to) && edge != null) {
-                CarPlayBackgroundSession.snapshot()?.controller?.showViewArea(AirPlayInfoPlist.dockViewArea(edge))
+            val session = CarPlayBackgroundSession.snapshot()
+            val areas = session?.display?.viewAreas
+            val target = to.edge?.let { areas?.withDock(it) }
+            if (CarPlayDock.movesLive(from, to) && areas != null && target != null) {
+                if (session.controller.showViewArea(target)) areas.use(target)
             } else {
                 reconnectForClusterMap()
             }

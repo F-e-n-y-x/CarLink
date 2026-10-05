@@ -158,17 +158,13 @@ object AirPlayInfoPlist {
      */
     const val DOCK_EDGE_BOTTOM = 1
     const val DOCK_EDGE_DRIVER_SIDE = 2
-    private val DOCK_EDGES = listOf(DOCK_EDGE_DRIVER_SIDE, DOCK_EDGE_BOTTOM)
     private const val VIEW_AREA_ANIMATION_MILLIS = 300
-
-    /** The main screen's view area that carries [dockEdge]. */
-    fun dockViewArea(dockEdge: Int): Int = DOCK_EDGES.indexOf(dockEdge).coerceAtLeast(0)
 
     /**
      * updateViewArea for the main screen. Seen on a Tang with iOS 27: the iPhone acts on it only with an
      * animation duration and the adjacent areas, the arguments CarPlaySDK's ViewAreaUpdate takes.
      */
-    fun viewAreaCommand(index: Int, areaCount: Int = DOCK_EDGES.size): Map<String, Any?> = linkedMapOf(
+    fun viewAreaCommand(index: Int, areaCount: Int): Map<String, Any?> = linkedMapOf(
         "type" to "updateViewArea",
         "params" to linkedMapOf(
             "uuid" to MAIN_UUID,
@@ -202,29 +198,40 @@ object AirPlayInfoPlist {
             "primaryInputDevice" to display.primaryInputDevice,
         )
 
-        // A fixed dock declares the whole screen once per edge; updateViewArea then moves the dock live.
-        val dock = display.dockEdge
-        entry["viewAreas"] = if (dock == null) listOf(areaDict(display)) else DOCK_EDGES.map { areaDict(display, it) }
-        entry["initialViewArea"] = if (dock == null) 0 else dockViewArea(dock)
-        if (dock != null) entry["viewAreaTransitionControl"] = true
+        // Several areas let the car move CarPlay between them (another dock edge, the head unit's split
+        // screen) with updateViewArea, without reconnecting.
+        val areas = display.viewAreas?.takeIf { it.isNotEmpty() }
+        entry["viewAreas"] = areas?.map { areaDict(display, it) } ?: listOf(areaDict(display))
+        entry["initialViewArea"] = if (areas == null) 0 else display.initialViewArea.coerceIn(0, areas.lastIndex)
+        if (areas != null && areas.size > 1) entry["viewAreaTransitionControl"] = true
         if (display.initialUrl != null) entry["initialURL"] = display.initialUrl
         return entry
     }
 
-    private fun areaDict(display: AirPlayDisplayConfig, dockEdge: Int? = null): Map<String, Any?> {
+    private fun areaDict(display: AirPlayDisplayConfig, area: AirPlayViewArea? = null): Map<String, Any?> {
         // The session SETUP response enables "viewAreas", so /info must always describe one.
-        // A display without custom insets uses the full panel for both the view and safe areas.
-        val view = display.viewArea ?: AirPlayInsets()
+        // A display without custom insets uses the full panel for both the view and safe areas; an
+        // explicit area replaces the display's view insets and clips its safe area.
         val width = display.widthPixels
         val height = display.heightPixels
+        val view = area?.let {
+            AirPlayInsets(top = it.originY, bottom = height - it.originY - it.height,
+                left = it.originX, right = width - it.originX - it.width)
+        } ?: display.viewArea ?: AirPlayInsets()
         val result = linkedMapOf<String, Any?>(
             "widthPixels" to (width - view.left - view.right),
             "heightPixels" to (height - view.top - view.bottom),
             "originXPixels" to view.left,
             "originYPixels" to view.top,
         )
-        if (dockEdge != null) result["viewAreaStatusBarEdge"] = dockEdge
-        val safe = display.safeArea ?: AirPlayInsets()
+        area?.dockEdge?.let { result["viewAreaStatusBarEdge"] = it }
+        val displaySafe = display.safeArea ?: AirPlayInsets()
+        val safe = if (area == null) displaySafe else AirPlayInsets(
+            top = maxOf(displaySafe.top, view.top),
+            bottom = maxOf(displaySafe.bottom, view.bottom),
+            left = maxOf(displaySafe.left, view.left),
+            right = maxOf(displaySafe.right, view.right),
+        )
         val safeArea = linkedMapOf<String, Any?>(
             "widthPixels" to (width - safe.left - safe.right),
             "heightPixels" to (height - safe.top - safe.bottom),

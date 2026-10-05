@@ -598,4 +598,6 @@
     <string name="carplay_dock_driver_side">جهة السائق</string>
     <string name="carplay_dock_bottom">في الأسفل</string>
     <string name="carplay_dock_hint">مكان عرض CarPlay لتطبيقاته والساعة والحالة. التبديل بين «جهة السائق» و«في الأسفل» فوري؛ أما «تلقائي» فيترك الاختيار لجهاز iPhone ويُطبَّق بعد إعادة الاتصال.</string>
+    <string name="split_screen_areas">CarPlay في الشاشة المقسومة</string>
+    <string name="split_screen_areas_description">عندما تعرض الوحدة DiPlay في شاشة مقسومة، يعيد CarPlay الرسم لتلك النافذة بدل أن يصغر مع أشرطة سوداء، ويعود إلى ملء الشاشة دون إعادة اتصال. يُحفظ حجم النافذة في المرة الأولى، فتطابق الصورة تمامًا من الاتصال التالي. إذا كان شريط التطبيقات على «تلقائي» يضعه CarPlay في الأسفل. يُطبَّق عند الاتصال التالي.</string>
 </resources>

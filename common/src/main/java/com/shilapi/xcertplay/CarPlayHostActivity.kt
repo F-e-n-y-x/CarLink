@@ -343,6 +343,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var maximumDetectedHeightPixels = 0
     private var rightHandDrive = false
     private var carPlayDock = CarPlayDock.AUTOMATIC
+    /** The view areas the next session declares (see createAirPlayConfig). */
+    private var pendingViewAreas: CarPlayViewAreas? = null
     /** The dock the running session declared; null before the first connection. */
     private var sessionDock: CarPlayDock? = null
     private var hideTopBar = true
@@ -2522,10 +2524,12 @@ class CarPlayHostActivity : ComponentActivity() {
             val next = buttons.entries.firstOrNull { it.value.id == checkedId }?.key ?: return@setOnCheckedChangeListener
             carPlayDock = next
             val from = sessionDock
-            val edge = next.edge
-            if (from != null && edge != null && CarPlayDock.movesLive(from, next) &&
-                controller?.showViewArea(com.shilapi.xcertplay.airplay.AirPlayInfoPlist.dockViewArea(edge)) == true
+            val areas = sessionDisplay?.viewAreas
+            val target = next.edge?.let { areas?.withDock(it) }
+            if (from != null && areas != null && target != null && CarPlayDock.movesLive(from, next) &&
+                controller?.showViewArea(target) == true
             ) {
+                areas.use(target)
                 CarPlayDock.save(this, next)
             }
         }
@@ -3405,8 +3409,17 @@ class CarPlayHostActivity : ComponentActivity() {
                 displayHeightPixels = scaledDisplay.heightPixels,
             ),
             safeAreaDrawOutside = safeAreaDrawOutside,
-            dockEdge = CarPlayDock.load(this).also { sessionDock = it }.edge,
         )
+        // A fixed dock or split-screen support declares several areas the car switches between live. A
+        // session that starts in split screen sizes its canvas to that window, so it keeps one area.
+        val viewAreas = CarPlayViewAreas.build(
+            display.widthPixels, display.heightPixels, CarPlayDock.load(this).also { sessionDock = it },
+            splitWindow = if (SplitScreenSettings.enabled(this) && !isMultiWindowActive()) {
+                SplitScreenSettings.window(this, portrait = size.height > size.width)
+            } else null,
+        )
+        pendingViewAreas = viewAreas
+        val declared = if (viewAreas == null) display else display.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
         val requestSummary = "Display request selected=${CarPlayUiScale.label(requestedPercent)} percent=$requestedPercent " +
             "surface=${size.width}x${size.height} resolution=${requestedResolutionPercent}% " +
             "base=${requestedResolutionDisplay.widthPixels}x${requestedResolutionDisplay.heightPixels} " +
@@ -3425,7 +3438,7 @@ class CarPlayHostActivity : ComponentActivity() {
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
             btMac = DiPlayBluetooth.localAddress(this) ?: DiPlayBootstrap.deviceId(airPlayIdentity),
             sourceVersion = "950.7.1",
-            main = display,
+            main = declared,
             cluster = clusterDisplayConfig(),
             rightHandDrive = rightHandDrive,
             hevc = hevcEnabled,
@@ -3901,6 +3914,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val display = CarPlaySessionDisplay(
             airPlayConfig.main.widthPixels, airPlayConfig.main.heightPixels,
             displayRotation(), hideTopBar, hideBottomBar, effectiveSize.width, effectiveSize.height,
+            viewAreas = pendingViewAreas,
         )
         sessionDisplay = display
         videoView?.let { updateVideoLayout(it.width, it.height) }
@@ -4000,6 +4014,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun applyDisplaySize(size: DisplaySize) {
         val display = sessionDisplay
+        if (display != null && applySplitScreenArea(size, display)) return
         val layoutChanged = displayLayoutChanged(size)
         if (shuttingDown.get()) return
         if (size == activeDisplaySize && !layoutChanged) {
@@ -4041,6 +4056,32 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Entering or leaving the head unit's split screen moves CarPlay to the matching view area instead of
+     * reconnecting. The split window is remembered for the next session's area. False when the change
+     * is something else (a rotation, a camera window), which the usual path handles.
+     */
+    private fun applySplitScreenArea(size: DisplaySize, display: CarPlaySessionDisplay): Boolean {
+        val areas = display.viewAreas ?: return false
+        if (controller == null || menuOpen || handshakeResetInProgress || shuttingDown.get()) return false
+        if (display.rotation != displayRotation()) return false
+        val split = isMultiWindowActive()
+        if (split && display.windowWidth > 0 && display.windowHeight > 0) {
+            SplitScreenSettings.saveWindow(this, portrait = display.windowHeight > display.windowWidth,
+                size.width.toFloat() / display.windowWidth, size.height.toFloat() / display.windowHeight)
+        }
+        val target = areas.indexFor(size.width, size.height, split)
+        val splitArea = areas.kindOf(target) == CarPlayViewAreas.Kind.SPLIT_SCREEN
+        if (!splitArea && areas.kindOf(areas.current) != CarPlayViewAreas.Kind.SPLIT_SCREEN) return false
+        val previous = activeDisplaySize
+        activeDisplaySize = size
+        val sent = if (target == areas.current) true else controller?.showViewArea(target) == true
+        if (sent) areas.use(target)
+        videoView?.let { updateVideoLayout(it.width, it.height) }
+        appendLog("Split screen ${previous?.width}x${previous?.height} -> ${size.width}x${size.height}: view area $target sent=$sent")
+        return true
+    }
+
     @Suppress("DEPRECATION")
     private fun displayRotation(): Int = videoView?.display?.rotation ?: windowManager.defaultDisplay.rotation
 
@@ -4063,6 +4104,17 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun contentRect(viewWidth: Int, viewHeight: Int): CarPlayVideoLayout {
         val display = sessionDisplay ?: return CarPlayVideoLayout(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+        // In the head unit's split screen CarPlay draws in an area the size of DiPlay's window; that area
+        // fills the window and the rest of the canvas falls outside it. Video and touches both follow this.
+        display.viewAreas?.let { areas ->
+            if (areas.kindOf(areas.current) == CarPlayViewAreas.Kind.SPLIT_SCREEN) {
+                val area = areas.areas[areas.current]
+                val scaleX = viewWidth.toFloat() / area.width
+                val scaleY = viewHeight.toFloat() / area.height
+                return CarPlayVideoLayout(-area.originX * scaleX, -area.originY * scaleY,
+                    display.width * scaleX, display.height * scaleY)
+            }
+        }
         return CarPlayVideoLayout.fit(display.width, display.height, viewWidth, viewHeight)
     }
 
@@ -4647,6 +4699,8 @@ internal data class CarPlaySessionDisplay(
     // Compare unscaled startup window dimensions, not the scaled video canvas.
     val windowWidth: Int,
     val windowHeight: Int,
+    /** The view areas this session declared, or null for the whole screen as one area. */
+    val viewAreas: CarPlayViewAreas? = null,
 )
 
 /** Process-local hand-off for keeping the CarPlay session alive while no Activity is visible. */
