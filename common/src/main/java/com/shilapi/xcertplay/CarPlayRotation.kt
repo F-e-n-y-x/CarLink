@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.content.Context
+import android.media.MediaCodec
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.os.Build
@@ -30,8 +31,18 @@ object CarPlayRotation {
 
     fun setPicture(context: Context, picture: Picture) = prefs(context).edit().putString(KEY_PICTURE, picture.name).apply()
 
-    /** The largest square the selected decoder takes, or null to retain the plain canvas. */
-    fun squareSide(longSide: Int, picture: Picture, hevc: Boolean, preferSoftwareHevcDecoder: Boolean = false): Int? {
+    /**
+     * The largest square the selected decoder takes, or null to retain the plain canvas. A square its
+     * listed sizes reject only by one side, though they allow a frame of that many pixels, is put to the
+     * decoder itself through [configures].
+     */
+    fun squareSide(
+        longSide: Int,
+        picture: Picture,
+        hevc: Boolean,
+        preferSoftwareHevcDecoder: Boolean = false,
+        configures: (decoder: String, mime: String, side: Int) -> Boolean = ::configures,
+    ): Int? {
         val limit = picture.maxSide?.let { minOf(it, longSide) } ?: longSide
         val mime = if (hevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
         val decoders = runCatching {
@@ -51,12 +62,34 @@ object CarPlayRotation {
         val video = if (decoder != null && (hardware || software != null))
             runCatching { decoder.getCapabilitiesForType(mime).videoCapabilities }.getOrNull() else null
         val alignedLimit = limit and 1.inv()
+        var probed = false
         val side = (listOf(alignedLimit) + SIDES.filter { it < alignedLimit }).firstOrNull { candidate ->
-            candidate >= 2 && runCatching { video?.isSizeSupported(candidate, candidate) == true }.getOrDefault(false)
+            if (candidate < 2 || video == null || decoder == null) return@firstOrNull false
+            if (runCatching { video.isSizeSupported(candidate, candidate) }.getOrDefault(false)) return@firstOrNull true
+            // Qualcomm's AVC decoder lists 4096x2176 at most, yet decodes a 2560x2560 square.
+            val widths = video.supportedWidths.upper
+            val heights = video.supportedHeights.upper
+            candidate <= maxOf(widths, heights) && candidate.toLong() * candidate <= widths.toLong() * heights &&
+                configures(decoder.name, mime, candidate).also { probed = it }
         }
         Log.i(TAG, "square ${side ?: "unsupported"} for a $longSide px screen, picture $picture, hevc=$hevc " +
-            "decoder=${decoder?.name} softwareSelected=${software != null}")
+            "decoder=${decoder?.name} softwareSelected=${software != null} configuredByDecoder=$probed")
         return side
+    }
+
+    /** Whether [decoder] accepts a [side] x [side] stream when asked to configure for it. */
+    private fun configures(decoder: String, mime: String, side: Int): Boolean {
+        var codec: MediaCodec? = null
+        return try {
+            codec = MediaCodec.createByCodecName(decoder)
+            codec.configure(MediaFormat.createVideoFormat(mime, side, side), null, null, 0)
+            true
+        } catch (error: Exception) {
+            Log.i(TAG, "decoder $decoder declined a ${side}x$side square: ${error.message}")
+            false
+        } finally {
+            runCatching { codec?.release() }
+        }
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
