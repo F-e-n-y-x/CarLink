@@ -109,6 +109,15 @@ internal class BydHudRouteState(
     private fun roadFor(maneuver: Maneuver): String = maneuver.afterRoad.ifEmpty { currentRoad }
 
     private fun parseRouteUpdate(data: ByteArray): BydHudRouteChange {
+        // A teardown NoRouteSet is not fresh guidance. Do not let repeated teardown frames
+        // extend the retained instruction's lifetime or replace its road/arrival metadata.
+        if (keepAcrossNoRoute) {
+            var noRoute = false
+            forEachTlv(data) { type, value, valueLength ->
+                if (type == 0x01 && valueLength >= 1) noRoute = data[value] == 0.toByte()
+            }
+            if (noRoute) return BydHudRouteChange.NONE
+        }
         lastRouteUpdateNs = nanoTime()
         var state: Int? = null
         var distance: Int? = null
@@ -133,7 +142,6 @@ internal class BydHudRouteState(
 
         // Only NoRouteSet (0) and Arrived (2) end the route. A wireless handoff often sends
         // NoRouteSet while the session is still coming back — keep the overlay instruction then.
-        if (state == 0 && keepAcrossNoRoute) return BydHudRouteChange.NONE
         if (state == 0 || state == 2) {
             return if (clear()) BydHudRouteChange.CLEAR else BydHudRouteChange.NONE
         }

@@ -128,9 +128,13 @@ object BydNavigationOutputs {
     fun dashboardNote(text: String, source: Int? = null) = BydClusterSong.note(text, source)
 
     /** Best effort while alive; Android does not guarantee callbacks before force-stop. */
-    fun endNow() {
+    fun endNow(preserveTurnOverlay: Boolean = false) {
         standalone.clear(); hud.clear(); cluster.clear(); BydClusterSong.end()
-        // Keep the overlay route across a session drop (wireless handoff). The overlay's
-        // own 120 s staleness window retires a truly ended route.
+        // Only a wireless session replacement retains the card. Explicit controller close
+        // and wired disconnect still clear it immediately.
+        if (!preserveTurnOverlay) {
+            synchronized(overlayLock) { overlayRoute.clear() }
+            refreshTurnOverlay()
+        }
     }
 }
