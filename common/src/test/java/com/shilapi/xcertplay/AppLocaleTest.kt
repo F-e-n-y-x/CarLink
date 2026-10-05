@@ -4,6 +4,7 @@ import android.app.LocaleManager
 import android.content.Context
 import android.os.LocaleList
 import android.view.View
+import com.shilapi.xcertplay.host.R
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -58,5 +59,21 @@ class AppLocaleTest {
         assertEquals(original, context.resources.configuration.locales.toLanguageTags())
         AppLocale.save(context, AppLocale.SYSTEM)
         assertSame(context, AppLocale.wrap(context))
+    }
+
+    @Test fun traditionalChineseUsesItsOwnLocaleOnAndroid13() {
+        AppLocale.save(context, AppLocale.TRADITIONAL_CHINESE)
+        assertEquals("zh-TW", manager.applicationLocales.toLanguageTags())
+        assertEquals(AppLocale.TRADITIONAL_CHINESE, AppLocale.preference(context))
+        manager.applicationLocales = LocaleList.forLanguageTags("zh-HK")
+        assertEquals(AppLocale.TRADITIONAL_CHINESE, AppLocale.preference(context))
+    }
+
+    @Test @Config(sdk = [28, 32])
+    fun traditionalChineseWrapsResourcesOnOlderAndroid() {
+        AppLocale.save(context, AppLocale.TRADITIONAL_CHINESE)
+        val wrapped = AppLocale.wrap(context)
+        assertEquals("zh-TW", wrapped.resources.configuration.locales.toLanguageTags())
+        assertEquals("應用程式語言", wrapped.getString(R.string.language_app_language))
     }
 }
