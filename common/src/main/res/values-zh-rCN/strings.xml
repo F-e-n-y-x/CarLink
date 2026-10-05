@@ -643,4 +643,9 @@
     <string name="carplay_dock_hint">CarPlay 显示应用、时钟和状态的位置。在“驾驶员一侧”和“底部”之间切换立即生效；“自动”由 iPhone 决定，重新连接后生效。</string>
     <string name="split_screen_areas">分屏中的 CarPlay</string>
     <string name="split_screen_areas_description">车机以分屏显示 DiPlay 时，CarPlay 会按该窗口重新绘制，而不是缩小并留黑边；返回全屏也无需重新连接。首次使用时会记住窗口大小，下次连接起画面完全贴合。程序栏设为“自动”时，CarPlay 会把它放在底部。下次连接时生效。</string>
+    <string name="carplay_rotation">随屏幕旋转 CarPlay，无需重新连接</string>
+    <string name="carplay_rotation_description">适用于屏幕可旋转的车机。CarPlay 会获得包含横屏和竖屏的方形画面，旋转屏幕时直接重新绘制，无需重新连接。方形画面解码负担更重，且不适用自定义安全区域。下次连接时生效。</string>
+    <string name="carplay_rotation_picture">方形画面</string>
+    <string name="carplay_rotation_smoother">更流畅（1920）</string>
+    <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
 </resources>

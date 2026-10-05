@@ -600,4 +600,9 @@
     <string name="carplay_dock_hint">Dónde muestra CarPlay sus apps, la hora y el estado. Entre «Lado del conductor» y «Abajo» cambia al instante; «Automático» deja la elección al iPhone y se aplica tras reconectar.</string>
     <string name="split_screen_areas">CarPlay en la pantalla dividida</string>
     <string name="split_screen_areas_description">Cuando la unidad muestra DiPlay en pantalla dividida, CarPlay se redibuja para esa ventana en lugar de reducirse con franjas negras, y vuelve a pantalla completa sin reconectar. El tamaño de la ventana se aprende la primera vez, así que desde la siguiente conexión la imagen encaja exactamente. Con el dock en Automático, CarPlay lo coloca abajo. Se aplica en la próxima conexión.</string>
+    <string name="carplay_rotation">Girar CarPlay con la pantalla sin reconectar</string>
+    <string name="carplay_rotation_description">Para unidades cuya pantalla gira. CarPlay recibe una imagen cuadrada con una pantalla horizontal y otra vertical, así que girar la pantalla redibuja CarPlay en lugar de reconectar. Una imagen cuadrada cuesta más decodificar; el área segura personalizada no se le aplica. Se aplica en la próxima conexión.</string>
+    <string name="carplay_rotation_picture">Imagen cuadrada</string>
+    <string name="carplay_rotation_smoother">Más fluida (1920)</string>
+    <string name="carplay_rotation_sharper">Más nítida (tamaño de la pantalla)</string>
 </resources>

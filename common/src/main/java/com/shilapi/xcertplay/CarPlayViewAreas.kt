@@ -9,38 +9,50 @@ import kotlin.math.ln
 /**
  * The view areas the main screen declares for one session, and the one CarPlay uses now. A fixed dock
  * declares every area once per dock edge; the head unit's split screen adds an area the size of DiPlay's
- * window there. The car moves CarPlay between them with updateViewArea, without reconnecting. No Android
- * types beyond preferences, so the choices are unit-tested.
+ * window there; a square canvas for a turning screen holds a landscape and a portrait screen. The car
+ * moves CarPlay between them with updateViewArea, without reconnecting. No Android types beyond
+ * preferences, so the choices are unit-tested.
  */
 class CarPlayViewAreas private constructor(
     val areas: List<AirPlayViewArea>,
-    private val kinds: List<Kind>,
+    private val slots: List<Slot>,
     initial: Int,
 ) {
     enum class Kind { FULL_SCREEN, SPLIT_SCREEN }
+
+    /** A full screen the canvas holds: its size and whether the screen is portrait then. */
+    data class Screen(val width: Int, val height: Int, val portrait: Boolean)
+
+    private data class Slot(val kind: Kind, val portrait: Boolean)
 
     /** The area CarPlay uses now; shared by the session's host and its settings. */
     @Volatile var current: Int = initial
         private set
 
-    fun kindOf(index: Int): Kind = kinds[index]
+    /** True when the canvas holds both a landscape and a portrait screen. */
+    val turnsWithScreen: Boolean = slots.any { it.portrait } && slots.any { !it.portrait }
 
-    /** The area of [kind] with [dockEdge] (or the edge-less one), or null if this session has none. */
-    fun index(kind: Kind, dockEdge: Int?): Int? =
-        areas.indices.firstOrNull { kinds[it] == kind && areas[it].dockEdge == dockEdge }
+    fun kindOf(index: Int): Kind = slots[index].kind
+
+    /** The area of [kind] with [dockEdge] (or the edge-less one) on the current screen, or null. */
+    fun index(kind: Kind, dockEdge: Int?): Int? = index(kind, slots[current].portrait, dockEdge)
+
+    fun index(kind: Kind, portrait: Boolean, dockEdge: Int?): Int? =
+        areas.indices.firstOrNull { slots[it].kind == kind && slots[it].portrait == portrait && areas[it].dockEdge == dockEdge }
 
     /**
-     * The area for DiPlay's window: the split-screen area in the head unit's split screen when one has
-     * about the window's shape, the whole screen otherwise; the dock edge stays as it is now.
+     * The area for DiPlay's window on a [portrait] or landscape screen, keeping the dock edge: the
+     * split-screen area in the head unit's split screen when one has about the window's shape, the
+     * whole screen otherwise. Null when this session has no area for that screen (the caller reconnects).
      */
-    fun indexFor(width: Int, height: Int, splitScreen: Boolean): Int {
+    fun indexFor(width: Int, height: Int, splitScreen: Boolean, portrait: Boolean = slots[current].portrait): Int? {
         val edge = areas[current].dockEdge
-        val split = index(Kind.SPLIT_SCREEN, edge)
+        val split = index(Kind.SPLIT_SCREEN, portrait, edge)
         if (splitScreen && split != null && closeShape(areas[split], width, height)) return split
-        return index(Kind.FULL_SCREEN, edge) ?: 0
+        return index(Kind.FULL_SCREEN, portrait, edge)
     }
 
-    /** The area in use after moving the dock to [dockEdge], keeping the kind of area. */
+    /** The area in use after moving the dock to [dockEdge], keeping the kind of area and the screen. */
     fun withDock(dockEdge: Int): Int? = index(kindOf(current), dockEdge)
 
     fun use(index: Int) {
@@ -48,35 +60,53 @@ class CarPlayViewAreas private constructor(
     }
 
     companion object {
-        /** Further than this (as an aspect ratio) from DiPlay's window, an area does not fit it. */
+        /** Further than this (as an aspect ratio) from DiPlay's window, a split-screen area does not fit it. */
         private const val MAX_ASPECT_MISMATCH = 1.25
 
+        /** One screen the size of the stream (no turning); see the general [build]. */
+        fun build(width: Int, height: Int, dock: CarPlayDock, splitWindow: Pair<Float, Float>?): CarPlayViewAreas? =
+            build(width, height, listOf(Screen(width, height, portrait = height > width)), dock,
+                splitWindow = { splitWindow }, startPortrait = height > width)
+
         /**
-         * The areas for a [width] x [height] stream, or null when the whole screen as one area will do
-         * (automatic dock, no split screen). [splitWindow] is the split-screen window as fractions of
-         * the full window (width, height), or null without split-screen support.
+         * The areas for a [canvasWidth] x [canvasHeight] stream holding [screens] (each at its top-left
+         * corner), or null when the whole stream as one area will do (one screen, automatic dock, no split
+         * screen). [splitWindow] gives the split-screen window on a portrait or landscape screen as
+         * fractions of that full screen, or null without split-screen support.
          */
-        fun build(width: Int, height: Int, dock: CarPlayDock, splitWindow: Pair<Float, Float>?): CarPlayViewAreas? {
+        fun build(
+            canvasWidth: Int,
+            canvasHeight: Int,
+            screens: List<Screen>,
+            dock: CarPlayDock,
+            splitWindow: (portrait: Boolean) -> Pair<Float, Float>?,
+            startPortrait: Boolean,
+        ): CarPlayViewAreas? {
+            val splits = screens.associateWith { splitWindow(it.portrait) }
+            if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } &&
+                screens[0].width == canvasWidth && screens[0].height == canvasHeight) return null
             val edges = dock.edge?.let { listOf(AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE, AirPlayInfoPlist.DOCK_EDGE_BOTTOM) }
                 ?: listOf(null)
-            if (dock.edge == null && splitWindow == null) return null
             val areas = mutableListOf<AirPlayViewArea>()
-            val kinds = mutableListOf<Kind>()
-            for (edge in edges) {
-                areas += AirPlayViewArea(width, height, dockEdge = edge)
-                kinds += Kind.FULL_SCREEN
+            val slots = mutableListOf<Slot>()
+            for (screen in screens) for (edge in edges) {
+                areas += AirPlayViewArea(screen.width, screen.height, dockEdge = edge)
+                slots += Slot(Kind.FULL_SCREEN, screen.portrait)
             }
-            if (splitWindow != null) {
+            for (screen in screens) {
+                val window = splits[screen] ?: continue
                 // The window's own size (BYD shows its bars in split screen), kept even for the encoder.
-                val splitWidth = (width * splitWindow.first).toInt().coerceIn(2, width) and 1.inv()
-                val splitHeight = (height * splitWindow.second).toInt().coerceIn(2, height) and 1.inv()
+                val splitWidth = (screen.width * window.first).toInt().coerceIn(2, screen.width) and 1.inv()
+                val splitHeight = (screen.height * window.second).toInt().coerceIn(2, screen.height) and 1.inv()
                 for (edge in edges) {
                     areas += AirPlayViewArea(splitWidth, splitHeight, dockEdge = edge)
-                    kinds += Kind.SPLIT_SCREEN
+                    slots += Slot(Kind.SPLIT_SCREEN, screen.portrait)
                 }
             }
-            val initial = areas.indices.first { kinds[it] == Kind.FULL_SCREEN && areas[it].dockEdge == dock.edge }
-            return CarPlayViewAreas(areas, kinds, initial)
+            val initial = areas.indices.firstOrNull {
+                slots[it].kind == Kind.FULL_SCREEN && slots[it].portrait == startPortrait && areas[it].dockEdge == dock.edge
+            } ?: areas.indices.first { slots[it].kind == Kind.FULL_SCREEN && areas[it].dockEdge == dock.edge }
+            return CarPlayViewAreas(areas, slots, initial)
         }
 
         private fun closeShape(area: AirPlayViewArea, width: Int, height: Int): Boolean {

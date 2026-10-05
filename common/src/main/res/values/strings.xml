@@ -643,4 +643,9 @@
     <string name="carplay_dock_hint">Where CarPlay shows its apps, clock and status. Between Driver\'s side and Bottom it moves at once; Automatic leaves it to the iPhone and applies after a reconnect.</string>
     <string name="split_screen_areas">CarPlay in the head unit\'s split screen</string>
     <string name="split_screen_areas_description">When the head unit shows DiPlay in split screen, CarPlay redraws for that window instead of shrinking with black bars, and back to full screen without reconnecting. The window\'s size is learned the first time, so the picture fits exactly from the next connection. With the dock on Automatic, CarPlay then puts it at the bottom. Applies at the next connection.</string>
+    <string name="carplay_rotation">Turn CarPlay with the screen without reconnecting</string>
+    <string name="carplay_rotation_description">For head units whose screen turns. CarPlay gets a square picture holding a landscape and a portrait screen, so turning the screen redraws CarPlay instead of reconnecting. A square picture is heavier to decode; the custom safe area does not apply to it. Applies at the next connection.</string>
+    <string name="carplay_rotation_picture">Square picture</string>
+    <string name="carplay_rotation_smoother">Smoother (1920)</string>
+    <string name="carplay_rotation_sharper">Sharper (the screen\'s size)</string>
 </resources>
