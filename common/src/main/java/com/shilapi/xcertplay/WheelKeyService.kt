@@ -17,9 +17,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.AirPlayKnobState
+import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.glance.CarPlayGlance
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.hud.BydOutputSettings
 
 /**
  * Optional: steering-wheel keys zoom CarPlay's dashboard map and work as a CarPlay joystick. BYD's window
@@ -30,7 +32,9 @@ import com.shilapi.xcertplay.hud.BydNavigationOutputs
  * to map zoom until it is pressed again, or, in the timed behaviour, until a few seconds after the last
  * zoom. With the joystick setting on, the joystick key (BYD's media key by default) turns the joystick on
  * and off; while it is on the keys drive CarPlay's main screen as a car's rotary knob would (see
- * [WheelJoystick]). A call always keeps the keys for the call. Every other key passes on unchanged. On
+ * [WheelJoystick]). A call always keeps the keys for the call. During a CarPlay call the call key answers on
+ * the iPhone (see [CarPlayCallKeys]), and with a CarPlay session DiLink 3's CarPlay voice keys open Siri.
+ * Every other key passes on unchanged. On
  * the Tang the console's volume sends the same codes as the wheel's, so it zooms and moves too.
  */
 class WheelKeyService : AccessibilityService() {
@@ -77,6 +81,7 @@ class WheelKeyService : AccessibilityService() {
 
     override fun onServiceConnected() {
         running = this
+        CarPlayCallKeys.install(this)
         refreshEligibility()
         handler.removeCallbacks(pollEligibility)
         handler.postDelayed(pollEligibility, ELIGIBILITY_POLL_MILLIS)
@@ -109,8 +114,14 @@ class WheelKeyService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
-        val key = WheelKey(event.keyCode, event.scanCode, deviceName(event.deviceId))
         val down = event.action == KeyEvent.ACTION_DOWN
+        if (CarPlayCallKeys.onKey(this, event.keyCode, down)) return true
+        if (BydOutputSettings.carPlayCallControls(this) &&
+            CarPlayMediaButton.opensSiriWhileCarPlay(event.keyCode) && session() != null) {
+            if (!down) Log.i(TAG, "CarPlay voice key ${event.keyCode}: Siri sent=${CarPlayBackgroundSession.snapshot()?.controller?.requestSiri() == true}")
+            return true
+        }
+        val key = WheelKey(event.keyCode, event.scanCode, deviceName(event.deviceId))
         refreshEligibility()
         val calling = inCall()
         if (calling) clearLearning()

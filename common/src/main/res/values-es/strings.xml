@@ -594,6 +594,8 @@
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
+    <string name="carplay_calls_on_dashboard">Llamadas de CarPlay en el cuadro</string>
+    <string name="carplay_calls_on_dashboard_description">Las llamadas de CarPlay entrantes y en curso muestran a quien llama en el cuadro de instrumentos, con la duración en el cuadro y en el head-up display, como la app CarPlay de BYD. El coche también baja el ventilador durante la llamada. Se aplica al instante. Requiere ADB por red en la unidad principal.</string>
     <string name="carplay_dock">Dock de CarPlay</string>
     <string name="carplay_dock_automatic">Automático</string>
     <string name="carplay_dock_driver_side">Lado del conductor</string>
@@ -606,6 +608,8 @@
     <string name="carplay_rotation_picture">Imagen cuadrada</string>
     <string name="carplay_rotation_smoother">Más fluida (1920)</string>
     <string name="carplay_rotation_sharper">Más nítida (tamaño de la pantalla)</string>
+    <string name="carplay_call_controls_experimental">Botones de llamadas de CarPlay (experimental)</string>
+    <string name="carplay_call_controls_experimental_description">Activa los botones de llamada, voz y reproducción/pausa de DiLink 3 aún sin verificar. Falta probarlos en el vehículo. Desactivado de forma predeterminada; las tarjetas de llamadas del cuadro tienen un ajuste independiente.</string>
     <string name="side_panel">Panel lateral junto a CarPlay (experimental)</string>
     <string name="side_panel_description">CarPlay puede pasar a dos tercios de la pantalla mientras DiPlay muestra un panel en el resto: del lado del pasajero en una pantalla horizontal, abajo en una vertical (reloj y, si se lee, la batería). Muéstralo y ocúltalo desde el menú de la sesión. Se aplica en la próxima conexión.</string>
     <string name="side_panel_show">Panel lateral</string>

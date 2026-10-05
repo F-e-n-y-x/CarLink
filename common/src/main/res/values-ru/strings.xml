@@ -594,6 +594,8 @@
     <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
+    <string name="carplay_calls_on_dashboard">Звонки CarPlay на приборной панели</string>
+    <string name="carplay_calls_on_dashboard_description">Входящие и текущие звонки CarPlay показывают абонента на приборной панели, а длительность — на панели и проекционном дисплее, как в штатном приложении CarPlay от BYD. Во время звонка машина также снижает обороты вентилятора. Применяется сразу. Нужен ADB по сети на головном устройстве.</string>
     <string name="carplay_dock">Панель приложений CarPlay</string>
     <string name="carplay_dock_automatic">Автоматически</string>
     <string name="carplay_dock_driver_side">Со стороны водителя</string>
@@ -606,6 +608,8 @@
     <string name="carplay_rotation_picture">Квадратная картинка</string>
     <string name="carplay_rotation_smoother">Плавнее (1920)</string>
     <string name="carplay_rotation_sharper">Чётче (размер экрана)</string>
+    <string name="carplay_call_controls_experimental">Кнопки вызовов CarPlay (экспериментально)</string>
+    <string name="carplay_call_controls_experimental_description">Включает непроверенные кнопки вызовов, голосового управления и воспроизведения/паузы DiLink 3. Требуется проверка в автомобиле. По умолчанию выключено; карточки вызовов на приборной панели настраиваются отдельно.</string>
     <string name="side_panel">Боковая панель рядом с CarPlay (экспериментально)</string>
     <string name="side_panel_description">CarPlay может переходить на две трети экрана, а DiPlay показывает в остальной части свою панель: со стороны пассажира на горизонтальном экране, снизу на вертикальном (часы и заряд, если он считан). Показывайте и скрывайте её из меню во время сеанса. Применяется со следующего подключения.</string>
     <string name="side_panel_show">Боковая панель</string>

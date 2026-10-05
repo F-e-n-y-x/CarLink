@@ -1680,6 +1680,18 @@ class DiPlayActivity : ComponentActivity() {
             BydOutputSettings.setClusterSongOnChange(this, it)
             BydNavigationOutputs.clusterSongOnChangeChanged()
         }
+        toggle(card, getString(R.string.carplay_call_controls_experimental),
+            getString(R.string.carplay_call_controls_experimental_description),
+            BydOutputSettings.carPlayCallControls(this)) {
+            BydOutputSettings.setCarPlayCallControls(this, it)
+        }
+        toggle(card, getString(R.string.carplay_calls_on_dashboard),
+            getString(R.string.carplay_calls_on_dashboard_description),
+            BydOutputSettings.carPlayCalls(this), enabled = !adbSwitchChangePending) {
+            BydOutputSettings.setCarPlayCalls(this, it)
+            if (it) checkAdbState(mayAsk = true)
+            BydNavigationOutputs.carPlayCallsChanged(it)
+        }
     }
 
     private fun advancedVehicleData(card: LinearLayout) {

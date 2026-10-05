@@ -43,6 +43,20 @@ class CarPlayMediaCallbackTest {
         assertEquals(List(3) { CarPlayMediaButton.PLAY_PAUSE }, sent)
     }
 
+    @Test fun experimentalPlayPauseKeyNeedsOptInAndStopsAfterDisable() {
+        var enabled = false
+        val experimental = CarPlayMediaCallback(experimentalDiLink3Keys = { enabled }) { index, _ -> sent += index }
+        val key = button(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, 331, 0))
+        experimental.onMediaButtonEvent(key)
+        assertEquals(emptyList<Int>(), sent)
+        enabled = true
+        experimental.onMediaButtonEvent(key)
+        assertEquals(listOf(CarPlayMediaButton.PLAY_PAUSE), sent)
+        enabled = false
+        experimental.onMediaButtonEvent(key)
+        assertEquals(listOf(CarPlayMediaButton.PLAY_PAUSE), sent)
+    }
+
     @Test
     fun aHeldKeySendsOnePress() {
         press(KeyEvent.KEYCODE_MEDIA_NEXT, repeat = 1)

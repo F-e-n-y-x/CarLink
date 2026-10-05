@@ -638,6 +638,8 @@
     <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard and to move around CarPlay\'s screen. It only receives key presses and does not read the screen.</string>
     <string name="cluster_song_on_change">Song only when it changes</string>
     <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
+    <string name="carplay_calls_on_dashboard">CarPlay calls on the dashboard</string>
+    <string name="carplay_calls_on_dashboard_description">Incoming and ongoing CarPlay calls show the caller on the instrument cluster, with the call time on the cluster and the head-up display, like BYD’s own CarPlay app. The car also turns the fan down during the call. Applies at once. Needs ADB over network on the head unit.</string>
     <string name="cluster_safe_area_edit">Cluster safe area · edit box</string>
     <string name="cluster_safe_area_reset">Reset cluster safe area</string>
     <string name="cluster_safe_area_hint">Drag the four green boundaries. Saving applies to the next CarPlay connection. A custom box replaces marker offsets; reset restores them.</string>
@@ -666,6 +668,8 @@
     <string name="carplay_rotation_smoother">Smoother (1920)</string>
     <string name="carplay_rotation_sharper">Sharper (the screen\'s size)</string>
     <string name="auto_grant_incomplete">Setup did not verify every requested permission. Check each status below; enable network ADB and retry, or use the manual setup. Existing permissions are kept.</string>
+    <string name="carplay_call_controls_experimental">CarPlay call keys (experimental)</string>
+    <string name="carplay_call_controls_experimental_description">Opt in to unverified DiLink 3 call, voice and play/pause keys. Vehicle testing is still required. Disabled by default; dashboard call cards are a separate setting.</string>
     <string name="side_panel">Side panel next to CarPlay (experimental)</string>
     <string name="side_panel_description">CarPlay can move to two thirds of the screen while DiPlay shows a panel in the rest: on the passenger\'s side of a landscape screen, at the bottom of a portrait one (clock and, where it is read, the battery). Show and hide it from the in-session menu. Applies at the next connection.</string>
     <string name="side_panel_show">Side panel</string>

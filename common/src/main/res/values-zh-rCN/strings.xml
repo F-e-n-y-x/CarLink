@@ -638,6 +638,8 @@
     <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图，并在 CarPlay 屏幕上移动选择。它只接收按键，不读取屏幕内容。</string>
     <string name="cluster_song_on_change">仅在切歌时显示</string>
     <string name="cluster_song_on_change_description">新歌曲在仪表盘上显示 5 秒，然后清空卡片。暂停和继续播放不会再次显示。</string>
+    <string name="carplay_calls_on_dashboard">仪表盘显示 CarPlay 通话</string>
+    <string name="carplay_calls_on_dashboard_description">来电和通话中的 CarPlay 通话会在仪表盘上显示来电者，并在仪表盘和抬头显示器上显示通话时长，与比亚迪原厂 CarPlay 应用相同。通话期间车辆还会降低风扇风速。立即生效。需要主机开启网络 ADB。</string>
     <string name="cluster_safe_area_edit">仪表安全区域 · 编辑框</string>
     <string name="cluster_safe_area_reset">重置仪表安全区域</string>
     <string name="cluster_safe_area_hint">拖动四条绿色边界，保存后在下次 CarPlay 连接时生效。自定义区域会替代车辆标记偏移，重置后恢复。</string>
@@ -666,6 +668,8 @@
     <string name="carplay_rotation_smoother">更流畅（1920）</string>
     <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
     <string name="auto_grant_incomplete">未验证全部请求权限。请检查下方各项状态；开启网络 ADB 后重试，或使用手动设置。现有权限保持不变。</string>
+    <string name="carplay_call_controls_experimental">CarPlay 通话按键（实验功能）</string>
+    <string name="carplay_call_controls_experimental_description">启用尚未验证的 DiLink 3 通话、语音和播放/暂停按键。仍需实车测试。默认关闭；仪表通话卡片为独立设置。</string>
     <string name="side_panel">CarPlay 旁的侧边面板（实验性）</string>
     <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
     <string name="side_panel_show">侧边面板</string>
