@@ -73,6 +73,9 @@ class BufferedAudioSessionTest {
             assertNull(engine.onBufferedAudioControl(session, "SETRATE", emptyMap()))
             assertNull(engine.onBufferedAudioControl(session, "SETRATEANCHORTIME", mapOf("rate" to 2)))
             assertNull(engine.onBufferedAudioControl(session, "GETANCHOR", emptyMap()))
+            assertEquals(1, engine.onBufferedAudioControl(session, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024L))!!["rate"])
+            assertNull(engine.onBufferedAudioControl(session, "SETRATEANCHORTIME", mapOf("rate" to 0.5)))
+            assertEquals(1, engine.onBufferedAudioControl(session, "GETANCHOR", emptyMap())!!["rate"])
         } finally { session.close() }
     }
 

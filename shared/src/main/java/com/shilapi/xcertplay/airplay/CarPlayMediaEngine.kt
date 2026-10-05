@@ -229,7 +229,11 @@ class CarPlayMediaEngine(
     ): Map<String, Any?>? {
         val buffered = bufferedStreams[session]?.stream ?: return null
         val rtpTime = (body["rtpTime"] as? Number)?.toLong()
-        val rate = (body["rate"] as? Number)?.toInt()
+        val rate = when ((body["rate"] as? Number)?.toDouble()) {
+            0.0 -> 0
+            1.0 -> 1
+            else -> null
+        }
         return when (method) {
             "SETRATE", "SETRATEANCHORTIME" -> {
                 if (rate == null || rate !in 0..1) null else buffered.setRate(rtpTime, rate, session.syncedNtp())
