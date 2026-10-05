@@ -66,6 +66,7 @@ class DiPlayActivity : ComponentActivity() {
     private var clusterSafeAreaDialog: Dialog? = null
     private var clusterContentRequestVersion = 0L
     private var pendingCarHotspotSetup = false
+    private var hotspotJoinControls: HotspotJoinControls? = null
     private var setupError: String? = null
     private var status: TextView? = null
     private var connectButton: Button? = null
@@ -75,6 +76,11 @@ class DiPlayActivity : ComponentActivity() {
     private var initialLaunch = true
     private var notificationTransport = true
     private var exportInProgress = false
+    private var usbPermissionOperation: UsbPermissionSetup.Operation? = null
+    private var usbPermissionDialog: AlertDialog? = null
+    internal var usbPermissionOperationFactory: (Context) -> UsbPermissionSetup.Operation = {
+        UsbPermissionSetup.Operation(it.applicationContext)
+    }
     private var navigationStreamType = 14
     private var testToneTrack: AudioTrack? = null
     private var toneStop: Runnable? = null
@@ -213,6 +219,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        cancelUsbPermissionSetup()
         clusterSafeAreaDialog?.dismiss()
         startupHotspotCancelled = true
         super.onStop()
@@ -247,6 +254,8 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        hotspotJoinControls?.close()
+        cancelUsbPermissionSetup()
         WheelKeyService.cancelLearning()
         handler.removeCallbacks(automaticVehicleValidation)
         adbCheckGeneration++
@@ -267,8 +276,9 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private val isCompactLayout: Boolean
-        get() = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode) ||
-            resources.configuration.screenWidthDp < 550 ||
+        // Window size only: a multi-window task can fill the whole screen, and in multi-window the
+        // configuration already reports the window's own size.
+        get() = resources.configuration.screenWidthDp < 550 ||
             resources.configuration.screenHeightDp < 450
 
     private fun render() {
@@ -454,7 +464,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun settings(content: LinearLayout) {
         content.addView(label(getString(R.string.your_drive_your_way), 34, TEXT, true))
         content.addView(label(getString(R.string.apply_reconnects_carplay_for_size_resolution_music_buffer), 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
-        section(content, getString(R.string.carplay_controls), R.drawable.ic_dp_display) { card ->
+        section(content, getString(R.string.carplay_controls), R.drawable.ic_dp_controls) { card ->
             val gestureFingers = listOf(2, 3, 4)
             choice(card, getString(R.string.settings_gesture_fingers_label),
                 gestureFingers.map { getString(R.string.settings_gesture_fingers_option, it) },
@@ -490,13 +500,33 @@ class DiPlayActivity : ComponentActivity() {
                 permissions = { listOf(CarHotspotSetup.Permission.BOOT_LAUNCH) }) {
                 AirPlayPersistence.saveAutoStartOnBoot(this, it)
             }
+            val autoConfirmActive = UsbPermissionSetup.Permission.ACCESSIBILITY.granted(this)
             toggle(
                 card,
                 getString(R.string.usb_auto_confirm_title),
                 getString(R.string.usb_auto_confirm_subtitle),
-                UsbAutoConfirmService.isEnabled(this),
-            ) {
-                UsbAutoConfirmService.openSettings(this)
+                autoConfirmActive,
+            ) { enabled ->
+                if (enabled) promptEnableUsbAutoConfirm()
+                else {
+                    if (!UsbAutoConfirmService.openSettings(this)) toast(getString(R.string.wheel_keys_no_settings))
+                    render()
+                }
+            }
+            if (!autoConfirmActive) {
+                card.addView(
+                    button(
+                        getString(R.string.btn_auto_apply_permissions),
+                        true,
+                    ) {
+                        autoApplyPermissions()
+                    },
+                    matchButton(8, 54),
+                )
+            } else {
+                card.addView(label(getString(R.string.usb_auto_confirm_active_hint), 14, Color.rgb(127, 205, 154)).apply {
+                    setPadding(0, dp(4), 0, dp(8))
+                })
             }
             card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
@@ -545,6 +575,28 @@ class DiPlayActivity : ComponentActivity() {
             choice(card, getString(R.string.frame_rate), listOf(getString(R.string.s_30_fps_lighter_load), getString(R.string.s_60_fps_smoother_motion)), if (AirPlayPersistence.loadFps(this) == 60) 1 else 0) { AirPlayPersistence.saveFps(this, if (it == 1) 60 else 30) }
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it) }
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
+            carPlayDockControl(card)
+            toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
+                SplitScreenSettings.enabled(this)) {
+                SplitScreenSettings.setEnabled(this, it)
+                reconnectForClusterMap()
+            }
+            toggle(card, getString(R.string.carplay_rotation), getString(R.string.carplay_rotation_description),
+                CarPlayRotation.enabled(this)) {
+                CarPlayRotation.setEnabled(this, it)
+                render()
+                reconnectForClusterMap()
+            }
+            if (CarPlayRotation.enabled(this)) {
+                val pictures = CarPlayRotation.Picture.entries
+                choice(card, getString(R.string.carplay_rotation_picture), listOf(
+                    getString(R.string.carplay_rotation_smoother),
+                    getString(R.string.carplay_rotation_sharper),
+                ), pictures.indexOf(CarPlayRotation.picture(this)), reconnects = false) {
+                    CarPlayRotation.setPicture(this, pictures[it])
+                    reconnectForClusterMap()
+                }
+            }
             addSystemBarControls(
                 hideTopBar = AirPlayPersistence.loadHideTopBar(this),
                 hideBottomBar = AirPlayPersistence.loadHideBottomBar(this),
@@ -557,7 +609,7 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
         }
-        section(content, getString(R.string.audio_routing)) { card ->
+        section(content, getString(R.string.audio_routing), R.drawable.ic_dp_audio) { card ->
             toggle(card, getString(R.string.contrib_audio_home_toggle_audio_focus), getString(R.string.contrib_audio_home_toggle_audio_focus_desc), AirPlayPersistence.loadAudioFocusEnabled(this)) { AirPlayPersistence.saveAudioFocusEnabled(this, it) }
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
                 toggle(card, getString(R.string.advanced_audio_channel_mapping),
@@ -586,7 +638,7 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
-        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
+        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_dashboard) { card ->
             toggle(card, getString(R.string.adb_cluster_activity_mode),
                 getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 AirPlayPersistence.saveAdbClusterEnabled(this, it)
@@ -652,6 +704,9 @@ class DiPlayActivity : ComponentActivity() {
                     val usage = HomeScreenMonitor.hasAccess(this)
                     card.addView(label(if (usage) getString(R.string.center_map_auto_hide_active)
                         else getString(R.string.center_map_auto_hide_needed), 14, if (usage) MUTED else WARNING))
+                    if (!usage) {
+                        card.addView(button(getString(R.string.btn_auto_apply_permissions), false) { autoApplyPermissions() }, matchButton(8, 54))
+                    }
                 }
                 if (clusterDisplay != null || adbCluster) {
                     if (DiLink51ClusterLayout.supported() && !adbCluster) {
@@ -877,6 +932,14 @@ class DiPlayActivity : ComponentActivity() {
             }
             adbStatus = label(getString(if (access == LocalAdb.Access.READY)
                 R.string.adb_access_ready else R.string.adb_not_approved), 14, MUTED).also(card::addView)
+            val allReady = UsbPermissionSetup.snapshot(this).values.all { it }
+            if (!allReady) {
+                card.addView(button(getString(R.string.btn_auto_apply_permissions), false) { autoApplyPermissions() }, matchButton(8, 54))
+            } else {
+                card.addView(label(getString(R.string.btn_permissions_ready), 14, Color.rgb(127, 205, 154)).apply {
+                    setPadding(0, dp(6), 0, dp(4))
+                })
+            }
         }
     }
 
@@ -1072,6 +1135,11 @@ class DiPlayActivity : ComponentActivity() {
                 }
             }, matchButton(12, 60))
             parent.addView(label(if (pendingCarHotspotSetup) getString(R.string.finish_setup_save_your_hotspot_details_to_use_this_mode) else if (carHotspotOff()) getString(R.string.hotspot_details_off) else getString(R.string.hotspot_details_saved), 15, if (carHotspotOff()) WARNING else MUTED).apply { setPadding(0, dp(12), 0, 0) })
+            val join = hotspotJoinControls ?: HotspotJoinControls(this,
+                { CarPlayBackgroundSession.hasSession() }, beforeAction = { startupHotspotCancelled = true },
+                labelFactory = { label(it, 15, MUTED) }, buttonFactory = { title, click -> button(title, false, click) })
+                .also { hotspotJoinControls = it }
+            parent.addView(join.build())
         } else if (mode == WirelessHotspotMode.EXISTING_WIFI) {
             parent.addView(label(getString(R.string.existing_wifi_instructions), 16, MUTED))
             parent.addView(button(getString(R.string.open_car_wi_fi_settings), false) { openCarClientWifiSettings() }, matchButton(12, 60))
@@ -1137,7 +1205,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyMediaChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(12, 60))
     }
 
     private fun navigationChannelControl(parent: LinearLayout) {
@@ -1154,7 +1222,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyNavigationChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(10, 60))
         parent.addView(label(getString(R.string.contrib_audio_home_nav_channel_note), 14, MUTED).apply {
             setPadding(0, dp(8), 0, dp(18))
         })
@@ -1361,6 +1429,127 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun promptEnableUsbAutoConfirm() {
+        if (UsbPermissionSetup.Permission.ACCESSIBILITY.granted(this)) {
+            toast(getString(R.string.usb_auto_confirm_status_on))
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.usb_auto_confirm_title))
+            .setMessage(getString(R.string.usb_auto_confirm_dialog_msg))
+            .setPositiveButton(getString(R.string.btn_auto_apply_permissions)) { _, _ ->
+                autoApplyPermissions()
+            }
+            .setNeutralButton(getString(R.string.btn_open_accessibility_setting)) { _, _ ->
+                if (!UsbAutoConfirmService.openSettings(this)) {
+                    toast(getString(R.string.wheel_keys_no_settings))
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                render()
+            }
+            .setOnCancelListener {
+                render()
+            }
+            .show()
+    }
+
+    private fun cancelUsbPermissionSetup() {
+        val operation = usbPermissionOperation
+        usbPermissionOperation = null
+        operation?.cancel()
+        val dialog = usbPermissionDialog
+        usbPermissionDialog = null
+        dialog?.dismiss()
+    }
+
+    private fun autoApplyPermissions() {
+        if (usbPermissionOperation != null || isFinishing || isDestroyed) return
+        val operation = usbPermissionOperationFactory(applicationContext)
+        usbPermissionOperation = operation
+        val progress = AlertDialog.Builder(this)
+            .setTitle(R.string.auto_grant_title)
+            .setMessage(R.string.auto_grant_msg)
+            .setNegativeButton(R.string.cancel) { _, _ -> cancelUsbPermissionSetup() }
+            .create()
+        usbPermissionDialog = progress
+        progress.setOnCancelListener { cancelUsbPermissionSetup() }
+        progress.setOnDismissListener {
+            if (usbPermissionDialog === progress) cancelUsbPermissionSetup()
+        }
+        progress.show()
+        Thread({
+            val result = operation.run()
+            handler.post {
+                if (usbPermissionOperation !== operation || operation.isCancelled || isFinishing || isDestroyed) {
+                    return@post
+                }
+                usbPermissionOperation = null
+                usbPermissionDialog = null
+                progress.dismiss()
+                render()
+                if (result.complete) {
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.auto_grant_success_title)
+                        .setMessage(R.string.auto_grant_success_msg)
+                        .setPositiveButton(R.string.close, null)
+                        .show()
+                } else {
+                    val reason = when (result.access) {
+                        LocalAdb.Access.NOT_APPROVED -> getString(R.string.auto_grant_confirm_msg)
+                        LocalAdb.Access.UNSUPPORTED -> getString(R.string.adb_pairing_only)
+                        else -> getString(R.string.auto_grant_incomplete)
+                    }
+                    showManualPermissionDialog(reason)
+                }
+            }
+        }, "diplay-auto-permission").start()
+    }
+
+    private fun showManualPermissionDialog(reason: String) {
+        val body = column().apply { setPadding(dp(20), dp(10), dp(20), dp(10)) }
+        body.addView(label(reason, 15, MUTED).apply { setPadding(0, 0, 0, dp(12)) })
+
+        val autoConfirmOn = UsbPermissionSetup.Permission.ACCESSIBILITY.granted(this)
+        body.addView(button(if (autoConfirmOn) getString(R.string.usb_auto_confirm_status_on) else getString(R.string.btn_open_accessibility_setting), false) {
+            if (!UsbAutoConfirmService.openSettings(this)) toast(getString(R.string.wheel_keys_no_settings))
+        }, matchButton(0, 56))
+
+        val overlayOn = CenterMapOverlay.permitted(this)
+        body.addView(button(if (overlayOn) getString(R.string.center_map_overlay_allowed) else getString(R.string.btn_open_overlay_setting), false) {
+            openOverlayPermission()
+        }, matchButton(10, 56))
+
+        UsbPermissionSetup.snapshot(this).forEach { (permission, granted) ->
+            val title = getString(when (permission) {
+                UsbPermissionSetup.Permission.ACCESSIBILITY -> R.string.usb_auto_confirm_title
+                UsbPermissionSetup.Permission.USAGE -> R.string.center_map_auto_hide
+                UsbPermissionSetup.Permission.OVERLAY -> R.string.btn_open_overlay_setting
+            })
+            body.addView(label("$title: ${getString(if (granted) R.string.permission_enabled_ready else R.string.permission_not_enabled)}", 14, if (granted) MUTED else WARNING))
+        }
+        val adbCmd = UsbPermissionSetup.manualCommand(packageName)
+        body.addView(label(getString(R.string.manual_grant_cmd_hint), 14, MUTED).apply { setPadding(0, dp(12), 0, dp(6)) })
+        body.addView(label(adbCmd, 13, TEXT).apply {
+            typeface = Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setBackgroundColor(0x22FFFFFF)
+        })
+        body.addView(button(getString(R.string.copy_command), false) {
+            getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
+                android.content.ClipData.newPlainText("DiPlay ADB Command", adbCmd)
+            )
+            toast(getString(R.string.copied_to_the_car_clipboard_run_the_command_on_your_comput))
+        }, matchButton(8, 50))
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.permissions_and_connection_help))
+            .setView(ScrollView(this).apply { addView(body) })
+            .setPositiveButton(getString(R.string.close)) { _, _ -> render() }
+            .show()
     }
 
     /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
@@ -2205,7 +2394,7 @@ class DiPlayActivity : ComponentActivity() {
         dialog.show()
         dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.9f).toInt(),
             (resources.displayMetrics.heightPixels * 0.85f).toInt())
-        ClusterActivityOutput.beginSafeAreaPreview(previewOwner, initial)
+        ClusterActivityOutput.beginSafeAreaPreview(previewOwner, initial, this)
     }
 
     private fun reconnectForClusterMap() {
@@ -2460,6 +2649,29 @@ class DiPlayActivity : ComponentActivity() {
         }
         // Run another traversal after the platform has finished its initial button measurement.
         decor.post { if (dialog.isShowing) decor.requestLayout() }
+    }
+
+    /** Where CarPlay puts its dock; between the two fixed edges it moves at once, otherwise on reconnect. */
+    private fun carPlayDockControl(card: LinearLayout) {
+        val docks = CarPlayDock.entries
+        choice(card, getString(R.string.carplay_dock), listOf(
+            getString(R.string.carplay_dock_automatic),
+            getString(R.string.carplay_dock_driver_side),
+            getString(R.string.carplay_dock_bottom),
+        ), docks.indexOf(CarPlayDock.load(this)), reconnects = false) {
+            val from = CarPlayDock.load(this)
+            val to = docks[it]
+            CarPlayDock.save(this, to)
+            val session = CarPlayBackgroundSession.snapshot()
+            val areas = session?.display?.viewAreas
+            val target = to.edge?.let { areas?.withDock(it) }
+            if (CarPlayDock.movesLive(from, to) && areas != null && target != null) {
+                if (session.controller.showViewArea(target)) areas.use(target)
+            } else {
+                reconnectForClusterMap()
+            }
+        }
+        card.addView(label(getString(R.string.carplay_dock_hint), 14, MUTED).apply { setPadding(0, 0, 0, dp(18)) })
     }
 
     private fun carPlaySizeControl(parent: LinearLayout) {
@@ -2858,7 +3070,7 @@ class DiPlayActivity : ComponentActivity() {
     }
     private fun version() = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.1.0-beta.1"
     private fun languageSettings(content: LinearLayout) {
-        section(content, getString(R.string.language_section_title)) { card ->
+        section(content, getString(R.string.language_section_title), R.drawable.ic_dp_language) { card ->
             card.addView(label(getString(R.string.language_hint), 14, MUTED))
             val current = AppLocale.preference(this)
             val languageButton = button("${getString(R.string.language_app_language)} · ${AppLocale.displayName(this, current)}", false) { }
@@ -2921,20 +3133,23 @@ class DiPlayActivity : ComponentActivity() {
     private fun button(title: String, primary: Boolean, click: () -> Unit) = Button(this).apply {
         text = title; isAllCaps = false; textSize = 18f; setTextColor(if (primary) BG else TEXT)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else SURFACE, if (primary) ACCENT else BORDER), null)
+        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else BUTTON, if (primary) ACCENT else BORDER), null)
         setPadding(dp(16), 0, dp(16), 0); minHeight = dp(56); stateListAnimator = null
         setOnClickListener { click() }
     }
     private fun rounded(color: Int, stroke: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat(); setStroke(dp(1), stroke) }
     private fun matchButton(top: Int = 0, height: Int = 68) = LinearLayout.LayoutParams(-1, dp(height)).apply { topMargin = dp(top) }
     private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, dp(height)) }
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     companion object {
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
         private val BG = Color.rgb(12, 17, 27)
         private val SURFACE = Color.rgb(21, 30, 44)
+        // One step lighter than a card, so a button reads as a button even where its 1 px border is faint.
+        private val BUTTON = Color.rgb(31, 43, 61)
         private val BORDER = Color.rgb(42, 56, 75)
         private val ACCENT = Color.rgb(166, 200, 255)
         private val TEXT = Color.rgb(241, 245, 252)
