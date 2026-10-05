@@ -117,17 +117,33 @@ BYD's own CarPlay app (`com.byd.carplay.ui`) answers CarPlay calls from the whee
 - the hang-up key (314) and the multifunction "menu" key (309) reach no app; on release BYD sends `com.byd.btcall.action.CLOSE_BLUETOOTHSETTING` with the key code to the current user;
 - the CarPlay voice keys (327 short, 328 long) reach the wheel key service before BYD's window manager keeps them.
 
-DiPlay follows the iPhone's calls from iAP2 CallStateUpdate (0x4155, already subscribed). During a CarPlay call:
+DiPlay follows the iPhone's calls from iAP2 CallStateUpdate (0x4155, already subscribed). The separate
+**CarPlay call keys (experimental)** setting is disabled by default and requires explicit opt-in.
+With that setting enabled, during a CarPlay call:
 
 - the call key answers a ringing call with CarPlay's telephony HID Hook Switch, and is kept during a connected call. It works through the wheel key service and on the CarPlay screen; since BYD has already opened its phone screen by then, DiPlay brings CarPlay back to the front;
 - the hang-up and menu keys end or decline the call (telephony HID Drop), through BYD's broadcast; no setting or service is needed;
 - with a CarPlay session, the CarPlay voice keys open Siri through the wheel key service. DiLink 3's play/pause key (331) toggles CarPlay playback.
 
-Outside a CarPlay call every call key keeps BYD's action, so the Bluetooth phone works as before.
+With the experimental controls disabled, all new call/voice/play-pause key behavior passes through.
+Outside a CarPlay call every call key keeps BYD's action. The exported hang-up receiver requires
+the sender's `android.permission.DUMP`; BYD's system-server window manager can send it, while an
+ordinary third-party app cannot. Actual sender/key behavior still requires vehicle acceptance.
 
 **Settings → BYD navigation → CarPlay calls on the dashboard** (optional, needs ADB over network) also writes what BYD's CarPlay app writes, through the adb shell (`BydCarPlayCallTool`, feature ids resolved on the car): the instrument's call state and caller (device 1007, `INSTRUMENT_CALL_STATE_SET`, `INSTRUMENT_CALL_INFO_SET` as UTF-16LE up to 60 bytes), the call time every second (`INSTRUMENT_CALL_TIME_HOUR/MINUTE/SECOND_SET`), the car's call state (device 1023, `SET_CALL_STATE_SET`, `SET_CMD_BTCALL_STATE_SET`: 2 ringing, 1 dialing, 3 active, 5 ended) and the audio system's CarPlay call status (device 1002, `AUDIO_CARPLAY_CALL_STATUS`: 0 in a call, 1 idle). The call time comes from a small watcher under the adb shell that also ends the call on the car if DiPlay's process goes away mid-call. Not yet checked in a car.
 
+Each displayed-call lifetime has a new package-qualified UUID token. The shell tool serializes its
+ownership marker and vehicle writes with a file lock. A stale watcher, another variant's old
+process, or a prior PID cannot update or clear a newer call. Cleanup retires only its own token;
+an end write that throws retains ownership for retry. A queued update rechecks that dashboard
+output remains enabled before writing. This bounds lifecycle interference; it does not establish
+that every vehicle feature id/value or partial-write outcome is correct on a particular firmware.
+
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
+
+Merge acceptance remains pending: answering/ending a real call from the wheel, caller card and
+timer on cluster/HUD, microphone routing, cancellation/disable and process-death cleanup. The
+reported live key codes alone do not prove these behaviors. Both experimental settings default off.
 
 ## ADB vehicle-data settings and firmware scope
 

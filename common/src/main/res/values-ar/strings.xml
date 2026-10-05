@@ -607,4 +607,6 @@
     <string name="carplay_rotation_picture">الصورة المربعة</string>
     <string name="carplay_rotation_smoother">أكثر سلاسة (1920)</string>
     <string name="carplay_rotation_sharper">أكثر وضوحًا (حجم الشاشة)</string>
+    <string name="carplay_call_controls_experimental">أزرار مكالمات CarPlay (تجريبي)</string>
+    <string name="carplay_call_controls_experimental_description">تفعيل أزرار المكالمات والصوت والتشغيل/الإيقاف المؤقت غير المتحقق منها في DiLink 3. لا يزال يلزم اختبارها في السيارة. معطلة افتراضيًا؛ بطاقات مكالمات لوحة العدادات لها إعداد منفصل.</string>
 </resources>

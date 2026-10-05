@@ -20,6 +20,7 @@ object BydOutputSettings {
     private const val KEY_CLUSTER_SONG_ON_CHANGE = "cluster_song_on_change"
     private const val KEY_HUD_SONG = "hud_song"
     private const val KEY_CARPLAY_CALLS = "carplay_calls"
+    private const val KEY_CARPLAY_CALL_CONTROLS = "carplay_call_controls_experimental"
     private const val KEY_OEM_CLUSTER_HOLD = "oem_cluster_hold"
     private const val KEY_LEGACY_VEHICLE_PROBE = "legacy_vehicle_probe"
     const val DEFAULT_LOW_CHARGE_PERCENT = 20
@@ -83,6 +84,13 @@ object BydOutputSettings {
 
     fun setCarPlayCalls(context: Context, enabled: Boolean) =
         prefs(context).edit().putBoolean(KEY_CARPLAY_CALLS, enabled).apply()
+
+    /** Unverified DiLink 3 call/voice/media key handling requires a separate explicit opt-in. */
+    fun carPlayCallControls(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CARPLAY_CALL_CONTROLS, false)
+
+    fun setCarPlayCallControls(context: Context, enabled: Boolean) =
+        prefs(context).edit().putBoolean(KEY_CARPLAY_CALL_CONTROLS, enabled).apply()
 
     /** Show a new song on the dashboard for a few seconds only, then an empty card. */
     fun clusterSongOnChange(context: Context): Boolean = prefs(context).getBoolean(KEY_CLUSTER_SONG_ON_CHANGE, false)

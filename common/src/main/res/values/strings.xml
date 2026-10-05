@@ -667,4 +667,6 @@
     <string name="carplay_rotation_smoother">Smoother (1920)</string>
     <string name="carplay_rotation_sharper">Sharper (the screen\'s size)</string>
     <string name="auto_grant_incomplete">Setup did not verify every requested permission. Check each status below; enable network ADB and retry, or use the manual setup. Existing permissions are kept.</string>
+    <string name="carplay_call_controls_experimental">CarPlay call keys (experimental)</string>
+    <string name="carplay_call_controls_experimental_description">Opt in to unverified DiLink 3 call, voice and play/pause keys. Vehicle testing is still required. Disabled by default; dashboard call cards are a separate setting.</string>
 </resources>

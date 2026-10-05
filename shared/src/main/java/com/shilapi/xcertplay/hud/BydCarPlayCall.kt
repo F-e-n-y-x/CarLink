@@ -108,7 +108,6 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
  */
 object BydCarPlayCall {
     private const val TAG = "DiPlay-BYD-Call"
-    internal const val TOKEN = "/data/local/tmp/diplay-carplay-call"
 
     private val shell = BydAdbShell(TAG)
     private val writer = Executors.newSingleThreadExecutor { Thread(it, "diplay-carplay-call").apply { isDaemon = true } }
@@ -116,6 +115,7 @@ object BydCarPlayCall {
     @Volatile private var context: Context? = null
     private var shown: CarPlayCallCard? = null // writer thread
     private var watcherRunning = false // writer thread
+    private var watcherToken: String? = null // writer thread; unique for each displayed call lifetime
 
     fun attach(appContext: Context) {
         context = appContext.applicationContext
@@ -149,28 +149,31 @@ object BydCarPlayCall {
     }
 
     private fun apply(app: Context, wanted: CarPlayCallCard?) {
+        if (wanted != null && !BydOutputSettings.carPlayCalls(app)) return
         // Only the newest state matters; older queued ones are skipped.
         if (wanted != current() && !(wanted == null && !BydOutputSettings.carPlayCalls(app))) return
         if (wanted == shown) return
         if (wanted == null) {
             if (shown == null) return
-            shell.run(app, "rm -f $TOKEN")
-            watcherRunning = false
-            if (run(app, "end -")) shown = null
+            val token = watcherToken ?: return
+            if (run(app, "end - $token")) {
+                shown = null
+                watcherToken = null
+                watcherRunning = false
+            }
             return
         }
-        val name = Base64.encodeToString(wanted.name.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+        val name = Base64.encodeToString(wanted.name.toByteArray(Charsets.UTF_8), Base64.NO_WRAP).ifEmpty { "-" }
         val phase = wanted.phase.name.lowercase()
-        if (!run(app, "$phase $name")) return
-        shown = wanted
-        // The watcher reads the phase and, when connected, the start time (seconds) from the token.
+        val token = watcherToken ?: CarPlayCallWatchOwnership.newToken(app.packageName)
         val since = wanted.activeSinceMillis?.let { it / 1000 } ?: 0
-        shell.run(app, "echo '$phase $since' > $TOKEN")
+        if (!run(app, "$phase $name $token $since")) return
+        watcherToken = token
+        shown = wanted
         if (!watcherRunning) {
             val apk = app.applicationInfo.sourceDir
-            val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $TOKEN ${app.packageName}"
-            shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
-            watcherRunning = true
+            val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} ${android.os.Process.myPid()}"
+            watcherRunning = shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &") != null
         }
     }
 
@@ -194,6 +197,7 @@ object BydCarPlayCall {
  * process is gone; it exits once the token is removed. Prints "name=result" per write; 0 is success.
  */
 object BydCarPlayCallTool {
+    private val ownership = CarPlayCallWatchOwnership()
     private const val INSTRUMENT = 1007
     private const val AUDIO = 1002
     private const val SETTING = 1023
@@ -213,9 +217,14 @@ object BydCarPlayCallTool {
         try {
             val device = device()
             when (args.getOrNull(0)) {
-                "watch" -> watch(device, args.getOrNull(1) ?: return, args.getOrNull(2) ?: return)
-                "end" -> end(device)
-                else -> call(device, args[0], args.getOrNull(1))
+                "watch" -> watch(device, args.getOrNull(1) ?: return,
+                    args.getOrNull(2) ?: return, args.getOrNull(3) ?: return)
+                "end" -> ownership.retire(args.getOrNull(2) ?: return) { end(device) }
+                else -> ownership.claim(args.getOrNull(2) ?: return) { token ->
+                    call(device, args[0], args.getOrNull(1))
+                    val since = args.getOrNull(3)?.toLongOrNull() ?: 0
+                    token.writeText("${args[0]} $since")
+                }
             }
         } catch (error: Throwable) {
             println("write=ERR ${describe(error)}")
@@ -248,32 +257,35 @@ object BydCarPlayCallTool {
         device.set("audio", AUDIO, "$IDS\$Audio", "AUDIO_CARPLAY_CALL_STATUS", AUDIO_IDLE)
     }
 
-    private fun watch(device: Device, tokenPath: String, packageName: String) {
+    private fun watch(device: Device, tokenPath: String, packageName: String, processId: String) {
         val token = java.io.File(tokenPath)
         val started = System.currentTimeMillis()
         while (token.exists() && System.currentTimeMillis() - started < MAX_WATCH_MILLIS) {
-            if (!running(packageName)) {
-                token.delete()
-                end(device)
+            if (!running(packageName, processId)) {
+                ownership.retire(tokenPath) { end(device) }
                 return
             }
-            val parts = runCatching { token.readText().trim().split(' ') }.getOrDefault(emptyList())
-            val since = parts.getOrNull(1)?.toLongOrNull() ?: 0
-            if (parts.firstOrNull() == "active" && since > 0) {
-                val seconds = (System.currentTimeMillis() / 1000 - since).coerceIn(0, 99L * 3600 + 3599)
-                device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_HOUR_SET", (seconds / 3600).toInt())
-                device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_MINUTE_SET", (seconds / 60 % 60).toInt())
-                device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_SECOND_SET", (seconds % 60).toInt())
+            val current = ownership.update(tokenPath) {
+                val parts = runCatching { it.readText().trim().split(' ') }.getOrDefault(emptyList())
+                val since = parts.getOrNull(1)?.toLongOrNull() ?: 0
+                if (parts.firstOrNull() == "active" && since > 0) {
+                    val seconds = (System.currentTimeMillis() / 1000 - since).coerceIn(0, 99L * 3600 + 3599)
+                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_HOUR_SET", (seconds / 3600).toInt())
+                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_MINUTE_SET", (seconds / 60 % 60).toInt())
+                    device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_SECOND_SET", (seconds % 60).toInt())
+                }
             }
+            if (!current) { ownership.retire(tokenPath) {}; return }
             Thread.sleep(1000)
         }
+        ownership.retire(tokenPath) { end(device) }
     }
 
-    private fun running(packageName: String): Boolean = runCatching {
+    private fun running(packageName: String, processId: String): Boolean = runCatching {
         val process = ProcessBuilder("pidof", packageName).redirectErrorStream(true).start()
         val pid = process.inputStream.bufferedReader().readText().trim()
         process.waitFor()
-        pid.isNotEmpty()
+        pid.split(Regex("\\s+")).contains(processId)
     }.getOrDefault(true)
 
     @SuppressLint("PrivateApi")

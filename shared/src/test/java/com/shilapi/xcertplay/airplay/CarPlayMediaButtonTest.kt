@@ -19,7 +19,9 @@ class CarPlayMediaButtonTest {
         assertEquals(CarPlayMediaButton.PLAY_PAUSE, CarPlayMediaButton.forKeyCode(KeyEvent.KEYCODE_HEADSETHOOK))
         assertEquals(CarPlayMediaButton.PLAY_PAUSE, CarPlayMediaButton.forKeyCode(353))
         // DiLink 3 (Han, GCC) sends KEYCODE_AUTO_MEDIA_PLAY_PAUSE unchanged.
-        assertEquals(CarPlayMediaButton.PLAY_PAUSE, CarPlayMediaButton.forKeyCode(331))
+        assertNull(CarPlayMediaButton.forKeyCode(331))
+        assertEquals(CarPlayMediaButton.PLAY_PAUSE,
+            CarPlayMediaButton.forKeyCode(331, experimentalDiLink3Keys = true))
     }
 
     @Test

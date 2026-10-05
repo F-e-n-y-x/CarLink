@@ -607,4 +607,6 @@
     <string name="carplay_rotation_picture">Квадратная картинка</string>
     <string name="carplay_rotation_smoother">Плавнее (1920)</string>
     <string name="carplay_rotation_sharper">Чётче (размер экрана)</string>
+    <string name="carplay_call_controls_experimental">Кнопки вызовов CarPlay (экспериментально)</string>
+    <string name="carplay_call_controls_experimental_description">Включает непроверенные кнопки вызовов, голосового управления и воспроизведения/паузы DiLink 3. Требуется проверка в автомобиле. По умолчанию выключено; карточки вызовов на приборной панели настраиваются отдельно.</string>
 </resources>

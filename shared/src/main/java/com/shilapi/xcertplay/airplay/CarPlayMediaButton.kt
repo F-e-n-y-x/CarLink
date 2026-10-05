@@ -45,15 +45,15 @@ object CarPlayMediaButton {
         keyCode == KEYCODE_BYD_CARPLAY_VOICE || keyCode == KEYCODE_BYD_CARPLAY_VOICE_LONG
 
     /** The CarPlay press for [keyCode], or null when the key is not a media key CarPlay handles. */
-    fun forKeyCode(keyCode: Int): Int? = when (keyCode) {
+    fun forKeyCode(keyCode: Int, experimentalDiLink3Keys: Boolean = false): Int? = when (keyCode) {
         KeyEvent.KEYCODE_MEDIA_NEXT -> NEXT
         KeyEvent.KEYCODE_MEDIA_PREVIOUS -> PREVIOUS
         KeyEvent.KEYCODE_MEDIA_PLAY,
         KeyEvent.KEYCODE_MEDIA_PAUSE,
         KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
         KeyEvent.KEYCODE_HEADSETHOOK,
-        KEYCODE_BYD_AUTO_MEDIA_PLAY_PAUSE,
-        KEYCODE_BYD_AUTO_MEDIA_PLAY_PAUSE_DILINK3 -> PLAY_PAUSE
+        KEYCODE_BYD_AUTO_MEDIA_PLAY_PAUSE -> PLAY_PAUSE
+        KEYCODE_BYD_AUTO_MEDIA_PLAY_PAUSE_DILINK3 -> if (experimentalDiLink3Keys) PLAY_PAUSE else null
         else -> null
     }
 }

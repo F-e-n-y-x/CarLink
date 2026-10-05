@@ -607,4 +607,6 @@
     <string name="carplay_rotation_picture">Imagen cuadrada</string>
     <string name="carplay_rotation_smoother">Más fluida (1920)</string>
     <string name="carplay_rotation_sharper">Más nítida (tamaño de la pantalla)</string>
+    <string name="carplay_call_controls_experimental">Botones de llamadas de CarPlay (experimental)</string>
+    <string name="carplay_call_controls_experimental_description">Activa los botones de llamada, voz y reproducción/pausa de DiLink 3 aún sin verificar. Falta probarlos en el vehículo. Desactivado de forma predeterminada; las tarjetas de llamadas del cuadro tienen un ajuste independiente.</string>
 </resources>

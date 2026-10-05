@@ -20,6 +20,7 @@ import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.glance.CarPlayGlance
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.hud.BydOutputSettings
 
 /**
  * Optional: steering-wheel keys zoom CarPlay's dashboard map and work as a CarPlay joystick. BYD's window
@@ -114,7 +115,8 @@ class WheelKeyService : AccessibilityService() {
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
         val down = event.action == KeyEvent.ACTION_DOWN
         if (CarPlayCallKeys.onKey(this, event.keyCode, down)) return true
-        if (CarPlayMediaButton.opensSiriWhileCarPlay(event.keyCode) && session() != null) {
+        if (BydOutputSettings.carPlayCallControls(this) &&
+            CarPlayMediaButton.opensSiriWhileCarPlay(event.keyCode) && session() != null) {
             if (!down) Log.i(TAG, "CarPlay voice key ${event.keyCode}: Siri sent=${CarPlayBackgroundSession.snapshot()?.controller?.requestSiri() == true}")
             return true
         }

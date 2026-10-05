@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
+import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.hud.CarPlayCallKeyPolicy
 import com.shilapi.xcertplay.orchestration.CarPlayController
 
@@ -32,6 +33,7 @@ internal object CarPlayCallKeys {
             val app = context.applicationContext
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
+                    if (!BydOutputSettings.carPlayCallControls(context)) return
                     val keyCode = intent.getIntExtra(CarPlayCallKeyPolicy.EXTRA_KEYCODE, -1)
                     val controller = currentController()
                     val action = CarPlayCallKeyPolicy.onHangUpBroadcast(
@@ -47,9 +49,10 @@ internal object CarPlayCallKeys {
             runCatching {
                 val filter = IntentFilter(CarPlayCallKeyPolicy.ACTION_BYD_HANG_UP)
                 if (android.os.Build.VERSION.SDK_INT >= 33) {
-                    app.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+                    app.registerReceiver(receiver, filter, android.Manifest.permission.DUMP, null,
+                        Context.RECEIVER_EXPORTED)
                 } else {
-                    app.registerReceiver(receiver, filter)
+                    app.registerReceiver(receiver, filter, android.Manifest.permission.DUMP, null)
                 }
             }.onFailure { Log.w(TAG, "hang-up broadcast unavailable", it) }
             installed = true
@@ -58,6 +61,7 @@ internal object CarPlayCallKeys {
 
     /** Returns true when the key belongs to a CarPlay call and must not reach the car. */
     fun onKey(context: Context, keyCode: Int, down: Boolean, controller: CarPlayController? = currentController()): Boolean {
+        if (!BydOutputSettings.carPlayCallControls(context)) return false
         val action = CarPlayCallKeyPolicy.onKey(keyCode, down, BydNavigationOutputs.carPlayCall(), controller.hasSession())
         when (action) {
             CarPlayCallKeyPolicy.Action.PASS -> return false
@@ -77,6 +81,7 @@ internal object CarPlayCallKeys {
 
     private fun returnToCarPlay(app: Context) {
         handler.postDelayed({
+            if (!BydOutputSettings.carPlayCallControls(app) || !currentController().hasSession()) return@postDelayed
             runCatching {
                 app.startActivity(
                     Intent(app, CarPlayHostActivity::class.java)

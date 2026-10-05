@@ -667,4 +667,6 @@
     <string name="carplay_rotation_smoother">更流畅（1920）</string>
     <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
     <string name="auto_grant_incomplete">未验证全部请求权限。请检查下方各项状态；开启网络 ADB 后重试，或使用手动设置。现有权限保持不变。</string>
+    <string name="carplay_call_controls_experimental">CarPlay 通话按键（实验功能）</string>
+    <string name="carplay_call_controls_experimental_description">启用尚未验证的 DiLink 3 通话、语音和播放/暂停按键。仍需实车测试。默认关闭；仪表通话卡片为独立设置。</string>
 </resources>
