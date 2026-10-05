@@ -593,4 +593,11 @@
     <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
+    <string name="carplay_dock">Панель приложений CarPlay</string>
+    <string name="carplay_dock_automatic">Автоматически</string>
+    <string name="carplay_dock_driver_side">Со стороны водителя</string>
+    <string name="carplay_dock_bottom">Снизу</string>
+    <string name="carplay_dock_hint">Где CarPlay показывает приложения, часы и состояние. Между «Со стороны водителя» и «Снизу» переключается сразу; «Автоматически» оставляет выбор iPhone и действует после переподключения.</string>
+    <string name="split_screen_areas">CarPlay в разделённом экране</string>
+    <string name="split_screen_areas_description">Когда головное устройство показывает DiPlay в разделённом экране, CarPlay перерисовывается под это окно, а не уменьшается с чёрными полосами, и возвращается на весь экран без переподключения. Размер окна запоминается в первый раз, поэтому со следующего подключения картинка точно по размеру. Если панель приложений на «Автоматически», CarPlay тогда ставит её снизу. Применяется со следующего подключения.</string>
 </resources>

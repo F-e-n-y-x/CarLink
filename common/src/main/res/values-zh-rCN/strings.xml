@@ -636,4 +636,11 @@
     <string name="first_tcp_timeout">等待 iPhone 接入 CarPlay 超时</string>
     <string name="wireless_startup_retries_exhausted">自动重试已停止，请检查连接后手动重试。</string>
     <string name="retry_carplay_connection">重新连接</string>
+    <string name="carplay_dock">CarPlay 程序栏</string>
+    <string name="carplay_dock_automatic">自动</string>
+    <string name="carplay_dock_driver_side">驾驶员一侧</string>
+    <string name="carplay_dock_bottom">底部</string>
+    <string name="carplay_dock_hint">CarPlay 显示应用、时钟和状态的位置。在“驾驶员一侧”和“底部”之间切换立即生效；“自动”由 iPhone 决定，重新连接后生效。</string>
+    <string name="split_screen_areas">分屏中的 CarPlay</string>
+    <string name="split_screen_areas_description">车机以分屏显示 DiPlay 时，CarPlay 会按该窗口重新绘制，而不是缩小并留黑边；返回全屏也无需重新连接。首次使用时会记住窗口大小，下次连接起画面完全贴合。程序栏设为“自动”时，CarPlay 会把它放在底部。下次连接时生效。</string>
 </resources>

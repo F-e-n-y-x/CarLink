@@ -548,6 +548,12 @@ class DiPlayActivity : ComponentActivity() {
             choice(card, getString(R.string.frame_rate), listOf(getString(R.string.s_30_fps_lighter_load), getString(R.string.s_60_fps_smoother_motion)), if (AirPlayPersistence.loadFps(this) == 60) 1 else 0) { AirPlayPersistence.saveFps(this, if (it == 1) 60 else 30) }
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it) }
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }
+            carPlayDockControl(card)
+            toggle(card, getString(R.string.split_screen_areas), getString(R.string.split_screen_areas_description),
+                SplitScreenSettings.enabled(this)) {
+                SplitScreenSettings.setEnabled(this, it)
+                reconnectForClusterMap()
+            }
             addSystemBarControls(
                 hideTopBar = AirPlayPersistence.loadHideTopBar(this),
                 hideBottomBar = AirPlayPersistence.loadHideBottomBar(this),
@@ -2461,6 +2467,29 @@ class DiPlayActivity : ComponentActivity() {
         }
         // Run another traversal after the platform has finished its initial button measurement.
         decor.post { if (dialog.isShowing) decor.requestLayout() }
+    }
+
+    /** Where CarPlay puts its dock; between the two fixed edges it moves at once, otherwise on reconnect. */
+    private fun carPlayDockControl(card: LinearLayout) {
+        val docks = CarPlayDock.entries
+        choice(card, getString(R.string.carplay_dock), listOf(
+            getString(R.string.carplay_dock_automatic),
+            getString(R.string.carplay_dock_driver_side),
+            getString(R.string.carplay_dock_bottom),
+        ), docks.indexOf(CarPlayDock.load(this)), reconnects = false) {
+            val from = CarPlayDock.load(this)
+            val to = docks[it]
+            CarPlayDock.save(this, to)
+            val session = CarPlayBackgroundSession.snapshot()
+            val areas = session?.display?.viewAreas
+            val target = to.edge?.let { areas?.withDock(it) }
+            if (CarPlayDock.movesLive(from, to) && areas != null && target != null) {
+                if (session.controller.showViewArea(target)) areas.use(target)
+            } else {
+                reconnectForClusterMap()
+            }
+        }
+        card.addView(label(getString(R.string.carplay_dock_hint), 14, MUTED).apply { setPadding(0, 0, 0, dp(18)) })
     }
 
     private fun carPlaySizeControl(parent: LinearLayout) {
