@@ -124,9 +124,9 @@ class WheelKeyService : AccessibilityService() {
             if (!down) Log.i(TAG, "CarPlay voice key ${event.keyCode}: Siri sent=${CarPlayBackgroundSession.snapshot()?.controller?.requestSiri() == true}")
             return true
         }
-        val key = WheelKey(event.keyCode, event.scanCode, deviceName(event.deviceId))
+        val key = WheelKey.of(event)
         refreshEligibility()
-        val calling = inCall()
+        val calling = inCall(this)
         if (calling) clearLearning()
         val enabled = WheelZoomSettings.enabled(this)
         val role = if (WheelZoomSettings.anyEnabled(this)) WheelZoomSettings.roleOf(this, key) else null
@@ -265,10 +265,6 @@ class WheelKeyService : AccessibilityService() {
         }
     }
 
-    // Android is in a call or communication audio mode during CarPlay and Bluetooth calls (and ringing).
-    private fun inCall(): Boolean =
-        (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.mode.let { it != null && it != AudioManager.MODE_NORMAL }
-
     // On the centre screen, and where the song shows on the dashboard: zoom with BYD's Bluetooth-music
     // icon (source 6), volume with the song's usual icon.
     private fun announce(zoomOn: Boolean) {
@@ -283,10 +279,8 @@ class WheelKeyService : AccessibilityService() {
         }
     }
 
-    private fun deviceName(id: Int): String = runCatching { InputDevice.getDevice(id)?.name }.getOrNull() ?: "?"
-
     companion object {
-        private const val TAG = "DiPlay-WheelKeys"
+        internal const val TAG = "DiPlay-WheelKeys"
         private const val ZOOM_NOTE_SOURCE = 6
         private const val ELIGIBILITY_POLL_MILLIS = 250L
         private const val ROUTE_CHECK_MILLIS = 1_000L
@@ -415,6 +409,10 @@ class WheelKeyService : AccessibilityService() {
     }
 }
 
+// Android is in a call or communication audio mode during CarPlay and Bluetooth calls (and ringing).
+internal fun inCall(context: Context): Boolean =
+    (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.mode.let { it != null && it != AudioManager.MODE_NORMAL }
+
 /** Use the input-device ID for a held press; saved assignments still use the stable device name. */
 private data class PhysicalWheelKey(val device: Int, val code: Int, val scan: Int)
 
@@ -441,6 +439,9 @@ data class WheelKey(val code: Int, val scan: Int, val device: String) {
     fun encode(): String = "$code|$scan|$device"
 
     companion object {
+        fun of(event: KeyEvent): WheelKey = WheelKey(event.keyCode, event.scanCode,
+            runCatching { InputDevice.getDevice(event.deviceId)?.name }.getOrNull() ?: "?")
+
         fun decode(text: String?): WheelKey? = text?.split('|', limit = 3)?.takeIf { it.size == 3 }?.let {
             WheelKey(it[0].toIntOrNull() ?: return null, it[1].toIntOrNull() ?: return null, it[2])
         }
@@ -627,6 +628,8 @@ object WheelZoomSettings {
 
     /** Whether any setting needs the key service. */
     fun anyEnabled(context: Context): Boolean = enabled(context) || joystick(context) || siriKey(context)
+
+    fun isSiriKey(context: Context, key: WheelKey): Boolean = siriKey(context) && key(context, Role.SIRI) == key
 
     fun key(context: Context, role: Role): WheelKey? =
         WheelKey.decode(prefs(context).getString("key_${role.name}", null)) ?: role.defaultKey

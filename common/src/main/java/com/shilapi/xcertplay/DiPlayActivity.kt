@@ -26,6 +26,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -65,6 +66,8 @@ import kotlin.math.roundToInt
 /** DiAuto's visual language, with a connection flow for an independent CarPlay receiver. */
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
+    private var windowLearning: WindowKeyLearning? = null
+    private val endWindowLearning = Runnable { cancelKeyLearning() }
     private var page = "home"
     private var clusterSafeAreaDialog: Dialog? = null
     private var clusterContentRequestVersion = 0L
@@ -260,7 +263,7 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
     override fun onPause() {
-        WheelKeyService.cancelLearning()
+        cancelKeyLearning()
         pausedForAdbSwitchChange = adbSwitchChangePending
         handler.removeCallbacks(tick)
         super.onPause()
@@ -269,7 +272,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun onDestroy() {
         hotspotJoinControls?.close()
         cancelUsbPermissionSetup()
-        WheelKeyService.cancelLearning()
+        cancelKeyLearning()
         handler.removeCallbacks(automaticVehicleValidation)
         adbCheckGeneration++
         synchronized(vehicleOperationLock) {
@@ -296,7 +299,7 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun render() {
         // A pending assignment belongs to the widgets being replaced, never to another page.
-        WheelKeyService.cancelLearning()
+        cancelKeyLearning()
         // A restore still waiting for layout keeps its target: the old page was never laid out.
         val previousScrollY = (pendingScrollY ?: rootScroll?.scrollY)?.takeIf { renderedPage == page }
         status = null; connectButton = null; disconnectButton = null; lastRunning = null; carButtonCard = null
@@ -1678,15 +1681,44 @@ class DiPlayActivity : ComponentActivity() {
             getString(R.string.wheel_key_assign, name, key?.toString() ?: getString(R.string.wheel_key_none))
         lateinit var assign: android.widget.Button
         assign = button(current(), false) {
-            val started = WheelKeyService.learn(role, cancelled = {
-                runOnUiThread { assign.text = current() }
-            }) { _, key ->
-                runOnUiThread { assign.text = current(key) }
-            }
+            val cancelled = { runOnUiThread { assign.text = current() } }
+            val started = WheelKeyService.learn(role, cancelled) { _, key -> runOnUiThread { assign.text = current(key) } } ||
+                // Without the service the Siri key is learnt from this window, so only keys that reach apps.
+                (role == WheelZoomSettings.Role.SIRI && learnInWindow(role, cancelled) { assign.text = current(it) })
             if (started) assign.text = getString(R.string.wheel_key_press, name)
             else toast(getString(R.string.wheel_keys_service_off))
         }
         card.addView(assign, matchButton(10, 56))
+    }
+
+    private class WindowKeyLearning(val role: WheelZoomSettings.Role, val cancelled: () -> Unit, val done: (WheelKey) -> Unit)
+
+    private fun learnInWindow(role: WheelZoomSettings.Role, cancelled: () -> Unit, done: (WheelKey) -> Unit): Boolean {
+        cancelKeyLearning()
+        windowLearning = WindowKeyLearning(role, cancelled, done)
+        handler.postDelayed(endWindowLearning, WheelKeyService.LEARNING_TIMEOUT_MILLIS)
+        return true
+    }
+
+    private fun cancelKeyLearning() {
+        WheelKeyService.cancelLearning()
+        handler.removeCallbacks(endWindowLearning)
+        windowLearning?.cancelled?.invoke()
+        windowLearning = null
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val learning = windowLearning
+        if (learning == null || event.keyCode == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            handler.removeCallbacks(endWindowLearning)
+            windowLearning = null
+            val key = WheelKey.of(event)
+            WheelZoomSettings.assign(this, learning.role, key)
+            Log.i(WheelKeyService.TAG, "${learning.role} key is now $key (learnt without the service)")
+            learning.done(key)
+        }
+        return true
     }
 
     /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */

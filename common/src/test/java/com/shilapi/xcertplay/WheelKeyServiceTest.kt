@@ -276,4 +276,13 @@ class WheelKeyServiceTest {
         assertEquals(1, learned)
         assertEquals(KeyEvent.KEYCODE_F7, WheelZoomSettings.key(service, WheelZoomSettings.Role.SIRI)?.code)
     }
+
+    @Test fun theSiriKeyMatchesOnlyWhileTheSettingIsOn() {
+        siriSetUp()
+        val assigned = WheelKey(KeyEvent.KEYCODE_F6, 0, "?")
+        assertTrue(WheelZoomSettings.isSiriKey(service, assigned))
+        assertFalse(WheelZoomSettings.isSiriKey(service, WheelKey(KeyEvent.KEYCODE_F6, 1, "?")))
+        WheelZoomSettings.setSiriKey(service, false)
+        assertFalse(WheelZoomSettings.isSiriKey(service, assigned))
+    }
 }

@@ -121,6 +121,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var connectionPanel: View? = null
     private var wifiRecoveryButton: View? = null
     private var reconnectAttempts = 0
+    private val siriKey = WheelSiriKey()
     private val startupRetryBudget = WirelessStartupRetryBudget()
     private var startupRetryStopped = false
     private var startupRetryButton: View? = null
@@ -1078,6 +1079,16 @@ class CarPlayHostActivity : ComponentActivity() {
 
         // During a CarPlay call the wheel's call key answers on the iPhone instead of opening BYD's phone app.
         if (CarPlayCallKeys.onKey(this, event.keyCode, event.action == KeyEvent.ACTION_DOWN, controller)) return true
+
+        // The wheel key service, when it runs, takes an assigned Siri key before this window sees it.
+        if (WheelZoomSettings.isSiriKey(this, WheelKey.of(event)) && !inCall(this)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && siriKey.opens(event.eventTime)) {
+                val message = "Siri: assigned key ${event.keyCode} sent=${controller?.requestSiri() == true}"
+                Log.i(WheelKeyService.TAG, message)
+                appendLog(message)
+            }
+            return true
+        }
 
         // Keep DiPlay's existing steering-wheel/voice-key Siri handling intact.
         if (!CarPlayMediaButton.opensSiri(event.keyCode)) return super.dispatchKeyEvent(event)

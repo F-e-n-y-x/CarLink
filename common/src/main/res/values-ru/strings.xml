@@ -592,7 +592,7 @@
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">нет</string>
     <string name="wheel_siri_key">Кнопка Siri на руле</string>
-    <string name="wheel_siri_key_description">Открывает Siri кнопкой на руле, которую вы выберете, для автомобилей, где DiPlay не видит кнопку голосового управления. Нужна служба кнопок руля. Без CarPlay или во время звонка кнопка сохраняет своё действие в автомобиле.</string>
+    <string name="wheel_siri_key_description">Открывает Siri кнопкой на руле, которую вы выберете, пока CarPlay на экране. Кнопка, которую автомобиль оставляет себе, работает только со службой кнопок руля; служба работает и когда CarPlay в фоне. Без CarPlay или во время звонка кнопка сохраняет своё действие в автомобиле.</string>
     <string name="wheel_key_role_back">назад</string>
     <string name="wheel_key_service_label">Кнопки руля DiPlay</string>
     <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
