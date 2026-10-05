@@ -1,5 +1,7 @@
 # Unreleased
 
+- Cross-fade the cluster waiting placeholder and the map (300 ms) and use a light waiting screen instead of a black panel.
+
 - Fix the DiLink 3 cluster map staying empty: send full-screen projection (16) before half-screen projection (17), because after projection off (18) the cluster ignores 17 on its own.
 
 # DiPlay 0.2.12 — 2026-10-04
