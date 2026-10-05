@@ -413,6 +413,17 @@ class CarPlayHostActivity : ComponentActivity() {
     private var failurePendingAfterMenu: CarPlayStatus.Failed? = null
     private val shuttingDown = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var sidePanel: LinearLayout? = null
+    private var sidePanelContent: View? = null
+    private var sidePanelSpacer: View? = null
+    private var sidePanelBattery: TextView? = null
+    private var sidePanelShown = false
+    private val sidePanelTick = object : Runnable {
+        override fun run() {
+            refreshSidePanel()
+            if (sidePanelShown) mainHandler.postDelayed(this, SIDE_PANEL_REFRESH_MILLIS)
+        }
+    }
     private val teardownExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
@@ -1293,6 +1304,8 @@ class CarPlayHostActivity : ComponentActivity() {
         panel.addView(gestureHint)
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
+        // Above the video and gesture layer, below the menus.
+        sidePanel = buildSidePanel().also { root.addView(it, FrameLayout.LayoutParams(-1, -1)) }
         var preparationHeight = -1
         fun updatePreparationLayout() {
             val height = viewport.height - viewport.paddingTop - viewport.paddingBottom
@@ -1358,6 +1371,89 @@ class CarPlayHostActivity : ComponentActivity() {
         return root
     }
 
+    // DiPlay's side panel: the right third of a landscape screen or a band at the bottom of a portrait one,
+    // over the part of the canvas CarPlay leaves black. The rest of the row is an unclickable spacer, so
+    // touches there still reach the gesture layer and CarPlay.
+    private fun buildSidePanel(): LinearLayout {
+        val row = LinearLayout(this).apply {
+            weightSum = 3f
+            visibility = View.GONE
+        }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            setBackgroundColor(Color.rgb(16, 16, 18))
+            setPadding(dp(24), dp(24), dp(24), dp(24))
+        }
+        panel.addView(android.widget.TextClock(this).apply {
+            format24Hour = "HH:mm"
+            format12Hour = "h:mm"
+            textSize = 72f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        })
+        sidePanelBattery = TextView(this).apply {
+            textSize = 30f
+            setTextColor(Color.rgb(200, 200, 205))
+            gravity = Gravity.CENTER
+            setPadding(0, dp(24), 0, dp(32))
+        }
+        panel.addView(sidePanelBattery)
+        panel.addView(Button(this).apply {
+            text = getString(R.string.side_panel_full_screen)
+            textSize = 22f
+            setOnClickListener { showSidePanel(false) }
+        })
+        sidePanelContent = panel
+        sidePanelSpacer = View(this)
+        arrangeSidePanel(row, portrait = false)
+        return row
+    }
+
+    private fun arrangeSidePanel(row: LinearLayout, portrait: Boolean) {
+        val panel = sidePanelContent ?: return
+        val spacer = sidePanelSpacer ?: return
+        row.removeAllViews()
+        row.orientation = if (portrait) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+        fun params(weight: Float) = if (portrait) LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, weight)
+            else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight)
+        row.addView(spacer, params(2f))
+        row.addView(panel, params(1f))
+    }
+
+    private fun showSidePanel(show: Boolean) {
+        val areas = sessionDisplay?.viewAreas ?: return
+        val view = videoView ?: return
+        val split = isMultiWindowActive()
+        val portrait = if (split) screenPortrait() else view.height > view.width
+        val target = if (show) areas.sidePanel(portrait) else areas.indexFor(view.width, view.height, split, portrait)
+        val sent = target != null && controller?.showViewArea(target) == true
+        appendLog("Side panel ${if (show) "shown" else "hidden"}: view area $target sent=$sent")
+        if (!sent || target == null) return
+        areas.use(target)
+        sidePanelShown = show
+        sidePanel?.let { arrangeSidePanel(it, portrait) }
+        sidePanel?.visibility = if (show) View.VISIBLE else View.GONE
+        mainHandler.removeCallbacks(sidePanelTick)
+        if (show) sidePanelTick.run()
+        updateVideoLayout(view.width, view.height)
+    }
+
+    private fun resetSidePanel() {
+        sidePanelShown = false
+        sidePanel?.visibility = View.GONE
+        mainHandler.removeCallbacks(sidePanelTick)
+    }
+
+    // The battery shows only where DiPlay already reads it for the iPhone.
+    private fun refreshSidePanel() {
+        val battery = if (com.shilapi.xcertplay.hud.BydOutputSettings.batteryToIphoneActive(this)) {
+            com.shilapi.xcertplay.hud.BydNavigationOutputs.batteryStatus(applicationContext).snapshot()
+        } else null
+        sidePanelBattery?.text = battery?.let { "🔋 ${Math.round(it.batteryPercent)} %  ·  ${it.rangeKm} km" }.orEmpty()
+    }
+
     private fun buildSettingsMenu(): View {
         val overlay = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -1380,6 +1476,16 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
         )
+        if (sessionDisplay?.viewAreas?.sidePanel() != null) {
+            content.addView(Button(this).apply {
+                text = getString(if (sidePanelShown) R.string.side_panel_full_screen else R.string.side_panel_show)
+                textSize = 20f
+                setOnClickListener {
+                    cancelSettingsEdits()
+                    showSidePanel(!sidePanelShown)
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
         content.addView(
             settingsCategoryHeader(getString(R.string.connection)),
             LinearLayout.LayoutParams(
@@ -3444,13 +3550,14 @@ class CarPlayHostActivity : ComponentActivity() {
         val viewAreas = if (square == null) {
             CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
                 CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
-            ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels)
+            ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
+                sidePanel = SidePanelSettings.enabled(this))
         } else {
             val areaShort = (shortPixels.toLong() * square / longPixels).toInt() and 1.inv()
             CarPlayViewAreas.build(square, square, listOf(
                 CarPlayViewAreas.Screen(square, areaShort, portrait = false),
                 CarPlayViewAreas.Screen(areaShort, square, portrait = true),
-            ), dock, splitWindow, startPortrait = size.height > size.width)
+            ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this))
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
@@ -3943,6 +4050,7 @@ class CarPlayHostActivity : ComponentActivity() {
             },
         )
         controller = next
+        resetSidePanel() // a new session starts without the side panel
         updateClusterMapShown()
         CarPlayMediaKeys.attach(this, next)
         if (airPlayConfig.videoInCar) CarPlayVideo.attach(this, next)
@@ -4124,6 +4232,7 @@ class CarPlayHostActivity : ComponentActivity() {
             else SplitScreenSettings.saveWindow(this, false, size.width / longWindow, size.height / shortWindow)
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
+        if (sidePanelShown) resetSidePanel() // a turn or the split screen ends the side panel
         // The same whole-screen area without a turn (a camera window, say) keeps the usual handling.
         if (!turned && target == areas.current && areas.kindOf(target) == CarPlayViewAreas.Kind.FULL_SCREEN) return false
         activeDisplaySize = size
@@ -4172,7 +4281,7 @@ class CarPlayHostActivity : ComponentActivity() {
         // the canvas; that area fills the window and the rest falls outside it. Video and touches both
         // follow this. An area of the whole canvas keeps the usual fit.
         display.viewAreas?.let { areas ->
-            val area = areas.areas[areas.current]
+            val area = areas.layoutArea(areas.current)
             if (area.width != display.width || area.height != display.height) {
                 val scaleX = viewWidth.toFloat() / area.width
                 val scaleY = viewHeight.toFloat() / area.height
@@ -4718,6 +4827,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private companion object {
+        const val SIDE_PANEL_REFRESH_MILLIS = 5_000L
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111

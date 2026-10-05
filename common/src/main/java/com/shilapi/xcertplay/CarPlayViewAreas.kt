@@ -18,7 +18,8 @@ class CarPlayViewAreas private constructor(
     private val slots: List<Slot>,
     initial: Int,
 ) {
-    enum class Kind { FULL_SCREEN, SPLIT_SCREEN }
+    /** What an area is for; SIDE_PANEL is CarPlay beside DiPlay's panel and is only chosen on request. */
+    enum class Kind { FULL_SCREEN, SPLIT_SCREEN, SIDE_PANEL }
 
     /** A full screen the canvas holds: its size and whether the screen is portrait then. */
     data class Screen(val width: Int, val height: Int, val portrait: Boolean)
@@ -52,6 +53,18 @@ class CarPlayViewAreas private constructor(
         return index(Kind.FULL_SCREEN, portrait, edge)
     }
 
+    /** The area beside DiPlay's side panel on the current (or given) screen, or null without one. */
+    fun sidePanel(portrait: Boolean = slots[current].portrait): Int? = index(Kind.SIDE_PANEL, portrait, areas[current].dockEdge)
+
+    /**
+     * The area to lay out the canvas by: beside the side panel CarPlay draws in part of its screen, so the
+     * whole screen is laid out and the panel covers the rest.
+     */
+    fun layoutArea(index: Int): AirPlayViewArea =
+        if (slots[index].kind == Kind.SIDE_PANEL) {
+            index(Kind.FULL_SCREEN, slots[index].portrait, areas[index].dockEdge)?.let { areas[it] } ?: areas[index]
+        } else areas[index]
+
     /** The area in use after moving the dock to [dockEdge], keeping the kind of area and the screen. */
     fun withDock(dockEdge: Int): Int? = index(kindOf(current), dockEdge)
 
@@ -64,9 +77,15 @@ class CarPlayViewAreas private constructor(
         private const val MAX_ASPECT_MISMATCH = 1.25
 
         /** One screen the size of the stream (no turning); see the general [build]. */
-        fun build(width: Int, height: Int, dock: CarPlayDock, splitWindow: Pair<Float, Float>?): CarPlayViewAreas? =
+        fun build(
+            width: Int,
+            height: Int,
+            dock: CarPlayDock,
+            splitWindow: Pair<Float, Float>?,
+            sidePanel: Boolean = false,
+        ): CarPlayViewAreas? =
             build(width, height, listOf(Screen(width, height, portrait = height > width)), dock,
-                splitWindow = { splitWindow }, startPortrait = height > width)
+                splitWindow = { splitWindow }, startPortrait = height > width, sidePanel = sidePanel)
 
         /**
          * The areas for a [canvasWidth] x [canvasHeight] stream holding [screens] (each at its top-left
@@ -81,9 +100,10 @@ class CarPlayViewAreas private constructor(
             dock: CarPlayDock,
             splitWindow: (portrait: Boolean) -> Pair<Float, Float>?,
             startPortrait: Boolean,
+            sidePanel: Boolean = false,
         ): CarPlayViewAreas? {
             val splits = screens.associateWith { splitWindow(it.portrait) }
-            if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } &&
+            if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } && !sidePanel &&
                 screens[0].width == canvasWidth && screens[0].height == canvasHeight) return null
             val edges = dock.edge?.let { listOf(AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE, AirPlayInfoPlist.DOCK_EDGE_BOTTOM) }
                 ?: listOf(null)
@@ -101,6 +121,16 @@ class CarPlayViewAreas private constructor(
                 for (edge in edges) {
                     areas += AirPlayViewArea(splitWidth, splitHeight, dockEdge = edge)
                     slots += Slot(Kind.SPLIT_SCREEN, screen.portrait)
+                }
+            }
+            if (sidePanel) for (screen in screens) {
+                // CarPlay keeps two thirds: the left of a landscape screen (the panel on the right) or the top
+                // of a portrait one (the panel at the bottom), the same edge of a turning screen.
+                val width = if (screen.portrait) screen.width else (screen.width * 2 / 3) and 1.inv()
+                val height = if (screen.portrait) (screen.height * 2 / 3) and 1.inv() else screen.height
+                for (edge in edges) {
+                    areas += AirPlayViewArea(width, height, dockEdge = edge)
+                    slots += Slot(Kind.SIDE_PANEL, screen.portrait)
                 }
             }
             val initial = areas.indices.firstOrNull {
