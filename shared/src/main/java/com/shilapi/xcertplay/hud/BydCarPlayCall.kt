@@ -181,7 +181,8 @@ object BydCarPlayCall {
         val apk = app.applicationInfo.sourceDir
         val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} $args")
             ?: return false
-        // A firmware without one of the features still shows the rest; only a tool that did not run is retried.
+        // A firmware without one of the features still shows the rest. A refused write makes the tool undo
+        // the call writes it made and report write=ERR, so the call is retried rather than marked shown.
         val failed = output.lineSequence().map { it.trim() }.filter { it.contains('=') }
             .filter { line -> line.substringAfter('=').trim().toIntOrNull() != 0 }.toList()
         if (failed.isNotEmpty()) Log.w(TAG, "call writes not accepted: ${failed.joinToString().take(200)}")
@@ -195,6 +196,7 @@ object BydCarPlayCall {
  * `ringing|dialing|active <base64 name>` and `end -`. `watch <token> <package>` sends the call time
  * every second while the token says `active <start seconds>`, and ends the call on the car when DiPlay's
  * process is gone; it exits once the token is removed. Prints "name=result" per write; 0 is success.
+ * A refused call write undoes the accepted ones (see [CarPlayCallWrites]) and reports write=ERR.
  */
 object BydCarPlayCallTool {
     private val ownership = CarPlayCallWatchOwnership()
@@ -211,6 +213,15 @@ object BydCarPlayCallTool {
     private const val AUDIO_IN_CALL = 0
     private const val AUDIO_IDLE = 1
     private const val MAX_WATCH_MILLIS = 6L * 60 * 60 * 1000
+
+    private class Feature(val device: Int, val idClass: String, val idName: String)
+
+    private val features = mapOf(
+        "audio" to Feature(AUDIO, "$IDS\$Audio", "AUDIO_CARPLAY_CALL_STATUS"),
+        "car" to Feature(SETTING, IDS, "SET_CALL_STATE_SET"),
+        "bt" to Feature(SETTING, IDS, "SET_CMD_BTCALL_STATE_SET"),
+        "state" to Feature(INSTRUMENT, IDS, "INSTRUMENT_CALL_STATE_SET"),
+    )
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -243,18 +254,29 @@ object BydCarPlayCallTool {
         }
         val name = encodedName?.takeIf { it != "-" }
             ?.let { String(java.util.Base64.getDecoder().decode(it), Charsets.UTF_8) }.orEmpty()
-        device.set("audio", AUDIO, "$IDS\$Audio", "AUDIO_CARPLAY_CALL_STATUS", AUDIO_IN_CALL)
-        device.set("car", SETTING, IDS, "SET_CALL_STATE_SET", 1)
-        device.set("bt", SETTING, IDS, "SET_CMD_BTCALL_STATE_SET", bt)
-        device.set("state", INSTRUMENT, IDS, "INSTRUMENT_CALL_STATE_SET", INSTRUMENT_IN_CALL)
-        device.setBytes("name", INSTRUMENT, IDS, "INSTRUMENT_CALL_INFO_SET", CarPlayCallState.nameBytes(name))
+        val writes = listOf(
+            CarPlayCallWrite("audio", AUDIO_IN_CALL, AUDIO_IDLE),
+            CarPlayCallWrite("car", 1, 0),
+            CarPlayCallWrite("bt", bt, BT_IDLE),
+            CarPlayCallWrite("state", INSTRUMENT_IN_CALL, INSTRUMENT_ENDED),
+        )
+        val accepted = CarPlayCallWrites.apply(
+            writes,
+            write = { step, value, undo -> device.set(if (undo) "undo-${step.label}" else step.label, features.getValue(step.label), value) },
+            name = { device.setBytes("name", INSTRUMENT, IDS, "INSTRUMENT_CALL_INFO_SET", CarPlayCallState.nameBytes(name)) },
+        )
+        check(accepted) { "the car refused a call write; the accepted ones were set back to idle" }
     }
 
     private fun end(device: Device) {
-        device.set("car", SETTING, IDS, "SET_CALL_STATE_SET", 0)
-        device.set("bt", SETTING, IDS, "SET_CMD_BTCALL_STATE_SET", BT_IDLE)
-        device.set("state", INSTRUMENT, IDS, "INSTRUMENT_CALL_STATE_SET", INSTRUMENT_ENDED)
-        device.set("audio", AUDIO, "$IDS\$Audio", "AUDIO_CARPLAY_CALL_STATUS", AUDIO_IDLE)
+        val results = listOf(
+            device.set("car", features.getValue("car"), 0),
+            device.set("bt", features.getValue("bt"), BT_IDLE),
+            device.set("state", features.getValue("state"), INSTRUMENT_ENDED),
+            device.set("audio", features.getValue("audio"), AUDIO_IDLE),
+        )
+        // Every idle value is still attempted; a refused one keeps ownership so the end is retried.
+        check(CarPlayCallWrites.Result.REFUSED !in results) { "the car refused a call end write" }
     }
 
     private fun watch(device: Device, tokenPath: String, packageName: String, processId: String) {
@@ -310,14 +332,21 @@ object BydCarPlayCallTool {
         private val setInt = deviceClass.getMethod("setMediaState", Int::class.java, Int::class.java, Int::class.java)
         private val setBuffer = deviceClass.getMethod("setMediaInfo", Int::class.java, Int::class.java, ByteArray::class.java)
 
-        fun set(label: String, device: Int, idClass: String, idName: String, value: Int) {
-            val id = featureId(idClass, idName) ?: return println("$label=ERR no $idName")
-            println("$label=${setInt.invoke(instance, device, id, value)}")
+        fun set(label: String, feature: Feature, value: Int): CarPlayCallWrites.Result {
+            val id = featureId(feature.idClass, feature.idName)
+                ?: return CarPlayCallWrites.Result.MISSING.also { println("$label=ERR no ${feature.idName}") }
+            return report(label, runCatching { setInt.invoke(instance, feature.device, id, value) })
         }
 
-        fun setBytes(label: String, device: Int, idClass: String, idName: String, value: ByteArray) {
-            val id = featureId(idClass, idName) ?: return println("$label=ERR no $idName")
-            println("$label=${setBuffer.invoke(instance, device, id, value)}")
+        fun setBytes(label: String, device: Int, idClass: String, idName: String, value: ByteArray): CarPlayCallWrites.Result {
+            val id = featureId(idClass, idName)
+                ?: return CarPlayCallWrites.Result.MISSING.also { println("$label=ERR no $idName") }
+            return report(label, runCatching { setBuffer.invoke(instance, device, id, value) })
+        }
+
+        private fun report(label: String, result: Result<Any?>): CarPlayCallWrites.Result {
+            println("$label=${result.fold({ it.toString() }, { "ERR ${describe(it)}" })}")
+            return if (result.getOrNull() == 0) CarPlayCallWrites.Result.DONE else CarPlayCallWrites.Result.REFUSED
         }
 
         fun quiet(device: Int, idClass: String, idName: String, value: Int) {

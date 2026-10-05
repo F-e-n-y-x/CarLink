@@ -141,7 +141,13 @@ Each displayed-call lifetime has a new package-qualified UUID token. The shell t
 ownership marker and vehicle writes with a file lock. A stale watcher, another variant's old
 process, or a prior PID cannot update or clear a newer call. Cleanup retires only its own token;
 an end write that throws retains ownership for retry. A queued update rechecks that dashboard
-output remains enabled before writing. This bounds lifecycle interference; it does not establish
+output remains enabled before writing. If the car refuses one of a call's writes (a non-zero result
+or an error), the tool sets the writes it already made back to their idle values, newest first, and
+reports a failure so DiPlay retries on the next call update instead of treating the call as shown. A
+feature this firmware does not define is skipped, not undone. End writes are all attempted; a
+refused one keeps ownership so the end is retried. The idle values are what BYD's CarPlay app sends
+when a call ends, not a snapshot of the previous state, because these command features have no
+confirmed read-back. This bounds lifecycle interference; it does not establish
 that every vehicle feature id/value or partial-write outcome is correct on a particular firmware.
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
