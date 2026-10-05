@@ -551,6 +551,22 @@ class DiPlayActivity : ComponentActivity() {
                 SplitScreenSettings.setEnabled(this, it)
                 reconnectForClusterMap()
             }
+            toggle(card, getString(R.string.carplay_rotation), getString(R.string.carplay_rotation_description),
+                CarPlayRotation.enabled(this)) {
+                CarPlayRotation.setEnabled(this, it)
+                render()
+                reconnectForClusterMap()
+            }
+            if (CarPlayRotation.enabled(this)) {
+                val pictures = CarPlayRotation.Picture.entries
+                choice(card, getString(R.string.carplay_rotation_picture), listOf(
+                    getString(R.string.carplay_rotation_smoother),
+                    getString(R.string.carplay_rotation_sharper),
+                ), pictures.indexOf(CarPlayRotation.picture(this)), reconnects = false) {
+                    CarPlayRotation.setPicture(this, pictures[it])
+                    reconnectForClusterMap()
+                }
+            }
             addSystemBarControls(
                 hideTopBar = AirPlayPersistence.loadHideTopBar(this),
                 hideBottomBar = AirPlayPersistence.loadHideBottomBar(this),
