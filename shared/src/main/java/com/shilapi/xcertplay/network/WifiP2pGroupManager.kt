@@ -137,7 +137,11 @@ class WifiP2pGroupManager(
                 "frequencyMHz=${WifiP2pChannels.frequencyMhz(preferredChannel) ?: "auto"}")
             diagnostic(when {
                 preferredChannel != WifiP2pChannels.AUTO -> "Wi-Fi P2P remembered skipped=manual_channel"
-                preferred != null -> "Wi-Fi P2P remembered first mode=${preferred.request.mode} frequencyMHz=${preferred.request.frequencyMHz ?: "auto"}"
+                preferred != null -> {
+                    val position = if (P2pStartupRecovery.plan(stationFrequency, preferred.request).first() == preferred.request)
+                        "first" else "deferred"
+                    "Wi-Fi P2P remembered $position mode=${preferred.request.mode} frequencyMHz=${preferred.request.frequencyMHz ?: "auto"}"
+                }
                 remembered != null -> "Wi-Fi P2P remembered skipped=station_channel_changed"
                 else -> "Wi-Fi P2P remembered unavailable"
             })
