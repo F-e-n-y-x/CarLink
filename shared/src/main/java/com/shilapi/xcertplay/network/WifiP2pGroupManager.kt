@@ -516,13 +516,13 @@ class WifiP2pGroupManager(
         startupDeadlineNanos: Long,
     ): InetAddress? {
         val addressDeadline = minOf(startupDeadlineNanos, deadlineAfter(2_000))
-        var pending: InetAddress? = null
         while (true) {
             ensureStartActive(attempt)
             val address = interfaceAddress(interfaceName)
             if (address is Inet4Address) return address
-            if (address != null) pending = address
-            if (remainingNanos(addressDeadline) <= 0) return pending
+            // Publish only the current interface snapshot. A link-local address seen earlier
+            // may disappear while DHCP/group configuration is still changing.
+            if (remainingNanos(addressDeadline) <= 0) return address
             Thread.sleep(100)
         }
     }
