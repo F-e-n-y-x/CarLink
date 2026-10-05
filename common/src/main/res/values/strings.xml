@@ -670,4 +670,11 @@
     <string name="side_panel_description">CarPlay can move to two thirds of the screen while DiPlay shows a panel in the rest: on the passenger\'s side of a landscape screen, at the bottom of a portrait one (clock and, where it is read, the battery). Show and hide it from the in-session menu. Applies at the next connection.</string>
     <string name="side_panel_show">Side panel</string>
     <string name="side_panel_full_screen">⤢ Full screen</string>
+    <string name="car_button_in_carplay">Car button in CarPlay</string>
+    <string name="car_button_icon">Icon</string>
+    <string name="car_button_icon_custom">Custom icon</string>
+    <string name="car_button_name">Name</string>
+    <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
+    <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
+    <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
 </resources>

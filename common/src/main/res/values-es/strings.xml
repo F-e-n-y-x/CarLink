@@ -610,4 +610,11 @@
     <string name="side_panel_description">CarPlay puede pasar a dos tercios de la pantalla mientras DiPlay muestra un panel en el resto: del lado del pasajero en una pantalla horizontal, abajo en una vertical (reloj y, si se lee, la batería). Muéstralo y ocúltalo desde el menú de la sesión. Se aplica en la próxima conexión.</string>
     <string name="side_panel_show">Panel lateral</string>
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
+    <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
+    <string name="car_button_icon">Icono</string>
+    <string name="car_button_icon_custom">Icono personalizado</string>
+    <string name="car_button_name">Nombre</string>
+    <string name="car_button_description">CarPlay muestra este icono y este nombre en su lista de apps. Tócalo para volver a la pantalla del coche. Los cambios se aplican la próxima vez que CarPlay se conecte.</string>
+    <string name="car_button_saved_next_connection">Guardado. CarPlay mostrará el nuevo icono y nombre la próxima vez que se conecte.</string>
+    <string name="this_head_unit_has_no_image_picker">Esta unidad principal no tiene selector de imágenes.</string>
 </resources>

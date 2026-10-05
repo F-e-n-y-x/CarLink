@@ -670,4 +670,11 @@
     <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
     <string name="side_panel_show">侧边面板</string>
     <string name="side_panel_full_screen">⤢ 全屏</string>
+    <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
+    <string name="car_button_icon">图标</string>
+    <string name="car_button_icon_custom">自定义图标</string>
+    <string name="car_button_name">名称</string>
+    <string name="car_button_description">CarPlay 会在应用列表中显示此图标和名称。点按即可返回车辆自带的界面。更改将在 CarPlay 下次连接时生效。</string>
+    <string name="car_button_saved_next_connection">已保存。CarPlay 将在下次连接时显示新的图标和名称。</string>
+    <string name="this_head_unit_has_no_image_picker">此车机没有图片选择器。</string>
 </resources>
