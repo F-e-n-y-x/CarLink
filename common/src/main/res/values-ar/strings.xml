@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">قياسي · أوضح صورة</string>
     <string name="cluster_size_larger">أكبر · الافتراضي</string>
     <string name="cluster_size_largest">الأكبر</string>
+    <string name="cluster_size_smallest">أصغر · خريطة أكثر وتفاصيل أدق</string>
     <string name="marker_left">يسار</string>
     <string name="marker_right">يمين</string>
     <string name="marker_up">أعلى</string>

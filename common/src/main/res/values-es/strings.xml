@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">Estándar · máxima nitidez</string>
     <string name="cluster_size_larger">Más grande · predeterminado</string>
     <string name="cluster_size_largest">El más grande</string>
+    <string name="cluster_size_smallest">Más pequeño · más mapa y detalle fino</string>
     <string name="marker_left">Izquierda</string>
     <string name="marker_right">Derecha</string>
     <string name="marker_up">Arriba</string>

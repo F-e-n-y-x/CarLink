@@ -21,6 +21,7 @@
     <string name="cluster_size_standard">Стандартний · найчіткіший</string>
     <string name="cluster_size_larger">Більший · типовий</string>
     <string name="cluster_size_largest">Найбільший</string>
+    <string name="cluster_size_smallest">Менше · більше карти та дрібніші деталі</string>
     <string name="marker_left">Ліворуч</string>
     <string name="marker_right">Праворуч</string>
     <string name="marker_up">Угору</string>
