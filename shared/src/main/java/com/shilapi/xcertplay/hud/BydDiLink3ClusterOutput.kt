@@ -37,9 +37,11 @@ internal object BydDiLink3ClusterOutput {
     }
 
     fun prepareDisplay(appContext: Context, displayPresent: () -> Boolean) {
+        if (adbClusterRouteSelected(appContext)) return
         initialize(appContext)
         worker.execute {
             val app = context ?: return@execute
+            if (adbClusterRouteSelected(app)) return@execute
             val prepared = runCatching {
                 state(app).prepareDisplay(displayPresent, { desiredMode },
                     { BydOutputSettings.enabled(app) }, { Thread.sleep(3_000L) })
@@ -70,6 +72,10 @@ internal object BydDiLink3ClusterOutput {
 
     private fun applyLatest() {
         val app = context ?: return
+        // The ADB route uses the native casting mode selected by the driver. The AMap
+        // package name alone does not prove this is a DiLink 3 head unit. Keep any
+        // old recovery journal pending rather than closing DiLink 4 casting.
+        if (adbClusterRouteSelected(app)) return
         runCatching { state(app).apply(desiredMode) }
             .onFailure { Log.w(TAG, "Cluster mode will retry", it) }
             .onSuccess { accepted -> if (!accepted) Log.w(TAG, "Cluster mode pending recovery/retry") }
@@ -83,11 +89,17 @@ internal object BydDiLink3ClusterOutput {
             edit.commit()
         }
         return DiLink3ClusterModeSession(
-            run = { command -> shell.run(app, command) },
+            run = { command ->
+                if (adbClusterRouteSelected(app)) null else shell.run(app, command)
+            },
             loadRecovery = { journal.pending },
             saveRecovery = journal::save,
         ).also { session = it }
     }
+
+    internal fun adbClusterRouteSelected(context: Context): Boolean =
+        context.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE)
+            .getBoolean("adb_cluster_activity_enabled", false)
 
     private fun prefs(context: Context) = context.getSharedPreferences("diplay_dilink3_cluster", Context.MODE_PRIVATE)
 }
