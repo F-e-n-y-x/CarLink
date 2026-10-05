@@ -179,13 +179,28 @@ class WifiP2pGroupManagerTest {
     }
 
     @Test fun rememberedDefaultUsesSystemCreationInsteadOfInventingAFixedChannel() {
-        seedMemory(kind = "system", requested = 0)
+        seedMemory(kind = "system", requested = 0, station = 2437)
+        shadowOf(context.getSystemService(WifiManager::class.java).connectionInfo).setFrequency(2437)
         WifiP2pGroupManager(context).use { manager ->
             background { manager.start(5000) }
             assertEquals(1, radio.requests.size)
             assertNull(radio.requests.single())
             manager.onCarPlayConfirmed()
             assertTrue(memory.getString("confirmed", null)!!.startsWith("system|0|2437|"))
+        }
+    }
+
+    @Test fun rememberedDefaultCannotBypassExplicitChannelsBesideFiveGhzStation() {
+        seedMemory(kind = "system", requested = 0, station = 5200)
+        shadowOf(context.getSystemService(WifiManager::class.java).connectionInfo).setFrequency(5200)
+        radio.fixed24Only = true
+        val logs = mutableListOf<String>()
+        WifiP2pGroupManager(context, logs::add).use { manager ->
+            background { manager.start(6000) }
+            assertEquals(listOf(5200, 2437), radio.requests.map { it?.groupOwnerBand })
+            assertTrue(logs.any { it.contains("remembered deferred mode=SYSTEM_DEFAULT") })
+            manager.onCarPlayConfirmed()
+            assertTrue(memory.getString("confirmed", null)!!.startsWith("frequency|2437|2437|5200|"))
         }
     }
 

@@ -44,7 +44,10 @@ internal object P2pStartupRecovery {
         val remembered = preferred?.frequencyMHz?.let(::rememberedFrequency)
         val rememberedSwitches = stationOnFiveGhz && remembered != null &&
             remembered.frequencyMHz!! in 5150..5895 && remembered.frequencyMHz != stationFrequency
-        if (preferred?.mode == P2pCreationMode.SYSTEM_DEFAULT && preferred.frequencyMHz == null) add(preferred)
+        // The default API does not pin a channel. A cached success cannot prove it will avoid
+        // hopping beside the current 5 GHz station, so keep it behind explicit channels there.
+        if (preferred?.mode == P2pCreationMode.SYSTEM_DEFAULT && preferred.frequencyMHz == null &&
+            !stationOnFiveGhz) add(preferred)
         else if (remembered != null && !rememberedSwitches) channel(remembered.mode, remembered.frequencyMHz!!)
         if (aligned24) channel(P2pCreationMode.ALIGNED_2_GHZ, requireNotNull(stationFrequency))
         if (aligned5) channel(P2pCreationMode.ALIGNED_5_GHZ, requireNotNull(stationFrequency))

@@ -96,12 +96,28 @@ class P2pStartupRecoveryTest {
 
     @Test fun rejectedRememberedSystemConfigurationFallsBackToExplicitChannels() {
         val attempted = mutableListOf<Int?>()
-        val result = P2pStartupRecovery.create(5180, {}, P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)) {
+        val result = P2pStartupRecovery.create(2437, {}, P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)) {
             attempted += it.frequencyMHz
             if (it.frequencyMHz == null) throw P2pCreateRejected(WifiP2pManager.ERROR, "rejected")
         }
-        assertEquals(listOf(null, 5180), attempted)
-        assertEquals(5180, result.frequencyMHz)
+        assertEquals(listOf(null, 2437), attempted)
+        assertEquals(2437, result.frequencyMHz)
+    }
+
+    @Test fun rememberedSystemDefaultCannotBypassTwoGhzBesideAFiveGhzStation() {
+        val remembered = P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)
+        val plan = P2pStartupRecovery.plan(5200, remembered)
+        assertEquals(listOf(5200, 2437, 2412, 2462, 5180, 5745, null), plan.map { it.frequencyMHz })
+        val attempts = mutableListOf<Int?>()
+        val result = P2pStartupRecovery.create(5200, {}, remembered) {
+            attempts += it.frequencyMHz
+            if (it.frequencyMHz != 2437) throw P2pCreateRejected(WifiP2pManager.ERROR, "rejected")
+        }
+        assertEquals(listOf(5200, 2437), attempts)
+        assertEquals(2437, result.frequencyMHz)
+        // Proven default configuration remains first outside the new 5 GHz station policy.
+        assertEquals(remembered, P2pStartupRecovery.plan(null, remembered).first())
+        assertEquals(remembered, P2pStartupRecovery.plan(2437, remembered).first())
     }
 
     @Test fun unsafeRememberedFrequenciesDoNotBypassTheChannelPolicy() {
@@ -290,7 +306,7 @@ class P2pStartupRecoveryTest {
         var calls = 0
         val original = P2pConfigBuildCompatibilityFailure(NoSuchMethodError())
         try {
-            P2pStartupRecovery.create(5180, { fail("Unexpected guard") }, P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)) {
+            P2pStartupRecovery.create(2437, { fail("Unexpected guard") }, P2pCreationRequest(P2pCreationMode.SYSTEM_DEFAULT)) {
                 calls++
                 throw original
             }
