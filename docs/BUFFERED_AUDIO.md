@@ -36,11 +36,12 @@ Apple Music's lossless setting does not reach the car this way. With only PCM 48
 2024 BYD Tang (DiLink 5.0), iPhone on iOS 27, wireless CarPlay (Wi-Fi Direct and the car's hotspot), Apple Music:
 
 - music played from the car, with pause, resume and track changes;
-- calls and Siri worked as before; Spotify used the normal stream;
+- navigation prompts ducked the music, a call paused it and it resumed afterwards, Siri worked over it (tested together with #295, which Siri needs on main); Spotify used the normal stream;
 - unit tests cover the offer, frame opening, the anchor format, wrap-safe timestamps and the start/pause/flush flow.
 
 ## Limits
 
 - Experimental and off by default; only AAC-LC is accepted.
+- It cannot help when the link is slower than the music itself. With Wi-Fi Direct on 5 GHz (5745 MHz) while the car was also joined to a home network on 5 GHz (5200 MHz), the buffered stream arrived at 49–281 kbit/s, the queue never filled and the music stuttered; the normal stream (Spotify) stuttered as well, losing packets. A 2.4 GHz Wi-Fi Direct channel fixed both. The log line "Buffered audio: queued N s, received … kbit/s" shows which case applies.
 - The anchor latency is a fixed estimate (about 400 ms), which only shifts the iPhone's progress bar slightly.
 - Spatial audio (APAC formats in the simulator's list) is not offered.
