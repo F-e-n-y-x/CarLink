@@ -25,7 +25,7 @@
     <string name="marker_up">上</string>
     <string name="marker_down">下</string>
     <string name="marker_centre_default">居中 · 默认</string>
-    <string name="hotspot_mode_manual_desc">使用车輄自带热点。若车机支持，请在车机设置中选择 5 GHz。</string>
+    <string name="hotspot_mode_manual_desc">使用车辆自带热点。若车机支持，请在车机设置中选择 5 GHz。</string>
     <string name="hotspot_mode_p2p_desc">备选方案。需要打开车机 Wi-Fi 开关；2.4 GHz 连接可能会卡顿。</string>
     <string name="hotspot_details_off">热点已关闭 · 请在车机设置中开启。</string>
     <string name="hotspot_details_saved">详情已保存 · 连接前请确认车载热点已开启。</string>
@@ -665,4 +665,8 @@
     <string name="carplay_rotation_smoother">更流畅（1920）</string>
     <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
     <string name="auto_grant_incomplete">未验证全部请求权限。请检查下方各项状态；开启网络 ADB 后重试，或使用手动设置。现有权限保持不变。</string>
+    <string name="side_panel">CarPlay 旁的侧边面板（实验性）</string>
+    <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
+    <string name="side_panel_show">侧边面板</string>
+    <string name="side_panel_full_screen">⤢ 全屏</string>
 </resources>

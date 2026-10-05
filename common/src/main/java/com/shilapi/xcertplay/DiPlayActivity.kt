@@ -589,6 +589,10 @@ class DiPlayActivity : ComponentActivity() {
                 render()
                 reconnectForClusterMap()
             }
+            toggle(card, getString(R.string.side_panel), getString(R.string.side_panel_description), SidePanelSettings.enabled(this)) {
+                SidePanelSettings.setEnabled(this, it)
+                reconnectForClusterMap()
+            }
             if (CarPlayRotation.enabled(this)) {
                 val pictures = CarPlayRotation.Picture.entries
                 choice(card, getString(R.string.carplay_rotation_picture), listOf(
