@@ -611,4 +611,11 @@
     <string name="side_panel_full_screen">⤢ На весь экран</string>
     <string name="main_buffered_audio">Буферизованная музыка (экспериментально)</string>
     <string name="main_buffered_audio_description">Приложения, которые это поддерживают (например, Apple Music), присылают музыку примерно на две минуты вперёд, поэтому короткие провалы Wi-Fi не слышны. Остальные приложения работают как раньше. Переподключает CarPlay.</string>
+    <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
+    <string name="car_button_icon">Значок</string>
+    <string name="car_button_icon_custom">Свой значок</string>
+    <string name="car_button_name">Название</string>
+    <string name="car_button_description">CarPlay показывает этот значок и название в списке приложений. Нажмите его, чтобы вернуться на экран автомобиля. Изменения применятся при следующем подключении CarPlay.</string>
+    <string name="car_button_saved_next_connection">Сохранено. CarPlay покажет новый значок и название при следующем подключении.</string>
+    <string name="this_head_unit_has_no_image_picker">На этом головном устройстве нет выбора изображений.</string>
 </resources>

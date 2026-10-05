@@ -611,4 +611,11 @@
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
     <string name="main_buffered_audio">موسيقى مخزّنة مسبقًا (تجريبي)</string>
     <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
+    <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
+    <string name="car_button_icon">الأيقونة</string>
+    <string name="car_button_icon_custom">أيقونة مخصصة</string>
+    <string name="car_button_name">الاسم</string>
+    <string name="car_button_description">يعرض CarPlay هذه الأيقونة وهذا الاسم في قائمة التطبيقات. اضغط عليها للعودة إلى شاشة السيارة. تُطبَّق التغييرات عند اتصال CarPlay في المرة القادمة.</string>
+    <string name="car_button_saved_next_connection">تم الحفظ. سيعرض CarPlay الأيقونة والاسم الجديدين عند اتصاله في المرة القادمة.</string>
+    <string name="this_head_unit_has_no_image_picker">لا يحتوي نظام السيارة هذا على أداة لاختيار الصور.</string>
 </resources>

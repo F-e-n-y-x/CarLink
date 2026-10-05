@@ -611,4 +611,11 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
+    <string name="car_button_icon">Icono</string>
+    <string name="car_button_icon_custom">Icono personalizado</string>
+    <string name="car_button_name">Nombre</string>
+    <string name="car_button_description">CarPlay muestra este icono y este nombre en su lista de apps. Tócalo para volver a la pantalla del coche. Los cambios se aplican la próxima vez que CarPlay se conecte.</string>
+    <string name="car_button_saved_next_connection">Guardado. CarPlay mostrará el nuevo icono y nombre la próxima vez que se conecte.</string>
+    <string name="this_head_unit_has_no_image_picker">Esta unidad principal no tiene selector de imágenes.</string>
 </resources>

@@ -671,4 +671,11 @@
     <string name="side_panel_full_screen">⤢ Full screen</string>
     <string name="main_buffered_audio">Buffered music (experimental)</string>
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="car_button_in_carplay">Car button in CarPlay</string>
+    <string name="car_button_icon">Icon</string>
+    <string name="car_button_icon_custom">Custom icon</string>
+    <string name="car_button_name">Name</string>
+    <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
+    <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
+    <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
 </resources>
