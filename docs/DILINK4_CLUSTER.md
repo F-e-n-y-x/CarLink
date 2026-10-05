@@ -33,7 +33,11 @@ non-focusable Activity leaves factory instruments visible. An inactive stream is
 covered with black so a disconnected phone does not leave a frozen map behind.
 
 **Cluster safe area · edit box** opens a fitted editor. Drag the green edges;
-the outline is mirrored on the cluster during calibration. Save applies the new
+the outline is mirrored on the cluster during calibration, including before a phone
+connects. Opening the editor launches a preview-only window using already authorized
+local ADB; it does not start CarPlay or hold the stock map. Keep the car's native
+cluster casting active. Dismissing the editor closes a preview-only window and
+invalidates pending launches, while an existing CarPlay window remains. Save applies the new
 safe area after reconnecting. Cancel keeps the saved mapping. The outline clears
 on dismissal or leaving settings. The cluster mapping has its own preference and
 does not overwrite the main display's mapping. Reset restores marker-offset-based
@@ -53,6 +57,12 @@ saved. Until an activity confirms the private display, the original virtual stre
 remains. If confirmation arrives after CarPlay starts, DiPlay reconnects once to
 request 1920×720 and covers the cluster during that transition. Turning off only
 the ADB option leaves the saved cluster-map enable preference intact.
+When the DiLink 4 ADB option is selected, automatic DiLink 3 cluster-mode
+commands are suppressed. The installed AMap adapter package alone cannot identify
+the generation: those commands can switch a DiLink 4 cluster to half-screen or
+close its native casting. A pending DiLink 3 recovery journal is retained until
+the ADB option is deselected. The user-selected native casting mode is preserved.
+
 USB reconnection and colour controls retain the implementations already on main. Automated tests cannot establish visible placement on other cars.
 
 The direct `am start-activity --display … -f 0x18000000` approach follows the legacy
