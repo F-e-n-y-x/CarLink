@@ -289,4 +289,29 @@ class AirPlayInfoPlistTest {
         assertEquals(listOf(0), params["adjacentViewAreas"])
         assertEquals(listOf(0, 1, 3), (AirPlayInfoPlist.viewAreaCommand(2, areaCount = 4)["params"] as Map<*, *>)["adjacentViewAreas"])
     }
+
+    @Test
+    fun aSavedMappingOutsideTheSplitAreaUsesItsBoundsWithoutChangingTheFullArea() {
+        val split = AirPlayViewArea(1270, 1208)
+        // The first mapping lies to the right, the second below, and the third only touches the edge.
+        for (mapping in listOf(
+            SafeAreaRect(1280, 0, 2560, 1440),
+            SafeAreaRect(0, 1300, 2560, 1440),
+            SafeAreaRect(1270, 0, 2560, 1440),
+        )) {
+            val insets = AirPlaySafeArea.toInsets(mapping, 2560, 1440, 2560, 1440)
+            val display = mainDisplay(listOf(AirPlayViewArea(2560, 1440), split), safeArea = insets)
+            val areas = (display["viewAreas"] as List<*>).map { it as Map<*, *> }
+            val fullSafe = areas[0]["safeArea"] as Map<*, *>
+            assertEquals(mapping.width, fullSafe["widthPixels"])
+            assertEquals(mapping.height, fullSafe["heightPixels"])
+            assertEquals(mapping.left, fullSafe["originXPixels"])
+            assertEquals(mapping.top, fullSafe["originYPixels"])
+            val splitSafe = areas[1]["safeArea"] as Map<*, *>
+            assertEquals(split.width, splitSafe["widthPixels"])
+            assertEquals(split.height, splitSafe["heightPixels"])
+            assertEquals(split.originX, splitSafe["originXPixels"])
+            assertEquals(split.originY, splitSafe["originYPixels"])
+        }
+    }
 }

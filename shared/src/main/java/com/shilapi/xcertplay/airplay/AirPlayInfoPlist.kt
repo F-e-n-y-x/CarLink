@@ -226,12 +226,17 @@ object AirPlayInfoPlist {
         )
         area?.dockEdge?.let { result["viewAreaStatusBarEdge"] = it }
         val displaySafe = display.safeArea ?: AirPlayInsets()
-        val safe = if (area == null) displaySafe else AirPlayInsets(
+        val clipped = if (area == null) displaySafe else AirPlayInsets(
             top = maxOf(displaySafe.top, view.top),
             bottom = maxOf(displaySafe.bottom, view.bottom),
             left = maxOf(displaySafe.left, view.left),
             right = maxOf(displaySafe.right, view.right),
         )
+        // A valid saved mapping can lie wholly outside a smaller view area. In that case the
+        // intersection is empty: use this area's bounds instead of advertising negative/zero sizes.
+        val safe = if (area != null &&
+            (clipped.left + clipped.right >= width || clipped.top + clipped.bottom >= height)
+        ) view else clipped
         val safeArea = linkedMapOf<String, Any?>(
             "widthPixels" to (width - safe.left - safe.right),
             "heightPixels" to (height - safe.top - safe.bottom),
