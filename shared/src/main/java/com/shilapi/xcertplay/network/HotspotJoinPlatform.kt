@@ -27,6 +27,10 @@ internal class HotspotJoinPlatform(private val wifi: Any, private val api: Int,
 
     override fun repaired(config: Any): Any? {
         if (api < 33) return null
+        // WifiApConfigStore forces this flag true on every non-null setter call. A false
+        // original therefore cannot be restored verbatim, even when every other field is
+        // preserved. Refuse it before preparing a target; Apply repeats this same gate.
+        if (configType.getMethod("isUserConfiguration").invoke(config) != true) return null
         val bands = configType.getMethod("getBands").invoke(config) as IntArray
         val existing = elements(config)
         val policy = existing.map(::description)

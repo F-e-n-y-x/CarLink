@@ -9,10 +9,15 @@ controlled broadcast comparison.
 
 | Suite | Tests | Failures / errors / skipped |
 | --- | ---: | --- |
-| shared | 687 | 0 / 0 / 0 |
+| shared | 692 | 0 / 0 / 1 |
 | common | 531 | 0 / 0 / 0 |
 | home | 4 | 0 / 0 / 0 |
-| Total | **1,222** | **0 / 0 / 0** |
+| Total | **1,227** | **0 / 0 / 1** |
+
+The normalization-gate follow-up was revalidated on macOS. The one skipped test is
+an existing network-port test whose host assumption does not hold when wildcard
+and specific-address listeners may overlap. All 33 focused hotspot-repair tests
+ran without failures, errors or skips.
 
 The 28 focused regression tests cover:
 
@@ -31,10 +36,19 @@ The 28 focused regression tests cover:
 - Inert UI rendering, separate Apply/Restore confirmation, active-session
   rejection, busy-state handling and cancellation when the activity closes.
 
+Five additional Android 13 framework-normalization regressions exercise the
+production configuration adapter, full-parcel journal and transaction together.
+The test setter models Android's forced user-configured flag: Check and Apply
+refuse non-user originals, including an older prepared record, before any write.
+Eligible user configurations restore completely after transaction recreation and
+after rejected/cancelled writes. Unexpected changes to other fields still retain
+the pending original and refuse rollback through a mismatched configuration.
+These checks do not replace the remaining physical-device acceptance below.
+
 Validation command:
 
-```powershell
-.\gradlew.bat :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :automotive:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug :automotive:assembleDebug --console=plain
+```sh
+./gradlew :shared:testDebugUnitTest :common:testDebugUnitTest :home:testDebugUnitTest :mobile:lintDebug :home:lintDebug :maphost:lintDebug :automotive:lintDebug :mobile:assembleDebug :home:assembleDebug :maphost:assembleDebug :automotive:assembleDebug --console=plain
 ```
 
 All tests, four debug lint checks and source-only APK builds passed using the

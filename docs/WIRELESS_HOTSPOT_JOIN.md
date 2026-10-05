@@ -101,11 +101,20 @@ new vehicle brand.
 The helper requires Android 13/API 33 or later, the firmware's complete
 `SoftApConfiguration` getter/setter and vendor-element/copy APIs, authoritative
 hotspot 5 GHz capability with supported channels, and a saved **5 GHz-only**
-band configuration. It rejects 2.4 GHz, automatic/mixed bands, bridged APs,
+band configuration already marked as user-configured by the framework. It rejects
+2.4 GHz, automatic/mixed bands, bridged APs,
 6/60 GHz and ambiguous/conflicting Apple Device elements. It does not change bands, credentials, security, channel, addresses or
 Interworking IE 107. Existing vendor elements are retained in order; an exact
 existing Apple element is left alone without claiming rollback ownership.
 The copy is checked against the original before any write.
+
+Default/non-user configurations are refused before a backup or write. Android 13's
+[Wi-Fi configuration store](https://android.googlesource.com/platform/packages/modules/Wifi/+/refs/heads/android13-release/service/java/com/android/server/wifi/WifiApConfigStore.java#179)
+forces the user-configured flag to true whenever a configuration is saved, so an
+original false value could not be restored verbatim through this API. Apply repeats
+the same gate, including for an older prepared snapshot. Equality checks for every
+other field remain strict; unexpected firmware normalization or configuration drift
+retains recovery state instead of being treated as successful preservation.
 
 Ordinary app permissions, including WRITE_SETTINGS, are insufficient for this
 API on many builds. LocalAdb supports **plain localhost:5555 ADB only**. It does
@@ -167,7 +176,12 @@ or exception payloads are printed by the helper or added to diagnostic reports.
 Focused JVM/Robolectric tests exercise merging, platform copy/parcel preservation,
 full rollback, API/band/conflict rejection, durable storage failure, configuration
 and firmware drift, cancellation, lost readback, partial writes, overlapping
-locks and separate UI confirmation. Build/lint results are recorded in
+locks, framework setter normalization and separate UI confirmation. The normalization
+regressions use real Android 13 configuration parcels with the production adapter,
+journal and transaction: default configurations and older prepared snapshots are
+refused before writing; eligible user configurations apply, restore and compensate
+failed/cancelled writes without relaxing drift detection. Build/lint results are
+recorded in
 [hotspot repair validation](HOTSPOT_JOIN_VALIDATION.md).
 
 The controlled phone experiment above used the original APK and a separate
