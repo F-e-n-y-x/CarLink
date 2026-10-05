@@ -609,4 +609,6 @@
     <string name="side_panel_description">CarPlay puede pasar a dos tercios de la pantalla mientras DiPlay muestra un panel en el resto: del lado del pasajero en una pantalla horizontal, abajo en una vertical (reloj y, si se lee, la batería). Muéstralo y ocúltalo desde el menú de la sesión. Se aplica en la próxima conexión.</string>
     <string name="side_panel_show">Panel lateral</string>
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
+    <string name="main_buffered_audio">Música con búfer (experimental)</string>
+    <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
 </resources>

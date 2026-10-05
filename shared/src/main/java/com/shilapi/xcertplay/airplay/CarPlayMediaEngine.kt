@@ -65,6 +65,9 @@ class CarPlayMediaEngine(
     private val audioCaptures = ConcurrentHashMap<StreamKey, AudioPacketCapture>()
     private val pendingIapTunnels = ConcurrentHashMap<AirPlaySession, PendingIapTunnel>()
     private val videoSettingsChannels = ConcurrentHashMap<AirPlaySession, VideoSettingsChannel>()
+    private val bufferedStreams = ConcurrentHashMap<AirPlaySession, BufferedStream>()
+
+    private class BufferedStream(val stream: BufferedAudioStream, val connectionId: Any?)
     @Volatile private var nextRemoteControlStreamId = FIRST_REMOTE_CONTROL_STREAM_ID
     @Volatile private var iapTunnelHandler: ((BlockingDuplexByteStream) -> Boolean)? = null
 
@@ -180,6 +183,56 @@ class CarPlayMediaEngine(
         )
     }
 
+    override fun onBufferedAudio(session: AirPlaySession, stream: Map<String, Any?>): Map<String, Any?>? {
+        val type = BufferedAudioStream.STREAM_TYPE
+        val streamKey = StreamKey(session, type, "media")
+        streams.remove(streamKey)?.close()
+        bufferedStreams.remove(session)
+        val key = stream["shk"] as? ByteArray
+        if (key == null || key.size != 32) {
+            Log.w(TAG, "buffered audio SETUP without a 32-byte shk; declined")
+            return null
+        }
+        val format = AudioStreamCodec.fromFormatBits((stream["audioFormat"] as? Number)?.toLong() ?: 0L, type, "media")
+        if (format.codec != AudioCodecKind.AAC_LC) {
+            Log.w(TAG, "buffered audio format ${stream["audioFormat"]} is not AAC-LC; declined")
+            return null
+        }
+        val buffered = try {
+            BufferedAudioStream(key, format, sink, session::logDebug).also { it.start() }
+        } catch (error: Exception) {
+            Log.w(TAG, "buffered audio listener failed", error)
+            return null
+        }
+        streams[streamKey] = buffered
+        bufferedStreams[session] = BufferedStream(buffered, stream["streamConnectionID"])
+        Log.i(TAG, "buffered audio stream client=${stream["clientID"]} rate=${format.sampleRate} port=${buffered.port}")
+        return linkedMapOf(
+            "type" to type,
+            "dataPort" to buffered.port,
+            "audioBufferSize" to BufferedAudioStream.AUDIO_BUFFER_BYTES,
+        )
+    }
+
+    override fun onBufferedAudioControl(
+        session: AirPlaySession,
+        method: String,
+        body: Map<String, Any?>,
+    ): Map<String, Any?>? {
+        val buffered = bufferedStreams[session]?.stream ?: return null
+        val rtpTime = (body["rtpTime"] as? Number)?.toLong()
+        val rate = (body["rate"] as? Number)?.toInt()
+        return when (method) {
+            "SETRATE", "SETRATEANCHORTIME" -> buffered.setRate(rtpTime, rate ?: 1, session.syncedNtp())
+            "GETANCHOR" -> buffered.anchor()
+            "FLUSHBUFFERED" -> {
+                buffered.flush((body["flushUntilTS"] as? Number)?.toLong())
+                null
+            }
+            else -> null
+        }
+    }
+
     override fun onDataStream(session: AirPlaySession, stream: Map<String, Any?>): Map<String, Any?>? {
         val uuid = (stream["clientTypeUUID"] as? String)?.uppercase() ?: return null
         if (session.videoInCar) videoDataStream(session, uuid, stream)?.let { return it }
@@ -289,7 +342,8 @@ class CarPlayMediaEngine(
 
     override fun onFeedback(session: AirPlaySession): Map<String, Any?>? {
         val active = audioMeta.values.toList()
-        if (active.isEmpty()) return null
+        val buffered = bufferedStreams[session]
+        if (active.isEmpty() && buffered == null) return null
         val streams = active.map { meta ->
             val entry = linkedMapOf<String, Any?>(
                 "type" to meta.type,
@@ -312,12 +366,13 @@ class CarPlayMediaEngine(
                 entry["sampleTime"] = sampleTime
             }
             entry
-        }
+        } + listOfNotNull(buffered?.let { it.stream.feedback(session.syncedNtp(), it.connectionId) })
         return linkedMapOf("streams" to streams)
     }
 
     override fun onTeardown(session: AirPlaySession, type: Int) {
         if (type == STREAM_TYPE_DATA) clearPendingIapTunnel(session)
+        if (type == BufferedAudioStream.STREAM_TYPE) bufferedStreams.remove(session)
         // TEARDOWN carries only the stream type; release every audioType variant of it.
         val tornDown = streams.keys.filter { it.session === session && it.type == type }
         tornDown.forEach { key ->
@@ -333,6 +388,7 @@ class CarPlayMediaEngine(
 
     override fun onSessionClosed(session: AirPlaySession) {
         clearPendingIapTunnel(session)
+        bufferedStreams.remove(session)
         videoSettingsChannels.remove(session)?.close()
         val sessionStreams = streams.keys.filter { it.session === session }
         sessionStreams
