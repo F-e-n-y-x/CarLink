@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">قياسي · أوضح صورة</string>
     <string name="cluster_size_larger">أكبر · الافتراضي</string>
     <string name="cluster_size_largest">الأكبر</string>
+    <string name="cluster_size_smallest">أصغر · خريطة أكثر وتفاصيل أدق</string>
     <string name="marker_left">يسار</string>
     <string name="marker_right">يمين</string>
     <string name="marker_up">أعلى</string>
@@ -603,7 +604,7 @@
     <string name="split_screen_areas">CarPlay في الشاشة المقسومة</string>
     <string name="split_screen_areas_description">عندما تعرض الوحدة DiPlay في شاشة مقسومة، يعيد CarPlay الرسم لتلك النافذة بدل أن يصغر مع أشرطة سوداء، ويعود إلى ملء الشاشة دون إعادة اتصال. يُحفظ حجم النافذة في المرة الأولى، فتطابق الصورة تمامًا من الاتصال التالي. إذا كان شريط التطبيقات على «تلقائي» يضعه CarPlay في الأسفل. يُطبَّق عند الاتصال التالي.</string>
     <string name="carplay_rotation">تدوير CarPlay مع الشاشة دون إعادة اتصال</string>
-    <string name="carplay_rotation_description">للوحدات التي تدور شاشتها. يحصل CarPlay على صورة مربعة تضم شاشة أفقية وأخرى عمودية، فيعيد تدوير الشاشة رسم CarPlay بدل إعادة الاتصال. فك ترميز الصورة المربعة أثقل، ولا تنطبق عليها المنطقة الآمنة المخصصة. يُطبَّق عند الاتصال التالي.</string>
+    <string name="carplay_rotation_description">للوحدات التي تدور شاشتها. يحصل CarPlay على صورة مربعة تضم شاشة أفقية وأخرى عمودية، فيعيد تدوير الشاشة رسم CarPlay بدل إعادة الاتصال. قد تزيد الصورة المربعة الأكبر من معالجة الفيديو وتقلل السلاسة، خصوصًا مع «أكثر وضوحًا» على شاشة كبيرة. إذا كنت نادرًا ما تدير الشاشة، فقد يساعد إبقاء هذا الخيار متوقفًا. لا تنطبق المنطقة الآمنة المخصصة على الصورة المربعة. يُطبَّق عند الاتصال التالي.</string>
     <string name="carplay_rotation_picture">الصورة المربعة</string>
     <string name="carplay_rotation_smoother">أكثر سلاسة (1920)</string>
     <string name="carplay_rotation_sharper">أكثر وضوحًا (حجم الشاشة)</string>
@@ -613,4 +614,13 @@
     <string name="side_panel_description">يمكن نقل CarPlay إلى ثلثي الشاشة بينما يعرض DiPlay لوحة في الباقي: على جانب الراكب في الشاشة الأفقية، وفي الأسفل في الشاشة العمودية (الساعة، والبطارية إذا تمت قراءتها). أظهرها وأخفها من قائمة الجلسة. يُطبَّق عند الاتصال التالي.</string>
     <string name="side_panel_show">اللوحة الجانبية</string>
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
+    <string name="main_buffered_audio">موسيقى مخزّنة مسبقًا (تجريبي)</string>
+    <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
+    <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
+    <string name="car_button_icon">الأيقونة</string>
+    <string name="car_button_icon_custom">أيقونة مخصصة</string>
+    <string name="car_button_name">الاسم</string>
+    <string name="car_button_description">يعرض CarPlay هذه الأيقونة وهذا الاسم في قائمة التطبيقات. اضغط عليها للعودة إلى شاشة السيارة. تُطبَّق التغييرات عند اتصال CarPlay في المرة القادمة.</string>
+    <string name="car_button_saved_next_connection">تم الحفظ. سيعرض CarPlay الأيقونة والاسم الجديدين عند اتصاله في المرة القادمة.</string>
+    <string name="this_head_unit_has_no_image_picker">لا يحتوي نظام السيارة هذا على أداة لاختيار الصور.</string>
 </resources>

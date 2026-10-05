@@ -1017,14 +1017,31 @@ class CarPlayHostActivity : ComponentActivity() {
                         AirPlayPersistence.loadClusterSafeAreaRect(this),
                     ).also { MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels }
                 }
-                return CarPlayClusterDisplay.config(
+                val requestedScale = AirPlayPersistence.loadClusterMapScalePercent(this)
+                fun streamAt(scale: Int) = CarPlayClusterDisplay.config(
                     size.x,
                     size.y,
-                    AirPlayPersistence.loadClusterMapScalePercent(this),
+                    scale,
                     AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
                     AirPlayPersistence.loadClusterMarkerVerticalStep(this),
                     AirPlayPersistence.loadClusterContent(this),
-                ).also {
+                )
+                val requested = streamAt(requestedScale)
+                // The smaller-map preset enlarges the encoded canvas beyond this panel. Probe
+                // the same selected hardware decoder as the main-screen enlargement guard.
+                val effective = if (requestedScale > 100) {
+                    val support = largerCanvasSupport(requested)
+                    appendLog("Cluster map: ${support.details}")
+                    if (support.supported) requested else {
+                        val native = streamAt(100)
+                        val fallback = if (largerCanvasSupport(native).supported) 100
+                            else CarPlayClusterDisplay.STREAM_SCALE_PERCENT
+                        AirPlayPersistence.saveClusterMapScalePercent(this, fallback)
+                        appendLog("Cluster map: scale $requestedScale% refused (${support.reason}); using $fallback%")
+                        streamAt(fallback)
+                    }
+                } else requested
+                return effective.also {
                     MapMirrors.streamAspect = it.widthPixels.toDouble() / it.heightPixels
                     appendLog("Cluster map: requesting ${it.widthPixels}x${it.heightPixels} on ${size.x}x${size.y} safeArea=${it.safeArea} url=${it.initialUrl}")
                 }
@@ -1237,7 +1254,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 )
             }
         }.apply {
-            setBackgroundColor(Color.rgb(12, 17, 27))
+            setBackgroundColor(Color.rgb(233, 238, 246))
             isClickable = true
         }
         val panel = LinearLayout(this).apply {
@@ -1251,7 +1268,7 @@ class CarPlayHostActivity : ComponentActivity() {
         panel.addView(icon, LinearLayout.LayoutParams(dp(88), dp(88)))
         val title = TextView(this).apply {
             text = getString(R.string.diplay)
-            setTextColor(Color.rgb(241, 245, 252))
+            setTextColor(Color.rgb(28, 28, 30))
             gravity = Gravity.CENTER
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
@@ -1259,14 +1276,14 @@ class CarPlayHostActivity : ComponentActivity() {
         val stage = TextView(this).apply {
             text = getString(R.string.getting_carplay_ready)
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(241, 245, 252))
+            setTextColor(Color.rgb(28, 28, 30))
         }
         panel.addView(stage)
         val instructions = TextView(this).apply {
             text = if (wirelessEnabled) getString(R.string.keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow)
                 else getString(R.string.use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an)
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(168, 182, 202))
+            setTextColor(Color.rgb(90, 100, 116))
         }
         panel.addView(instructions)
         val recovery = Button(this).apply {
@@ -1307,7 +1324,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val gestureHint = TextView(this).apply {
             text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(168, 182, 202))
+            setTextColor(Color.rgb(90, 100, 116))
         }
         panel.addView(gestureHint)
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
@@ -2447,7 +2464,13 @@ class CarPlayHostActivity : ComponentActivity() {
                 isAllCaps = false
                 setOnClickListener {
                     externalActivityInProgress = true
-                    imagePicker.launch("image/*")
+                    runCatching { imagePicker.launch("image/*") }.onFailure {
+                        externalActivityInProgress = false
+                        appendLog("No image picker: ${it.javaClass.simpleName}")
+                        android.widget.Toast.makeText(this@CarPlayHostActivity,
+                            getString(R.string.this_head_unit_has_no_image_picker),
+                            android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             },
             LinearLayout.LayoutParams(
@@ -3276,6 +3299,8 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun createAirPlayConfig(size: DisplaySize): AirPlayConfig {
+        // The home settings page can change the name while this host stays alive.
+        if (!menuOpen) oemLabel = AirPlayPersistence.loadOemLabel(this)
         val safeWidth = (size.width / 2 * 2).coerceAtLeast(2)
         val safeHeight = (size.height / 2 * 2).coerceAtLeast(2)
         val alignedSize = DisplaySize(safeWidth, safeHeight)
@@ -3421,6 +3446,7 @@ class CarPlayHostActivity : ComponentActivity() {
             oemLabel = oemLabel,
             icons = listOf(loadAirPlayIcon()),
             videoInCar = com.shilapi.xcertplay.hud.BydOutputSettings.videoWhileParkedActive(this),
+            mainBufferedAudio = AirPlayPersistence.loadMainBufferedAudio(this),
         )
     }
 

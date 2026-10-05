@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">Estándar · máxima nitidez</string>
     <string name="cluster_size_larger">Más grande · predeterminado</string>
     <string name="cluster_size_largest">El más grande</string>
+    <string name="cluster_size_smallest">Más pequeño · más mapa y detalle fino</string>
     <string name="marker_left">Izquierda</string>
     <string name="marker_right">Derecha</string>
     <string name="marker_up">Arriba</string>
@@ -603,7 +604,7 @@
     <string name="split_screen_areas">CarPlay en la pantalla dividida</string>
     <string name="split_screen_areas_description">Cuando la unidad muestra DiPlay en pantalla dividida, CarPlay se redibuja para esa ventana en lugar de reducirse con franjas negras, y vuelve a pantalla completa sin reconectar. El tamaño de la ventana se aprende la primera vez, así que desde la siguiente conexión la imagen encaja exactamente. Con el dock en Automático, CarPlay lo coloca abajo. Se aplica en la próxima conexión.</string>
     <string name="carplay_rotation">Girar CarPlay con la pantalla sin reconectar</string>
-    <string name="carplay_rotation_description">Para unidades cuya pantalla gira. CarPlay recibe una imagen cuadrada con una pantalla horizontal y otra vertical, así que girar la pantalla redibuja CarPlay en lugar de reconectar. Una imagen cuadrada cuesta más decodificar; el área segura personalizada no se le aplica. Se aplica en la próxima conexión.</string>
+    <string name="carplay_rotation_description">Para unidades cuya pantalla gira. CarPlay recibe una imagen cuadrada con una pantalla horizontal y otra vertical, así que girar la pantalla redibuja CarPlay en lugar de reconectar. Un cuadrado mayor puede aumentar el trabajo de vídeo y reducir la fluidez, sobre todo con Más nítida en una pantalla grande. Si casi no giras la pantalla, dejarlo desactivado puede ayudar. El área segura personalizada no se aplica a una imagen cuadrada. Se aplica en la próxima conexión.</string>
     <string name="carplay_rotation_picture">Imagen cuadrada</string>
     <string name="carplay_rotation_smoother">Más fluida (1920)</string>
     <string name="carplay_rotation_sharper">Más nítida (tamaño de la pantalla)</string>
@@ -613,4 +614,13 @@
     <string name="side_panel_description">CarPlay puede pasar a dos tercios de la pantalla mientras DiPlay muestra un panel en el resto: del lado del pasajero en una pantalla horizontal, abajo en una vertical (reloj y, si se lee, la batería). Muéstralo y ocúltalo desde el menú de la sesión. Se aplica en la próxima conexión.</string>
     <string name="side_panel_show">Panel lateral</string>
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
+    <string name="main_buffered_audio">Música con búfer (experimental)</string>
+    <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
+    <string name="car_button_icon">Icono</string>
+    <string name="car_button_icon_custom">Icono personalizado</string>
+    <string name="car_button_name">Nombre</string>
+    <string name="car_button_description">CarPlay muestra este icono y este nombre en su lista de apps. Tócalo para volver a la pantalla del coche. Los cambios se aplican la próxima vez que CarPlay se conecte.</string>
+    <string name="car_button_saved_next_connection">Guardado. CarPlay mostrará el nuevo icono y nombre la próxima vez que se conecte.</string>
+    <string name="this_head_unit_has_no_image_picker">Esta unidad principal no tiene selector de imágenes.</string>
 </resources>

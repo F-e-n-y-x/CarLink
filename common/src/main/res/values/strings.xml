@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">Standard · sharpest</string>
     <string name="cluster_size_larger">Larger · default</string>
     <string name="cluster_size_largest">Largest</string>
+    <string name="cluster_size_smallest">Smaller · more map, finer detail</string>
     <string name="marker_left">Left</string>
     <string name="marker_right">Right</string>
     <string name="marker_up">Up</string>
@@ -662,7 +663,7 @@
     <string name="split_screen_areas">CarPlay in the head unit\'s split screen</string>
     <string name="split_screen_areas_description">When the head unit shows DiPlay in split screen, CarPlay redraws for that window instead of shrinking with black bars, and back to full screen without reconnecting. The window\'s size is learned the first time, so the picture fits exactly from the next connection. With the dock on Automatic, CarPlay then puts it at the bottom. Applies at the next connection.</string>
     <string name="carplay_rotation">Turn CarPlay with the screen without reconnecting</string>
-    <string name="carplay_rotation_description">For head units whose screen turns. CarPlay gets a square picture holding a landscape and a portrait screen, so turning the screen redraws CarPlay instead of reconnecting. A square picture is heavier to decode; the custom safe area does not apply to it. Applies at the next connection.</string>
+    <string name="carplay_rotation_description">For head units whose screen turns. CarPlay gets a square picture holding a landscape and a portrait screen, so turning the screen redraws CarPlay instead of reconnecting. A larger square can increase video work and reduce smoothness, especially with Sharper on a large screen. If you rarely turn the screen, leaving this off may help. The custom safe area does not apply to a square picture. Applies at the next connection.</string>
     <string name="carplay_rotation_picture">Square picture</string>
     <string name="carplay_rotation_smoother">Smoother (1920)</string>
     <string name="carplay_rotation_sharper">Sharper (the screen\'s size)</string>
@@ -673,4 +674,13 @@
     <string name="side_panel_description">CarPlay can move to two thirds of the screen while DiPlay shows a panel in the rest: on the passenger\'s side of a landscape screen, at the bottom of a portrait one (clock and, where it is read, the battery). Show and hide it from the in-session menu. Applies at the next connection.</string>
     <string name="side_panel_show">Side panel</string>
     <string name="side_panel_full_screen">⤢ Full screen</string>
+    <string name="main_buffered_audio">Buffered music (experimental)</string>
+    <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="car_button_in_carplay">Car button in CarPlay</string>
+    <string name="car_button_icon">Icon</string>
+    <string name="car_button_icon_custom">Custom icon</string>
+    <string name="car_button_name">Name</string>
+    <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
+    <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
+    <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
 </resources>

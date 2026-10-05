@@ -20,6 +20,7 @@
     <string name="cluster_size_standard">Стандартный · максимальная чёткость</string>
     <string name="cluster_size_larger">Крупнее · по умолчанию</string>
     <string name="cluster_size_largest">Самый крупный</string>
+    <string name="cluster_size_smallest">Меньше · больше карты и мельче детали</string>
     <string name="marker_left">Влево</string>
     <string name="marker_right">Вправо</string>
     <string name="marker_up">Вверх</string>
@@ -603,7 +604,7 @@
     <string name="split_screen_areas">CarPlay в разделённом экране</string>
     <string name="split_screen_areas_description">Когда головное устройство показывает DiPlay в разделённом экране, CarPlay перерисовывается под это окно, а не уменьшается с чёрными полосами, и возвращается на весь экран без переподключения. Размер окна запоминается в первый раз, поэтому со следующего подключения картинка точно по размеру. Если панель приложений на «Автоматически», CarPlay тогда ставит её снизу. Применяется со следующего подключения.</string>
     <string name="carplay_rotation">Поворачивать CarPlay вместе с экраном без переподключения</string>
-    <string name="carplay_rotation_description">Для головных устройств, у которых экран поворачивается. CarPlay получает квадратную картинку с горизонтальным и вертикальным экраном, поэтому поворот экрана перерисовывает CarPlay вместо переподключения. Квадратную картинку тяжелее декодировать; своя безопасная зона к ней не применяется. Применяется со следующего подключения.</string>
+    <string name="carplay_rotation_description">Для головных устройств, у которых экран поворачивается. CarPlay получает квадратную картинку с горизонтальным и вертикальным экраном, поэтому поворот экрана перерисовывает CarPlay вместо переподключения. Более крупный квадрат может увеличить нагрузку при обработке видео и снизить плавность, особенно с «Чётче» на большом экране. Если вы редко поворачиваете экран, отключение этого параметра может помочь. Своя безопасная зона к квадратной картинке не применяется. Применяется со следующего подключения.</string>
     <string name="carplay_rotation_picture">Квадратная картинка</string>
     <string name="carplay_rotation_smoother">Плавнее (1920)</string>
     <string name="carplay_rotation_sharper">Чётче (размер экрана)</string>
@@ -613,4 +614,13 @@
     <string name="side_panel_description">CarPlay может переходить на две трети экрана, а DiPlay показывает в остальной части свою панель: со стороны пассажира на горизонтальном экране, снизу на вертикальном (часы и заряд, если он считан). Показывайте и скрывайте её из меню во время сеанса. Применяется со следующего подключения.</string>
     <string name="side_panel_show">Боковая панель</string>
     <string name="side_panel_full_screen">⤢ На весь экран</string>
+    <string name="main_buffered_audio">Буферизованная музыка (экспериментально)</string>
+    <string name="main_buffered_audio_description">Приложения, которые это поддерживают (например, Apple Music), присылают музыку примерно на две минуты вперёд, поэтому короткие провалы Wi-Fi не слышны. Остальные приложения работают как раньше. Переподключает CarPlay.</string>
+    <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
+    <string name="car_button_icon">Значок</string>
+    <string name="car_button_icon_custom">Свой значок</string>
+    <string name="car_button_name">Название</string>
+    <string name="car_button_description">CarPlay показывает этот значок и название в списке приложений. Нажмите его, чтобы вернуться на экран автомобиля. Изменения применятся при следующем подключении CarPlay.</string>
+    <string name="car_button_saved_next_connection">Сохранено. CarPlay покажет новый значок и название при следующем подключении.</string>
+    <string name="this_head_unit_has_no_image_picker">На этом головном устройстве нет выбора изображений.</string>
 </resources>
