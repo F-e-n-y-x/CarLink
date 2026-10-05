@@ -1,6 +1,6 @@
 # Unreleased
 
-Add changes after 0.2.12 here.
+- Fix the DiLink 3 cluster map staying empty: send full-screen projection (16) before half-screen projection (17), because after projection off (18) the cluster ignores 17 on its own.
 
 - Experimental DiLink 3 call controls (disabled by default): the call key answers, hang-up/menu keys end or decline, voice keys open Siri, and play/pause key 331 toggles CarPlay. A separate optional dashboard-call setting (needs ADB) shows caller and call time. Actual call, card and microphone acceptance is still pending.
 

@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import com.shilapi.xcertplay.CarPlayViewAreas.Kind
 import com.shilapi.xcertplay.airplay.AirPlayInfoPlist.DOCK_EDGE_BOTTOM
 import com.shilapi.xcertplay.airplay.AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE
+import com.shilapi.xcertplay.airplay.AirPlayViewArea
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -95,5 +96,56 @@ class CarPlayViewAreasTest {
     fun aSquareCanvasNeedsAreasEvenWithAnAutomaticDock() {
         val areas = turning()
         assertEquals(listOf<Int?>(null, null), areas.areas.map { it.dockEdge })
+    }
+
+    @Test
+    fun theSidePanelSitsOnTheRightOrAtTheBottomOfCarPlaysTwoThirds() {
+        val areas = CarPlayViewAreas.build(2560, 2560, listOf(
+            CarPlayViewAreas.Screen(2560, 1440, portrait = false),
+            CarPlayViewAreas.Screen(1440, 2560, portrait = true),
+        ), CarPlayDock.AUTOMATIC, splitWindow = { null }, startPortrait = false, sidePanel = true)!!
+        val landscape = areas.sidePanel(portrait = false)!!
+        assertEquals(Kind.SIDE_PANEL, areas.kindOf(landscape))
+        assertEquals(1706 to 1440, areas.areas[landscape].let { it.width to it.height })
+        assertEquals(0, areas.areas[landscape].originX)
+        val portrait = areas.sidePanel(portrait = true)!!
+        assertEquals(1440 to 1706, areas.areas[portrait].let { it.width to it.height })
+        // The canvas is laid out by the whole screen; the panel covers the rest.
+        assertEquals(2560 to 1440, areas.layoutArea(landscape).let { it.width to it.height })
+        assertEquals(1440 to 2560, areas.layoutArea(portrait).let { it.width to it.height })
+        assertEquals(AirPlayViewArea(854, 1440, 1706, 0), areas.panelRect(landscape))
+        assertEquals(AirPlayViewArea(1440, 854, 0, 1706), areas.panelRect(portrait))
+        assertNull(areas.panelRect(areas.current))
+    }
+
+    @Test
+    fun aRightHandDriveCarKeepsCarPlayOnTheRightWithThePanelOnTheLeft() {
+        val areas = CarPlayViewAreas.build(2560, 2560, listOf(
+            CarPlayViewAreas.Screen(2560, 1440, portrait = false),
+            CarPlayViewAreas.Screen(1440, 2560, portrait = true),
+        ), CarPlayDock.AUTOMATIC, splitWindow = { null }, startPortrait = false, sidePanel = true, rightHandDrive = true)!!
+        val landscape = areas.sidePanel(portrait = false)!!
+        assertEquals(854, areas.areas[landscape].originX)
+        assertEquals(AirPlayViewArea(854, 1440, 0, 0), areas.panelRect(landscape))
+        // A portrait screen keeps the panel at the bottom.
+        assertEquals(AirPlayViewArea(1440, 854, 0, 1706), areas.panelRect(areas.sidePanel(portrait = true)!!))
+    }
+
+    @Test
+    fun aWindowNeverPicksTheSidePanelByItself() {
+        val areas = CarPlayViewAreas.build(2560, 1440, CarPlayDock.AUTOMATIC, splitWindow = null, sidePanel = true)!!
+        assertEquals(0, areas.indexFor(2560, 1440, splitScreen = false))
+        assertEquals(0, areas.indexFor(1706, 1440, splitScreen = false))
+        areas.use(areas.sidePanel()!!)
+        assertEquals(0, areas.indexFor(2560, 1440, splitScreen = false))
+    }
+
+    @Test
+    fun theDockMovesBesideTheSidePanelToo() {
+        val areas = CarPlayViewAreas.build(2560, 1440, CarPlayDock.DRIVER_SIDE, splitWindow = null, sidePanel = true)!!
+        areas.use(areas.sidePanel()!!)
+        val moved = areas.withDock(DOCK_EDGE_BOTTOM)!!
+        assertEquals(Kind.SIDE_PANEL, areas.kindOf(moved))
+        assertEquals(DOCK_EDGE_BOTTOM, areas.areas[moved].dockEdge)
     }
 }

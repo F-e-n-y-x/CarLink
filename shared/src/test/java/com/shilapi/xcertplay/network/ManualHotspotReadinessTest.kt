@@ -67,13 +67,12 @@ class ManualHotspotReadinessTest {
         assertEquals(500L, now)
     }
 
-    @Test fun ipv4Ipv6AndDualStackPreserveScope() {
+    @Test fun dualStackPrefersIpv4AndKeepsTheScopedLinkLocalFallback() {
         assertEquals(ipv4, select(snapshot(iface()))?.address)
-        for (addresses in listOf(listOf(ipv6), listOf(ipv4, ipv6))) {
-            val selected = select(snapshot(iface(index = 9, addresses = addresses)))!!
-            assertEquals(9, (selected.address as Inet6Address).scopeId)
-            assertTrue(selected.address.isLinkLocalAddress)
-        }
+        val onlyIpv6 = select(snapshot(iface(index = 9, addresses = listOf(ipv6))))!!
+        assertEquals(9, (onlyIpv6.address as Inet6Address).scopeId)
+        assertTrue(onlyIpv6.address.isLinkLocalAddress)
+        assertEquals(ipv4, select(snapshot(iface(index = 9, addresses = listOf(ipv4, ipv6))))?.address)
     }
 
     @Test fun addressAndIdentityChangesRestartStability() {
@@ -104,7 +103,7 @@ class ManualHotspotReadinessTest {
                 ap = ap, default = "rmnet_data5")
         }
         assertEquals("wlan0", selected.name)
-        assertEquals(31, (selected.address as Inet6Address).scopeId)
+        assertEquals(ipv4, selected.address)
         assertEquals(500L, now)
     }
 

@@ -621,4 +621,8 @@
     <string name="carplay_rotation_sharper">Чіткіше (розмір екрана)</string>
     <string name="carplay_call_controls_experimental">Кнопки викликів CarPlay (експериментально)</string>
     <string name="carplay_call_controls_experimental_description">Увімкнення неперевірених кнопок викликів, голосового керування та відтворення/паузи DiLink 3. Потрібна перевірка в автомобілі. Типово вимкнено; картки викликів на панелі приладів налаштовуються окремо.</string>
+    <string name="side_panel">Бічна панель поруч із CarPlay (експериментально)</string>
+    <string name="side_panel_description">CarPlay може переходити на дві третини екрана, а DiPlay показує в решті свою панель: з боку пасажира на горизонтальному екрані, знизу на вертикальному (годинник і заряд, якщо його зчитано). Показуйте й ховайте її з меню під час сесії. Застосовується з наступного підключення.</string>
+    <string name="side_panel_show">Бічна панель</string>
+    <string name="side_panel_full_screen">⤢ На весь екран</string>
 </resources>
