@@ -29,8 +29,9 @@ internal object BydDiLink3ClusterMode {
         SIMPLE_NAVIGATION(39),
         STOCK(18);
 
-        /** The reply is that of the final mode, so a refused 17 still counts as a failure. */
-        val command: String get() = enterVia?.let { "${call(it)} >/dev/null && sleep 1 && ${call(info)}" } ?: call(info)
+        // The serial session validates each Binder reply separately and compensates failure.
+        val entryCommand: String? get() = enterVia?.let(::call)
+        val command: String get() = call(info)
     }
 
     private fun call(info: Int) = "service call AutoContainer 2 i32 1000 i32 $info s16 \"\""
