@@ -62,13 +62,19 @@ internal object WifiP2pLegacyChannels {
             settled.await(CALLBACK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
         } catch (interrupted: InterruptedException) {
             Thread.currentThread().interrupt()
-            throw IOException("Interrupted while selecting the Wi-Fi Direct channel", interrupted)
+            throw LegacyChannelOutcomeUnknown("Interrupted while selecting the Wi-Fi Direct channel", interrupted)
         }
         if (!completed) {
             diagnostic("Wi-Fi P2P legacy channel callback timeout requestedChannel=$operatingChannel")
+            // The command may already have changed the shared supplicant state. A retry
+            // cannot safely treat an unanswered asynchronous request as a rejection.
+            throw LegacyChannelOutcomeUnknown("Wi-Fi Direct channel selection did not respond")
         }
         return completed && accepted.get()
     }
 
     private fun failureClass(failure: Throwable): String = (failure.cause ?: failure).javaClass.simpleName
 }
+
+internal class LegacyChannelOutcomeUnknown(message: String, cause: Throwable? = null) :
+    IOException(message, cause)

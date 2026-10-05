@@ -11,6 +11,7 @@ import android.net.wifi.p2p.WifiP2pManager
 import com.shilapi.xcertplay.network.WifiP2pGroupManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -23,10 +24,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowWifiP2pManager
+import org.robolectric.util.ReflectionHelpers
 import java.net.InetAddress
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], manifest = Config.NONE,
@@ -86,6 +90,114 @@ class WifiP2pLegacyGroupManagerTest {
         assertNull(memory.getString("confirmed", null))
     }
 
+    @Test fun defaultRetryClearsTheSuccessfulPinFromRejectedCreations() {
+        radio.rejectPinnedCreation = true
+        WifiP2pGroupManager(context).use { manager ->
+            assertEquals(0, background { manager.start(8000) }.channel)
+            assertEquals(0, radio.operatingChannel)
+            assertEquals(0, radio.channelRequests.last())
+        }
+        assertEquals(6, radio.systemCreations)
+        assertEquals(1, radio.channelRequests.count { it == 0 })
+    }
+
+    @Test fun closingOurGroupReleasesOnlyOurRestriction() {
+        val manager = WifiP2pGroupManager(context, preferredChannel = 149)
+        background { manager.start(5000) }
+        background { manager.close() }
+        assertEquals(listOf(149, 0), radio.channelRequests)
+        assertEquals(1, radio.removals)
+    }
+
+    @Test fun closingAfterAReplacementPreservesItsGroupAndChannelState() {
+        val logs = mutableListOf<String>()
+        val manager = WifiP2pGroupManager(context, logs::add, preferredChannel = 149)
+        background { manager.start(5000) }
+        val replacement = radio.makeGroup("DIRECT-another-app")
+        radio.group = replacement
+        background { manager.close() }
+        assertSame(replacement, radio.group)
+        assertEquals(0, radio.removals)
+        assertEquals(listOf(149), radio.channelRequests)
+        assertTrue(logs.any { it.contains("legacy channel cleanup skipped=another_app_owns_group") })
+    }
+
+    @Test fun failedClearStopsDefaultCreationAndDoesNotClaimRestoration() {
+        radio.rejectPinnedCreation = true
+        radio.rejectClear = true
+        val logs = mutableListOf<String>()
+        WifiP2pGroupManager(context, logs::add).use { manager ->
+            assertTrue(failure { manager.start(8000) }.message!!.contains("clear its previous"))
+        }
+        assertEquals(5, radio.systemCreations)
+        assertTrue(logs.any { it.contains("restriction cleared=false") })
+        assertTrue(logs.none { it.contains("restriction cleared=true") })
+    }
+
+    @Test fun unansweredSelectionStopsWithoutRetryAndLateCallbackCannotRepin() {
+        radio.deferSelection = true
+        WifiP2pGroupManager(context, preferredChannel = 149).use { manager ->
+            assertTrue(failure { manager.start(5000) }.message!!.contains("did not respond"))
+            assertEquals(listOf(149, 0), radio.channelRequests)
+            assertEquals(0, radio.systemCreations)
+            radio.deferredListener!!.onSuccess()
+            assertEquals(0, radio.operatingChannel)
+            assertEquals(listOf(149, 0), radio.channelRequests)
+        }
+    }
+
+    @Test fun closeDuringSelectionWaitsForCompensationBeforeClosingTheChannel() {
+        radio.deferSelection = true
+        val manager = WifiP2pGroupManager(context, preferredChannel = 149)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val starting = workers.submit<Any> { manager.start(5000) }
+            assertTrue(radio.selectionIssued.await(2, TimeUnit.SECONDS))
+            val closing = workers.submit { manager.close() }
+            val deadline = System.nanoTime() + 1_000_000_000L
+            while (!ReflectionHelpers.getField<Boolean>(manager, "closed") && System.nanoTime() < deadline) {
+                Thread.sleep(1)
+            }
+            assertTrue(ReflectionHelpers.getField(manager, "closed"))
+            radio.deferredListener!!.onSuccess()
+            closing.get(5, TimeUnit.SECONDS)
+            try { starting.get(5, TimeUnit.SECONDS); fail("Closed startup must fail") }
+            catch (_: ExecutionException) { }
+            assertEquals(0, radio.systemCreations)
+            assertEquals(listOf(149, 0), radio.channelRequests)
+        } finally { workers.shutdownNow(); manager.close() }
+    }
+
+    @Test fun interruptedSelectionStillCompensatesAndPreservesTheInterrupt() {
+        radio.deferSelection = true
+        val manager = WifiP2pGroupManager(context, preferredChannel = 149)
+        val interrupted = AtomicBoolean(false)
+        val starting = Thread {
+            try { manager.start(5000); fail("Interrupted startup must fail") }
+            catch (_: java.io.IOException) { interrupted.set(Thread.currentThread().isInterrupted) }
+        }
+        try {
+            starting.start()
+            assertTrue(radio.selectionIssued.await(2, TimeUnit.SECONDS))
+            starting.interrupt()
+            starting.join(5000)
+            assertTrue(!starting.isAlive)
+            assertTrue(interrupted.get())
+            assertEquals(listOf(149, 0), radio.channelRequests)
+            assertEquals(0, radio.systemCreations)
+        } finally { manager.close() }
+    }
+
+    @Test fun missingExactGroupInterfaceStopsAndRemovesOnlyOurGroup() {
+        radio.missingInterface = true
+        WifiP2pGroupManager(context, preferredChannel = 149).use { manager ->
+            assertTrue(failure { manager.start(300) }.message!!.contains("usable Wi-Fi P2P group"))
+        }
+        assertEquals(1, radio.systemCreations)
+        assertEquals(1, radio.removals)
+        assertEquals(listOf(149, 0), radio.channelRequests)
+    }
+
     private fun failure(block: () -> Any): Throwable {
         try { background(block); fail("Expected failure") }
         catch (failure: ExecutionException) { return failure.cause!! }
@@ -109,6 +221,13 @@ class WifiP2pLegacyGroupManagerTest {
         var systemCreations = 0
         var group: WifiP2pGroup? = null
         var removals = 0
+        val channelRequests = mutableListOf<Int>()
+        var rejectPinnedCreation = false
+        var rejectClear = false
+        var deferSelection = false
+        var missingInterface = false
+        @Volatile var deferredListener: WifiP2pManager.ActionListener? = null
+        val selectionIssued = CountDownLatch(1)
 
         @Implementation override fun setWifiP2pChannels(
             channel: WifiP2pManager.Channel,
@@ -116,8 +235,16 @@ class WifiP2pLegacyGroupManagerTest {
             operatingChannel: Int,
             listener: WifiP2pManager.ActionListener,
         ) {
+            channelRequests.add(operatingChannel)
+            if (rejectChannels || (rejectClear && operatingChannel == 0)) {
+                listener.onFailure(WifiP2pManager.ERROR)
+                return
+            }
             super.setWifiP2pChannels(channel, listenChannel, operatingChannel, listener)
-            if (rejectChannels) listener.onFailure(WifiP2pManager.ERROR) else listener.onSuccess()
+            if (deferSelection && operatingChannel != 0) {
+                deferredListener = listener
+                selectionIssued.countDown()
+            } else listener.onSuccess()
         }
 
         @Implementation override fun requestGroupInfo(
@@ -143,6 +270,10 @@ class WifiP2pLegacyGroupManagerTest {
             listener: WifiP2pManager.ActionListener,
         ) {
             systemCreations++
+            if (rejectPinnedCreation && operatingChannel != 0) {
+                listener.onFailure(WifiP2pManager.ERROR)
+                return
+            }
             group = makeGroup()
             listener.onSuccess()
         }
@@ -165,11 +296,11 @@ class WifiP2pLegacyGroupManagerTest {
             listener.onSuccess()
         }
 
-        fun makeGroup() = WifiP2pGroup().apply {
+        fun makeGroup(name: String = "DIRECT-legacy-test") = WifiP2pGroup().apply {
             shadowOf(this).setIsGroupOwner(true)
-            shadowOf(this).setNetworkName("DIRECT-legacy-test")
+            shadowOf(this).setNetworkName(name)
             shadowOf(this).setPassphrase("legacy-passphrase")
-            shadowOf(this).setInterface("p2p0")
+            shadowOf(this).setInterface(if (missingInterface) "" else "p2p0")
         }
     }
 }

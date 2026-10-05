@@ -34,7 +34,8 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Creates a temporary Wi-Fi Direct group owner, preferring 5 GHz, that can also be joined as a legacy AP.
  *
- * The group is deliberately not persistent. [close] removes it and releases the callback thread.
+ * Android 10+ creates a temporary group. Android 9's public overload can create or reuse a
+ * persistent system profile; [close] removes the active group without deleting saved profiles.
  */
 class WifiP2pGroupManager(
     context: Context,
@@ -48,6 +49,10 @@ class WifiP2pGroupManager(
     private val p2pManager = appContext.getSystemService(WifiP2pManager::class.java)
         ?: throw IllegalStateException("WifiP2pManager is unavailable")
     private val stateLock = Object()
+    // The legacy channel API changes shared supplicant state, rather than this Channel object.
+    // Keep selection, compensation and Channel.close ordered even when startup is cancelled.
+    private val legacyChannelLock = Any()
+    private var legacyRestrictionOwned = false
     private val random = SecureRandom()
     private val configurationMemory = P2pConfigurationMemory(appContext)
     private var rememberedAttempt: P2pConfigurationMemory.Record? = null
@@ -308,7 +313,10 @@ class WifiP2pGroupManager(
         if (removeGroup && activeChannel != null) {
             removeGroupBlocking(activeChannel)
         }
-        activeChannel?.close()
+        synchronized(legacyChannelLock) {
+            if (activeChannel != null) releaseLegacyChannelRestriction(activeChannel)
+            activeChannel?.close()
+        }
         activeThread?.quitSafely()
     }
 
@@ -367,22 +375,74 @@ class WifiP2pGroupManager(
         channel: WifiP2pManager.Channel,
         selection: P2pCreationRequest,
     ) {
-        val requested = selection.frequencyMHz ?: return
-        val operatingChannel = WifiP2pLegacyChannels.operatingChannelFor(requested)
-            ?: throw P2pCreateRejected(
-                WifiP2pManager.ERROR,
-                "Wi-Fi Direct cannot request ${requested}MHz on this Android release",
-            )
-        ensureStartActive(attempt)
-        if (!WifiP2pLegacyChannels.apply(p2pManager, channel, operatingChannel, diagnostic)) {
-            throw P2pCreateRejected(
-                WifiP2pManager.ERROR,
-                "Wi-Fi Direct could not pin channel $operatingChannel on this Android release",
-            )
+        synchronized(legacyChannelLock) {
+            ensureStartActive(attempt)
+            val requested = selection.frequencyMHz
+            if (requested == null) {
+                // A failed creation can leave our successful pin behind. Default creation
+                // must not inherit it, or reset a restriction this manager never applied.
+                if (legacyRestrictionOwned && !clearLegacyChannelRestriction(channel)) {
+                    throw IOException("Wi-Fi Direct could not clear its previous channel restriction")
+                }
+                return
+            }
+            val operatingChannel = WifiP2pLegacyChannels.operatingChannelFor(requested)
+                ?: throw P2pCreateRejected(
+                    WifiP2pManager.ERROR,
+                    "Wi-Fi Direct cannot request ${requested}MHz on this Android release",
+                )
+            val accepted = try {
+                WifiP2pLegacyChannels.apply(p2pManager, channel, operatingChannel, diagnostic)
+            } catch (unknown: LegacyChannelOutcomeUnknown) {
+                legacyRestrictionOwned = true
+                throw unknown
+            }
+            if (!accepted) {
+                throw P2pCreateRejected(
+                    WifiP2pManager.ERROR,
+                    "Wi-Fi Direct could not pin channel $operatingChannel on this Android release",
+                )
+            }
+            legacyRestrictionOwned = true
+            ensureStartActive(attempt)
+            diagnostic("Wi-Fi P2P legacy channel applied channel=$operatingChannel frequencyMHz=$requested")
         }
-        diagnostic(
-            "Wi-Fi P2P legacy channel applied channel=$operatingChannel frequencyMHz=$requested",
-        )
+    }
+
+    /** Called with [legacyChannelLock] held before closing the callback channel. */
+    private fun releaseLegacyChannelRestriction(channel: WifiP2pManager.Channel) {
+        if (!legacyRestrictionOwned) return
+        // Startup interruption must not prevent compensation of its submitted command.
+        // Restore the caller's interrupt status after the bounded cleanup attempt.
+        val wasInterrupted = Thread.interrupted()
+        val result = AtomicReference<WifiP2pGroup?>()
+        val reply = CountDownLatch(1)
+        try {
+            p2pManager.requestGroupInfo(channel) { result.set(it); reply.countDown() }
+            if (!await(reply, REQUEST_POLL_NANOS)) {
+                diagnostic("Wi-Fi P2P legacy channel cleanup skipped=group_unknown")
+                return
+            }
+            val current = result.get()
+            val expectedName = observedCreatedName ?: requestedName
+            if (current != null && (!current.isGroupOwner || expectedName.isNullOrBlank() ||
+                    current.networkName != expectedName)) {
+                diagnostic("Wi-Fi P2P legacy channel cleanup skipped=another_app_owns_group")
+                return
+            }
+            clearLegacyChannelRestriction(channel)
+        } catch (failure: Exception) {
+            diagnostic("Wi-Fi P2P legacy channel cleanup failed failureClass=${failure.javaClass.simpleName}")
+        } finally {
+            if (wasInterrupted) Thread.currentThread().interrupt()
+        }
+    }
+
+    private fun clearLegacyChannelRestriction(channel: WifiP2pManager.Channel): Boolean {
+        val cleared = WifiP2pLegacyChannels.apply(p2pManager, channel, 0, diagnostic)
+        if (cleared) legacyRestrictionOwned = false
+        diagnostic("Wi-Fi P2P legacy channel restriction cleared=$cleared")
+        return cleared
     }
 
     private fun awaitGroupCreated(
@@ -556,20 +616,10 @@ class WifiP2pGroupManager(
         }
     }
 
-    private fun legacyGroupInterface(group: WifiP2pGroup): String? {
-        runCatching { group.getInterface() }
-            .getOrNull()
-            ?.takeIf { it.isNotBlank() }
-            ?.let { return it }
-        return runCatching {
-            Collections.list(NetworkInterface.getNetworkInterfaces())
-                .firstOrNull { network ->
-                    network.name?.startsWith("p2p") == true &&
-                        interfaceAddress(network.name) != null
-                }
-                ?.name
-        }.getOrNull()
-    }
+    // WifiP2pGroup.getInterface is available on Android 9. An arbitrary p2p interface
+    // can belong to a different group, so missing exact group identity must fail closed.
+    private fun legacyGroupInterface(group: WifiP2pGroup): String? =
+        runCatching { group.getInterface()?.takeIf { it.isNotBlank() } }.getOrNull()
 
     private fun requestGroupInfo(
         attempt: StartAttempt,
@@ -781,7 +831,10 @@ class WifiP2pGroupManager(
         if (removeGroup && failedChannel != null) {
             removeGroupBlocking(failedChannel)
         }
-        failedChannel?.close()
+        synchronized(legacyChannelLock) {
+            if (failedChannel != null) releaseLegacyChannelRestriction(failedChannel)
+            failedChannel?.close()
+        }
         failedThread?.quitSafely()
     }
 
