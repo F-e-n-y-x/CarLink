@@ -631,11 +631,13 @@ class CarPlayHostActivity : ComponentActivity() {
             PackageManager.PERMISSION_GRANTED
 
     private fun requestVpnConsent() {
+        if (awaitingVpnConsent) return
         val consent = CarPlayVpnService.prepare(this)
         if (consent == null) {
             vpnReady = true
             maybeStartCarPlay()
         } else {
+            vpnReady = false
             awaitingVpnConsent = true
             vpnConsent.launch(consent)
         }
@@ -683,14 +685,14 @@ class CarPlayHostActivity : ComponentActivity() {
         setIntent(intent)
         if (isIphoneUsbAttachment(intent)) {
             if (wirelessEnabled) {
+                if (menuOpen) cancelSettingsEdits()
                 AirPlayPersistence.saveWirelessEnabled(this, false)
                 wirelessEnabled = false
                 wirelessPermissionsReady = true
                 if (controller != null) {
                     restartCarPlay("switching to USB")
-                } else {
-                    requestStartupPrerequisites()
                 }
+                requestStartupPrerequisites()
             } else if (controller == null) {
                 requestStartupPrerequisites()
             }
