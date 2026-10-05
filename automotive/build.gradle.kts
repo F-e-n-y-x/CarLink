@@ -35,12 +35,7 @@ android {
             optimization {
                 enable = false
             }
-            val releaseKeystore = signingConfigs.getByName("release").storeFile
-            signingConfig = if (releaseKeystore != null && releaseKeystore.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

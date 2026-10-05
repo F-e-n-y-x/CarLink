@@ -204,6 +204,7 @@ class CenterMapOverlayTest {
         card = CenterMapOverlay.javaClass.getDeclaredField("root").apply { isAccessible = true }.get(CenterMapOverlay) as View
         assertEquals(width, params.width)
     }
+
     private fun touch(action: Int, vararg pointers: Pair<Int, Float>) {
         time += 16
         val properties = pointers.map { (id, _) -> MotionEvent.PointerProperties().apply {

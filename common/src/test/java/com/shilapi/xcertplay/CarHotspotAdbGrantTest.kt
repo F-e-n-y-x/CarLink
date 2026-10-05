@@ -6,7 +6,6 @@ import com.shilapi.xcertplay.adb.LocalAdb
 import java.io.DataInputStream
 import java.io.InputStream
 import java.net.ServerSocket
-import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.KeyPairGenerator
@@ -163,10 +162,8 @@ class CarHotspotAdbGrantTest {
         val commands = CopyOnWriteArrayList<String>()
         @Volatile var offeredKey = false
         val keyOffered = CountDownLatch(1)
-        @Volatile private var activeSocket: Socket? = null
         private val worker = thread(isDaemon = true) {
             server.accept().use { socket ->
-                activeSocket = socket
                 socket.soTimeout = 2_000
                 val input = socket.getInputStream()
                 val output = socket.getOutputStream()
@@ -199,20 +196,8 @@ class CarHotspotAdbGrantTest {
         }
 
         fun client() = LocalAdb(key, port = server.localPort)
-        fun await() {
-            worker.join(5_000)
-            if (worker.isAlive) {
-                runCatching { activeSocket?.close() }
-                runCatching { server.close() }
-                worker.join(1_000)
-            }
-            assertFalse("Fake adbd did not finish", worker.isAlive)
-        }
-        override fun close() {
-            runCatching { activeSocket?.close() }
-            runCatching { server.close() }
-            await()
-        }
+        fun await() { worker.join(3_000); assertFalse("Fake adbd did not finish", worker.isAlive) }
+        override fun close() { await(); server.close() }
     }
 
     // Independent wire fixture: the protocol codec is internal to the shared module.

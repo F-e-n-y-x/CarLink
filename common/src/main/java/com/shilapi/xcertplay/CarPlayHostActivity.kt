@@ -480,8 +480,6 @@ class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.requestShow = ::showCenterMap
         MapMirrors.sink = mirrorSink
         MapMirrors.onChanged = mirrorsChanged
-        val hasPhysicalCluster = ClusterMapPresentation.findDisplay(this) != null
-        MapMirrors.streamAspect = if (hasPhysicalCluster) MapMirrors.PHYSICAL_STREAM_ASPECT else MapMirrors.VIRTUAL_STREAM_ASPECT
         languagePreferenceAtCreate = AppLocale.preference(this)
         if (isIphoneUsbAttachment(intent)) {
             AirPlayPersistence.saveWirelessEnabled(this, false)
@@ -502,11 +500,6 @@ class CarPlayHostActivity : ComponentActivity() {
             resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)
         airPlayIdentity = AirPlayPersistence.loadIdentity(this)
         loadPersistedSettings()
-        if (isIphoneUsbAttachment(intent) && wirelessEnabled) {
-            AirPlayPersistence.saveWirelessEnabled(this, false)
-            wirelessEnabled = false
-            wirelessPermissionsReady = true
-        }
         locationPermissionAvailable = hasFineLocationPermission()
         setContentView(buildContentView())
         applyFullscreenMode()
@@ -576,15 +569,6 @@ class CarPlayHostActivity : ComponentActivity() {
         AirPlayPersistence.loadMaximumDetectedDisplay(this).let { (width, height) ->
             maximumDetectedWidthPixels = width
             maximumDetectedHeightPixels = height
-        }
-        if (maximumDetectedWidthPixels <= 0 || maximumDetectedHeightPixels <= 0) {
-            val dm = android.util.DisplayMetrics()
-            @Suppress("DEPRECATION")
-            windowManager.defaultDisplay.getRealMetrics(dm)
-            if (dm.widthPixels > 0 && dm.heightPixels > 0) {
-                maximumDetectedWidthPixels = dm.widthPixels
-                maximumDetectedHeightPixels = dm.heightPixels
-            }
         }
         rightHandDrive = AirPlayPersistence.loadRightHandDrive(this)
         hideTopBar = AirPlayPersistence.loadHideTopBar(this)

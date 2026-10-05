@@ -87,7 +87,7 @@
     <string name="safe_area_mapping_summary">Safe area: %1$d x %2$d at (%3$d, %4$d) in %5$d x %6$d</string>
     <string name="settings_android9_compat">The following settings are unavailable and hidden on Android 9 (API 28):\n• Wi-Fi P2P (5 GHz) — LocalOnlyHotspot is used instead.\n• HEVC software decoder — hardware decoding is used instead.</string>
     <string name="settings_mfi_address_hint">Address must start with http:// or https://. Token is optional and sent as an Authorization bearer token.</string>
-    <string name="app_name">DiPlay CarPlay</string>
+    <string name="app_name">DiPlay</string>
     <string name="language_section_title">Language</string>
     <string name="language_app_language">App language</string>
     <string name="language_system_default">System default</string>
@@ -556,16 +556,16 @@
     <string name="launcher_map_sharing">Share the live map with other launchers</string>
     <string name="launcher_map_sharing_description">Launchers that support DiPlay can show the live dashboard map inside their own home screen. Off by default, because any app on the head unit could then ask for the map. See docs/LAUNCHER_INTEGRATION.md.</string>
     <string name="usb_auto_confirm_status_on">USB Dialog Auto-Confirm: Enabled</string>
-    <string name="usb_auto_confirm_dialog_msg">Auto-confirm requires the Accessibility Service. Many car head units do not expose the system accessibility settings.\n\nWould you like to automatically enable it via local ADB now?</string>
+    <string name="usb_auto_confirm_dialog_msg">Auto-confirm requires the Accessibility Service. Many car head units do not expose the system accessibility settings.\n\nThis setup also requests Usage Access and permission to draw over other apps for the home-screen map. Existing accessibility services are preserved.\n\nApply these three permissions via local ADB?</string>
     <string name="usb_auto_confirm_active_hint">✓ Accessibility Service is active (USB prompt will be auto-confirmed)</string>
-    <string name="btn_auto_apply_permissions">Apply for Accessibility &amp; ADB Permissions</string>
-    <string name="btn_permissions_ready">Accessibility &amp; Auto-Hide: All Active ✓</string>
+    <string name="btn_auto_apply_permissions">Set up USB and map permissions</string>
+    <string name="btn_permissions_ready">USB, usage and overlay permissions verified ✓</string>
     <string name="auto_grant_title">Configuring Permissions via Local ADB...</string>
-    <string name="auto_grant_msg">Attempting to grant Accessibility and Usage Access via Local ADB. If a system prompt appears, please tap Allow.</string>
+    <string name="auto_grant_msg">Requesting USB accessibility, Usage Access and overlay permission via local ADB. Approve the system debugging prompt if shown. Cancel stops further requests; permissions already granted remain enabled.</string>
     <string name="auto_grant_success_title">Auto-Grant Succeeded!</string>
     <string name="auto_grant_success_msg">Successfully configured:\n✓ Accessibility Service (USB auto-confirm)\n✓ Foreground Sensing (Auto-hide floating map when leaving home)\n✓ System Alert Window</string>
     <string name="auto_grant_confirm_title">Please Confirm ADB on Screen</string>
-    <string name="auto_grant_confirm_msg">The car screen has shown the \"Allow USB debugging?\" prompt.\n\nPlease check \"Always allow\" and tap OK, then tap this button again to complete setup!</string>
+    <string name="auto_grant_confirm_msg">ADB authorization has not been confirmed. If the car shows an \"Allow USB debugging?\" prompt, approve it.\n\nPlease check \"Always allow\" and tap OK, then tap this button again to complete setup!</string>
     <string name="retry_auto_grant">Retry Auto-Grant</string>
     <string name="manual_grant_reason_adboff">Local ADB (port 5555) is not active on this head unit.\nYou can enable Accessibility manually in system settings, or enable ADB over network.</string>
     <string name="btn_open_accessibility_setting">Open System Accessibility Settings</string>
@@ -652,4 +652,5 @@
     <string name="first_tcp_timeout">The iPhone did not connect to CarPlay in time</string>
     <string name="wireless_startup_retries_exhausted">Automatic retries stopped. Check the connection and retry manually.</string>
     <string name="retry_carplay_connection">Retry connection</string>
+    <string name="auto_grant_incomplete">Setup did not verify every requested permission. Check each status below; enable network ADB and retry, or use the manual setup. Existing permissions are kept.</string>
 </resources>
