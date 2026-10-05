@@ -605,4 +605,8 @@
     <string name="carplay_rotation_picture">Квадратная картинка</string>
     <string name="carplay_rotation_smoother">Плавнее (1920)</string>
     <string name="carplay_rotation_sharper">Чётче (размер экрана)</string>
+    <string name="side_panel">Боковая панель рядом с CarPlay (экспериментально)</string>
+    <string name="side_panel_description">CarPlay может переходить на две трети экрана, а DiPlay показывает в остальной части свою панель: со стороны пассажира на горизонтальном экране, снизу на вертикальном (часы и заряд, если он считан). Показывайте и скрывайте её из меню во время сеанса. Применяется со следующего подключения.</string>
+    <string name="side_panel_show">Боковая панель</string>
+    <string name="side_panel_full_screen">⤢ На весь экран</string>
 </resources>
