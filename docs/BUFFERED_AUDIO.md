@@ -14,6 +14,7 @@ Apple calls it "Enhanced buffering" ([WWDC23, Optimize CarPlay for vehicle syste
 Names come from the strings of Xcode's CarPlay Simulator and its CarPlaySDK; the behaviour was observed between DiPlay and an iPhone.
 
 - **Offer:** `/info` carries `mainBufferedInfo` (an empty dictionary is accepted) and an `audioFormats` entry `{type 103, audioType media, audioOutputFormats AAC-LC}`. The iPhone proposes the session feature `mainBuffered` in its SETUP, and DiPlay enables it. Enabling the feature without `mainBufferedInfo`, or the reverse, makes the iPhone drop the session.
+- **Ownership:** only one control session can own the shared buffered music renderer. A valid replacement cancels the previous TCP preload and completes its output cleanup before the new stream starts. Retired sessions cannot reclaim it with late SETUP/control/teardown requests; a fresh control session is required. Concurrent SETUP during retirement is declined. Session identities are weakly retained, and closed sessions cannot negotiate a new buffered stream.
 - **Stream SETUP (type 103):** `ct 4` (AAC), `audioFormat`, `spf 1024`, `isMedia`, `clientID`, `streamConnectionID` and `shk` (the stream key). DiPlay answers `{type 103, dataPort, audioBufferSize}` and listens on TCP.
 - **Data:** each frame is a 2-byte length (including itself), a 12-byte RTP header (sequence +1, timestamp +1024) and the payload sealed with ChaCha20-Poly1305 under `shk` (the header's timestamp and SSRC as associated data), followed by an 8-byte nonce. The payload is a raw AAC-LC access unit.
 - **Control:**

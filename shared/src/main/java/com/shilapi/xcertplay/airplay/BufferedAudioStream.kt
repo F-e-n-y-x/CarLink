@@ -34,6 +34,9 @@ internal class BufferedAudioStream(
     private val id = AudioStreamId(format.payloadType, format.audioType)
     private val closed = AtomicBoolean(false)
     private val started = AtomicBoolean(false)
+    private var cleanupStarted = false // guarded by lock; permits reentrant close without recursion
+    @Volatile internal var outputCleanupComplete = false
+        private set
     private val server = ServerSocket(0)
     private val boundPort = server.localPort
     @Volatile private var client: Socket? = null
@@ -287,17 +290,25 @@ internal class BufferedAudioStream(
     }
 
     override fun close() {
-        if (!closed.compareAndSet(false, true)) return
+        closed.set(true)
         runCatching { server.close() }
         synchronized(lock) {
-            runCatching { client?.close() }
-            client = null
-            queue.clear()
-            fed.clear()
-            queuedBytes = 0
-            rate = 0
-            restartOutputLocked()
-            lock.notifyAll()
+            // A second external closer must wait for the first one's sink cleanup, rather
+            // than return just because closed was set while a delivery callback was active.
+            if (cleanupStarted) return
+            cleanupStarted = true
+            try {
+                runCatching { client?.close() }
+                client = null
+                queue.clear()
+                fed.clear()
+                queuedBytes = 0
+                rate = 0
+                restartOutputLocked()
+            } finally {
+                outputCleanupComplete = true
+                lock.notifyAll()
+            }
         }
     }
 

@@ -8,6 +8,8 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.math.BigInteger
+import java.util.Collections
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 
 /** Identity of one CarPlay audio stream: the stream type plus its CarPlay audio type. */
@@ -68,6 +70,25 @@ class CarPlayMediaEngine(
     private val bufferedStreams = ConcurrentHashMap<AirPlaySession, BufferedStream>()
 
     private class BufferedStream(val stream: BufferedAudioStream, val connectionId: Any?)
+
+    // The sink has one type-103 renderer, even while old control sessions remain connected.
+    // Never hold this lock when closing/controlling a stream: sink callbacks can reenter us.
+    private val bufferedOwnershipLock = Any()
+    private var bufferedOwner: AirPlaySession? = null
+    private var bufferedTransition: BufferedTransition? = null
+    private val retiredBufferedSessions = Collections.newSetFromMap(WeakHashMap<AirPlaySession, Boolean>())
+    private class BufferedTransition(val session: AirPlaySession, val candidate: BufferedStream?) {
+        var cancelled = false // guarded by bufferedOwnershipLock
+        var retiring: BufferedStream? = null
+    }
+
+    private fun mayInstallBufferedLocked(session: AirPlaySession): Boolean {
+        // A reentrant sink callback cannot wait for itself. Preserve its retirement barrier
+        // until cleanup completes; the volatile flag requires no reverse stream-lock order.
+        bufferedTransition?.takeIf { it.candidate == null && it.retiring?.stream?.outputCleanupComplete == true }
+            ?.let { bufferedTransition = null }
+        return !session.isClosed && session !in retiredBufferedSessions && bufferedTransition == null
+    }
     @Volatile private var nextRemoteControlStreamId = FIRST_REMOTE_CONTROL_STREAM_ID
     @Volatile private var iapTunnelHandler: ((BlockingDuplexByteStream) -> Boolean)? = null
 
@@ -185,6 +206,7 @@ class CarPlayMediaEngine(
     }
 
     override fun onBufferedAudio(session: AirPlaySession, stream: Map<String, Any?>): Map<String, Any?>? {
+        if (!synchronized(bufferedOwnershipLock) { mayInstallBufferedLocked(session) }) return null
         val type = BufferedAudioStream.STREAM_TYPE
         val streamKey = StreamKey(session, type, "media")
         val key = stream["shk"] as? ByteArray
@@ -209,12 +231,47 @@ class CarPlayMediaEngine(
             Log.w(TAG, "buffered audio listener failed", error)
             return null
         }
-        // A rejected replacement must not destroy the stream that is still playing.
-        streams.remove(streamKey)?.close()
-        bufferedStreams.remove(session)
-        streams[streamKey] = buffered
-        bufferedStreams[session] = BufferedStream(buffered, stream["streamConnectionID"])
+        // Validate before retiring a healthy owner. Detach its registry entries first, but
+        // keep a transition barrier until close has finished its final sink callback.
+        val candidate = BufferedStream(buffered, stream["streamConnectionID"])
+        val transition = BufferedTransition(session, candidate)
+        var previous: BufferedStream? = null
+        val accepted = synchronized(bufferedOwnershipLock) {
+            if (!mayInstallBufferedLocked(session)) false else {
+                bufferedTransition = transition
+                bufferedOwner?.let { oldSession ->
+                    previous = detachBufferedLocked(oldSession)
+                    if (oldSession !== session) retiredBufferedSessions.add(oldSession)
+                }
+                transition.retiring = previous
+                true
+            }
+        }
+        if (!accepted) {
+            buffered.close()
+            return null
+        }
+        val retired = runCatching { previous?.stream?.close() }.isSuccess &&
+            previous?.stream?.outputCleanupComplete != false
+        val installed = synchronized(bufferedOwnershipLock) {
+            val usable = retired && bufferedTransition === transition && !transition.cancelled &&
+                !session.isClosed && session !in retiredBufferedSessions
+            if (usable) {
+                streams[streamKey] = buffered
+                bufferedStreams[session] = candidate
+                bufferedOwner = session
+            }
+            if (bufferedTransition === transition) {
+                bufferedTransition = if (retired) null else BufferedTransition(session, null).also { it.retiring = previous }
+            }
+            usable
+        }
+        if (!installed) {
+            buffered.close()
+            return null
+        }
         buffered.start()
+        if (bufferedStreams[session] !== candidate) return null
         Log.i(TAG, "buffered audio stream client=${stream["clientID"]} rate=${format.sampleRate} port=${buffered.port}")
         return linkedMapOf(
             "type" to type,
@@ -228,7 +285,7 @@ class CarPlayMediaEngine(
         method: String,
         body: Map<String, Any?>,
     ): Map<String, Any?>? {
-        val buffered = bufferedStreams[session]?.stream ?: return null
+        val buffered = synchronized(bufferedOwnershipLock) { bufferedStreams[session]?.stream } ?: return null
         val rtpTime = (body["rtpTime"] as? Number)?.toLong()
         val rate = when ((body["rate"] as? Number)?.toDouble()) {
             0.0 -> 0
@@ -387,7 +444,10 @@ class CarPlayMediaEngine(
 
     override fun onTeardown(session: AirPlaySession, type: Int) {
         if (type == STREAM_TYPE_DATA) clearPendingIapTunnel(session)
-        if (type == BufferedAudioStream.STREAM_TYPE) bufferedStreams.remove(session)
+        if (type == BufferedAudioStream.STREAM_TYPE) {
+            retireBuffered(session)
+            return
+        }
         // TEARDOWN carries only the stream type; release every audioType variant of it.
         val tornDown = streams.keys.filter { it.session === session && it.type == type }
         tornDown.forEach { key ->
@@ -405,9 +465,11 @@ class CarPlayMediaEngine(
 
     override fun onSessionClosed(session: AirPlaySession) {
         clearPendingIapTunnel(session)
-        bufferedStreams.remove(session)
+        retireBuffered(session)
         videoSettingsChannels.remove(session)?.close()
-        val sessionStreams = streams.keys.filter { it.session === session }
+        val sessionStreams = streams.keys.filter {
+            it.session === session && it.type != BufferedAudioStream.STREAM_TYPE
+        }
         sessionStreams
             .filter { isScreenStreamType(it.type) }
             .forEach { sink.onScreenStreamActive(it.type, false) }
@@ -416,6 +478,41 @@ class CarPlayMediaEngine(
         pendingMicrophone.clear()
         audioCaptures.values.forEach(AudioPacketCapture::close)
         audioCaptures.clear()
+    }
+
+    /** Removes ownership before a close that may block on delivery or invoke the sink. */
+    private fun detachBufferedLocked(session: AirPlaySession): BufferedStream? {
+        val previous = bufferedStreams.remove(session)
+        previous?.let { streams.remove(StreamKey(session, BufferedAudioStream.STREAM_TYPE, "media"), it.stream) }
+        if (bufferedOwner === session) bufferedOwner = null
+        return previous
+    }
+
+    private fun retireBuffered(session: AirPlaySession) {
+        var pending: BufferedStream? = null
+        var retirement: BufferedTransition? = null
+        val previous = synchronized(bufferedOwnershipLock) {
+            bufferedTransition?.takeIf { it.session === session }?.let {
+                it.cancelled = true
+                pending = it.candidate
+                // The SETUP thread still owns the barrier while it closes the earlier owner.
+            }
+            detachBufferedLocked(session).also {
+                if (it != null && bufferedTransition == null) {
+                    retirement = BufferedTransition(session, null).also { barrier -> barrier.retiring = it }
+                    bufferedTransition = retirement
+                }
+            }
+        }
+        try {
+            pending?.stream?.close()
+            previous?.stream?.close()
+        } finally {
+            synchronized(bufferedOwnershipLock) {
+                if (retirement != null && bufferedTransition === retirement &&
+                    previous?.stream?.outputCleanupComplete == true) bufferedTransition = null
+            }
+        }
     }
 
     private fun replacePendingIapTunnel(session: AirPlaySession, next: PendingIapTunnel) {

@@ -4,6 +4,12 @@ import java.net.Socket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.io.DataOutputStream
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -77,6 +83,181 @@ class BufferedAudioSessionTest {
             assertNull(engine.onBufferedAudioControl(session, "SETRATEANCHORTIME", mapOf("rate" to 0.5)))
             assertEquals(1, engine.onBufferedAudioControl(session, "GETANCHOR", emptyMap())!!["rate"])
         } finally { session.close() }
+    }
+
+    @Test
+    fun replacingTheSessionClosesOldPreloadAndLateOldCleanupCannotStopTheNewOutput() {
+        val events = CopyOnWriteArrayList<String>()
+        val sink = object : MediaSink {
+            override fun onAudioStarted(id: AudioStreamId, format: AudioFormat, firstSample: Int) { events += "start:$firstSample" }
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) { events += "rtp:$sample" }
+            override fun onAudioStopped(id: AudioStreamId) { events += "stop" }
+        }
+        val engine = CarPlayMediaEngine(sink)
+        val old = session(media = engine)
+        val replacement = session(media = engine)
+        try {
+            val oldSetup = engine.onBufferedAudio(old, validSetup())!!
+            Socket("127.0.0.1", oldSetup["dataPort"] as Int).use { oldSocket ->
+                sendFrame(oldSocket, 0, 1024)
+                engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
+                waitFor { events.contains("rtp:1024") }
+                val newSetup = engine.onBufferedAudio(replacement, validSetup())!!
+                oldSocket.soTimeout = 1000
+                assertEquals("The retired TCP preload must be cancelled", -1, oldSocket.getInputStream().read())
+                Socket("127.0.0.1", newSetup["dataPort"] as Int).use { newSocket ->
+                    sendFrame(newSocket, 1, 100000)
+                    engine.onBufferedAudioControl(replacement, "SETRATE", mapOf("rate" to 1, "rtpTime" to 100000))
+                    waitFor { events.contains("rtp:100000") }
+                    val started = events.indexOf("start:100000")
+                    assertNull(engine.onBufferedAudioControl(old, "SETRATEANCHORTIME", mapOf("rate" to 0)))
+                    engine.onTeardown(old, 103)
+                    old.close()
+                    sendFrame(newSocket, 2, 101024)
+                    waitFor { events.contains("rtp:101024") }
+                    assertTrue("Late old cleanup stopped the replacement renderer", events.drop(started).none { it == "stop" })
+                    assertEquals(1, engine.onBufferedAudioControl(replacement, "GETANCHOR", emptyMap())!!["rate"])
+                }
+            }
+        } finally { old.close(); replacement.close() }
+    }
+
+    @Test
+    fun aRetiredSessionCannotReclaimTheBufferedRendererWithALateSetup() {
+        val engine = CarPlayMediaEngine(object : MediaSink {})
+        val old = session(media = engine)
+        val replacement = session(media = engine)
+        try {
+            assertTrue(engine.onBufferedAudio(old, validSetup()) != null)
+            assertTrue(engine.onBufferedAudio(replacement, validSetup()) != null)
+            assertNull(engine.onBufferedAudio(old, validSetup()))
+            old.close()
+            assertNull(engine.onBufferedAudio(old, validSetup()))
+            assertTrue(engine.onFeedback(replacement) != null)
+        } finally { old.close(); replacement.close() }
+    }
+
+    @Test
+    fun replacementWaitsForDeliveryWithoutHoldingTheEngineLockAcrossAReentrantCallback() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val reentered = AtomicBoolean(false)
+        lateinit var engine: CarPlayMediaEngine
+        lateinit var old: AirPlaySession
+        engine = CarPlayMediaEngine(object : MediaSink {
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) {
+                entered.countDown()
+                release.await(3, TimeUnit.SECONDS)
+                reentered.set(engine.onBufferedAudioControl(old, "GETANCHOR", emptyMap()) == null)
+            }
+        })
+        old = session(media = engine)
+        val replacement = session(media = engine)
+        val third = session(media = engine)
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            val setup = engine.onBufferedAudio(old, validSetup())!!
+            Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
+                sendFrame(socket, 0, 1024)
+                engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
+                assertTrue(entered.await(3, TimeUnit.SECONDS))
+                val pending = executor.submit<Map<String, Any?>?> { engine.onBufferedAudio(replacement, validSetup()) }
+                waitFor { engine.onFeedback(old) == null }
+                assertTrue("Replacement must finish old delivery before publishing its port", !pending.isDone)
+                assertNull(engine.onBufferedAudio(third, validSetup()))
+                release.countDown()
+                assertTrue(pending.get(3, TimeUnit.SECONDS) != null)
+                assertTrue("Engine lock blocked an old sink callback during retirement", reentered.get())
+            }
+        } finally {
+            release.countDown()
+            old.close(); replacement.close(); third.close(); executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun closingThePendingReplacementCannotReleaseTheBarrierBeforeOldOutputCleanup() {
+        val stopped = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val delivered = CountDownLatch(1)
+        val engine = CarPlayMediaEngine(object : MediaSink {
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) { delivered.countDown() }
+            override fun onAudioStopped(id: AudioStreamId) {
+                stopped.countDown()
+                release.await(3, TimeUnit.SECONDS)
+            }
+        })
+        val old = session(media = engine)
+        val replacement = session(media = engine)
+        val third = session(media = engine)
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            val setup = engine.onBufferedAudio(old, validSetup())!!
+            Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
+                sendFrame(socket, 0, 1024)
+                engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
+                assertTrue(delivered.await(3, TimeUnit.SECONDS))
+                val pending = executor.submit<Map<String, Any?>?> { engine.onBufferedAudio(replacement, validSetup()) }
+                assertTrue(stopped.await(3, TimeUnit.SECONDS))
+                replacement.close()
+                assertNull(engine.onBufferedAudio(third, validSetup()))
+                release.countDown()
+                assertNull(pending.get(3, TimeUnit.SECONDS))
+                assertNull(engine.onBufferedAudio(replacement, validSetup()))
+                assertTrue(engine.onBufferedAudio(third, validSetup()) != null)
+            }
+        } finally {
+            release.countDown()
+            old.close(); replacement.close(); third.close(); executor.shutdownNow()
+        }
+    }
+
+    @Test
+    fun reentrantSetupDuringOldStopIsDeclinedUntilThatCallbackCompletes() {
+        val delivered = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val declined = AtomicBoolean(false)
+        lateinit var engine: CarPlayMediaEngine
+        lateinit var replacement: AirPlaySession
+        engine = CarPlayMediaEngine(object : MediaSink {
+            override fun onAudioRtp(id: AudioStreamId, format: AudioFormat, rtp: ByteArray, sample: Int) { delivered.countDown() }
+            override fun onAudioStopped(id: AudioStreamId) {
+                declined.set(engine.onBufferedAudio(replacement, validSetup()) == null)
+                stopped.countDown()
+            }
+        })
+        val old = session(media = engine)
+        replacement = session(media = engine)
+        try {
+            val setup = engine.onBufferedAudio(old, validSetup())!!
+            Socket("127.0.0.1", setup["dataPort"] as Int).use { socket ->
+                sendFrame(socket, 0, 1024)
+                engine.onBufferedAudioControl(old, "SETRATE", mapOf("rate" to 1, "rtpTime" to 1024))
+                assertTrue(delivered.await(3, TimeUnit.SECONDS))
+                // A malformed TCP frame closes the stream from its receiver, outside the engine.
+                DataOutputStream(socket.getOutputStream()).apply { writeShort(2); flush() }
+                assertTrue(stopped.await(3, TimeUnit.SECONDS))
+                assertTrue(declined.get())
+                waitFor { engine.onBufferedAudio(replacement, validSetup()) != null }
+            }
+        } finally { old.close(); replacement.close() }
+    }
+
+    private fun sendFrame(socket: Socket, sequence: Int, timestamp: Int) {
+        val header = java.nio.ByteBuffer.allocate(12).apply {
+            put(0x80.toByte()); put(0x60.toByte()); putShort(sequence.toShort()); putInt(timestamp); putInt(0)
+        }.array()
+        val tail = java.nio.ByteBuffer.allocate(8).putLong(sequence.toLong()).array()
+        val nonce = ByteArray(12).also { tail.copyInto(it, 4) }
+        val encrypted = AirPlayCrypto.chachaSeal(ByteArray(32), nonce, byteArrayOf(0x21), header.copyOfRange(4, 12))
+        val body = header + encrypted + tail
+        DataOutputStream(socket.getOutputStream()).apply { writeShort(body.size + 2); write(body); flush() }
+    }
+
+    private fun waitFor(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(3)
+        while (!condition() && System.nanoTime() < deadline) Thread.sleep(10)
+        assertTrue("condition not met in time", condition())
     }
 
     private fun validSetup(): Map<String, Any?> = mapOf(
