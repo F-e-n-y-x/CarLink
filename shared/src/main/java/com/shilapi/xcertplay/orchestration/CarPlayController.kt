@@ -461,6 +461,23 @@ class CarPlayController(
         }
     }
 
+    /** Moves CarPlay on the main screen to its declared view area [index], for example another dock edge. */
+    fun showViewArea(index: Int): Boolean {
+        if (closed) return false
+        val session = activeSession ?: return false
+        val token = session.mainScreenSessionToken() ?: return false
+        return try {
+            touchExecutor.execute {
+                if (!closed && activeSession === session && session.mainScreenSessionToken() === token) {
+                    debugLog("View area $index sent=${session.showViewArea(index)}")
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /** Sends a CarPlay knob/touchpad movement or button state through the AirPlay HID channel. */
     fun sendKnob(state: AirPlayKnobState, momentary: Boolean = true): Boolean {
         if (closed) return false
