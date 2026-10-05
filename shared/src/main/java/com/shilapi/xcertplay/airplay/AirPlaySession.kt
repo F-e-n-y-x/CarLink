@@ -807,9 +807,8 @@ class AirPlaySession(
         try {
             val socket = server.accept()
             socket.setSoLinger(true, 0)
-            // Touches are small messages sent many times a second, and the iPhone does not answer them on
-            // this channel. With Nagle's algorithm a touch waited for the iPhone's delayed ACK of the
-            // previous one, so moves reached it in bunches.
+            // Avoid Nagle coalescing on this interactive event connection: small HID/event writes
+            // need not wait for earlier unacknowledged data.
             socket.tcpNoDelay = true
             debugLog("airplay event connection accepted from ${socket.remoteSocketAddress} noDelay=${socket.tcpNoDelay}")
             eventSocket = socket
