@@ -52,7 +52,6 @@ import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.WifiP2pChannels
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
-import com.shilapi.xcertplay.settings.DisplaySettingsSection
 import com.shilapi.xcertplay.settings.SettingsTheme
 import com.shilapi.xcertplay.settings.SettingsWidgets
 import com.shilapi.xcertplay.transport.EvChargingConnectors

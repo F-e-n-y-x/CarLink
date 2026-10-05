@@ -27,6 +27,7 @@ object DisplaySettingsSection {
         theme = theme,
         contentDescription = if (theme.isOverlay) context.getString(R.string.hevc_h_265_video_transport)
         else context.getString(R.string.efficient_video),
+        labelSizeSp = if (theme.isOverlay) 20f else 18f,
         onChanged = onChanged,
     )
 
@@ -42,6 +43,7 @@ object DisplaySettingsSection {
         checked = checked,
         theme = theme,
         contentDescription = context.getString(R.string.use_software_hevc_decoder),
+        labelSizeSp = if (theme.isOverlay) 20f else 18f,
         onChanged = onChanged,
     )
 

@@ -17,6 +17,17 @@ import com.shilapi.xcertplay.host.R
 
 object SettingsWidgets {
 
+    private fun TextView.applyTextStyle(context: Context, theme: SettingsTheme, bold: Boolean = false) {
+        if (theme.isOverlay) {
+            typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            includeFontPadding = false
+        } else {
+            typeface = Typeface.create(if (bold) "sans-serif-medium" else "sans-serif", Typeface.NORMAL)
+            gravity = Gravity.CENTER_VERTICAL
+            setLineSpacing(theme.dp(context, 3).toFloat(), 1f)
+        }
+    }
+
     data class SwitchRowResult(
         val rowView: View,
         val switch: Switch,
@@ -41,7 +52,7 @@ object SettingsWidgets {
         text = title
         textSize = if (theme.isOverlay) 16f else 22f
         setTextColor(if (theme.isOverlay) theme.accent else theme.textPrimary)
-        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        applyTextStyle(context, theme, bold = true)
     }
 
     fun createSwitchRow(
@@ -52,6 +63,7 @@ object SettingsWidgets {
         theme: SettingsTheme = SettingsTheme.OVERLAY,
         contentDescription: String = label,
         enabled: Boolean = true,
+        labelSizeSp: Float = 18f,
         onChanged: (Boolean) -> Unit,
     ): SwitchRowResult {
         val row = LinearLayout(context).apply {
@@ -82,8 +94,9 @@ object SettingsWidgets {
         if (theme.isOverlay) {
             val labelView = TextView(context).apply {
                 text = label
-                textSize = 18f
+                textSize = labelSizeSp
                 setTextColor(theme.textSecondary)
+                applyTextStyle(context, theme)
             }
             row.addView(labelView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             row.addView(switch, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -94,15 +107,16 @@ object SettingsWidgets {
             }
             val labelView = TextView(context).apply {
                 text = label
-                textSize = 18f
+                textSize = labelSizeSp
                 setTextColor(theme.textPrimary)
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                applyTextStyle(context, theme, bold = true)
             }
             val descView = TextView(context).apply {
                 text = description
                 textSize = 14f
                 setTextColor(theme.textSecondary)
                 setPadding(0, theme.dp(context, 6), theme.dp(context, 16), 0)
+                applyTextStyle(context, theme)
             }
             textCol.addView(labelView)
             textCol.addView(descView)
@@ -128,9 +142,7 @@ object SettingsWidgets {
             text = label
             textSize = 18f
             setTextColor(if (theme.isOverlay) theme.textSecondary else theme.textPrimary)
-            if (!theme.isOverlay) {
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            }
+            applyTextStyle(context, theme, bold = !theme.isOverlay)
         }
         container.addView(
             labelView,
@@ -167,10 +179,18 @@ object SettingsWidgets {
             )
         }
         if (selectedId != View.NO_ID) group.check(selectedId)
+        var lastSelectedId = group.checkedRadioButtonId
         group.setOnCheckedChangeListener { radioGroup, checkedId ->
+            if (checkedId == View.NO_ID) {
+                lastSelectedId = View.NO_ID
+                return@setOnCheckedChangeListener
+            }
+            val button = radioGroup.findViewById<RadioButton>(checkedId) ?: return@setOnCheckedChangeListener
+            // RadioGroup may notify while unchecking the old button, then repeat the new ID.
+            if (!button.isChecked || checkedId == lastSelectedId) return@setOnCheckedChangeListener
             @Suppress("UNCHECKED_CAST")
-            val value = radioGroup.findViewById<RadioButton>(checkedId)?.tag as? T
-                ?: return@setOnCheckedChangeListener
+            val value = button.tag as? T ?: return@setOnCheckedChangeListener
+            lastSelectedId = checkedId
             onSelected(value)
         }
         container.addView(
@@ -189,6 +209,7 @@ object SettingsWidgets {
         theme: SettingsTheme = SettingsTheme.OVERLAY,
         onPercentChanged: (Int) -> Unit,
     ): ResolutionSliderResult {
+        val initial = initialPercent.coerceIn(CarPlayDisplayScale.MIN_PERCENT, CarPlayDisplayScale.MAX_PERCENT)
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -200,16 +221,14 @@ object SettingsWidgets {
             text = context.getString(R.string.resolution)
             textSize = 20f
             setTextColor(if (theme.isOverlay) theme.textSecondary else theme.textPrimary)
-            if (!theme.isOverlay) {
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            }
+            applyTextStyle(context, theme, bold = !theme.isOverlay)
         }
         header.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val valueTextView = TextView(context).apply {
-            text = "$initialPercent%"
+            text = "$initial%"
             textSize = 28f
             setTextColor(theme.accent)
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            applyTextStyle(context, theme, bold = true)
         }
         header.addView(
             valueTextView,
@@ -225,7 +244,7 @@ object SettingsWidgets {
 
         val seekBar = SeekBar(context).apply {
             max = CarPlayDisplayScale.MAX_PERCENT - CarPlayDisplayScale.MIN_PERCENT
-            progress = initialPercent - CarPlayDisplayScale.MIN_PERCENT
+            progress = initial - CarPlayDisplayScale.MIN_PERCENT
             splitTrack = false
             progressTintList = ColorStateList.valueOf(theme.accent)
             thumbTintList = ColorStateList.valueOf(theme.accent)
@@ -258,12 +277,14 @@ object SettingsWidgets {
             text = context.getString(R.string.custom_resolution_summary, CarPlayDisplayScale.MIN_PERCENT)
             textSize = 15f
             setTextColor(theme.textSecondary)
+            applyTextStyle(context, theme)
         }
         range.addView(minLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         val maxLabel = TextView(context).apply {
             text = context.getString(R.string.custom_resolution_summary, CarPlayDisplayScale.MAX_PERCENT)
             textSize = 15f
             setTextColor(theme.textSecondary)
+            applyTextStyle(context, theme)
         }
         range.addView(
             maxLabel,

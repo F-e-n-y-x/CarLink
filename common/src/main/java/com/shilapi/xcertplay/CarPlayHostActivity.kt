@@ -1802,6 +1802,7 @@ class CarPlayHostActivity : ComponentActivity() {
             backgroundTintList = ColorStateList.valueOf(MENU_TRACK_OFF)
             minHeight = dp(52)
             setOnClickListener {
+                cancelSettingsEdits()
                 showDiPlayHome("settings")
             }
         }

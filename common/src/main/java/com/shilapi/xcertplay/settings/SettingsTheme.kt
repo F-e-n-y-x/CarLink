@@ -24,11 +24,11 @@ enum class SettingsTheme(
     OVERLAY(
         isOverlay = true,
         textPrimary = Color.WHITE,
-        textSecondary = Color.rgb(0xcc, 0xd3, 0xdf),
-        accent = Color.rgb(0x6f, 0x9f, 0xd9),
-        accentTrack = Color.rgb(0x32, 0x58, 0x8c),
-        trackOff = Color.rgb(0x3b, 0x3d, 0x47),
-        buttonText = Color.rgb(0x12, 0x13, 0x18),
+        textSecondary = Color.rgb(170, 180, 190),
+        accent = Color.rgb(127, 205, 154),
+        accentTrack = Color.rgb(78, 143, 102),
+        trackOff = Color.rgb(64, 74, 80),
+        buttonText = Color.rgb(8, 17, 11),
     );
 
     fun dp(context: Context, value: Int): Int =

@@ -37,6 +37,7 @@ object ConnectionSettingsSection {
         checked = checked,
         theme = theme,
         contentDescription = context.getString(R.string.wireless_carplay_transport),
+        labelSizeSp = if (theme.isOverlay) 20f else 18f,
         onChanged = onChanged,
     )
 
