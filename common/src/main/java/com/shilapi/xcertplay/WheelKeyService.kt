@@ -13,6 +13,7 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
+import java.util.concurrent.atomic.AtomicBoolean
 import com.shilapi.xcertplay.adb.AdbKeys
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.AirPlayKnobState
@@ -269,7 +270,9 @@ class WheelKeyService : AccessibilityService() {
         private const val ELIGIBILITY_POLL_MILLIS = 250L
         private const val ROUTE_CHECK_MILLIS = 1_000L
         internal const val LEARNING_TIMEOUT_MILLIS = 10_000L
+        private const val RESTORE_GRACE_MILLIS = 4_000L
         @Volatile private var running: WheelKeyService? = null
+        private val restoring = AtomicBoolean(false)
 
         fun connected(): Boolean = running != null
 
@@ -298,18 +301,53 @@ class WheelKeyService : AccessibilityService() {
          * BYD's settings have no accessibility page, so the user can turn the service on through the car's
          * own adb (allowed once on the car screen). Services already in the list stay there.
          */
-        fun enableOverAdb(context: Context): LocalAdb.Access = LocalAdb(AdbKeys.load(context)).use { adb ->
-            val access = adb.connect(mayAsk = true)
+        fun enableOverAdb(context: Context, mayAsk: Boolean = true): LocalAdb.Access = LocalAdb(AdbKeys.load(context)).use { adb ->
+            val access = adb.connect(mayAsk)
             if (access == LocalAdb.Access.READY) {
-                val ours = component(context).flattenToString()
-                val current = adb.shell("settings get secure enabled_accessibility_services")?.trim()
-                    ?.takeUnless { it.isEmpty() || it == "null" }
-                val list = (current?.split(':').orEmpty() + ours).filter { it.isNotBlank() }.distinct().joinToString(":")
-                adb.shell("settings put secure enabled_accessibility_services '$list'")
+                val current = adb.shell("settings get secure enabled_accessibility_services")
+                val (without, with) = allowedServices(current, component(context).flattenToString())
+                // Listed but not running: Android stops binding a service after its process crashed, until
+                // the list changes, so take it out and put it back.
+                without?.let { adb.shell("settings put secure enabled_accessibility_services '$it'") }
+                adb.shell("settings put secure enabled_accessibility_services '$with'")
                 adb.shell("settings put secure accessibility_enabled 1")
-                Log.i(TAG, "wheel key service allowed over adb")
+                Log.i(TAG, "wheel key service allowed over adb${if (without != null) " (listed, rebound)" else ""}")
             }
             access
+        }
+
+        /**
+         * Android takes the service off the allowed list when the app is force-stopped (BYD's system does
+         * that), and an update or a crash can leave it unbound. With the zoom or joystick setting on, DiPlay
+         * puts it back over the car's adb, already allowed, when it is still not running a few seconds after
+         * DiPlay starts, so the keys work without a visit to the settings.
+         */
+        fun restoreIfNeeded(context: Context) {
+            val app = context.applicationContext
+            if (!WheelZoomSettings.enabled(app) && !WheelZoomSettings.joystick(app)) return
+            if (connected() || !restoring.compareAndSet(false, true)) return
+            Thread({
+                try {
+                    Thread.sleep(RESTORE_GRACE_MILLIS)
+                    if (!connected()) Log.i(TAG, "wheel key service not running; restoring over adb: ${enableOverAdb(app, mayAsk = false)}")
+                } catch (error: Exception) {
+                    Log.w(TAG, "wheel key service restore failed", error)
+                } finally {
+                    restoring.set(false)
+                }
+            }, "diplay-wheel-keys-restore").start()
+        }
+
+        /**
+         * The allowed-services setting without and with [ours]: the first is null when [ours] is not listed,
+         * the second keeps every other service in its place.
+         */
+        internal fun allowedServices(current: String?, ours: String): Pair<String?, String> {
+            val listed = current?.trim()?.takeUnless { it.isEmpty() || it == "null" }
+                ?.split(':')?.filter { it.isNotBlank() }.orEmpty()
+            val others = listed.filter { it != ours }.distinct()
+            val without = if (ours in listed) others.joinToString(":") else null
+            return without to (others + ours).joinToString(":")
         }
 
         private fun component(context: Context) = ComponentName(context, WheelKeyService::class.java)
