@@ -488,6 +488,7 @@ class DiPlayActivity : ComponentActivity() {
             card.addView(label(getString(R.string.settings_gesture_fingers_hint), 14, MUTED).apply {
                 setPadding(0, dp(10), 0, 0)
             })
+            siriKeyControls(card)
         }
         section(content, getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
@@ -1599,29 +1600,7 @@ class DiPlayActivity : ComponentActivity() {
         val zoom = WheelZoomSettings.enabled(this)
         val joystick = WheelZoomSettings.joystick(this)
         if (!zoom && !joystick) return
-        val connected = WheelKeyService.connected()
-        card.addView(label(getString(when {
-            connected -> R.string.wheel_keys_service_on
-            WheelKeyService.enabledInSettings(this) -> R.string.wheel_keys_service_starting
-            else -> R.string.wheel_keys_service_off
-        }), 14, if (connected) MUTED else WARNING))
-        if (!connected) {
-            card.addView(button(getString(R.string.wheel_keys_enable_adb), false) {
-                Thread({
-                    val access = WheelKeyService.enableOverAdb(this)
-                    runOnUiThread {
-                        if (access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
-                            toast(getString(R.string.wheel_keys_adb_failed, access.name))
-                        }
-                        render()
-                    }
-                }, "diplay-wheel-keys-enable").start()
-            }, matchButton(10, 56))
-            card.addView(button(getString(R.string.wheel_keys_open_settings), false) {
-                runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-                    .onFailure { toast(getString(R.string.wheel_keys_no_settings)) }
-            }, matchButton(10, 56))
-        }
+        wheelKeyServiceControls(card)
         if (zoom) {
             val behaviours = WheelZoomSettings.Behaviour.entries
             choice(card, getString(R.string.wheel_zoom_behaviour),
@@ -1648,22 +1627,66 @@ class DiPlayActivity : ComponentActivity() {
                 WheelZoomSettings.Role.ZOOM_OUT, WheelZoomSettings.Role.NEXT -> R.string.wheel_key_role_next
                 WheelZoomSettings.Role.JOYSTICK -> R.string.wheel_key_role_joystick
                 WheelZoomSettings.Role.SELECT -> R.string.wheel_key_role_select
+                WheelZoomSettings.Role.SIRI -> null
             }.takeIf { joystick }
             val names = listOfNotNull(zoomName, joystickName)
             if (names.isEmpty()) continue
-            val name = names.joinToString(" · ") { getString(it) }
-            lateinit var assign: android.widget.Button
-            assign = button(getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()), false) {
-                val started = WheelKeyService.learn(role, cancelled = {
-                    runOnUiThread { assign.text = getString(R.string.wheel_key_assign, name, WheelZoomSettings.key(this, role).toString()) }
-                }) { _, key ->
-                    runOnUiThread { assign.text = getString(R.string.wheel_key_assign, name, key.toString()) }
-                }
-                if (started) assign.text = getString(R.string.wheel_key_press, name)
-                else toast(getString(R.string.wheel_keys_service_off))
-            }
-            card.addView(assign, matchButton(10, 56))
+            wheelKeyAssignButton(card, role, names.joinToString(" · ") { getString(it) })
         }
+    }
+
+    /** A wheel key that opens Siri on any car whose key reaches the key service. */
+    private fun siriKeyControls(card: LinearLayout) {
+        toggle(card, getString(R.string.wheel_siri_key), getString(R.string.wheel_siri_key_description),
+            WheelZoomSettings.siriKey(this)) {
+            WheelZoomSettings.setSiriKey(this, it)
+            render()
+        }
+        if (!WheelZoomSettings.siriKey(this)) return
+        wheelKeyServiceControls(card)
+        wheelKeyAssignButton(card, WheelZoomSettings.Role.SIRI, getString(R.string.wheel_key_role_siri))
+    }
+
+    private fun wheelKeyServiceControls(card: LinearLayout) {
+        val connected = WheelKeyService.connected()
+        card.addView(label(getString(when {
+            connected -> R.string.wheel_keys_service_on
+            WheelKeyService.enabledInSettings(this) -> R.string.wheel_keys_service_starting
+            else -> R.string.wheel_keys_service_off
+        }), 14, if (connected) MUTED else WARNING))
+        if (!connected) {
+            card.addView(button(getString(R.string.wheel_keys_enable_adb), false) {
+                Thread({
+                    val access = WheelKeyService.enableOverAdb(this)
+                    runOnUiThread {
+                        if (access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                            toast(getString(R.string.wheel_keys_adb_failed, access.name))
+                        }
+                        render()
+                    }
+                }, "diplay-wheel-keys-enable").start()
+            }, matchButton(10, 56))
+            card.addView(button(getString(R.string.wheel_keys_open_settings), false) {
+                runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                    .onFailure { toast(getString(R.string.wheel_keys_no_settings)) }
+            }, matchButton(10, 56))
+        }
+    }
+
+    private fun wheelKeyAssignButton(card: LinearLayout, role: WheelZoomSettings.Role, name: String) {
+        fun current(key: WheelKey? = WheelZoomSettings.key(this, role)) =
+            getString(R.string.wheel_key_assign, name, key?.toString() ?: getString(R.string.wheel_key_none))
+        lateinit var assign: android.widget.Button
+        assign = button(current(), false) {
+            val started = WheelKeyService.learn(role, cancelled = {
+                runOnUiThread { assign.text = current() }
+            }) { _, key ->
+                runOnUiThread { assign.text = current(key) }
+            }
+            if (started) assign.text = getString(R.string.wheel_key_press, name)
+            else toast(getString(R.string.wheel_keys_service_off))
+        }
+        card.addView(assign, matchButton(10, 56))
     }
 
     /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */

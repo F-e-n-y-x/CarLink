@@ -59,9 +59,9 @@ class WheelKeyServiceTest {
         service.javaClass.getDeclaredMethod("onServiceConnected").apply { isAccessible = true }.invoke(service)
     }
 
-    private fun key(code: Int, down: Boolean, repeat: Int = 0): Boolean = service.javaClass
+    private fun key(code: Int, down: Boolean, repeat: Int = 0, time: Long = 0): Boolean = service.javaClass
         .getDeclaredMethod("onKeyEvent", KeyEvent::class.java).apply { isAccessible = true }.invoke(service,
-            KeyEvent(0, 0, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, repeat, 0, -1, 0),
+            KeyEvent(time, time, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, repeat, 0, -1, 0),
         ) as Boolean
 
     private fun zoomOn() {
@@ -80,7 +80,7 @@ class WheelKeyServiceTest {
         assertFalse(key(KeyEvent.KEYCODE_F3, true))
         assertFalse(key(KeyEvent.KEYCODE_F3, false))
         assertEquals(0, learned)
-        assertEquals(KeyEvent.KEYCODE_F1, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE).code)
+        assertEquals(KeyEvent.KEYCODE_F1, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE)?.code)
     }
 
     @Test fun cancelAndTimeoutDoNotLeaveTheNextKeyCaptured() {
@@ -203,7 +203,7 @@ class WheelKeyServiceTest {
         assertTrue(learn())
         assertEquals(true to true, press(KeyEvent.KEYCODE_F4))
         assertEquals(1, learned)
-        assertEquals(KeyEvent.KEYCODE_F4, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE).code)
+        assertEquals(KeyEvent.KEYCODE_F4, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE)?.code)
         assertTrue(knobs.isEmpty())
     }
 
@@ -228,5 +228,52 @@ class WheelKeyServiceTest {
         assertEquals("" to ours, WheelKeyService.allowedServices(ours, ours))
         for (empty in listOf("", "null", " \n")) assertEquals(null to ours, WheelKeyService.allowedServices(empty, ours))
         assertNull(WheelKeyService.allowedServices(null, ours))
+    }
+
+    private var siriRequests = 0
+
+    private fun siriSetUp() {
+        WheelZoomSettings.setEnabled(service, false)
+        WheelZoomSettings.setSiriKey(service, true)
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.SIRI, WheelKey(KeyEvent.KEYCODE_F6, 0, "?"))
+        service.session = { phone }
+        service.requestSiri = { siriRequests++; true }
+    }
+
+    @Test fun aHeldSiriKeySentAsRepeatedPressesOpensSiriOnce() {
+        siriSetUp()
+        for (time in 0L..500L step 100) {
+            assertTrue(key(KeyEvent.KEYCODE_F6, true, time = time))
+            assertTrue(key(KeyEvent.KEYCODE_F6, false, time = time))
+        }
+        assertEquals(1, siriRequests)
+        assertTrue(key(KeyEvent.KEYCODE_F6, true, time = 2_000))
+        assertTrue(key(KeyEvent.KEYCODE_F6, false, time = 2_000))
+        assertEquals(2, siriRequests)
+    }
+
+    @Test fun siriKeyKeepsTheCarsActionWithoutCarPlayInACallOrWhenOff() {
+        siriSetUp()
+        phone = null
+        assertFalse(key(KeyEvent.KEYCODE_F6, true))
+        assertFalse(key(KeyEvent.KEYCODE_F6, false))
+        phone = "phone-one"
+        service.getSystemService(AudioManager::class.java).mode = AudioManager.MODE_IN_CALL
+        assertFalse(key(KeyEvent.KEYCODE_F6, true))
+        assertFalse(key(KeyEvent.KEYCODE_F6, false))
+        service.getSystemService(AudioManager::class.java).mode = AudioManager.MODE_NORMAL
+        WheelZoomSettings.setSiriKey(service, false)
+        assertFalse(key(KeyEvent.KEYCODE_F6, true))
+        assertFalse(key(KeyEvent.KEYCODE_F6, false))
+        assertEquals(0, siriRequests)
+    }
+
+    @Test fun theSiriKeyCanBeLearnedWithOnlyTheSiriSettingOn() {
+        siriSetUp()
+        assertTrue(WheelKeyService.learn(WheelZoomSettings.Role.SIRI) { _, _ -> learned++ })
+        assertTrue(key(KeyEvent.KEYCODE_F7, true))
+        assertTrue(key(KeyEvent.KEYCODE_F7, false))
+        assertEquals(1, learned)
+        assertEquals(KeyEvent.KEYCODE_F7, WheelZoomSettings.key(service, WheelZoomSettings.Role.SIRI)?.code)
     }
 }

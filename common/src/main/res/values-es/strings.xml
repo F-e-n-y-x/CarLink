@@ -589,6 +589,10 @@
     <string name="wheel_key_role_previous">elemento anterior</string>
     <string name="wheel_key_role_next">elemento siguiente</string>
     <string name="wheel_key_role_select">seleccionar</string>
+    <string name="wheel_key_role_siri">Siri</string>
+    <string name="wheel_key_none">ninguna</string>
+    <string name="wheel_siri_key">Botón de Siri en el volante</string>
+    <string name="wheel_siri_key_description">Abre Siri con un botón del volante que elijas, para coches en los que DiPlay no ve el botón de voz. Necesita el servicio de botones del volante. Sin CarPlay, o durante una llamada, el botón conserva su función en el coche.</string>
     <string name="wheel_key_role_back">atrás</string>
     <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
     <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
