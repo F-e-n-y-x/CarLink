@@ -115,6 +115,7 @@ object BydCarPlayCall {
     @Volatile private var context: Context? = null
     private var shown: CarPlayCallCard? = null // writer thread
     private var watcherRunning = false // writer thread
+    private var cleanupPending = false // writer thread; no fresh call mutation until owned cleanup succeeds
     private var watcherToken: String? = null // writer thread; unique for each displayed call lifetime
 
     fun attach(appContext: Context) {
@@ -152,24 +153,38 @@ object BydCarPlayCall {
         if (wanted != null && !BydOutputSettings.carPlayCalls(app)) return
         // Only the newest state matters; older queued ones are skipped.
         if (wanted != current() && !(wanted == null && !BydOutputSettings.carPlayCalls(app))) return
-        if (wanted == shown) return
-        if (wanted == null) {
-            if (shown == null) return
+        if (wanted == shown && !cleanupPending) return
+        if (wanted == null || cleanupPending) {
             val token = watcherToken ?: return
-            if (run(app, "end - $token")) {
-                shown = null
-                watcherToken = null
-                watcherRunning = false
+            if (!run(app, "end - $token")) {
+                cleanupPending = true
+                ensureWatcher(app, token)
+                return
             }
-            return
+            shown = null
+            watcherToken = null
+            watcherRunning = false
+            cleanupPending = false
+            if (wanted == null) return
         }
         val name = Base64.encodeToString(wanted.name.toByteArray(Charsets.UTF_8), Base64.NO_WRAP).ifEmpty { "-" }
         val phase = wanted.phase.name.lowercase()
         val token = watcherToken ?: CarPlayCallWatchOwnership.newToken(app.packageName)
         val since = wanted.activeSinceMillis?.let { it / 1000 } ?: 0
-        if (!run(app, "$phase $name $token $since")) return
+        // A missing reply may follow a partial write. Retain recovery ownership before
+        // delivery, even when no call has yet been marked shown.
         watcherToken = token
-        shown = wanted
+        cleanupPending = true
+        if (run(app, "$phase $name $token $since")) {
+            shown = wanted
+            cleanupPending = false
+        } else {
+            shown = null
+        }
+        ensureWatcher(app, token)
+    }
+
+    private fun ensureWatcher(app: Context, token: String) {
         if (!watcherRunning) {
             val apk = app.applicationInfo.sourceDir
             val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} ${android.os.Process.myPid()}"
@@ -181,12 +196,12 @@ object BydCarPlayCall {
         val apk = app.applicationInfo.sourceDir
         val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} $args")
             ?: return false
-        // A firmware without one of the features still shows the rest. A refused write makes the tool undo
-        // the call writes it made and report write=ERR, so the call is retried rather than marked shown.
+        // Missing features remain optional. Only the tool's explicit completion confirms a
+        // show/end; empty or partial replies leave recovery ownership pending.
         val failed = output.lineSequence().map { it.trim() }.filter { it.contains('=') }
             .filter { line -> line.substringAfter('=').trim().toIntOrNull() != 0 }.toList()
         if (failed.isNotEmpty()) Log.w(TAG, "call writes not accepted: ${failed.joinToString().take(200)}")
-        return failed.none { it.startsWith("write=") }
+        return output.lineSequence().any { it.trim() == "write=0" } && failed.none { it.startsWith("write=") }
     }
 }
 
@@ -196,7 +211,8 @@ object BydCarPlayCall {
  * `ringing|dialing|active <base64 name>` and `end -`. `watch <token> <package>` sends the call time
  * every second while the token says `active <start seconds>`, and ends the call on the car when DiPlay's
  * process is gone; it exits once the token is removed. Prints "name=result" per write; 0 is success.
- * A refused call write undoes the accepted ones (see [CarPlayCallWrites]) and reports write=ERR.
+ * A failed call write attempts compensation (see [CarPlayCallWrites]) and reports write=ERR.
+ * Recovery ownership remains pending until an end succeeds; write=0 confirms completed commands.
  */
 object BydCarPlayCallTool {
     private val ownership = CarPlayCallWatchOwnership()
@@ -237,6 +253,7 @@ object BydCarPlayCallTool {
                     token.writeText("${args[0]} $since")
                 }
             }
+            println("write=0")
         } catch (error: Throwable) {
             println("write=ERR ${describe(error)}")
         } finally {
@@ -265,7 +282,7 @@ object BydCarPlayCallTool {
             write = { step, value, undo -> device.set(if (undo) "undo-${step.label}" else step.label, features.getValue(step.label), value) },
             name = { device.setBytes("name", INSTRUMENT, IDS, "INSTRUMENT_CALL_INFO_SET", CarPlayCallState.nameBytes(name)) },
         )
-        check(accepted) { "the car refused a call write; the accepted ones were set back to idle" }
+        check(accepted) { "the car refused a call write; compensation attempted and cleanup remains pending" }
     }
 
     private fun end(device: Device) {
@@ -282,15 +299,14 @@ object BydCarPlayCallTool {
     private fun watch(device: Device, tokenPath: String, packageName: String, processId: String) {
         val token = java.io.File(tokenPath)
         val started = System.currentTimeMillis()
+        var cleanupWanted = false
         while (token.exists() && System.currentTimeMillis() - started < MAX_WATCH_MILLIS) {
-            if (!running(packageName, processId)) {
-                ownership.retire(tokenPath) { end(device) }
-                return
-            }
+            if (!running(packageName, processId)) cleanupWanted = true
             val current = ownership.update(tokenPath) {
                 val parts = runCatching { it.readText().trim().split(' ') }.getOrDefault(emptyList())
                 val since = parts.getOrNull(1)?.toLongOrNull() ?: 0
-                if (parts.firstOrNull() == "active" && since > 0) {
+                if (parts.firstOrNull() == "cleanup") cleanupWanted = true
+                if (!cleanupWanted && parts.firstOrNull() == "active" && since > 0) {
                     val seconds = (System.currentTimeMillis() / 1000 - since).coerceIn(0, 99L * 3600 + 3599)
                     device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_HOUR_SET", (seconds / 3600).toInt())
                     device.quiet(INSTRUMENT, IDS, "INSTRUMENT_CALL_TIME_MINUTE_SET", (seconds / 60 % 60).toInt())
@@ -298,6 +314,9 @@ object BydCarPlayCallTool {
                 }
             }
             if (!current) { ownership.retire(tokenPath) {}; return }
+            // A failed idle setter keeps the token/owner and is retried while this watcher
+            // lives, including after the app dies. Do not abandon the first partial write.
+            if (cleanupWanted && ownership.retireOrRetry(tokenPath) { end(device) }) return
             Thread.sleep(1000)
         }
         ownership.retire(tokenPath) { end(device) }

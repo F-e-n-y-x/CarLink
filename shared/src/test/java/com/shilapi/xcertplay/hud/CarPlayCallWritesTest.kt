@@ -25,6 +25,24 @@ class CarPlayCallWritesTest {
             name = { log += "name"; name },
         )
 
+    @Test fun aSetterThatMutatesBeforeReportingFailureIsAlsoCompensated() {
+        val values = writes.associate { it.label to it.idle }.toMutableMap()
+        assertFalse(CarPlayCallWrites.apply(writes, { step, value, undo ->
+            values[step.label] = value
+            if (!undo && step.label == "bt") Result.REFUSED else Result.DONE
+        }, { Result.DONE }))
+        assertEquals(writes.associate { it.label to it.idle }, values)
+    }
+
+    @Test fun aThrowingUndoDoesNotPreventCompensationOfTheRemainingWrites() {
+        assertFalse(CarPlayCallWrites.apply(writes, { step, value, undo ->
+            log += "${if (undo) "undo-" else ""}${step.label}=$value"
+            if (undo && step.label == "car") throw IllegalStateException("setter failed after write")
+            if (!undo && step.label == "bt") Result.REFUSED else Result.DONE
+        }, { Result.DONE }))
+        assertEquals(listOf("audio=0", "car=1", "bt=2", "undo-bt=5", "undo-car=0", "undo-audio=1"), log)
+    }
+
     @Test fun allAcceptedWritesEveryFeatureAndTheName() {
         assertTrue(run())
         assertEquals(listOf("audio=0", "car=1", "bt=2", "state=1", "name"), log)
@@ -32,12 +50,12 @@ class CarPlayCallWritesTest {
 
     @Test fun refusedWriteStopsAndSetsAcceptedOnesBackToIdleNewestFirst() {
         assertFalse(run(mapOf("bt" to Result.REFUSED)))
-        assertEquals(listOf("audio=0", "car=1", "bt=2", "undo-car=0", "undo-audio=1"), log)
+        assertEquals(listOf("audio=0", "car=1", "bt=2", "undo-bt=5", "undo-car=0", "undo-audio=1"), log)
     }
 
     @Test fun missingFeatureIsSkippedAndNotUndone() {
         assertFalse(run(mapOf("car" to Result.MISSING, "state" to Result.REFUSED)))
-        assertEquals(listOf("audio=0", "car=1", "bt=2", "state=1", "undo-bt=5", "undo-audio=1"), log)
+        assertEquals(listOf("audio=0", "car=1", "bt=2", "state=1", "undo-state=2", "undo-bt=5", "undo-audio=1"), log)
     }
 
     @Test fun missingFeaturesAloneStillShowTheRest() {
@@ -53,8 +71,8 @@ class CarPlayCallWritesTest {
         )
     }
 
-    @Test fun firstWriteRefusedUndoesNothing() {
+    @Test fun firstWriteRefusedAlsoCompensatesThatAttempt() {
         assertFalse(run(mapOf("audio" to Result.REFUSED)))
-        assertEquals(listOf("audio=0"), log)
+        assertEquals(listOf("audio=0", "undo-audio=1"), log)
     }
 }

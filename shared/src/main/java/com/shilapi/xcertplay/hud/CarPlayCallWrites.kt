@@ -4,33 +4,35 @@ package com.shilapi.xcertplay.hud
 internal class CarPlayCallWrite(val label: String, val call: Int, val idle: Int)
 
 /**
- * Applies a call's writes all or nothing. A feature this firmware does not have is skipped; a write the
- * car refuses sets the ones already accepted back to their idle values, newest first, so the car is not
- * left half in a call. The caller name is written last and is hidden by the ended instrument state.
+ * Applies a call's writes with best-effort compensation. Missing features are skipped. Any attempted
+ * setter may mutate before reporting failure, so the failing setter is compensated too, newest first.
+ * Compensation continues after failures; false leaves cleanup ownership pending until an explicit end
+ * succeeds. The caller name is written last and is hidden by the ended instrument state.
  */
 internal object CarPlayCallWrites {
     enum class Result { DONE, MISSING, REFUSED }
 
-    /** Returns false when a write was refused and the accepted ones were undone. */
+    /** Returns false after a failed write and compensation attempt; it does not prove restoration. */
     fun apply(
         writes: List<CarPlayCallWrite>,
         write: (step: CarPlayCallWrite, value: Int, undo: Boolean) -> Result,
         name: () -> Result,
     ): Boolean {
-        val accepted = ArrayList<CarPlayCallWrite>()
+        val attempted = ArrayList<CarPlayCallWrite>()
         for (step in writes) {
-            when (write(step, step.call, false)) {
-                Result.DONE -> accepted += step
-                Result.MISSING -> Unit
-                Result.REFUSED -> return undo(accepted, write)
+            attempted += step
+            when (runCatching { write(step, step.call, false) }.getOrDefault(Result.REFUSED)) {
+                Result.DONE -> Unit
+                Result.MISSING -> attempted.remove(step)
+                Result.REFUSED -> return undo(attempted, write)
             }
         }
-        if (name() == Result.REFUSED) return undo(accepted, write)
+        if (runCatching(name).getOrDefault(Result.REFUSED) == Result.REFUSED) return undo(attempted, write)
         return true
     }
 
     private fun undo(accepted: List<CarPlayCallWrite>, write: (CarPlayCallWrite, Int, Boolean) -> Result): Boolean {
-        accepted.asReversed().forEach { write(it, it.idle, true) }
+        accepted.asReversed().forEach { step -> runCatching { write(step, step.idle, true) } }
         return false
     }
 }

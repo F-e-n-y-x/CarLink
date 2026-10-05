@@ -62,6 +62,47 @@ class CarPlayCallWatchOwnershipTest {
         assertTrue(ownership.retire(path) {})
     }
 
+    @Test fun cleanupIsJournaledBeforeAFirstShowCanMutateOrThrow() {
+        val path = token()
+        try {
+            ownership.claim(path) {
+                assertEquals("cleanup 0", it.readText())
+                throw IOException("setter failed after mutation")
+            }
+            fail("Expected failure")
+        } catch (_: IOException) {}
+        assertEquals("cleanup 0", File(path).readText())
+        assertTrue(ownership.update(path) {})
+    }
+
+    @Test fun watcherCleanupFailureKeepsTheJournalAndRetriesWithoutResettingAForeignOwner() {
+        val path = token()
+        ownership.claim(path) { }
+        var attempts = 0
+        assertFalse(ownership.retireOrRetry(path) { attempts++; throw IOException("idle setter refused") })
+        assertEquals("cleanup 0", File(path).readText())
+        assertTrue(ownership.retireOrRetry(path) { attempts++ })
+        assertEquals(2, attempts)
+        assertFalse(File(path).exists())
+        val old = token()
+        val next = token("com.example.other")
+        ownership.claim(old) { }
+        ownership.claim(next) { }
+        assertTrue(ownership.retireOrRetry(old) { fail("Foreign reset") })
+        assertEquals("cleanup 0", File(next).readText())
+    }
+
+    @Test fun failedEndTurnsAnActiveJournalIntoPendingCleanupBeforeTheSetter() {
+        val path = token()
+        ownership.claim(path) { it.writeText("active 1") }
+        assertFalse(ownership.retireOrRetry(path) {
+            assertEquals("cleanup 0", File(path).readText())
+            throw IOException("idle setter failed after mutation")
+        })
+        assertEquals("cleanup 0", File(path).readText())
+        assertTrue(ownership.update(path) {})
+    }
+
     @Test fun callerCannotDeleteAnUnrelatedFile() {
         val unrelated = temporary.newFile("other-owner")
         try { ownership.retire(unrelated.path) {}; fail("Expected invalid token") }

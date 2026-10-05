@@ -11,6 +11,9 @@ internal class CarPlayCallWatchOwnership(private val directory: File = File("/da
 
     fun claim(path: String, action: (File) -> Unit) = locked {
         val token = token(path)
+        // Persist recovery intent before claiming hardware or entering a setter. A failed
+        // first show must leave a real token for the watcher and later end commands.
+        token.writeText("cleanup 0")
         owner.writeText(token.path)
         action(token)
     }
@@ -26,12 +29,19 @@ internal class CarPlayCallWatchOwnership(private val directory: File = File("/da
         val token = token(path)
         val ours = owner.readTextOrNull() == token.path
         if (ours) {
+            // An idle write can also fail after mutation. Keep recovery intent visible to
+            // the existing watcher before attempting any owned end operation.
+            token.writeText("cleanup 0")
             action()
             owner.delete()
         }
         token.delete()
         ours
     }
+
+    /** True when cleanup completed or a newer owner superseded us; false retains retryable ownership. */
+    fun retireOrRetry(path: String, action: () -> Unit): Boolean =
+        runCatching { retire(path, action); true }.getOrDefault(false)
 
     private fun token(path: String): File {
         val file = File(path).canonicalFile
