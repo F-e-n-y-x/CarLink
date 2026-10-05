@@ -16,12 +16,13 @@ object AppLocale {
     const val SYSTEM = "system"
     const val ENGLISH = "en"
     const val SIMPLIFIED_CHINESE = "zh"
+    const val TRADITIONAL_CHINESE = "zh-TW"
     const val ARABIC = "ar"
     const val RUSSIAN = "ru"
     const val SPANISH = "es"
     const val UKRAINIAN = "uk"
 
-    val ALL = listOf(SYSTEM, ENGLISH, SIMPLIFIED_CHINESE, ARABIC, RUSSIAN, SPANISH, UKRAINIAN)
+    val ALL = listOf(SYSTEM, ENGLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE, ARABIC, RUSSIAN, SPANISH, UKRAINIAN)
 
     private const val PREFS = "diplay"
     private const val KEY_LANGUAGE = "app_language"
@@ -31,7 +32,13 @@ object AppLocale {
     fun preference(context: Context): String {
         if (Build.VERSION.SDK_INT >= 33) {
             val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
-            return if (locales.isEmpty) SYSTEM else locales[0].language
+            if (locales.isEmpty) return SYSTEM
+            val selected = locales[0]
+            return if (selected.language == "zh" && selected.country in setOf("TW", "HK", "MO")) {
+                TRADITIONAL_CHINESE
+            } else {
+                selected.language
+            }
         }
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_LANGUAGE, SYSTEM)?.takeIf { it in ALL } ?: SYSTEM
@@ -97,6 +104,7 @@ object AppLocale {
         SYSTEM -> context.getString(R.string.language_system_default)
         ENGLISH -> "English"
         SIMPLIFIED_CHINESE -> "简体中文"
+        TRADITIONAL_CHINESE -> "繁體中文"
         ARABIC -> "العربية"
         RUSSIAN -> "Русский"
         SPANISH -> "Español"
@@ -107,6 +115,7 @@ object AppLocale {
     private fun locale(language: String): Locale? = when (language) {
         ENGLISH -> Locale.ENGLISH
         SIMPLIFIED_CHINESE -> Locale.SIMPLIFIED_CHINESE
+        TRADITIONAL_CHINESE -> Locale.TRADITIONAL_CHINESE
         ARABIC -> Locale("ar")
         RUSSIAN -> Locale("ru")
         SPANISH -> Locale("es")
