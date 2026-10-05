@@ -414,8 +414,6 @@ class CarPlayHostActivity : ComponentActivity() {
     private val shuttingDown = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var sidePanel: LinearLayout? = null
-    private var sidePanelContent: View? = null
-    private var sidePanelSpacer: View? = null
     private var sidePanelBattery: TextView? = null
     private var sidePanelShown = false
     private val sidePanelTick = object : Runnable {
@@ -1306,7 +1304,7 @@ class CarPlayHostActivity : ComponentActivity() {
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
         // Above the video and gesture layer, below the menus.
-        sidePanel = buildSidePanel().also { root.addView(it, FrameLayout.LayoutParams(-1, -1)) }
+        sidePanel = buildSidePanel().also { root.addView(it, FrameLayout.LayoutParams(0, 0)) }
         var preparationHeight = -1
         fun updatePreparationLayout() {
             val height = viewport.height - viewport.paddingTop - viewport.paddingBottom
@@ -1372,18 +1370,14 @@ class CarPlayHostActivity : ComponentActivity() {
         return root
     }
 
-    // DiPlay's side panel: the right third of a landscape screen or a band at the bottom of a portrait one,
-    // over the part of the canvas CarPlay leaves black. The rest of the row is an unclickable spacer, so
-    // touches there still reach the gesture layer and CarPlay.
+    // DiPlay's side panel: placed over the part of the stream CarPlay leaves black (placeSidePanel), so it
+    // follows the video when it is letterboxed; touches elsewhere still reach the gesture layer and CarPlay.
     private fun buildSidePanel(): LinearLayout {
-        val row = LinearLayout(this).apply {
-            weightSum = 3f
-            visibility = View.GONE
-        }
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             isClickable = true
+            visibility = View.GONE
             setBackgroundColor(Color.rgb(16, 16, 18))
             setPadding(dp(24), dp(24), dp(24), dp(24))
         }
@@ -1406,21 +1400,24 @@ class CarPlayHostActivity : ComponentActivity() {
             textSize = 22f
             setOnClickListener { showSidePanel(false) }
         })
-        sidePanelContent = panel
-        sidePanelSpacer = View(this)
-        arrangeSidePanel(row, portrait = false)
-        return row
+        return panel
     }
 
-    private fun arrangeSidePanel(row: LinearLayout, portrait: Boolean) {
-        val panel = sidePanelContent ?: return
-        val spacer = sidePanelSpacer ?: return
-        row.removeAllViews()
-        row.orientation = if (portrait) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        fun params(weight: Float) = if (portrait) LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, weight)
-            else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, weight)
-        row.addView(spacer, params(2f))
-        row.addView(panel, params(1f))
+    // The panel's strip of the stream, mapped through the video's layout in the window.
+    private fun placeSidePanel(viewWidth: Int, viewHeight: Int) {
+        val panel = sidePanel ?: return
+        val display = sessionDisplay ?: return
+        val strip = display.viewAreas?.let { it.panelRect(it.current) } ?: return
+        val content = contentRect(viewWidth, viewHeight)
+        val scaleX = content.width / display.width
+        val scaleY = content.height / display.height
+        val left = Math.round(content.left + strip.originX * scaleX)
+        val top = Math.round(content.top + strip.originY * scaleY)
+        panel.layoutParams = FrameLayout.LayoutParams(
+            Math.round(content.left + (strip.originX + strip.width) * scaleX) - left,
+            Math.round(content.top + (strip.originY + strip.height) * scaleY) - top,
+            Gravity.TOP or Gravity.START,
+        ).apply { leftMargin = left; topMargin = top }
     }
 
     private fun showSidePanel(show: Boolean) {
@@ -1434,7 +1431,6 @@ class CarPlayHostActivity : ComponentActivity() {
         if (!sent || target == null) return
         areas.use(target)
         sidePanelShown = show
-        sidePanel?.let { arrangeSidePanel(it, portrait) }
         sidePanel?.visibility = if (show) View.VISIBLE else View.GONE
         mainHandler.removeCallbacks(sidePanelTick)
         if (show) sidePanelTick.run()
@@ -3552,13 +3548,14 @@ class CarPlayHostActivity : ComponentActivity() {
             CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
                 CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
-                sidePanel = SidePanelSettings.enabled(this))
+                sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
         } else {
             val areaShort = (shortPixels.toLong() * square / longPixels).toInt() and 1.inv()
             CarPlayViewAreas.build(square, square, listOf(
                 CarPlayViewAreas.Screen(square, areaShort, portrait = false),
                 CarPlayViewAreas.Screen(areaShort, square, portrait = true),
-            ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this))
+            ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
+                rightHandDrive = rightHandDrive)
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
@@ -4301,6 +4298,7 @@ class CarPlayHostActivity : ComponentActivity() {
             setScale(content.width / viewWidth, content.height / viewHeight)
             postTranslate(content.left, content.top)
         })
+        if (sidePanelShown) placeSidePanel(viewWidth, viewHeight)
     }
 
     private fun recordDetectedMaximum(size: DisplaySize) {

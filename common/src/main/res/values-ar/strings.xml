@@ -606,7 +606,7 @@
     <string name="carplay_rotation_smoother">أكثر سلاسة (1920)</string>
     <string name="carplay_rotation_sharper">أكثر وضوحًا (حجم الشاشة)</string>
     <string name="side_panel">لوحة جانبية بجوار CarPlay (تجريبي)</string>
-    <string name="side_panel_description">يمكن نقل CarPlay إلى ثلثي الشاشة بينما يعرض DiPlay لوحة في الباقي: على اليمين في الشاشة الأفقية، وفي الأسفل في الشاشة العمودية (الساعة، والبطارية إذا تمت قراءتها). أظهرها وأخفها من قائمة الجلسة. يُطبَّق عند الاتصال التالي.</string>
+    <string name="side_panel_description">يمكن نقل CarPlay إلى ثلثي الشاشة بينما يعرض DiPlay لوحة في الباقي: على جانب الراكب في الشاشة الأفقية، وفي الأسفل في الشاشة العمودية (الساعة، والبطارية إذا تمت قراءتها). أظهرها وأخفها من قائمة الجلسة. يُطبَّق عند الاتصال التالي.</string>
     <string name="side_panel_show">اللوحة الجانبية</string>
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
 </resources>
