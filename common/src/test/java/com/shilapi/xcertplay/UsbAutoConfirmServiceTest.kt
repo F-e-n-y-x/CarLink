@@ -42,6 +42,13 @@ class UsbAutoConfirmServiceTest {
         )
         assertTrue(UsbAutoConfirmService.isEnabled(context))
     }
+    @Test fun missingAccessibilitySettingsDoesNotCrash() {
+        val unavailable = org.mockito.Mockito.mock(Context::class.java)
+        org.mockito.Mockito.doThrow(android.content.ActivityNotFoundException())
+            .`when`(unavailable).startActivity(org.mockito.ArgumentMatchers.any(android.content.Intent::class.java))
+        assertFalse(UsbAutoConfirmService.openSettings(unavailable))
+    }
+
     @Test fun onlySystemUsbActivitiesAreAccepted() {
         assertTrue(UsbAutoConfirmService.isSystemUsbWindow("com.android.systemui", "com.android.systemui.usb.UsbPermissionActivity"))
         assertFalse(UsbAutoConfirmService.isSystemUsbWindow("evil.app", "com.android.systemui.usb.UsbPermissionActivity"))
