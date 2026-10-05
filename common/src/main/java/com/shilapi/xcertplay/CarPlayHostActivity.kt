@@ -2443,7 +2443,13 @@ class CarPlayHostActivity : ComponentActivity() {
                 isAllCaps = false
                 setOnClickListener {
                     externalActivityInProgress = true
-                    imagePicker.launch("image/*")
+                    runCatching { imagePicker.launch("image/*") }.onFailure {
+                        externalActivityInProgress = false
+                        appendLog("No image picker: ${it.javaClass.simpleName}")
+                        android.widget.Toast.makeText(this@CarPlayHostActivity,
+                            getString(R.string.this_head_unit_has_no_image_picker),
+                            android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             },
             LinearLayout.LayoutParams(
