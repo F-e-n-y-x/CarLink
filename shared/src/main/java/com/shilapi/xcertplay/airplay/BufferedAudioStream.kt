@@ -59,6 +59,8 @@ internal class BufferedAudioStream(
             log("Buffered audio: connected")
             val input = DataInputStream(socket.getInputStream().buffered())
             var failures = 0
+            var receivedBytes = 0L
+            var windowStart = nanoTime()
             while (!closed.get()) {
                 val length = input.readUnsignedShort()
                 val body = ByteArray(maxOf(0, length - LENGTH_BYTES))
@@ -67,6 +69,15 @@ internal class BufferedAudioStream(
                 if (frame == null) {
                     if (failures++ < 3) log("Buffered audio: frame did not open (${body.size} bytes)")
                     continue
+                }
+                receivedBytes += length
+                val now = nanoTime()
+                if (now - windowStart >= STATS_WINDOW_NS) {
+                    val queuedMillis = synchronized(lock) { queue.size * SAMPLES_PER_FRAME * 1000L / format.sampleRate }
+                    log("Buffered audio: queued ${queuedMillis / 1000} s, received " +
+                        "${receivedBytes * 8 * 1_000_000L / ((now - windowStart) / 1000L) / 1000} kbit/s")
+                    receivedBytes = 0
+                    windowStart = now
                 }
                 if (frame.rtp.size <= RTP_HEADER) continue
                 synchronized(lock) {
@@ -210,6 +221,7 @@ internal class BufferedAudioStream(
         /** About when the first fed sample is heard: the media renderer's start level and the decoder. */
         internal const val START_LATENCY_MILLIS = 400L
         private const val FEED_POLL_MILLIS = 20L
+        private const val STATS_WINDOW_NS = 10_000_000_000L
         private const val SAMPLES_PER_FRAME = 1024L
         private const val LENGTH_BYTES = 2
         private const val RTP_HEADER = 12
