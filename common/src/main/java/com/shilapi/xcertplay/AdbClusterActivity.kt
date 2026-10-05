@@ -136,7 +136,7 @@ internal object ClusterActivityOutput {
     private var launchHost = WeakReference<Activity>(null)
     private val retryTick = Runnable { launchHost.get()?.let(::ensure) }
 
-    fun acceptsToken(token: String?): Boolean = token != null && token == launchToken && hostOwner != null
+    fun acceptsToken(token: String?): Boolean = token != null && token == launchToken && (hostOwner != null || previewHost.get() != null)
     fun hasConfirmedRoute(): Boolean = activity.get()?.let { !it.isFinishing && !it.isDestroyed } == true &&
         expectedDisplay > 0
     fun confirm(window: AdbClusterActivity, token: String?, display: Int): Boolean {
@@ -150,7 +150,8 @@ internal object ClusterActivityOutput {
     }
     fun retry() {
         main.removeCallbacks(retryTick)
-        if (hostOwner != null && launchHost.get() != null) main.postDelayed(retryTick, 5_000L)
+        if ((hostOwner != null || previewHost.get() != null) && launchHost.get() != null)
+            main.postDelayed(retryTick, 5_000L)
     }
     var mainTaskId = -1
         private set
@@ -187,12 +188,16 @@ internal object ClusterActivityOutput {
     }
 
     private var previewOwner: Any? = null
+    private var previewHost = WeakReference<Activity>(null)
     var previewRect: com.shilapi.xcertplay.airplay.SafeAreaRect? = null
         private set
 
-    fun beginSafeAreaPreview(owner: Any, rect: com.shilapi.xcertplay.airplay.SafeAreaRect) {
+    fun beginSafeAreaPreview(owner: Any, rect: com.shilapi.xcertplay.airplay.SafeAreaRect, host: Activity? = null) {
         previewOwner = owner
+        previewHost = WeakReference(host)
         updateSafeAreaPreview(owner, rect)
+        // Calibration owns a window, not a CarPlay session or decoder callback.
+        if (hostOwner == null && host != null) ensure(host)
     }
 
     fun updateSafeAreaPreview(owner: Any, rect: com.shilapi.xcertplay.airplay.SafeAreaRect) {
@@ -204,26 +209,30 @@ internal object ClusterActivityOutput {
     fun endSafeAreaPreview(owner: Any) {
         if (previewOwner !== owner) return
         previewOwner = null
+        previewHost.clear()
         previewRect = null
         activity.get()?.updateSafeAreaPreview()
+        if (hostOwner == null) closeRoute()
     }
 
     fun bind(owner: Any, taskId: Int, callback: (Surface?) -> Unit) {
-        if (hostOwner !== owner && !hasConfirmedRoute()) {
+        if (hostOwner !== owner && !hasConfirmedRoute() && previewHost.get() == null) {
             ++generation
             launchToken = null
             expectedDisplay = -1
             launchPending = false
         }
         hostOwner = owner
+        if (owner is Activity) launchHost = WeakReference(owner)
         mainTaskId = taskId
         onSurface = callback
         callback(surface)
     }
 
     fun ensure(host: Activity) {
+        if (!AdbClusterRouter.enabled(host) || host.isFinishing || host.isDestroyed) return
+        if (hostOwner !== host && !(hostOwner == null && previewHost.get() === host)) return
         launchHost = WeakReference(host)
-        if (!AdbClusterRouter.enabled(host) || hostOwner !== host) return
         if (activity.get()?.let { !it.isFinishing && !it.isDestroyed } == true || launchPending) return
         launchPending = true
         val epoch = ++generation
@@ -231,8 +240,9 @@ internal object ClusterActivityOutput {
         launchToken = token
         expectedDisplay = -1
         val app = host.applicationContext
+        val holdStockMap = hostOwner != null
         Thread({
-            val result = AdbClusterRouter.launch(app, token) { display ->
+            val result = AdbClusterRouter.launch(app, token, holdStockMap = holdStockMap) { display ->
                 if (generation != epoch || launchToken != token) false
                 else { expectedDisplay = display; true }
             }
@@ -277,10 +287,14 @@ internal object ClusterActivityOutput {
     }
 
     /** Settings may change while the projection host is paused. Stop its old lease immediately. */
-    fun stopForSettings() { hostOwner?.let(::stop) }
+    fun stopForSettings() { closeRoute() }
 
     fun stop(owner: Any) {
         if (hostOwner !== owner) return
+        closeRoute()
+    }
+
+    private fun closeRoute() {
         val releaseContext = launchHost.get()?.applicationContext
         val releaseLease = launchToken
         ++generation
@@ -299,8 +313,11 @@ internal object ClusterActivityOutput {
         launchPending = false
         guidance = null
         previewOwner = null
+        previewHost.clear()
         previewRect = null
         setStreamActive(false)
-        activity.get()?.finish()
+        val oldActivity = activity.get()
+        activity.clear()
+        oldActivity?.finish()
     }
 }

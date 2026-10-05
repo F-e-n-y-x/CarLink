@@ -54,10 +54,13 @@ internal object AdbClusterRouter {
         return matches.singleOrNull()?.takeIf { it > 0 }
     }
 
-    fun launch(context: Context, token: String, prepare: (Int) -> Boolean): Result {
+    fun launch(context: Context, token: String, holdStockMap: Boolean = true, prepare: (Int) -> Boolean): Result {
         var success = false
         val text = buildString {
             appendLine("ADB direct cluster launch capturedAt=${java.util.Date()}")
+            appendLine("diLink3ModeSwitchSuppressed=" + AirPlayPersistence.loadAdbClusterEnabled(context))
+            appendLine("calibrationOnly=${!holdStockMap}")
+            appendLine("stockMapHoldMode=" + com.shilapi.xcertplay.hud.BydOutputSettings.oemClusterHold(context))
             try {
                 LocalAdb(AdbKeys.load(context)).use { adb ->
                     val access = adb.connect(mayAsk = false)
@@ -66,7 +69,7 @@ internal object AdbClusterRouter {
                     val display = displayId(adb.shell("dumpsys display").orEmpty())
                     appendLine("routeTarget=${display ?: "none"}")
                     if (display == null || !enabled(context) || !prepare(display)) return@use
-                    val held = com.shilapi.xcertplay.hud.BydOemClusterNavi.holdForLaunch(context, token) {
+                    val held = !holdStockMap || com.shilapi.xcertplay.hud.BydOemClusterNavi.holdForLaunch(context, token) {
                         enabled(context) && prepare(display)
                     }
                     appendLine("stockMapHoldReady=$held")

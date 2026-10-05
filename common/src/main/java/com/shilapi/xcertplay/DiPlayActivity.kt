@@ -274,8 +274,9 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private val isCompactLayout: Boolean
-        get() = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode) ||
-            resources.configuration.screenWidthDp < 550 ||
+        // Window size only: a multi-window task can fill the whole screen, and in multi-window the
+        // configuration already reports the window's own size.
+        get() = resources.configuration.screenWidthDp < 550 ||
             resources.configuration.screenHeightDp < 450
 
     private fun render() {
@@ -461,7 +462,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun settings(content: LinearLayout) {
         content.addView(label(getString(R.string.your_drive_your_way), 34, TEXT, true))
         content.addView(label(getString(R.string.apply_reconnects_carplay_for_size_resolution_music_buffer), 17, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
-        section(content, getString(R.string.carplay_controls), R.drawable.ic_dp_display) { card ->
+        section(content, getString(R.string.carplay_controls), R.drawable.ic_dp_controls) { card ->
             val gestureFingers = listOf(2, 3, 4)
             choice(card, getString(R.string.settings_gesture_fingers_label),
                 gestureFingers.map { getString(R.string.settings_gesture_fingers_option, it) },
@@ -584,7 +585,7 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
         }
-        section(content, getString(R.string.audio_routing)) { card ->
+        section(content, getString(R.string.audio_routing), R.drawable.ic_dp_audio) { card ->
             toggle(card, getString(R.string.contrib_audio_home_toggle_audio_focus), getString(R.string.contrib_audio_home_toggle_audio_focus_desc), AirPlayPersistence.loadAudioFocusEnabled(this)) { AirPlayPersistence.saveAudioFocusEnabled(this, it) }
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
                 toggle(card, getString(R.string.advanced_audio_channel_mapping),
@@ -613,7 +614,7 @@ class DiPlayActivity : ComponentActivity() {
             }
         }
         // Cluster video does not require a BYD navigation broadcast receiver.
-        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_navigation) { card ->
+        section(content, getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_dashboard) { card ->
             toggle(card, getString(R.string.adb_cluster_activity_mode),
                 getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 AirPlayPersistence.saveAdbClusterEnabled(this, it)
@@ -1175,7 +1176,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyMediaChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(12, 60))
     }
 
     private fun navigationChannelControl(parent: LinearLayout) {
@@ -1192,7 +1193,7 @@ class DiPlayActivity : ComponentActivity() {
                 onApply = { value -> applyNavigationChannel(value, current, control, summary) },
             )
         }
-        parent.addView(control, matchButton(0, 60))
+        parent.addView(control, matchButton(10, 60))
         parent.addView(label(getString(R.string.contrib_audio_home_nav_channel_note), 14, MUTED).apply {
             setPadding(0, dp(8), 0, dp(18))
         })
@@ -2357,7 +2358,7 @@ class DiPlayActivity : ComponentActivity() {
         dialog.show()
         dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.9f).toInt(),
             (resources.displayMetrics.heightPixels * 0.85f).toInt())
-        ClusterActivityOutput.beginSafeAreaPreview(previewOwner, initial)
+        ClusterActivityOutput.beginSafeAreaPreview(previewOwner, initial, this)
     }
 
     private fun reconnectForClusterMap() {
@@ -3010,7 +3011,7 @@ class DiPlayActivity : ComponentActivity() {
     }
     private fun version() = packageManager.getPackageInfo(packageName, 0).versionName ?: "0.1.0-beta.1"
     private fun languageSettings(content: LinearLayout) {
-        section(content, getString(R.string.language_section_title)) { card ->
+        section(content, getString(R.string.language_section_title), R.drawable.ic_dp_language) { card ->
             card.addView(label(getString(R.string.language_hint), 14, MUTED))
             val current = AppLocale.preference(this)
             val languageButton = button("${getString(R.string.language_app_language)} · ${AppLocale.displayName(this, current)}", false) { }
@@ -3073,20 +3074,23 @@ class DiPlayActivity : ComponentActivity() {
     private fun button(title: String, primary: Boolean, click: () -> Unit) = Button(this).apply {
         text = title; isAllCaps = false; textSize = 18f; setTextColor(if (primary) BG else TEXT)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else SURFACE, if (primary) ACCENT else BORDER), null)
+        background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x336F9FD9), rounded(if (primary) ACCENT else BUTTON, if (primary) ACCENT else BORDER), null)
         setPadding(dp(16), 0, dp(16), 0); minHeight = dp(56); stateListAnimator = null
         setOnClickListener { click() }
     }
     private fun rounded(color: Int, stroke: Int) = GradientDrawable().apply { setColor(color); cornerRadius = dp(20).toFloat(); setStroke(dp(1), stroke) }
     private fun matchButton(top: Int = 0, height: Int = 68) = LinearLayout.LayoutParams(-1, dp(height)).apply { topMargin = dp(top) }
     private fun space(height: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, dp(height)) }
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+    // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     companion object {
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
         private val BG = Color.rgb(12, 17, 27)
         private val SURFACE = Color.rgb(21, 30, 44)
+        // One step lighter than a card, so a button reads as a button even where its 1 px border is faint.
+        private val BUTTON = Color.rgb(31, 43, 61)
         private val BORDER = Color.rgb(42, 56, 75)
         private val ACCENT = Color.rgb(166, 200, 255)
         private val TEXT = Color.rgb(241, 245, 252)

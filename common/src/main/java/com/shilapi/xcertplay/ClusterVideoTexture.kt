@@ -9,6 +9,7 @@ import android.view.TextureView
 internal class ClusterVideoTexture(context: Context, private val onSurface: (Surface?) -> Unit) :
     TextureView(context), java.io.Closeable {
     private var output: Surface? = null
+    private val pictureBinding = CarPlayPicture.Binding(this)
     init {
         isOpaque = false
         surfaceTextureListener = object : SurfaceTextureListener {
@@ -32,6 +33,7 @@ internal class ClusterVideoTexture(context: Context, private val onSurface: (Sur
         output = null
     }
     override fun close() {
+        pictureBinding.close()
         surfaceTextureListener = null
         releaseOutput()
     }
