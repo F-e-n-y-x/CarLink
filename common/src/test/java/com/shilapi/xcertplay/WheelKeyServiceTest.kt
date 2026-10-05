@@ -205,4 +205,15 @@ class WheelKeyServiceTest {
         assertEquals(KeyEvent.KEYCODE_F4, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE).code)
         assertTrue(knobs.isEmpty())
     }
+
+    @Test
+    fun theAllowedListKeepsOtherServicesAndRebindsAListedButStoppedService() {
+        val ours = "com.shihab.diplay/com.shilapi.xcertplay.WheelKeyService"
+        val car = "com.byd.airconditioning/.gesture.AcGestureService:com.android.systemui/.custom.StatusBarAccessibilityService"
+        assertEquals(null to "$car:$ours", WheelKeyService.allowedServices("$car\n", ours))
+        assertEquals(car to "$car:$ours", WheelKeyService.allowedServices("$ours:$car", ours))
+        assertEquals("" to ours, WheelKeyService.allowedServices(ours, ours))
+        for (empty in listOf("", "null", " \n")) assertEquals(null to ours, WheelKeyService.allowedServices(empty, ours))
+        assertNull(WheelKeyService.allowedServices(null, ours))
+    }
 }
