@@ -137,6 +137,11 @@ ordinary third-party app cannot. Actual sender/key behavior still requires vehic
 
 **Settings → BYD navigation → CarPlay calls on the dashboard** (optional, needs ADB over network) also writes what BYD's CarPlay app writes, through the adb shell (`BydCarPlayCallTool`, feature ids resolved on the car): the instrument's call state and caller (device 1007, `INSTRUMENT_CALL_STATE_SET`, `INSTRUMENT_CALL_INFO_SET` as UTF-16LE up to 60 bytes), the call time every second (`INSTRUMENT_CALL_TIME_HOUR/MINUTE/SECOND_SET`), the car's call state (device 1023, `SET_CALL_STATE_SET`, `SET_CMD_BTCALL_STATE_SET`: 2 ringing, 1 dialing, 3 active, 5 ended) and the audio system's CarPlay call status (device 1002, `AUDIO_CARPLAY_CALL_STATUS`: 0 in a call, 1 idle). The call time comes from a small watcher under the adb shell that also ends the call on the car if DiPlay's process goes away mid-call. Not yet checked in a car.
 
+Before its first vehicle write, a call reserves a token and waits for confirmation that its shell
+watcher initialized. A failed launch or missing readiness acknowledgment prevents new call-state
+writes; one retry is attempted for an unchanged call. Cancelling a reservation that has made no
+vehicle writes does not send idle values; failed or uncertain writes retain cleanup ownership.
+
 Each displayed-call lifetime has a new package-qualified UUID token. The shell tool serializes its
 ownership marker and vehicle writes with a file lock. A stale watcher, another variant's old
 process, or a prior PID cannot update or clear a newer call. Cleanup retires only its own token;
@@ -152,9 +157,10 @@ that every vehicle feature id/value or partial-write outcome is correct on a par
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
 
-Merge acceptance remains pending: answering/ending a real call from the wheel, caller card and
-timer on cluster/HUD, microphone routing, cancellation/disable and process-death cleanup. The
-reported live key codes alone do not prove these behaviors. Both experimental settings default off.
+Both experimental settings default off. The opt-in feature is included for release testing;
+physical acceptance still needs confirmation on each target firmware: answering/ending a real call
+from the wheel, caller card and timer on cluster/HUD, microphone routing, cancellation/disable and
+process-death cleanup. The reported live key codes alone do not prove these behaviors.
 
 ## ADB vehicle-data settings and firmware scope
 
