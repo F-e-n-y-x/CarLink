@@ -198,6 +198,16 @@ class WifiP2pLegacyGroupManagerTest {
         assertEquals(listOf(149, 0), radio.channelRequests)
     }
 
+    @Test fun invokedSetterThrowingAfterMutationStopsAndCompensates() {
+        radio.throwAfterSelection = true
+        WifiP2pGroupManager(context, preferredChannel = 149).use { manager ->
+            assertTrue(failure { manager.start(3000) }.message!!.contains("unknown outcome"))
+        }
+        assertEquals(0, radio.systemCreations)
+        assertEquals(listOf(149, 0), radio.channelRequests)
+        assertEquals(0, radio.operatingChannel)
+    }
+
     private fun failure(block: () -> Any): Throwable {
         try { background(block); fail("Expected failure") }
         catch (failure: ExecutionException) { return failure.cause!! }
@@ -226,6 +236,7 @@ class WifiP2pLegacyGroupManagerTest {
         var rejectClear = false
         var deferSelection = false
         var missingInterface = false
+        var throwAfterSelection = false
         @Volatile var deferredListener: WifiP2pManager.ActionListener? = null
         val selectionIssued = CountDownLatch(1)
 
@@ -241,6 +252,7 @@ class WifiP2pLegacyGroupManagerTest {
                 return
             }
             super.setWifiP2pChannels(channel, listenChannel, operatingChannel, listener)
+            if (throwAfterSelection && operatingChannel != 0) throw IllegalStateException("vendor failed after mutation")
             if (deferSelection && operatingChannel != 0) {
                 deferredListener = listener
                 selectionIssued.countDown()

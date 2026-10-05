@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.network
 
 import android.net.wifi.p2p.WifiP2pManager
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -56,6 +57,9 @@ internal object WifiP2pLegacyChannels {
             method.invoke(manager, channel, LISTEN_CHANNEL, operatingChannel, listener)
         } catch (failure: Throwable) {
             diagnostic("Wi-Fi P2P legacy channel call failed failureClass=${failureClass(failure)}")
+            if (failure is InvocationTargetException) {
+                throw LegacyChannelOutcomeUnknown("Wi-Fi Direct channel selection failed with an unknown outcome", failure.cause)
+            }
             return false
         }
         val completed = try {
