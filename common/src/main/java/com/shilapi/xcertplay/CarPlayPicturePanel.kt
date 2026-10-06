@@ -7,7 +7,11 @@ import android.widget.*
 import com.shilapi.xcertplay.host.R
 
 /** An in-activity overlay: no dimmed background, decoder restart, or stream negotiation. */
-internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : LinearLayout(context) {
+internal class CarPlayPicturePanel(
+    context: Context,
+    adjustmentsAvailable: Boolean = true,
+    close: () -> Unit,
+) : LinearLayout(context) {
     private val prefs = CarPlayPicture.preferences(context)
     private val controls = mutableMapOf<String, Pair<TextView, SeekBar>>()
     private val original = Switch(context)
@@ -24,7 +28,8 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
         val rows = LinearLayout(context).apply { orientation = VERTICAL }
         val scroll = ScrollView(context).apply { addView(rows) }
         addView(scroll, LayoutParams(-1, 0, 1f))
-        rows.addView(text(context.getString(R.string.picture_live_hint)))
+        rows.addView(text(context.getString(if (adjustmentsAvailable) R.string.picture_live_hint
+            else R.string.picture_surface_output_unavailable)))
         val labels = listOf(R.string.picture_brightness, R.string.picture_contrast,
             R.string.picture_saturation, R.string.picture_warmth)
         CarPlayPicture.keys.forEachIndexed { index, key ->
@@ -34,13 +39,14 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
                 max = range.last - range.first
                 progress = CarPlayPicture.value(prefs, key) - range.first
                 contentDescription = context.getString(labels[index])
+                isEnabled = adjustmentsAvailable
             }
             fun updateLabel(value: Int) { label.text = "${context.getString(labels[index])}: $value" }
             updateLabel(CarPlayPicture.value(prefs, key))
             slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seek: SeekBar, progress: Int, fromUser: Boolean) {
                     updateLabel(progress + range.first)
-                    if (fromUser) prefs.edit().putInt(key, progress + range.first).apply()
+                    if (fromUser && adjustmentsAvailable) prefs.edit().putInt(key, progress + range.first).apply()
                 }
                 override fun onStartTrackingTouch(seek: SeekBar) = Unit
                 override fun onStopTrackingTouch(seek: SeekBar) = Unit
@@ -52,16 +58,20 @@ internal class CarPlayPicturePanel(context: Context, close: () -> Unit) : Linear
         original.apply {
             text = context.getString(R.string.picture_show_original)
             setTextColor(Color.WHITE)
+            isEnabled = adjustmentsAvailable
             setOnCheckedChangeListener { _, checked ->
+                if (!adjustmentsAvailable) return@setOnCheckedChangeListener
                 CarPlayPicture.showOriginal(checked)
-                controls.values.forEach { it.second.isEnabled = !checked }
+                controls.values.forEach { it.second.isEnabled = adjustmentsAvailable && !checked }
             }
         }
         addView(original, LayoutParams(-1, dp(48)))
         val actions = LinearLayout(context)
         actions.addView(Button(context).apply {
             text = context.getString(R.string.picture_reset); isAllCaps = false
+            isEnabled = adjustmentsAvailable
             setOnClickListener {
+                if (!adjustmentsAvailable) return@setOnClickListener
                 original.isChecked = false
                 CarPlayPicture.reset(prefs)
                 controls.forEach { (key, pair) ->
