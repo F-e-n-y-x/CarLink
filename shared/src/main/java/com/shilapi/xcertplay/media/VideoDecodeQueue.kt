@@ -2,7 +2,6 @@ package com.shilapi.xcertplay.media
 
 import android.view.Surface
 import com.shilapi.xcertplay.airplay.VideoCodec
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -11,11 +10,13 @@ internal sealed interface VideoJob {
     data class Frame(
         val nalus: ByteArray,
         val receivedNs: Long = System.nanoTime(),
-        /** When to show this frame (System.nanoTime), or 0 to show it as soon as it is decoded. */
-        val presentNs: Long = 0L,
+        /** The iPhone's frame time and when the frame arrived (System.nanoTime), 0 when unknown. */
+        val senderNanos: Long = 0L,
+        val arrivalNanos: Long = 0L,
     ) : VideoJob
-    /** [done], when set, is counted down once the decoder no longer renders to its previous surface. */
-    data class SurfaceChanged(val surface: Surface?, val done: CountDownLatch? = null) : VideoJob
+    data class SurfaceChanged(val surface: Surface?) : VideoJob
+    /** Stop rendering to a surface that is going away; completes [request] once the codec has let go. */
+    data class DetachSurface(val request: SurfaceDetachRequest) : VideoJob
     /** Ask the iPhone for a keyframe, so a surface that just came back gets a picture without waiting for motion. */
     data object RefreshPicture : VideoJob
     data object Resync : VideoJob
@@ -57,6 +58,9 @@ internal class VideoDecodeQueue(
     }
 
     fun poll(timeoutMillis: Long): VideoJob? = jobs.poll(timeoutMillis, TimeUnit.MILLISECONDS)
+
+    /** Removes and returns every queued job, for a worker that is shutting down. */
+    @Synchronized fun drain(): List<VideoJob> = ArrayList<VideoJob>().also { jobs.drainTo(it) }
 }
 
 /** Drain output while waiting for input: full output buffers can otherwise starve input forever. */

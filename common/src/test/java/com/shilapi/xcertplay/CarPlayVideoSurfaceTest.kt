@@ -15,6 +15,14 @@ class CarPlayVideoSurfaceTest {
         assertEquals(CarPlayVideoSurfaceMode.SURFACE, carPlayVideoSurfaceMode(false, smoothVideo = true))
     }
 
+    @Test fun aBackgroundSessionIsAdoptedOnlyWithTheSamePacing() {
+        // A Smooth video change whose reconnect stopped early leaves the old session running.
+        assertFalse(backgroundSessionMatchesView(sinkPaces = false, viewSmoothVideo = true))
+        assertFalse(backgroundSessionMatchesView(sinkPaces = true, viewSmoothVideo = false))
+        assertTrue(backgroundSessionMatchesView(sinkPaces = true, viewSmoothVideo = true))
+        assertTrue(backgroundSessionMatchesView(sinkPaces = false, viewSmoothVideo = false))
+    }
+
     @Test fun smoothVideoDelayCoversThreeFramesPlusAMargin() {
         assertEquals(90, smoothVideoDelayMillis(60))
         assertEquals(140, smoothVideoDelayMillis(30))

@@ -120,13 +120,17 @@ class CarPlayMediaEngine(
                 session.logDebug("Video recovery: requested keyframe sent=$sent")
             }
         }
+        // A replaced stream's thread may still be delivering when its successor starts; only the current
+        // stream reaches the sink. The iPhone connects after SETUP returns the port, so after put below.
+        fun current() = streams[streamKey] === screen
         val port = screen.listen(
             object : ScreenStream.Listener {
-                override fun onCodec(codec: VideoCodec) = sink.onVideoCodec(type, codec)
-                override fun onConfig(codecData: ByteArray) = sink.onVideoConfig(type, codecData)
-                override fun onFrame(naluBytes: ByteArray) = sink.onVideoFrame(type, naluBytes)
-                override fun onFrame(naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) =
-                    sink.onVideoFrame(type, naluBytes, senderNanos, arrivalNanos)
+                override fun onCodec(codec: VideoCodec) { if (current()) sink.onVideoCodec(type, codec) }
+                override fun onConfig(codecData: ByteArray) { if (current()) sink.onVideoConfig(type, codecData) }
+                override fun onFrame(naluBytes: ByteArray) { if (current()) sink.onVideoFrame(type, naluBytes) }
+                override fun onFrame(naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
+                    if (current()) sink.onVideoFrame(type, naluBytes, senderNanos, arrivalNanos)
+                }
                 override fun onClosed(cause: Throwable?) {
                     Log.w(
                         TAG,

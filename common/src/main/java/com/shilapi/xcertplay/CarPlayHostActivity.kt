@@ -276,11 +276,9 @@ class CarPlayHostActivity : ComponentActivity() {
     private var fallbackVideoBounds: CarPlaySurfaceBounds? = null
     // Smooth video (a setting): SurfaceView output with frames released at the iPhone's frame time.
     private var smoothVideo = false
-    // A SurfaceView loses its surface whenever the activity stops. Parking the decoder on an offscreen
-    // ImageReader meanwhile keeps it and its reference frames, as the TextureView path does; the reader
-    // drops each frame at once, so the decoder never runs out of output buffers.
-    private var parkingReader: android.media.ImageReader? = null
-    private var parkingSurface: Surface? = null
+    // A sink whose session is being torn down; its decoders may still render to the current surface
+    // until its close() finishes, so a destroyed surface is detached from it too.
+    @Volatile private var retiringSink: AndroidMediaSink? = null
     private var videoSurfaceProbe: ViewTreeObserver.OnPreDrawListener? = null
     private var pictureBinding: CarPlayPicture.Binding? = null
     private var picturePanel: View? = null
@@ -539,14 +537,16 @@ class CarPlayHostActivity : ComponentActivity() {
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
             val surface = holder.surface
-            if (smoothVideo && videoSurfaceOwner.current === surface) {
-                // Both return once the decoders no longer render to the surface being destroyed; the
-                // owner's detach below then finds nothing left to clear.
-                sink?.replaceSurface(SCREEN_TYPE_MAIN, surface, parkingSurface ?: newParkingSurface())
-                sink?.clearSurfaceAndWait(SCREEN_TYPE_ALT, surface)
+            // The SurfaceHolder contract: nothing may render to the surface once this returns. Each call
+            // returns when that decoder has let go (or after replacing a decoder that did not confirm).
+            // With smooth video the main decoder parks off screen and keeps its state for the return.
+            var confirmed = true
+            for (owner in listOfNotNull(sink, retiringSink).distinct()) {
+                confirmed = owner.detachSurfaceAndWait(SCREEN_TYPE_MAIN, surface, park = smoothVideo) and confirmed
+                confirmed = owner.detachSurfaceAndWait(SCREEN_TYPE_ALT, surface, park = false) and confirmed
             }
             videoSurfaceOwner.clear(surface)
-            appendLog("SurfaceView video surface destroyed")
+            appendLog("SurfaceView video surface destroyed detachConfirmed=$confirmed")
         }
     }
 
@@ -1323,10 +1323,6 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.removeCallbacks(expireOldLogLines)
         mainHandler.removeCallbacks(pollConfiguration)
         videoSurfaceOwner.clear()
-        parkingSurface?.let { sink?.clearSurfaceAndWait(SCREEN_TYPE_MAIN, it) }
-        parkingReader?.close()
-        parkingReader = null
-        parkingSurface = null
         currentSurfaceTexture = null
         fallbackVideoView = null
         fallbackVideoBounds = null
@@ -3891,6 +3887,15 @@ class CarPlayHostActivity : ComponentActivity() {
             CarPlayBackgroundSession.clear(snapshot.controller)
             return false
         }
+        // The sink's pacing is fixed when it is built; a session from before a Smooth video change (for
+        // example one whose reconnect stopped at a prerequisite) is stopped instead of adopted. Callers
+        // retry, and the next start matches this view.
+        if (!backgroundSessionMatchesView(snapshot.sink.videoPacingEnabled, smoothVideo)) {
+            appendLog("Background session smooth video=${snapshot.sink.videoPacingEnabled} differs from this view; " +
+                "stopping it instead of adopting it")
+            CarPlayBackgroundSession.stop { mainHandler.post { if (!isDestroyed) maybeStartCarPlay() } }
+            return false
+        }
         displayDiagnosticAttempt = DisplayDiagnosticSnapshot.currentAttempt(this)
         adbClusterConfigured = AdbClusterRouter.enabled(this) && snapshot.controller.configuredClusterSize() ==
             (DiLink4ClusterDisplay.STREAM_WIDTH to DiLink4ClusterDisplay.STREAM_HEIGHT)
@@ -4401,6 +4406,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController, keepOwner = true)
         controller = null
+        retiringSink = oldSink
         sink = null
         sessionDisplay = null
         val diagnosticLog = sessionLog
@@ -4415,6 +4421,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     "elapsedMs=${((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(0)}",
             )
             oldSink?.close()
+            if (retiringSink === oldSink) retiringSink = null
             runOnUiThread {
                 if (!shuttingDown.get() && generation == restartGeneration) {
                     handshakeResetInProgress = false
@@ -4549,6 +4556,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController)
         controller = null
+        retiringSink = oldSink
         sink = null
         sessionDisplay = null
         Log.i(TAG, "shutdown reason=$reason terminateProcess=$terminateProcess")
@@ -4556,6 +4564,7 @@ class CarPlayHostActivity : ComponentActivity() {
             oldController?.close()
             val clean = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
             oldSink?.close()
+            if (retiringSink === oldSink) retiringSink = null
             airPlayCommandExecutor.shutdown()
             if (terminateProcess) {
                 applicationContext.stopService(Intent(applicationContext, CarPlayVpnService::class.java))
@@ -4624,14 +4633,6 @@ class CarPlayHostActivity : ComponentActivity() {
         } else {
             "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
         })
-    }
-
-    private fun newParkingSurface(): Surface {
-        val size = sessionDisplay?.let { it.width to it.height } ?: (1920 to 1080)
-        val reader = android.media.ImageReader.newInstance(size.first, size.second, android.graphics.ImageFormat.PRIVATE, 3)
-        reader.setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, mainHandler)
-        parkingReader = reader
-        return reader.surface.also { parkingSurface = it }
     }
 
     private fun attachSurface(surface: Surface) {

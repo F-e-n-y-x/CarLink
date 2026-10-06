@@ -29,7 +29,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /** AudioTrack's attributes getter is only available from Android 10. */
@@ -257,24 +256,33 @@ class AndroidMediaSink(
         videoDecoders[type]?.setSurface(surface)
     }
 
-    /**
-     * Moves stream [type] onto [replacement] (smooth video's placeholder while the SurfaceView is gone) and
-     * returns once the decoder no longer renders to [leaving], as a SurfaceHolder destroy callback requires.
-     */
-    fun replaceSurface(type: Int, leaving: Surface, replacement: Surface) {
-        if (surfaces[type] !== leaving) return
-        surfaces[type] = replacement
-        videoDecoders[type]?.setSurfaceAndWait(replacement)
-    }
-
     fun clearSurface(type: Int, surface: Surface) {
         if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurface(null)
     }
 
-    /** Like [clearSurface], but returns once the decoder has stopped rendering to [surface]. */
-    fun clearSurfaceAndWait(type: Int, surface: Surface) {
-        if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurfaceAndWait(null)
+    /**
+     * Returns once stream [type]'s decoder no longer renders to [surface], as a SurfaceHolder destroy
+     * callback requires. With [park] the decoder moves to an offscreen consumer it owns and keeps its
+     * state (smooth video, so the picture can return at once); otherwise it is released. The decision
+     * follows the surface the codec actually renders to, after any surface change queued before this.
+     * If the worker does not confirm in time, the decoder is closed and replaced, and false is returned
+     * unless it then exits within a short grace period.
+     */
+    fun detachSurfaceAndWait(type: Int, surface: Surface, park: Boolean): Boolean {
+        surfaces.remove(type, surface) // a decoder created from now on must not start on it
+        val decoder = videoDecoders[type] ?: return true
+        if (decoder.detachAndWait(surface, park)) return true
+        Log.w("xcertplay-usb", "Video detach not confirmed in time type=$type; replacing the decoder")
+        videoDiagnosticHandlers[type]?.invoke("surface detach not confirmed; decoder replaced")
+        if (videoDecoders.remove(type, decoder)) {
+            decoder.close()
+            lastVideoConfig[type]?.let { (codec, data) -> videoDecoder(type).configure(codec, data) }
+        }
+        return decoder.awaitExit(DETACH_GRACE_MS)
     }
+
+    /** True when this sink paces main-screen frames (smooth video); fixed for its lifetime. */
+    val videoPacingEnabled: Boolean get() = videoPacingDelayMillis > 0
 
     /** Requests a keyframe for stream [type], e.g. after its surface came back. */
     fun refreshPicture(type: Int) {
@@ -492,6 +500,29 @@ class AndroidMediaSink(
 /** CarPlay's main screen stream type. */
 private const val MAIN_SCREEN_TYPE = 110
 
+// After an unconfirmed detach, how long the sink waits for the closed worker to release its codec.
+private const val DETACH_GRACE_MS = 500L
+
+/**
+ * An offscreen consumer a parked decoder renders to while its SurfaceView is gone. It drops each image
+ * on its own thread, so it keeps draining while the main thread waits on a surface handoff. Only the
+ * decoder worker creates and closes it, after the codec no longer renders to it.
+ */
+private class ParkingOutput(width: Int, height: Int) {
+    private val thread = android.os.HandlerThread("carplay-video-parking").apply { start() }
+    private val reader = android.media.ImageReader.newInstance(
+        width.coerceAtLeast(1), height.coerceAtLeast(1), android.graphics.ImageFormat.PRIVATE, 3,
+    ).apply {
+        setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, android.os.Handler(thread.looper))
+    }
+    val surface: Surface = reader.surface
+
+    fun close() {
+        reader.close()
+        thread.quitSafely()
+    }
+}
+
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
 private class VideoDecoder(
     streamType: Int,
@@ -526,6 +557,7 @@ private class VideoDecoder(
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
     private var outputSurface: Surface? = surface
+    private var parking: ParkingOutput? = null
     private var lastConfig: VideoJob.Config? = null
     private var renderedFrameLogged = false
     private var submittedFrameLogged = false
@@ -543,27 +575,29 @@ private class VideoDecoder(
 
     fun submit(nalus: ByteArray, senderNanos: Long = 0L, arrivalNanos: Long = 0L) {
         stats.onReceived(nalus.size)
-        val presentNs = if (pacingDelay != null && senderNanos > 0 && arrivalNanos > 0) {
-            pacer.localTime(senderNanos, arrivalNanos)
-        } else 0L
-        queue.offer(VideoJob.Frame(nalus, presentNs = presentNs))
+        // Pacing runs on the worker, in queue order: callbacks of a replaced stream may still deliver here.
+        queue.offer(VideoJob.Frame(nalus, senderNanos = senderNanos, arrivalNanos = arrivalNanos))
     }
 
     fun setSurface(surface: Surface?) {
         queue.offer(VideoJob.SurfaceChanged(surface))
     }
 
-    /** Waits (bounded) until the decoder has moved to [surface], so the previous one can be destroyed. */
-    fun setSurfaceAndWait(surface: Surface?) {
-        val done = CountDownLatch(1)
-        queue.offer(VideoJob.SurfaceChanged(surface, done))
-        if (Thread.currentThread() !== thread) {
-            try {
-                done.await(SURFACE_DETACH_WAIT_MS, TimeUnit.MILLISECONDS)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-            }
-        }
+    /**
+     * Asks the worker to stop rendering to [surface] (parking the codec when [park]) and waits until it
+     * confirms or exits, up to [SURFACE_DETACH_TIMEOUT_MS]; false when neither happened in time.
+     */
+    fun detachAndWait(surface: Surface, park: Boolean): Boolean {
+        check(Thread.currentThread() !== thread) { "detach from the decoder worker" }
+        val request = SurfaceDetachRequest(surface, park)
+        queue.offer(VideoJob.DetachSurface(request))
+        return request.await(SURFACE_DETACH_TIMEOUT_MS * 1_000_000L, workerAlive = thread::isAlive)
+    }
+
+    /** Waits up to [millis] for the worker, after [close], to release its codec and exit. */
+    fun awaitExit(millis: Long): Boolean {
+        try { thread.join(millis) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
+        return !thread.isAlive
     }
 
     fun refreshPicture() {
@@ -586,9 +620,10 @@ private class VideoDecoder(
                             if (System.nanoTime() - job.receivedNs > MAX_FRAME_AGE_NS) {
                                 queue.discardFrames()
                                 recover("video backlog exceeded 250 ms")
-                            } else feed(job.nalus, job.presentNs)
+                            } else feed(job.nalus, localTimeOf(job))
                         }
-                        is VideoJob.SurfaceChanged -> try { changeSurface(job.surface) } finally { job.done?.countDown() }
+                        is VideoJob.SurfaceChanged -> changeSurface(job.surface)
+                        is VideoJob.DetachSurface -> detach(job.request)
                         // Once per new surface, so it skips the rate limit an earlier request may still hold.
                         is VideoJob.RefreshPicture -> if (decoder != null) {
                             lastKeyFrameRequestNs = System.nanoTime()
@@ -615,6 +650,10 @@ private class VideoDecoder(
             // Worker shut down.
         } finally {
             releaseDecoder()
+            // The codec is gone, so nothing renders to any surface or to the parking consumer any more.
+            parking?.close()
+            parking = null
+            queue.drain().forEach { (it as? VideoJob.DetachSurface)?.request?.complete(DetachOutcome.RELEASED) }
         }
     }
 
@@ -742,6 +781,47 @@ private class VideoDecoder(
             }
         }
         return MediaCodec.createDecoderByType(mime)
+    }
+
+    private fun localTimeOf(frame: VideoJob.Frame): Long =
+        if (pacingDelay != null && frame.senderNanos > 0 && frame.arrivalNanos > 0) {
+            pacer.localTime(frame.senderNanos, frame.arrivalNanos)
+        } else 0L
+
+    /** Completes [request] once the codec no longer renders to its surface, whatever happens here. */
+    private fun detach(request: SurfaceDetachRequest) {
+        var outcome = DetachOutcome.RELEASED
+        try {
+            outcome = detachAction(outputSurface, request.surface, request.park, decoder != null)
+            when (outcome) {
+                DetachOutcome.NOT_RENDERING -> Unit
+                DetachOutcome.PARKED -> {
+                    val consumer = parking ?: ParkingOutput(width, height).also { parking = it }
+                    try {
+                        checkNotNull(decoder).setOutputSurface(consumer.surface)
+                        outputSurface = consumer.surface
+                        Log.i(TAG, "video decoder parked off screen")
+                    } catch (error: Exception) {
+                        Log.w(TAG, "video decoder could not park; releasing it", error)
+                        outcome = DetachOutcome.RELEASED
+                        outputSurface = null
+                        releaseDecoder()
+                    }
+                }
+                DetachOutcome.RELEASED -> {
+                    outputSurface = null
+                    releaseDecoder()
+                    Log.i(TAG, "video decoder detached from surface")
+                }
+            }
+        } catch (error: Exception) {
+            outcome = DetachOutcome.RELEASED
+            outputSurface = null
+            releaseDecoder()
+            throw error
+        } finally {
+            request.complete(outcome)
+        }
     }
 
     private fun changeSurface(surface: Surface?) {
@@ -936,8 +1016,8 @@ private class VideoDecoder(
         const val MAX_FRAME_AGE_NS = 250_000_000L
         // A paced frame more than this ahead is treated as a bad mapping and shown at once.
         const val MAX_PACING_AHEAD_NS = 1_000_000_000L
-        // Covers VideoInputPump's 500 ms input wait plus a codec stop and release.
-        const val SURFACE_DETACH_WAIT_MS = 700L
+        // Covers VideoInputPump's 500 ms input wait plus codec work; past it the sink replaces the decoder.
+        const val SURFACE_DETACH_TIMEOUT_MS = 2_000L
         // Longer input gaps are a still screen, not decoding work.
         const val STILL_GAP_NS = 500_000_000L
         // Consecutive frames this far apart in iPhone time are a pause in its frames: about four frame

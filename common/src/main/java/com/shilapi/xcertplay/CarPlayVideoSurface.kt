@@ -33,6 +33,13 @@ internal data class CarPlaySurfaceBounds(val left: Int, val top: Int, val width:
  */
 internal fun smoothVideoDelayMillis(fps: Int): Int = 40 + 3_000 / fps.coerceIn(30, 60)
 
+/**
+ * A retained background session can be adopted only when its sink's pacing matches the video view this
+ * host built: the sink fixes pacing at creation and the host picks its view once.
+ */
+internal fun backgroundSessionMatchesView(sinkPaces: Boolean, viewSmoothVideo: Boolean): Boolean =
+    sinkPaces == viewSmoothVideo
+
 /** Texture wrappers are ours to release; SurfaceHolder surfaces belong to the framework. */
 internal class CarPlayVideoSurfaceOwner<T : Any>(
     private val detach: (T) -> Unit,
