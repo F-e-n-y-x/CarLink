@@ -268,8 +268,10 @@ class CarPlayNightModeControllerTest {
     @Test fun scheduledNightCrossesMidnightAndUpdatesWhileConnected() {
         val clock = Clock()
         val time = object : NightTimeSource {
-            override fun minuteOfDay() = ((17 * 60 + 59 + clock.now / 60_000) % (24 * 60)).toInt()
-            override fun millisUntilNextMinute() = 60_000L - clock.now % 60_000L
+            override fun snapshot() = NightTimeSnapshot(
+                ((17 * 60 + 59 + clock.now / 60_000) % (24 * 60)).toInt(),
+                60_000L - clock.now % 60_000L,
+            )
         }
         val output = mutableListOf<Boolean>()
         val controller = CarPlayNightModeController(Light(), clock, false, output::add, time)
@@ -291,8 +293,7 @@ class CarPlayNightModeControllerTest {
         val clock = Clock()
         var minute = 8 * 60 + 59
         val time = object : NightTimeSource {
-            override fun minuteOfDay() = minute
-            override fun millisUntilNextMinute() = 60_000L
+            override fun snapshot() = NightTimeSnapshot(minute, 60_000L)
         }
         val controller = CarPlayNightModeController(Light(), clock, false, {}, time)
         controller.configure(CarPlayNightMode.SCHEDULE, false,
@@ -307,6 +308,97 @@ class CarPlayNightModeControllerTest {
         controller.configure(CarPlayNightMode.DAY, false)
         assertTrue(clock.tasks.isEmpty())
         assertFalse(CarPlayNightSchedule(6 * 60, 6 * 60).isNight(6 * 60))
+    }
+
+    @Test fun scheduleUsesOneSnapshotAndFirstTickReachesTheBoundary() {
+        val clock = Clock()
+        var snapshots = 0
+        val time = object : NightTimeSource {
+            override fun snapshot(): NightTimeSnapshot {
+                snapshots++
+                return if (clock.now == 0L) NightTimeSnapshot(17 * 60 + 59, 1)
+                    else NightTimeSnapshot(18 * 60, 60_000)
+            }
+        }
+        val controller = CarPlayNightModeController(Light(), clock, false, {}, time)
+        controller.configure(CarPlayNightMode.SCHEDULE, false)
+        assertEquals(1, snapshots)
+        assertTrue(clock.tasks.isEmpty())
+        controller.resume(false)
+        assertEquals(2, snapshots)
+        assertEquals(listOf(1L), clock.tasks.values.toList())
+        clock.advance(1)
+        assertTrue(controller.night)
+        assertEquals(3, snapshots)
+        assertEquals(listOf(60_001L), clock.tasks.values.toList())
+    }
+
+    @Test fun pausedScheduleReevaluatesChangedLocalTimeAndSettingsImmediatelyOnResume() {
+        val clock = Clock()
+        var minute = 19 * 60
+        val time = object : NightTimeSource {
+            override fun snapshot() = NightTimeSnapshot(minute, 30_000)
+        }
+        val output = mutableListOf<Boolean>()
+        val controller = CarPlayNightModeController(Light(), clock, false, output::add, time)
+        controller.configure(CarPlayNightMode.SCHEDULE, false)
+        assertTrue(controller.night)
+        controller.resume(false)
+        controller.pause()
+        minute = 7 * 60 // Clock or timezone moved while the host was paused.
+        clock.advance(60_000)
+        assertTrue(controller.night)
+        assertTrue(clock.tasks.isEmpty())
+        controller.resume(true)
+        assertFalse(controller.night)
+        assertEquals(1, clock.tasks.size)
+        controller.configure(CarPlayNightMode.SCHEDULE, true, schedule = CarPlayNightSchedule(6 * 60, 9 * 60))
+        assertTrue(controller.night)
+        assertEquals(1, clock.tasks.size)
+        controller.systemChanged(false)
+        assertTrue(controller.night)
+        minute = 10 * 60
+        clock.advance(30_000)
+        assertFalse(controller.night)
+        assertEquals(listOf(true, false, true, false), output)
+    }
+
+    @Test fun scheduleDoesNotRestartItsTimerWhenOutputPausesTheHost() {
+        val clock = Clock()
+        var minute = 17 * 60 + 59
+        val time = object : NightTimeSource {
+            override fun snapshot() = NightTimeSnapshot(minute, 1)
+        }
+        lateinit var controller: CarPlayNightModeController
+        controller = CarPlayNightModeController(Light(), clock, false, { controller.pause() }, time)
+        controller.configure(CarPlayNightMode.SCHEDULE, false)
+        controller.resume(false)
+        minute = 18 * 60
+        clock.advance(1)
+        assertTrue(controller.night)
+        assertTrue(clock.tasks.isEmpty())
+    }
+
+    @Test fun scheduleFollowsLocalMinutesWhenDstSkipsOrRepeatsAnHour() {
+        for (observations in listOf(
+            listOf(119 to true, 180 to false), // Spring forward skips the end time.
+            listOf(119 to true, 60 to false, 90 to true, 150 to false), // Fall back repeats the start.
+        )) {
+            val clock = Clock()
+            var minute = 0
+            val time = object : NightTimeSource {
+                override fun snapshot() = NightTimeSnapshot(minute, 60_000)
+            }
+            val controller = CarPlayNightModeController(Light(), clock, false, {}, time)
+            controller.configure(CarPlayNightMode.SCHEDULE, false,
+                schedule = CarPlayNightSchedule(1 * 60 + 30, 2 * 60 + 30))
+            controller.resume(false)
+            for ((localMinute, expectedNight) in observations) {
+                minute = localMinute
+                clock.advance(60_000)
+                assertEquals(expectedNight, controller.night)
+            }
+        }
     }
 
 }
