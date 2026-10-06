@@ -157,6 +157,7 @@
     <string name="check_that_storage_is_available_or_choose_another_save_loc">Check that storage is available, or choose another save location.</string>
     <string name="choose_how_to_connect_follow_the_setup_steps_and_save_your">Choose how to connect, follow the setup steps and save your car hotspot details.</string>
     <string name="choose_image">Choose image</string>
+    <string name="browse_image_files">Browse image files</string>
     <string name="choose_iphone">Choose iPhone</string>
     <string name="choose_location">Choose location</string>
     <string name="choose_save_location">Choose save location</string>
