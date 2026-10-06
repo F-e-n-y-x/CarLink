@@ -392,14 +392,15 @@ class CarPlayHostActivity : ComponentActivity() {
             light = AndroidAmbientLight(this),
             scheduler = MainThreadNightModeScheduler(),
             initialNight = darkMode,
-        ) { night ->
-            darkMode = night
-            paintWaitingScreen()
-            applyClusterTurnOverlay()
-            appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
-            logThemeState(nightModeDiagnosticSource, resources.configuration)
-            syncAirPlayDarkMode(nightModeDiagnosticSource)
-        }
+            onNightChanged = { night ->
+                darkMode = night
+                paintWaitingScreen()
+                applyClusterTurnOverlay()
+                appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
+                logThemeState(nightModeDiagnosticSource, resources.configuration)
+                syncAirPlayDarkMode(nightModeDiagnosticSource)
+            },
+        )
     }
     private val themeDiagnostics = ThemeModeDiagnostics()
     private var lastConfiguration: Configuration? = null
