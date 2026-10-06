@@ -1,6 +1,7 @@
 package com.shilapi.xcertplay
 
 import android.app.AlertDialog
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -13,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlertDialog
 
@@ -71,14 +73,16 @@ class DefaultConnectionModeTest {
         }
         button.performClick()
         var dialog = ShadowAlertDialog.getLatestAlertDialog()
-        dialog.listView.performItemClick(dialog.listView.getChildAt(2), 2, 2)
+        dialog.listView.performItemClick(null, 2, 0)
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
         assertEquals(DefaultConnectionMode.USB, DiPlayPreferences.defaultConnectionMode(app))
         assertTrue(button.text.toString().endsWith(activity.getString(R.string.default_connection_usb)))
         button.performClick()
         dialog = ShadowAlertDialog.getLatestAlertDialog()
-        dialog.listView.performItemClick(dialog.listView.getChildAt(1), 1, 1)
+        dialog.listView.performItemClick(null, 1, 0)
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
         assertEquals(DefaultConnectionMode.USB, DiPlayPreferences.defaultConnectionMode(app))
         assertFalse(DiPlayPreferences.autoConnect(app))
     }
