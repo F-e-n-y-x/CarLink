@@ -123,6 +123,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var reconnectAttempts = 0
     private val siriKey = WheelSiriKey()
     private val siriKeyPresses = WheelKeyPresses()
+    private val legacySiriPresses = mutableSetOf<Triple<Int, Int, Int>>()
     private val startupRetryBudget = WirelessStartupRetryBudget()
     private var startupRetryStopped = false
     private var startupRetryButton: View? = null
@@ -1069,6 +1070,13 @@ class CarPlayHostActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val physicalKey = Triple(event.deviceId, event.keyCode, event.scanCode)
         val downOrUp = event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP
+        if (downOrUp && physicalKey in legacySiriPresses) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                legacySiriPresses.remove(physicalKey)
+                requestLegacySiri(event.keyCode)
+            }
+            return true
+        }
         // A release/repeat belongs to its original press even if a call, session or setting changed.
         if (downOrUp && siriKeyPresses.hasConsumedPress(physicalKey)) {
             siriKeyPresses.filter(physicalKey, event.action == KeyEvent.ACTION_DOWN, event.repeatCount == 0) {
@@ -1110,11 +1118,16 @@ class CarPlayHostActivity : ComponentActivity() {
 
         // Keep DiPlay's existing steering-wheel/voice-key Siri handling intact.
         if (!CarPlayMediaButton.opensSiri(event.keyCode)) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN) legacySiriPresses.add(physicalKey)
         if (event.action == KeyEvent.ACTION_UP) {
-            val sent = controller?.requestSiri() == true
-            appendLog("Siri: voice key ${event.keyCode} sent=$sent")
+            requestLegacySiri(event.keyCode)
         }
         return true
+    }
+
+    private fun requestLegacySiri(keyCode: Int) {
+        val sent = controller?.requestSiri() == true
+        appendLog("Siri: voice key $keyCode sent=$sent")
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

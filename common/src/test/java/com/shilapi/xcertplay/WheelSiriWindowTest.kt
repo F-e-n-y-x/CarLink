@@ -3,7 +3,6 @@ package com.shilapi.xcertplay
 import android.content.Context
 import android.media.AudioManager
 import android.os.Handler
-import android.os.Looper
 import android.view.KeyEvent
 import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
@@ -84,6 +83,16 @@ class WheelSiriWindowTest {
             assertTrue(host.dispatchKeyEvent(key(code, false)))
         }
         verify(controller, times(3)).requestSiri()
+    }
+
+    @Test fun assigningALegacyVoiceKeyBetweenDownAndUpKeepsTheOriginalAction() {
+        val code = KeyEvent.KEYCODE_VOICE_ASSIST
+        WheelZoomSettings.setSiriKey(host, false)
+        assertTrue(host.dispatchKeyEvent(key(code, true)))
+        WheelZoomSettings.assign(host, WheelZoomSettings.Role.SIRI, WheelKey(code, 0, "?"))
+        WheelZoomSettings.setSiriKey(host, true)
+        assertTrue(host.dispatchKeyEvent(key(code, false)))
+        verify(controller, times(1)).requestSiri()
     }
 
     @Test fun carPlayCallStateBlocksAssignedSiriWhileAndroidModeIsNormal() {
