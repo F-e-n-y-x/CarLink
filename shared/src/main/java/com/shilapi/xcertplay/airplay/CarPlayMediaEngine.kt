@@ -39,6 +39,21 @@ interface MediaSink {
  * decrypts their payloads, and hands decoded media to a [MediaSink]. Telephony and speech
  * streams can additionally return a PCM microphone uplink through the sink.
  */
+/**
+ * Delivers a screen stream's data to [sink] only while [isCurrent]: a replaced stream's thread may still
+ * be delivering when its successor starts. The check runs before each delivery, so a callback already
+ * past it can still hand over one item; the successor's configuration and keyframe follow it. The iPhone
+ * connects after SETUP returns the port, which is after the stream is registered as current.
+ */
+internal fun currentScreenListener(type: Int, sink: MediaSink, isCurrent: () -> Boolean) = object : ScreenStream.Listener {
+    override fun onCodec(codec: VideoCodec) { if (isCurrent()) sink.onVideoCodec(type, codec) }
+    override fun onConfig(codecData: ByteArray) { if (isCurrent()) sink.onVideoConfig(type, codecData) }
+    override fun onFrame(naluBytes: ByteArray) { if (isCurrent()) sink.onVideoFrame(type, naluBytes) }
+    override fun onFrame(naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
+        if (isCurrent()) sink.onVideoFrame(type, naluBytes, senderNanos, arrivalNanos)
+    }
+}
+
 class CarPlayMediaEngine(
     private val sink: MediaSink,
     private val microphoneEnabled: Boolean = false,
@@ -120,17 +135,8 @@ class CarPlayMediaEngine(
                 session.logDebug("Video recovery: requested keyframe sent=$sent")
             }
         }
-        // A replaced stream's thread may still be delivering when its successor starts; only the current
-        // stream reaches the sink. The iPhone connects after SETUP returns the port, so after put below.
-        fun current() = streams[streamKey] === screen
         val port = screen.listen(
-            object : ScreenStream.Listener {
-                override fun onCodec(codec: VideoCodec) { if (current()) sink.onVideoCodec(type, codec) }
-                override fun onConfig(codecData: ByteArray) { if (current()) sink.onVideoConfig(type, codecData) }
-                override fun onFrame(naluBytes: ByteArray) { if (current()) sink.onVideoFrame(type, naluBytes) }
-                override fun onFrame(naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
-                    if (current()) sink.onVideoFrame(type, naluBytes, senderNanos, arrivalNanos)
-                }
+            object : ScreenStream.Listener by currentScreenListener(type, sink, isCurrent = { streams[streamKey] === screen }) {
                 override fun onClosed(cause: Throwable?) {
                     Log.w(
                         TAG,

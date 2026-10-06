@@ -276,9 +276,10 @@ class CarPlayHostActivity : ComponentActivity() {
     private var fallbackVideoBounds: CarPlaySurfaceBounds? = null
     // Smooth video (a setting): SurfaceView output with frames released at the iPhone's frame time.
     private var smoothVideo = false
-    // A sink whose session is being torn down; its decoders may still render to the current surface
-    // until its close() finishes, so a destroyed surface is detached from it too.
-    @Volatile private var retiringSink: AndroidMediaSink? = null
+    // Sinks whose sessions are being torn down; their decoders may still render to the current surface
+    // until they have released their codecs, so a destroyed surface is detached from them too. A restart
+    // and a shutdown can overlap, so this is a set.
+    private val retiringSinks = java.util.concurrent.CopyOnWriteArraySet<AndroidMediaSink>()
     private var videoSurfaceProbe: ViewTreeObserver.OnPreDrawListener? = null
     private var pictureBinding: CarPlayPicture.Binding? = null
     private var picturePanel: View? = null
@@ -537,14 +538,14 @@ class CarPlayHostActivity : ComponentActivity() {
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
             val surface = holder.surface
-            // The SurfaceHolder contract: nothing may render to the surface once this returns. Each call
-            // returns when that decoder has let go (or after replacing a decoder that did not confirm).
-            // With smooth video the main decoder parks off screen and keeps its state for the return.
-            var confirmed = true
-            for (owner in listOfNotNull(sink, retiringSink).distinct()) {
-                confirmed = owner.detachSurfaceAndWait(SCREEN_TYPE_MAIN, surface, park = smoothVideo) and confirmed
-                confirmed = owner.detachSurfaceAndWait(SCREEN_TYPE_ALT, surface, park = false) and confirmed
-            }
+            // The SurfaceHolder contract: nothing may render to the surface once this returns. Every decoder
+            // is asked at once, then waited for against one deadline; each confirms once it has moved,
+            // parked or released its codec, and closing decoders count once their workers exit. With
+            // smooth video the live session's main decoder parks off screen and keeps its state.
+            val live = sink
+            val detaches = (listOfNotNull(live) + retiringSinks).distinct()
+                .map { owner -> owner.beginSurfaceDetach(surface, parkMain = smoothVideo && owner === live) }
+            val confirmed = detaches.map { it.await() }.all { it }
             videoSurfaceOwner.clear(surface)
             appendLog("SurfaceView video surface destroyed detachConfirmed=$confirmed")
         }
@@ -4322,6 +4323,9 @@ class CarPlayHostActivity : ComponentActivity() {
         // The video view is chosen once per activity; a changed Smooth video setting needs a new one.
         if (controller == null && AirPlayPersistence.loadSmoothVideo(this) != smoothVideo) {
             appendLog("Smooth video setting changed; rebuilding the video view")
+            // No session runs here, but a restart keeps this host as the session owner; the new instance
+            // must be able to start its own.
+            if (CarPlayBackgroundSession.isOwner(this)) CarPlayBackgroundSession.clear()
             recreate()
             return
         }
@@ -4406,7 +4410,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController, keepOwner = true)
         controller = null
-        retiringSink = oldSink
+        oldSink?.let(retiringSinks::add)
         sink = null
         sessionDisplay = null
         val diagnosticLog = sessionLog
@@ -4421,7 +4425,8 @@ class CarPlayHostActivity : ComponentActivity() {
                     "elapsedMs=${((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(0)}",
             )
             oldSink?.close()
-            if (retiringSink === oldSink) retiringSink = null
+            oldSink?.awaitVideoReleased(SINK_RELEASE_WAIT_MILLIS)
+            oldSink?.let(retiringSinks::remove)
             runOnUiThread {
                 if (!shuttingDown.get() && generation == restartGeneration) {
                     handshakeResetInProgress = false
@@ -4556,7 +4561,7 @@ class CarPlayHostActivity : ComponentActivity() {
         CarPlayMediaKeys.detach(oldController)
         CarPlayBackgroundSession.clear(oldController)
         controller = null
-        retiringSink = oldSink
+        oldSink?.let(retiringSinks::add)
         sink = null
         sessionDisplay = null
         Log.i(TAG, "shutdown reason=$reason terminateProcess=$terminateProcess")
@@ -4564,7 +4569,8 @@ class CarPlayHostActivity : ComponentActivity() {
             oldController?.close()
             val clean = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
             oldSink?.close()
-            if (retiringSink === oldSink) retiringSink = null
+            oldSink?.awaitVideoReleased(SINK_RELEASE_WAIT_MILLIS)
+            oldSink?.let(retiringSinks::remove)
             airPlayCommandExecutor.shutdown()
             if (terminateProcess) {
                 applicationContext.stopService(Intent(applicationContext, CarPlayVpnService::class.java))
@@ -4902,6 +4908,9 @@ class CarPlayHostActivity : ComponentActivity() {
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111
+        // On the teardown thread: how long a closed sink's decoders get to release their codecs before it
+        // stops counting as one that may still render to the surface.
+        const val SINK_RELEASE_WAIT_MILLIS = 2_000L
         private const val CENTER_MAP_IDLE_MILLIS = 3_000L // a reconnect is quicker; a session end is not
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L

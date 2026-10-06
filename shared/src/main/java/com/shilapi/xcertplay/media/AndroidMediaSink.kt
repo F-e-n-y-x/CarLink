@@ -213,6 +213,13 @@ class AndroidMediaSink(
     @Volatile private var screenStreamActiveChanged = onScreenStreamActiveChanged
     private val surfaces = ConcurrentHashMap<Int, Surface>()
     private val videoDecoders = ConcurrentHashMap<Int, VideoDecoder>()
+    // Closed decoders whose workers may still hold a codec on a surface until they exit; a surface
+    // detach also waits for them.
+    private val closingVideoDecoders = ConcurrentHashMap.newKeySet<VideoDecoder>()
+    // How long a surface detach waits for decoders to confirm, and then for an unconfirmed one to exit
+    // after it is closed. Variables so tests can shorten them.
+    internal var detachTimeoutNanos = 2_000_000_000L
+    internal var detachGraceNanos = 500_000_000L
     private val mediaAudioTypes = mutableSetOf<AudioStreamId>()
     private val audioRenderers = ConcurrentHashMap<AudioStreamId, AudioRenderer>()
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
@@ -261,24 +268,62 @@ class AndroidMediaSink(
     }
 
     /**
-     * Returns once stream [type]'s decoder no longer renders to [surface], as a SurfaceHolder destroy
-     * callback requires. With [park] the decoder moves to an offscreen consumer it owns and keeps its
-     * state (smooth video, so the picture can return at once); otherwise it is released. The decision
-     * follows the surface the codec actually renders to, after any surface change queued before this.
-     * If the worker does not confirm in time, the decoder is closed and replaced, and false is returned
-     * unless it then exits within a short grace period.
+     * Starts moving every decoder of this sink off [surface], which a SurfaceHolder destroy callback must
+     * not return before. Each worker decides from the surface its codec actually renders to, after any
+     * surface change queued before this: one already elsewhere has nothing to do. With [parkMain] the
+     * main-screen decoder moves to an offscreen consumer it owns and keeps its state (smooth video, so the
+     * picture can return at once); other decoders are released. Decoders closed earlier whose workers have
+     * not exited yet are waited for too. [SurfaceDetach.await] returns the result.
      */
-    fun detachSurfaceAndWait(type: Int, surface: Surface, park: Boolean): Boolean {
-        surfaces.remove(type, surface) // a decoder created from now on must not start on it
-        val decoder = videoDecoders[type] ?: return true
-        if (decoder.detachAndWait(surface, park)) return true
-        Log.w("xcertplay-usb", "Video detach not confirmed in time type=$type; replacing the decoder")
-        videoDiagnosticHandlers[type]?.invoke("surface detach not confirmed; decoder replaced")
-        if (videoDecoders.remove(type, decoder)) {
-            decoder.close()
-            lastVideoConfig[type]?.let { (codec, data) -> videoDecoder(type).configure(codec, data) }
+    fun beginSurfaceDetach(surface: Surface, parkMain: Boolean): SurfaceDetach {
+        val deadline = System.nanoTime() + detachTimeoutNanos
+        surfaces.entries.removeIf { it.value === surface } // a decoder created from now on must not start on it
+        val requests = ArrayList<SurfaceDetachRequest>()
+        val steps = ArrayList<() -> Boolean>()
+        for ((type, decoder) in videoDecoders.entries.toList()) {
+            val request = decoder.requestDetach(surface, park = parkMain && type == MAIN_SCREEN_TYPE)
+            requests += request
+            steps += { settleDetach(type, decoder, request, deadline) }
         }
-        return decoder.awaitExit(DETACH_GRACE_MS)
+        closingVideoDecoders.removeIf { it.exited }
+        closingVideoDecoders.toList().forEach { closing -> steps += { closing.awaitExitUntil(deadline + detachGraceNanos) } }
+        return SurfaceDetach(requests, steps)
+    }
+
+    /** A surface detach in flight across one sink's decoders; see [beginSurfaceDetach]. */
+    class SurfaceDetach internal constructor(
+        internal val requests: List<SurfaceDetachRequest>,
+        private val steps: List<() -> Boolean>,
+    ) {
+        /**
+         * Waits until every decoder has let go of the surface (moved, parked, released, or its worker
+         * exited). False when one did not confirm in time and its worker, closed then, did not exit within
+         * the grace period either; nothing more can be done from here, as with any native call that hangs.
+         */
+        fun await(): Boolean = steps.map { it() }.all { it }
+    }
+
+    private fun settleDetach(type: Int, decoder: VideoDecoder, request: SurfaceDetachRequest, deadline: Long): Boolean {
+        if (decoder.awaitDetach(request, deadline)) return true
+        Log.w("xcertplay-usb", "Video detach not confirmed in time type=$type; closing that decoder")
+        videoDiagnosticHandlers[type]?.invoke("surface detach not confirmed; decoder closed")
+        // The stream's next frame starts a fresh decoder on no surface, so it cannot compete for this one.
+        retire(type, decoder)
+        return decoder.awaitExitUntil(deadline + detachGraceNanos)
+    }
+
+    /** Closes a stream's decoder and keeps it visible to surface detaches until its worker exits. */
+    private fun retire(type: Int, decoder: VideoDecoder) {
+        videoDecoders.remove(type, decoder)
+        closingVideoDecoders += decoder
+        decoder.close()
+    }
+
+    /** After [close], waits up to [timeoutMillis] for this sink's decoders to release their codecs. */
+    fun awaitVideoReleased(timeoutMillis: Long): Boolean {
+        val deadline = System.nanoTime() + timeoutMillis * 1_000_000L
+        closingVideoDecoders.removeIf { it.exited }
+        return closingVideoDecoders.toList().map { it.awaitExitUntil(deadline) }.all { it }
     }
 
     /** True when this sink paces main-screen frames (smooth video); fixed for its lifetime. */
@@ -345,7 +390,7 @@ class AndroidMediaSink(
         if (!active) {
             videoRecoveryHandlers.remove(type)
             videoDiagnosticHandlers.remove(type)
-            videoDecoders.remove(type)?.close()
+            videoDecoders[type]?.let { retire(type, it) }
             synchronized(mirrorLock) {
                 mirrorDecoders.keys.filter { it.first == type }.forEach { mirrorDecoders.remove(it)?.close() }
             }
@@ -438,8 +483,7 @@ class AndroidMediaSink(
             activeScreenTypes.clear()
             screenStreamActiveChanged = null
         }
-        videoDecoders.values.forEach(VideoDecoder::close)
-        videoDecoders.clear()
+        videoDecoders.entries.toList().forEach { (type, decoder) -> retire(type, decoder) }
         synchronized(mirrorLock) {
             mirrorDecoders.values.forEach(VideoDecoder::close)
             mirrorDecoders.clear()
@@ -463,7 +507,11 @@ class AndroidMediaSink(
     }
 
     private fun videoDecoder(type: Int): VideoDecoder =
-        videoDecoders.computeIfAbsent(type) { newVideoDecoder(type, surfaces[type] ?: defaultSurface) }
+        videoDecoders.computeIfAbsent(type) {
+            // A decoder that replaces a closed one picks up the stream's codec configuration.
+            newVideoDecoder(type, surfaces[type] ?: defaultSurface)
+                .also { decoder -> lastVideoConfig[type]?.let { (codec, data) -> decoder.configure(codec, data) } }
+        }
 
     private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null) = VideoDecoder(
         type,
@@ -474,6 +522,7 @@ class AndroidMediaSink(
         requestKeyFrame = { requestVideoRecovery(type) },
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
+        onExit = { closingVideoDecoders -= it },
         // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
         pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
     )
@@ -500,22 +549,30 @@ class AndroidMediaSink(
 /** CarPlay's main screen stream type. */
 private const val MAIN_SCREEN_TYPE = 110
 
-// After an unconfirmed detach, how long the sink waits for the closed worker to release its codec.
-private const val DETACH_GRACE_MS = 500L
-
 /**
  * An offscreen consumer a parked decoder renders to while its SurfaceView is gone. It drops each image
  * on its own thread, so it keeps draining while the main thread waits on a surface handoff. Only the
  * decoder worker creates and closes it, after the codec no longer renders to it.
  */
-private class ParkingOutput(width: Int, height: Int) {
+internal class ParkingOutput(width: Int, height: Int) {
     private val thread = android.os.HandlerThread("carplay-video-parking").apply { start() }
-    private val reader = android.media.ImageReader.newInstance(
-        width.coerceAtLeast(1), height.coerceAtLeast(1), android.graphics.ImageFormat.PRIVATE, 3,
-    ).apply {
-        setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, android.os.Handler(thread.looper))
+    private val reader: android.media.ImageReader
+    val surface: Surface
+    /** The looper the consumer drains on, never the main one. */
+    val listenerLooper: android.os.Looper get() = thread.looper
+
+    init {
+        try {
+            reader = android.media.ImageReader.newInstance(
+                width.coerceAtLeast(1), height.coerceAtLeast(1), android.graphics.ImageFormat.PRIVATE, 3,
+            )
+            reader.setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, android.os.Handler(thread.looper))
+            surface = reader.surface
+        } catch (error: Throwable) {
+            thread.quitSafely()
+            throw error
+        }
     }
-    val surface: Surface = reader.surface
 
     fun close() {
         reader.close()
@@ -534,6 +591,8 @@ private class VideoDecoder(
     private val report: (String) -> Unit,
     statsLabel: String? = null,
     pacingDelayNanos: Long = 0L,
+    /** Called on the worker as its last step, after it has released its codec. */
+    private val onExit: (VideoDecoder) -> Unit = {},
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -583,20 +642,34 @@ private class VideoDecoder(
         queue.offer(VideoJob.SurfaceChanged(surface))
     }
 
-    /**
-     * Asks the worker to stop rendering to [surface] (parking the codec when [park]) and waits until it
-     * confirms or exits, up to [SURFACE_DETACH_TIMEOUT_MS]; false when neither happened in time.
-     */
-    fun detachAndWait(surface: Surface, park: Boolean): Boolean {
+    /** Asks the worker to stop rendering to [surface], parking the codec when [park]. */
+    fun requestDetach(surface: Surface, park: Boolean): SurfaceDetachRequest {
         check(Thread.currentThread() !== thread) { "detach from the decoder worker" }
-        val request = SurfaceDetachRequest(surface, park)
-        queue.offer(VideoJob.DetachSurface(request))
-        return request.await(SURFACE_DETACH_TIMEOUT_MS * 1_000_000L, workerAlive = thread::isAlive)
+        return SurfaceDetachRequest(surface, park).also { queue.offer(VideoJob.DetachSurface(it)) }
     }
 
-    /** Waits up to [millis] for the worker, after [close], to release its codec and exit. */
-    fun awaitExit(millis: Long): Boolean {
-        try { thread.join(millis) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
+    /** True once [request] is confirmed or the worker has exited; false when [deadlineNanos] passed first. */
+    fun awaitDetach(request: SurfaceDetachRequest, deadlineNanos: Long): Boolean =
+        request.await(deadlineNanos - System.nanoTime(), workerAlive = thread::isAlive)
+
+    /** True once the worker has exited, so its codec is released. */
+    val exited: Boolean get() = !thread.isAlive
+
+    /**
+     * After [close], waits until [deadlineNanos] for the worker to release its codec and exit. An
+     * interrupt does not end the wait early; it is restored before returning.
+     */
+    fun awaitExitUntil(deadlineNanos: Long): Boolean {
+        var interrupted = false
+        try {
+            while (thread.isAlive) {
+                val leftMillis = (deadlineNanos - System.nanoTime()) / 1_000_000L
+                if (leftMillis <= 0) break
+                try { thread.join(leftMillis) } catch (_: InterruptedException) { interrupted = true }
+            }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt()
+        }
         return !thread.isAlive
     }
 
@@ -654,6 +727,7 @@ private class VideoDecoder(
             parking?.close()
             parking = null
             queue.drain().forEach { (it as? VideoJob.DetachSurface)?.request?.complete(DetachOutcome.RELEASED) }
+            runCatching { onExit(this) }
         }
     }
 
@@ -930,13 +1004,16 @@ private class VideoDecoder(
                 index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
                 index >= 0 -> {
                     val render = outputSurface != null
+                    // Parked output goes to the offscreen consumer: it keeps the codec's state, but it is
+                    // not shown, so it is neither paced nor counted.
+                    val shown = render && outputSurface !== parking?.surface
                     val now = System.nanoTime()
                     val slot = queuedSlotOf(info.presentationTimeUs)
                     val queued = if (slot >= 0) queuedAtNanos[slot] else 0L
                     val heldOverGap = queued in 1 until resumedAtNanos
                     if (queued > 0 && !heldOverGap) stats.onDecodeLatency(now - queued)
                     val delay = pacingDelay
-                    val paced = render && delay != null && slot >= 0 && queuedPaced[slot]
+                    val paced = shown && delay != null && slot >= 0 && queuedPaced[slot]
                     val localNs = info.presentationTimeUs * 1000
                     val pauseHeld = paced && queuedBeforePause[slot]
                     val targetNs = if (paced && delay != null) {
@@ -947,11 +1024,11 @@ private class VideoDecoder(
                     if (targetNs - now in 1..MAX_PACING_AHEAD_NS) {
                         codec.releaseOutputBuffer(index, targetNs)
                     } else {
-                        if (render && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
+                        if (shown && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
                         codec.releaseOutputBuffer(index, render)
                     }
-                    if (render) stats.onRendered()
-                    if (render && !renderedFrameLogged) {
+                    if (shown) stats.onRendered()
+                    if (shown && !renderedFrameLogged) {
                         renderedFrameLogged = true
                         report("first frame rendered")
                         Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
@@ -1016,8 +1093,6 @@ private class VideoDecoder(
         const val MAX_FRAME_AGE_NS = 250_000_000L
         // A paced frame more than this ahead is treated as a bad mapping and shown at once.
         const val MAX_PACING_AHEAD_NS = 1_000_000_000L
-        // Covers VideoInputPump's 500 ms input wait plus codec work; past it the sink replaces the decoder.
-        const val SURFACE_DETACH_TIMEOUT_MS = 2_000L
         // Longer input gaps are a still screen, not decoding work.
         const val STILL_GAP_NS = 500_000_000L
         // Consecutive frames this far apart in iPhone time are a pause in its frames: about four frame

@@ -20,7 +20,7 @@ class AndroidMediaSinkDetachTest {
         val sink = AndroidMediaSink(surface = surface, videoPacingDelayMillis = 90)
         repeat(50) { sink.onVideoFrame(110, predicted, it * 16_666_667L + 1, System.nanoTime()) }
         val started = System.nanoTime()
-        assertTrue(sink.detachSurfaceAndWait(110, surface, park = true))
+        assertTrue(sink.beginSurfaceDetach(surface, parkMain = true).await())
         assertTrue(System.nanoTime() - started < 2_000_000_000L)
         sink.close()
     }
@@ -30,9 +30,9 @@ class AndroidMediaSinkDetachTest {
         val sink = AndroidMediaSink(surface = surface)
         sink.onVideoFrame(110, predicted)
         sink.onScreenStreamActive(110, false) // closes that stream's decoder worker
-        assertTrue(sink.detachSurfaceAndWait(110, surface, park = true))
+        assertTrue(sink.beginSurfaceDetach(surface, parkMain = true).await())
         sink.close()
-        assertTrue(sink.detachSurfaceAndWait(110, surface, park = false))
+        assertTrue(sink.beginSurfaceDetach(surface, parkMain = false).await())
     }
 
     @Test fun pacedFramesFromAReplacedAndANewStreamThreadDoNotRace() {
