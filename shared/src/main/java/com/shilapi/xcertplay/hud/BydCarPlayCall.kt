@@ -103,7 +103,8 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
  * Optional, needs ADB over network: shows CarPlay calls on the dashboard and the windshield HUD the way
  * BYD's own CarPlay app does (com.byd.carplay.ui, BinderCarplayServer.CarplayNotifyInstrumentCallState):
  * the instrument's call state, caller and call time, the car's call state (which also turns the fan
- * down) and the audio system's CarPlay call status. Apps cannot write these, autoservice accepts the
+ * down). The audio system's CarPlay call status is only reset to idle, never set in a call (see
+ * [BydCarPlayCallTool]). Apps cannot write these, autoservice accepts the
  * adb shell, so DiPlay runs [BydCarPlayCallTool] from its APK under the shell. While a call lasts a
  * small watcher under the shell sends the call time every second and ends the call on the car if
  * DiPlay goes away mid-call.
@@ -314,7 +315,6 @@ object BydCarPlayCallTool {
     private const val BT_RINGING = 2
     private const val BT_ACTIVE = 3
     private const val BT_IDLE = 5
-    private const val AUDIO_IN_CALL = 0
     private const val AUDIO_IDLE = 1
     private const val MAX_WATCH_MILLIS = 6L * 60 * 60 * 1000
 
@@ -371,8 +371,9 @@ object BydCarPlayCallTool {
         }
         val name = encodedName?.takeIf { it != "-" }
             ?.let { String(java.util.Base64.getDecoder().decode(it), Charsets.UTF_8) }.orEmpty()
+        // No AUDIO_CARPLAY_CALL_STATUS in-call write: it switches the amplifier to the stock CarPlay call
+        // channel, while BYD's AudioService reclassifies DiPlay's voice stream as music, so callers go silent.
         val writes = listOf(
-            CarPlayCallWrite("audio", AUDIO_IN_CALL, AUDIO_IDLE),
             CarPlayCallWrite("car", 1, 0),
             CarPlayCallWrite("bt", bt, BT_IDLE),
             CarPlayCallWrite("state", INSTRUMENT_IN_CALL, INSTRUMENT_ENDED),
