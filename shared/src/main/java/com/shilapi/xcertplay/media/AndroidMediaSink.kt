@@ -39,21 +39,37 @@ internal fun audioTrackAttributesForFocus(track: AudioTrack, configured: AudioAt
 internal class AudioFocusCoordinator(
     context: Context?,
     private val enabled: Boolean,
+    private val muteMediaOnTransientLoss: Boolean = true,
     private val report: (String) -> Unit = {},
 ) {
-    private data class Entry(val channel: AudioChannel, val attributes: AudioAttributes)
+    private data class Entry(val channel: AudioChannel, val attributes: AudioAttributes, var appliedVolume: Float = FULL_VOLUME)
 
     private val manager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val active = LinkedHashMap<AudioTrack, Entry>()
     private var request: AudioFocusRequest? = null
     private var requestedChannel: AudioChannel? = null
-    private val listener = AudioManager.OnAudioFocusChangeListener { change ->
+    private var mediaVolume = FULL_VOLUME
+    private var closed = false
+    private var focusGeneration = 0L
+    private var currentListener = listenerFor(focusGeneration)
+    internal val listener: AudioManager.OnAudioFocusChangeListener get() = currentListener
+
+    private fun listenerFor(generation: Long) = AudioManager.OnAudioFocusChangeListener { change ->
         synchronized(this) {
+            // Android may have queued callbacks before a request was abandoned or replaced.
+            if (generation != focusGeneration || request == null || active.isEmpty()) return@synchronized
             runCatching { report("Audio: focus change=$change activeTracks=${active.size}") }
             when (change) {
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> setVolume(DUCKED_VOLUME)
-                AudioManager.AUDIOFOCUS_GAIN -> setVolume(FULL_VOLUME)
-                // Keep CarPlay audio running on permanent or transient loss. Some head units
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> setMediaVolume(DUCKED_VOLUME)
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    if (muteMediaOnTransientLoss) {
+                        // This reports a temporary Android focus owner, not a confirmed call.
+                        Log.i(TAG, "Audio: muting media during transient focus loss")
+                        setMediaVolume(0f)
+                    }
+                }
+                AudioManager.AUDIOFOCUS_GAIN -> setMediaVolume(FULL_VOLUME)
+                // Keep CarPlay audio running on permanent loss. Some head units
                 // do not send a later gain callback after taking focus back.
             }
         }
@@ -61,9 +77,10 @@ internal class AudioFocusCoordinator(
 
     @Synchronized
     fun acquire(track: AudioTrack, channel: AudioChannel, attributes: AudioAttributes) {
-        if (!enabled || manager == null || channel == AudioChannel.NAVIGATION) return
+        if (closed || !enabled || manager == null || channel == AudioChannel.NAVIGATION) return
         active[track] = Entry(channel, attributes)
         refreshRequest()
+        applyMediaVolume(track, active.getValue(track))
     }
 
     @Synchronized
@@ -71,15 +88,32 @@ internal class AudioFocusCoordinator(
         if (active.remove(track) != null) refreshRequest()
     }
 
+    fun onExternalFocusChange(change: Int) {
+        val current = synchronized(this) { currentListener }
+        current.onAudioFocusChange(change)
+    }
+
+    @Synchronized
+    fun close() {
+        if (closed) return
+        closed = true
+        active.clear()
+        refreshRequest()
+    }
+
     private fun refreshRequest() {
         val primary = active.values.maxByOrNull { it.channel.focusPriority() }
         if (primary == null) {
-            request?.let { manager?.abandonAudioFocusRequest(it) }
+            focusGeneration += 1
+            val abandoned = request
             request = null
             requestedChannel = null
+            mediaVolume = FULL_VOLUME
+            abandoned?.let { manager?.abandonAudioFocusRequest(it) }
             return
         }
         if (request != null && requestedChannel == primary.channel) return
+        focusGeneration += 1
         request?.let { manager?.abandonAudioFocusRequest(it) }
         val gain = when (primary.channel) {
             AudioChannel.MEDIA -> AudioManager.AUDIOFOCUS_GAIN
@@ -87,20 +121,31 @@ internal class AudioFocusCoordinator(
             AudioChannel.ASSISTANT -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
             AudioChannel.NAVIGATION -> return
         }
+        currentListener = listenerFor(focusGeneration)
         val next = AudioFocusRequest.Builder(gain)
             .setAudioAttributes(primary.attributes)
-            .setOnAudioFocusChangeListener(listener, Handler(Looper.getMainLooper()))
+            .setOnAudioFocusChangeListener(currentListener, Handler(Looper.getMainLooper()))
             .build()
         request = next
         requestedChannel = primary.channel
         val result = manager?.requestAudioFocus(next)
+        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) setMediaVolume(FULL_VOLUME)
         val line = "Audio: focus requested channel=${primary.channel} gain=$gain granted=$result activeTracks=${active.size}"
         Log.i(TAG, line)
         runCatching { report(line) }
     }
 
-    private fun setVolume(volume: Float) {
-        active.keys.forEach { track -> runCatching { track.setStereoVolume(volume, volume) } }
+    private fun setMediaVolume(volume: Float) {
+        mediaVolume = volume
+        active.forEach { (track, entry) -> applyMediaVolume(track, entry) }
+    }
+
+    private fun applyMediaVolume(track: AudioTrack, entry: Entry) {
+        // Telephony and assistant speech remain audible, and navigation never enters this map.
+        // This changes only the renderer's relative gain, never Android's user stream volume.
+        if (entry.channel != AudioChannel.MEDIA || entry.appliedVolume == mediaVolume) return
+        val applied = runCatching { track.setStereoVolume(mediaVolume, mediaVolume) == AudioTrack.SUCCESS }.getOrDefault(false)
+        if (applied) entry.appliedVolume = mediaVolume
     }
 
     private fun AudioChannel.focusPriority(): Int = when (this) {
@@ -131,6 +176,7 @@ class AndroidMediaSink(
     private val preferSoftwareHevcDecoder: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     private val audioFocusEnabled: Boolean = false,
+    private val audioFocusAutoYield: Boolean = true,
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
     context: Context? = null,
@@ -146,8 +192,15 @@ class AndroidMediaSink(
     private val audioFocusCoordinator = AudioFocusCoordinator(
         appContext,
         audioFocusEnabled,
+        audioFocusAutoYield,
         onAudioDiagnostic,
     )
+
+    /** The media-key session may own Android's current focus request for this same sink. */
+    fun onMediaAudioFocusChanged(change: Int) {
+        audioFocusCoordinator.onExternalFocusChange(change)
+    }
+
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
     private val defaultSurface = surface
@@ -355,6 +408,8 @@ class AndroidMediaSink(
         videoRecoveryHandlers.clear()
         videoDiagnosticHandlers.clear()
         recoveryExecutor.shutdownNow()
+        // Audio workers close asynchronously; none may reacquire focus after their sink closes.
+        audioFocusCoordinator.close()
         audioRenderers.values.forEach(AudioRenderer::close)
         audioRenderers.clear()
         val hadMedia = synchronized(mediaAudioTypes) { mediaAudioTypes.isNotEmpty().also { mediaAudioTypes.clear() } }
