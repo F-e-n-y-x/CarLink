@@ -141,7 +141,7 @@
     <string name="carplay_control_running">Керування CarPlay працює</string>
     <string name="carplay_control_window_ended">Вікно керування CarPlay завершилося</string>
     <string name="carplay_icon">Значок CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборці · експериментально</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборці (експериментально)</string>
     <string name="carplay_service_already_running">Служба CarPlay уже працює</string>
     <string name="carplay_session_already_running">Сеанс CarPlay уже триває</string>
     <string name="carplay_session_ended_reconnecting">Сеанс CarPlay завершився; повторне підключення</string>

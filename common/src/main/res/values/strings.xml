@@ -143,7 +143,7 @@
     <string name="carplay_control_running">CarPlay control running</string>
     <string name="carplay_control_window_ended">CarPlay control window ended</string>
     <string name="carplay_icon">CarPlay icon</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">CarPlay map on dashboard · experimental</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">CarPlay map on dashboard (experimental)</string>
     <string name="carplay_service_already_running">CarPlay service already running</string>
     <string name="carplay_session_already_running">CarPlay session already running</string>
     <string name="carplay_session_ended_reconnecting">CarPlay session ended; reconnecting</string>

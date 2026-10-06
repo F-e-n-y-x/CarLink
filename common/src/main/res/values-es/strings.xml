@@ -137,7 +137,7 @@
     <string name="carplay_control_running">Control de CarPlay en ejecución</string>
     <string name="carplay_control_window_ended">Ventana de control de CarPlay finalizada</string>
     <string name="carplay_icon">Icono de CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Mapa de CarPlay en el panel de instrumentos · experimental</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Mapa de CarPlay en el panel de instrumentos (experimental)</string>
     <string name="carplay_service_already_running">El servicio de CarPlay ya está en ejecución</string>
     <string name="carplay_session_already_running">La sesión de CarPlay ya está en ejecución</string>
     <string name="carplay_session_ended_reconnecting">Sesión de CarPlay finalizada; reconectando</string>

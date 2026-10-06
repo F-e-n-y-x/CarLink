@@ -135,7 +135,7 @@
     <string name="carplay_control_running">CarPlay 控制通道執行中</string>
     <string name="carplay_control_window_ended">CarPlay 控制工作階段已結束</string>
     <string name="carplay_icon">CarPlay 圖示</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">儀表板上的 CarPlay 地圖 · 實驗性</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">儀表板上的 CarPlay 地圖（實驗性）</string>
     <string name="carplay_service_already_running">CarPlay 服務已在執行</string>
     <string name="carplay_session_already_running">CarPlay 工作階段已在執行</string>
     <string name="carplay_session_ended_reconnecting">CarPlay 工作階段已結束；正在重新連線</string>

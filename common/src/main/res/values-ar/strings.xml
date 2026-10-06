@@ -137,7 +137,7 @@
     <string name="carplay_control_running">التحكم في CarPlay قيد التشغيل</string>
     <string name="carplay_control_window_ended">انتهت نافذة التحكم في CarPlay</string>
     <string name="carplay_icon">أيقونة CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات · تجريبي</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات (تجريبي)</string>
     <string name="carplay_service_already_running">خدمة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_already_running">جلسة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_ended_reconnecting">انتهت جلسة CarPlay؛ إعادة الاتصال</string>
