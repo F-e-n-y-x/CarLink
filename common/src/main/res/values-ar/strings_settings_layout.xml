@@ -18,8 +18,9 @@
     <string name="settings_display_summary">المظهر وملء الشاشة والدقة ومعدل الإطارات</string>
     <string name="settings_audio_summary">توجيه الصوت والتخزين المؤقت للموسيقى</string>
     <string name="settings_navigation_summary">إرسال الموقع والإرشاد المدعوم على لوحة العدادات</string>
-    <string name="settings_vehicle_summary">جهة القيادة وزر السيارة وإيماءات CarPlay</string>
+    <string name="settings_vehicle_summary">جهة القيادة وأزرار عجلة القيادة وزر السيارة وإيماءات CarPlay</string>
     <string name="settings_advanced_media">الفيديو والصوت</string>
+    <string name="settings_wheel_keys">أزرار عجلة القيادة</string>
     <string name="settings_experimental_display">الشاشة (تجريبي)</string>
     <string name="settings_diagnostics_summary">احفظ تقريرًا محليًا عند استكشاف مشكلة في الاتصال.</string>
     <string name="settings_full_screen_description">إخفاء شريطي النظام أثناء فتح CarPlay.</string>

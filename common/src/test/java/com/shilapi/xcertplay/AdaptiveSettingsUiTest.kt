@@ -260,6 +260,8 @@ class AdaptiveSettingsUiTest {
         }
         assertTrue(text(R.string.right_hand_drive) in vehicle)
         assertTrue(text(R.string.car_button_in_carplay) in vehicle)
+        assertTrue(text(R.string.wheel_siri_key) in vehicle)
+        assertTrue(text(R.string.settings_wheel_keys) in vehicle)
         assertTrue(text(R.string.side_panel) in advanced)
         listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.right_hand_drive, R.string.car_button_in_carplay,
             R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation).forEach {

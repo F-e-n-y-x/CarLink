@@ -31,7 +31,7 @@ Ask which goal the driver has when they look for the setting. Use the first row 
 | Display | how CarPlay looks on the head-unit screen | day/night mode, picture, size, resolution, frame rate, dock, system bars, multi-window resolution |
 | Audio | what the driver hears | media and navigation streams, music buffer |
 | Navigation | location and turn-by-turn guidance | location to iPhone, BYD HUD and cluster guidance |
-| Vehicle | how CarPlay fits this car and its driver | driving side, car button, gestures that conflict with the head unit |
+| Vehicle | how CarPlay fits this car and its driver | driving side, wheel keys (Siri, BYD joystick and map zoom), car button, gestures that conflict with the head unit |
 | Diagnostics | troubleshooting evidence | diagnostic reports |
 | Advanced | experimental, firmware-specific or risky behavior | dashboard map, split screen, screen rotation, side panel, HEVC video, audio focus, audio channel mapping, buffered music, vehicle data |
 | Overview | nothing new | see "Overview" below |

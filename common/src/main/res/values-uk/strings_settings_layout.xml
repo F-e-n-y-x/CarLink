@@ -18,8 +18,9 @@
     <string name="settings_display_summary">Оформлення, весь екран, роздільність і частота кадрів</string>
     <string name="settings_audio_summary">Виведення звуку та буферизація музики</string>
     <string name="settings_navigation_summary">Передавання місцезнаходження та підтримувані підказки на приладовій панелі</string>
-    <string name="settings_vehicle_summary">Бік водія, кнопка автомобіля та жести CarPlay</string>
+    <string name="settings_vehicle_summary">Бік водія, кнопки на кермі, кнопка автомобіля та жести CarPlay</string>
     <string name="settings_advanced_media">Відео та звук</string>
+    <string name="settings_wheel_keys">Кнопки на кермі</string>
     <string name="settings_experimental_display">Екран (експериментально)</string>
     <string name="settings_diagnostics_summary">Збережіть локальний звіт під час усунення проблем із підключенням.</string>
     <string name="settings_full_screen_description">Приховувати обидві системні панелі, поки відкрито CarPlay.</string>

@@ -18,8 +18,9 @@
     <string name="settings_display_summary">Apariencia, pantalla completa, resolución y velocidad de fotogramas</string>
     <string name="settings_audio_summary">Salida de sonido y búfer de música</string>
     <string name="settings_navigation_summary">Envío de ubicación y guía compatible en el cuadro de instrumentos</string>
-    <string name="settings_vehicle_summary">Lado de conducción, botón del coche y gestos de CarPlay</string>
+    <string name="settings_vehicle_summary">Lado de conducción, botones del volante, botón del coche y gestos de CarPlay</string>
     <string name="settings_advanced_media">Vídeo y audio</string>
+    <string name="settings_wheel_keys">Botones del volante</string>
     <string name="settings_experimental_display">Pantalla (experimental)</string>
     <string name="settings_diagnostics_summary">Guarda un informe local al resolver problemas de conexión.</string>
     <string name="settings_full_screen_description">Oculta ambas barras del sistema mientras CarPlay está abierto.</string>

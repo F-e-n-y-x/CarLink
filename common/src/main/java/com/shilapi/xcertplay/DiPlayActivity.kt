@@ -71,6 +71,7 @@ internal enum class SettingsCategory {
 /** A settings card. Every entry needs one category in [SettingsInformationArchitecture]; see AGENTS.md. */
 internal enum class SettingsSection {
     CARPLAY_CONTROLS,
+    WHEEL_KEYS,
     CONNECTION_SETUP,
     DIAGNOSTICS,
     AUTOMATIC_CONNECTION,
@@ -100,7 +101,11 @@ internal object SettingsInformationArchitecture {
         SettingsCategory.DISPLAY to setOf(SettingsSection.DISPLAY_AND_PERFORMANCE),
         SettingsCategory.AUDIO to setOf(SettingsSection.AUDIO_ROUTING),
         SettingsCategory.NAVIGATION to setOf(SettingsSection.LOCATION, SettingsSection.BYD_NAVIGATION),
-        SettingsCategory.VEHICLE to setOf(SettingsSection.CARPLAY_CONTROLS, SettingsSection.CAR_BUTTON),
+        SettingsCategory.VEHICLE to setOf(
+            SettingsSection.CARPLAY_CONTROLS,
+            SettingsSection.WHEEL_KEYS,
+            SettingsSection.CAR_BUTTON,
+        ),
         SettingsCategory.DIAGNOSTICS to setOf(SettingsSection.DIAGNOSTICS),
         SettingsCategory.ADVANCED to setOf(
             SettingsSection.CLUSTER_MAP,
@@ -1097,8 +1102,13 @@ class DiPlayActivity : ComponentActivity() {
             card.addView(label(getString(R.string.settings_gesture_fingers_hint), 14, MUTED).apply {
                 setPadding(0, dp(10), 0, 0)
             })
-            siriKeyControls(card)
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it); markReconnectNeeded() }
+        }
+        filteredSection(content, SettingsSection.WHEEL_KEYS,
+            getString(R.string.settings_wheel_keys), R.drawable.ic_dp_controls) { card ->
+            siriKeyControls(card)
+            // The joystick and map zoom use BYD's media and custom keys.
+            if (CarHotspotSetup.isBydHeadUnit(this)) wheelKeyControls(card)
         }
         filteredSection(content, SettingsSection.CONNECTION_SETUP,
             getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
@@ -1495,7 +1505,6 @@ class DiPlayActivity : ComponentActivity() {
                                 if (it) checkAdbState(mayAsk = true)
                             }
                         }
-                        wheelKeyControls(card)
                     }
                 }
             }
@@ -2215,18 +2224,29 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
+    // Map zoom only works where the dashboard map card used to show these controls.
+    private fun wheelMapZoomAvailable(): Boolean {
+        if (!AirPlayPersistence.loadClusterMapEnabled(this)) return false
+        val adbCluster = AdbClusterRouter.enabled(this)
+        if (DiLink51ClusterLayout.supported() && !adbCluster) return false
+        return adbCluster || ClusterMapPresentation.findDisplay(this) != null
+    }
+
     private fun wheelKeyControls(card: LinearLayout) {
-        toggle(card, getString(R.string.wheel_map_zoom), getString(R.string.wheel_map_zoom_description),
-            WheelZoomSettings.enabled(this)) {
-            WheelZoomSettings.setEnabled(this, it)
-            render()
+        val zoomAvailable = wheelMapZoomAvailable()
+        if (zoomAvailable) {
+            toggle(card, getString(R.string.wheel_map_zoom), getString(R.string.wheel_map_zoom_description),
+                WheelZoomSettings.enabled(this)) {
+                WheelZoomSettings.setEnabled(this, it)
+                render()
+            }
         }
         toggle(card, getString(R.string.wheel_joystick), getString(R.string.wheel_joystick_description),
             WheelZoomSettings.joystick(this)) {
             WheelZoomSettings.setJoystick(this, it)
             render()
         }
-        val zoom = WheelZoomSettings.enabled(this)
+        val zoom = zoomAvailable && WheelZoomSettings.enabled(this)
         val joystick = WheelZoomSettings.joystick(this)
         if (!zoom && !joystick) return
         if (!WheelZoomSettings.siriKey(this)) wheelKeyServiceControls(card)

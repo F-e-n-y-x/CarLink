@@ -377,11 +377,12 @@
     <string name="settings_display_summary">Appearance, full screen, resolution and frame rate</string>
     <string name="settings_audio_summary">Speaker routing and music buffering</string>
     <string name="settings_navigation_summary">Location reporting and supported dashboard guidance</string>
-    <string name="settings_vehicle_summary">Driving side, car button and CarPlay gestures</string>
+    <string name="settings_vehicle_summary">Driving side, wheel keys, car button and CarPlay gestures</string>
     <string name="settings_reconnect_pending">Saved. Some changes apply when CarPlay reconnects.</string>
     <string name="settings_reconnect_now">Reconnect now</string>
     <string name="settings_byd_navigation_unavailable">BYD dashboard and HUD guidance is not available on this head unit.</string>
     <string name="settings_advanced_media">Video and audio</string>
+    <string name="settings_wheel_keys">Wheel keys</string>
     <string name="settings_experimental_display">Display (experimental)</string>
     <string name="settings_diagnostics_summary">Save a local report when troubleshooting a connection.</string>
     <string name="settings_full_screen_description">Hide both system bars while CarPlay is open.</string>

@@ -18,8 +18,9 @@
     <string name="settings_display_summary">外观、全屏、分辨率和帧率</string>
     <string name="settings_audio_summary">声音输出与音乐缓冲</string>
     <string name="settings_navigation_summary">位置上报及支持的仪表盘导航提示</string>
-    <string name="settings_vehicle_summary">驾驶侧、车辆按钮和 CarPlay 手势</string>
+    <string name="settings_vehicle_summary">驾驶侧、方向盘按键、车辆按钮和 CarPlay 手势</string>
     <string name="settings_advanced_media">视频与音频</string>
+    <string name="settings_wheel_keys">方向盘按键</string>
     <string name="settings_experimental_display">显示（实验性）</string>
     <string name="settings_diagnostics_summary">排查连接问题时保存本地报告。</string>
     <string name="settings_full_screen_description">CarPlay 打开时隐藏两个系统栏。</string>
