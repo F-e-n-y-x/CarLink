@@ -106,7 +106,6 @@
     <string name="app_permissions">应用权限</string>
     <string name="app_settings">应用设置</string>
     <string name="apply_and_reconnect">应用并重新连接</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">需要重新连接的设置会在应用时重连 CarPlay。其他改动将在下次连接时生效。</string>
     <string name="audio">音频</string>
     <string name="audio_routing">音频路由</string>
     <string name="auto">自动</string>
@@ -189,7 +188,6 @@
     <string name="disconnect">断开连接</string>
     <string name="discovering_iphone">正在查找 iPhone</string>
     <string name="display_and_performance">显示与性能</string>
-    <string name="display_video">显示与视频</string>
     <string name="done">完成</string>
     <string name="drag_to_move_pinch_to_zoom">拖动以移动，双指缩放</string>
     <string name="draw_outside_safe_area">允许绘制到安全区域外</string>
@@ -229,7 +227,6 @@
     <string name="i2c_device">I2C 设备</string>
     <string name="i2c_device_path_contains_u_0000">I2C 设备路径包含 U+0000</string>
     <string name="i2c_device_path_is_required">必须填写 I2C 设备路径</string>
-    <string name="identity_appearance">身份与外观</string>
     <string name="image_is_not_ready">图片尚未准备好</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">在 CarPlay 界面用三指向下滑动，可打开 DiPlay 设置。</string>
     <string name="instrument_contrast">仪表盘对比度</string>
@@ -364,7 +361,6 @@
     <string name="starting">正在启动</string>
     <string name="starting_airplay_service">正在启动 AirPlay 服务</string>
     <string name="starting_wireless_hotspot">正在启动无线热点</string>
-    <string name="startup">启动</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">仍在等待使用访问权限。请确认命令已在本车机上成功运行，然后重试。</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">点按数字测试。14 = 比亚迪主驾扬声器。</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">车机无法启动 CarPlay Wi-Fi。请检查 Wi-Fi 并关闭其他投屏应用，正在重试…</string>
@@ -397,7 +393,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P（5 GHz）</string>
     <string name="wi_fi_session">Wi-Fi 会话</string>
     <string name="widest_width">较宽边</string>
-    <string name="window">窗口</string>
     <string name="wireless_carplay">无线 CarPlay</string>
     <string name="wireless_carplay_2">无线 CarPlay</string>
     <string name="wireless_carplay_active">无线 CarPlay 已启用</string>
@@ -410,7 +405,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">WPA2/WPA3 密码长度必须为 8–63 个字符</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">WPA3 过渡模式</string>
-    <string name="your_drive_your_way">按你的习惯设置。</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">暂时找不到 iPhone。请解锁手机并检查蓝牙。</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">地图、音乐与通话，\n在车机屏幕上畅享 CarPlay。</string>
     <string name="your_phone_your_drive">你的手机，畅享旅程。</string>

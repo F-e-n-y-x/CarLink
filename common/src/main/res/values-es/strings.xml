@@ -111,7 +111,6 @@
     <string name="app_permissions">Permisos de la aplicación</string>
     <string name="app_settings">Ajustes de la aplicación</string>
     <string name="apply_and_reconnect">Aplicar y reconectar</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Los ajustes que requieren una nueva conexión reconectan CarPlay al aplicarse. Los demás cambios se aplican en tu próxima conexión.</string>
     <string name="audio">Audio</string>
     <string name="audio_routing">Enrutamiento de audio</string>
     <string name="auto">Auto</string>
@@ -188,7 +187,6 @@
     <string name="disconnect">Desconectar</string>
     <string name="discovering_iphone">Buscando iPhone</string>
     <string name="display_and_performance">Pantalla y rendimiento</string>
-    <string name="display_video">Pantalla y vídeo</string>
     <string name="done">Listo</string>
     <string name="drag_to_move_pinch_to_zoom">Arrastra para mover, pellizca para ampliar</string>
     <string name="draw_outside_safe_area">Dibujar fuera de la zona segura</string>
@@ -227,7 +225,6 @@
     <string name="i2c_device">Dispositivo I2C</string>
     <string name="i2c_device_path_contains_u_0000">La ruta del dispositivo I2C contiene U+0000</string>
     <string name="i2c_device_path_is_required">Se requiere la ruta del dispositivo I2C</string>
-    <string name="identity_appearance">Identidad y apariencia</string>
     <string name="image_is_not_ready">La imagen no está lista</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">En CarPlay, desliza hacia abajo con tres dedos para abrir los ajustes de DiPlay.</string>
     <string name="instrument_contrast">Contraste del cuadro</string>
@@ -352,7 +349,6 @@
     <string name="starting">Iniciando</string>
     <string name="starting_airplay_service">Iniciando el servicio de AirPlay</string>
     <string name="starting_wireless_hotspot">Iniciando el punto de acceso inalámbrico</string>
-    <string name="startup">Inicio</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">Sigue esperando el acceso al uso. Comprueba que el comando se ejecutó correctamente para este coche e inténtalo de nuevo.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">Toca un número para probar. 14 = altavoz del conductor en BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">La unidad principal no pudo iniciar el Wi‑Fi de CarPlay. Comprueba el Wi‑Fi y cierra otras aplicaciones de proyección. Reintentando…</string>
@@ -385,7 +381,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P (5 GHz)</string>
     <string name="wi_fi_session">Sesión Wi‑Fi</string>
     <string name="widest_width">Ancho máximo</string>
-    <string name="window">Ventana</string>
     <string name="wireless_carplay">CARPLAY INALÁMBRICO</string>
     <string name="wireless_carplay_2">CarPlay inalámbrico</string>
     <string name="wireless_carplay_active">CarPlay inalámbrico activo</string>
@@ -396,7 +391,6 @@
     <string name="wireless_permissions">Permisos inalámbricos</string>
     <string name="wpa2_wpa3_password_must_be_8_63_characters">La contraseña WPA2/WPA3 debe tener de 8 a 63 caracteres</string>
     <string name="wpa3_transition">Transición WPA3</string>
-    <string name="your_drive_your_way">Tu trayecto, a tu manera.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">Tu iPhone no está disponible. Desbloquéalo y comprueba el Bluetooth.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">Tus mapas, tu música y tus conversaciones.\nCarPlay, aquí mismo en la pantalla de tu coche.</string>
     <string name="your_phone_your_drive">TU TELÉFONO. TU TRAYECTO.</string>

@@ -114,7 +114,6 @@
     <string name="app_permissions">Дозволи застосунку</string>
     <string name="app_settings">Налаштування застосунку</string>
     <string name="apply_and_reconnect">Застосувати й перепідключитися</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Налаштування, що потребують нового підключення, перепідключають CarPlay під час застосування. Інші зміни діятимуть після наступного підключення.</string>
     <string name="audio">Аудіо</string>
     <string name="audio_routing">Спрямування аудіо</string>
     <string name="auto">Авто</string>
@@ -193,7 +192,6 @@
     <string name="disconnect">Відключити</string>
     <string name="discovering_iphone">Пошук iPhone</string>
     <string name="display_and_performance">Екран і продуктивність</string>
-    <string name="display_video">Екран і відео</string>
     <string name="done">Готово</string>
     <string name="drag_to_move_pinch_to_zoom">Перетягніть, щоб перемістити; зведіть або розведіть пальці, щоб змінити масштаб</string>
     <string name="draw_outside_safe_area">Показувати поза безпечною областю</string>
@@ -233,7 +231,6 @@
     <string name="i2c_device">Пристрій I2C</string>
     <string name="i2c_device_path_contains_u_0000">Шлях пристрою I2C містить U+0000</string>
     <string name="i2c_device_path_is_required">Укажіть шлях пристрою I2C</string>
-    <string name="identity_appearance">Ідентичність і вигляд</string>
     <string name="image_is_not_ready">Зображення ще не готове</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">У CarPlay проведіть трьома пальцями вниз, щоб відкрити налаштування DiPlay.</string>
     <string name="instrument_contrast">Контрастність приборки</string>
@@ -363,7 +360,6 @@
     <string name="starting">Запуск</string>
     <string name="starting_airplay_service">Запуск служби AirPlay</string>
     <string name="starting_wireless_hotspot">Запуск бездротової точки доступу</string>
-    <string name="startup">Запуск</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">Доступ до даних використання ще не надано. Перевірте, чи команда успішно виконалася для цього автомобіля, і спробуйте знову.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">Торкніться числа для перевірки. 14 = динамік водія в BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">Головний пристрій не зміг запустити Wi-Fi CarPlay. Перевірте Wi-Fi й закрийте інші застосунки проєкції. Повторна спроба…</string>
@@ -396,7 +392,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P (5 ГГц)</string>
     <string name="wi_fi_session">Сеанс Wi-Fi</string>
     <string name="widest_width">Найбільша ширина</string>
-    <string name="window">Вікно</string>
     <string name="wireless_carplay">БЕЗДРОТОВИЙ CARPLAY</string>
     <string name="wireless_carplay_2">Бездротовий CarPlay</string>
     <string name="wireless_carplay_active">Бездротовий CarPlay активний</string>
@@ -409,7 +404,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">Пароль WPA2/WPA3 має містити від 8 до 63 символів</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">Перехідний режим WPA3</string>
-    <string name="your_drive_your_way">Ваша поїздка, ваші правила.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">iPhone недоступний. Розблокуйте його й перевірте Bluetooth.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">Ваші карти, музика й розмови.\nCarPlay прямо на екрані автомобіля.</string>
     <string name="your_phone_your_drive">ВАШ ТЕЛЕФОН. ВАША ПОЇЗДКА.</string>

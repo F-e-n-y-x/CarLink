@@ -113,7 +113,6 @@
     <string name="app_permissions">App permissions</string>
     <string name="app_settings">App settings</string>
     <string name="apply_and_reconnect">Apply and reconnect</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Settings that require a new connection restart CarPlay when applied. Other changes apply to your next connection.</string>
     <string name="audio">Audio</string>
     <string name="audio_routing">Audio routing</string>
     <string name="auto">Auto</string>
@@ -195,7 +194,6 @@
     <string name="disconnect">Disconnect</string>
     <string name="discovering_iphone">Discovering iPhone</string>
     <string name="display_and_performance">Display and performance</string>
-    <string name="display_video">Display &amp; video</string>
     <string name="done">Done</string>
     <string name="drag_to_move_pinch_to_zoom">Drag to move, pinch to zoom</string>
     <string name="draw_outside_safe_area">Draw outside safe area</string>
@@ -235,7 +233,6 @@
     <string name="i2c_device">I2C device</string>
     <string name="i2c_device_path_contains_u_0000">I2C device path contains U+0000</string>
     <string name="i2c_device_path_is_required">I2C device path is required</string>
-    <string name="identity_appearance">Identity &amp; appearance</string>
     <string name="image_is_not_ready">Image is not ready</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">In CarPlay, swipe down with three fingers to open DiPlay settings.</string>
     <string name="instrument_contrast">Instrument contrast</string>
@@ -401,7 +398,6 @@
     <string name="starting">Starting</string>
     <string name="starting_airplay_service">Starting AirPlay service</string>
     <string name="starting_wireless_hotspot">Starting wireless hotspot</string>
-    <string name="startup">Startup</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">Still waiting for Usage Access. Check that the command ran successfully for this car, then try again.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">Tap a number to test. 14 = driver speaker on BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">The head unit couldn’t start CarPlay Wi-Fi. Check Wi-Fi and close other projection apps. Retrying…</string>
@@ -434,7 +430,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P (5 GHz)</string>
     <string name="wi_fi_session">Wi-Fi session</string>
     <string name="widest_width">Widest width</string>
-    <string name="window">Window</string>
     <string name="wireless_carplay">WIRELESS CARPLAY</string>
     <string name="wireless_carplay_2">Wireless CarPlay</string>
     <string name="wireless_carplay_active">Wireless CarPlay active</string>
@@ -447,7 +442,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">WPA2/WPA3 password must be 8-63 characters</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">WPA3 transition</string>
-    <string name="your_drive_your_way">Your drive, your way.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">Your iPhone isn’t available. Unlock it and check Bluetooth.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">Your maps, music and conversations.\nCarPlay, right here on your car display.</string>
     <string name="your_phone_your_drive">YOUR PHONE. YOUR DRIVE.</string>
