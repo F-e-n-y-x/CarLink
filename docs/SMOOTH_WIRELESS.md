@@ -58,7 +58,7 @@ The iPhone stamps each frame with its own time in the screen header. On the Tang
 - maps that time onto the head unit's clock, adding the link's base delay: a low percentile of recent arrivals (frame time to arrival). For the first 30 frames the base follows that percentile at once. After that it moves at most 2 ms per second, unless it rises by more than 0.5 s or falls by more than 100 ms, when it jumps to the new value;
 - releases each frame with `releaseOutputBuffer(index, timestampNs)` at that local time plus a display delay.
 
-The display delay adjusts itself. For each frame it can time, DiPlay notes how long after its local time the decoder released it. Frames released only after a pause in the iPhone's frames are not counted: the last three frames before a gap of more than 120 ms between consecutive iPhone frame times, since the decoder holds about two, and frames queued before a still screen of more than 0.5 s. Every 15 counted frames, the delay's goal is set to the 90th percentile of the last 120 counted frames plus 4 ms, kept between 30 and 200 ms, aiming for about nine in ten frames ready before their time. It rises by at most 1 ms per frame and falls by at most 0.5 ms per frame, so a change spreads over many frames instead of shifting every later frame at once. It starts at three frame intervals of the frame-rate setting plus 40 ms: 90 ms at 60 fps, 140 ms at 30 fps. Frames that still leave the decoder after their time are shown at once and counted as `late`, and the stats line shows the current `delay`.
+The display delay adjusts itself. For each frame it can time, DiPlay notes how long after its local time the decoder released it. Frames released only after a pause in the iPhone's frames are not counted: the last three frames before a gap of more than 120 ms between consecutive iPhone frame times, since the decoder holds about two, and frames queued before a still screen of more than 0.5 s. Every 15 counted frames, the delay's goal is set to the 90th percentile of the last 120 counted frames plus a 20 ms margin, kept between 30 and 200 ms, aiming for about nine in ten frames ready in time. The margin is a refresh plus 4 ms because SurfaceFlinger takes a buffer about one refresh before the vsync it is shown at (measured below). It rises by at most 1 ms per frame and falls by at most 0.5 ms per frame, so a change spreads over many frames instead of shifting every later frame at once. It starts at three frame intervals of the frame-rate setting plus 40 ms: 90 ms at 60 fps, 140 ms at 30 fps. Frames that still leave the decoder after their time are shown at once and counted as `late`, and the stats line shows the current `delay`.
 
 **Measured on my Tang with a fixed 90 ms delay**, with an earlier version of this change that set up its own `SurfaceView` before the current one existed, and before the delay adjusted itself (USB, 2560×1440 at 60 fps, alternating off/on captures of 41–53 s while scrolling on and off, `rx` about 56 fps while scrolling). Intervals come from `dumpsys SurfaceFlinger --latency` for the video layer (the app window when off, the `SurfaceView` when on), counting only seconds with at least 40 presented frames:
 
@@ -74,7 +74,7 @@ The display delay adjusts itself. For each frame it can time, DiPlay notes how l
 - The main screen sometimes arrived at a steady 30 fps for over a minute while the setting was 60 fps. Over USB right after run B2 (no touches), `rx` was 29–34 fps and `late` was 49–112 per 5 s (about 31–75% of the frames received). In a later wireless session (car hotspot, while I switched between CarPlay apps, the map among them), `late` was 98–128 per 5 s (about 62–85%). So for those stretches most frames were released as soon as they left the decoder, as with the setting off; what reached the screen was not captured then. This is why the delay now adjusts itself.
 - When DiPlay goes to the background, the main-screen decoder moves to an offscreen surface and keeps its state, and on return DiPlay asks the iPhone for a new keyframe. In the car the picture came back at once, with a short blink.
 
-**Measured on my Tang with the adjusting delay** (car hotspot, 2560×1440 at 60 fps, one session of about 3 minutes: lists, the map, lists again, background and back; not an A/B run):
+**Measured on my Tang with the adjusting delay and a 4 ms margin**, the first version of the adjusting delay (car hotspot, 2560×1440 at 60 fps, one session of about 3 minutes: lists, the map, lists again, background and back; not an A/B run):
 
 - `SurfaceView` layer in `dumpsys SurfaceFlinger --latency`, seconds with at least 40 presented frames (108 s, nearly all lists): the next frame came 1 refresh later for 88.7% of frames, 2 refreshes later for 9.1%, and 3 or more for 1.7%; 51.2 presented fps.
 - Per 5 s window of the main screen:
@@ -88,6 +88,18 @@ The display delay adjusts itself. For each frame it can time, DiPlay notes how l
 - The 190 ms window followed a still screen of about a second while I switched apps; it is also the window with 35% `late`.
 - This build still counted frames held over a pause in the iPhone's frames as `late`. The build in this change leaves them out, so its `late` reads lower for the same picture.
 - This session used the car hotspot and the fixed-delay table used USB, on a different run, so the two are not a like-for-like comparison.
+
+**Margin, measured on my Tang** (car hotspot, 2560×1440 at 60 fps; one connection per run, about 1–1.5 minutes of scrolling each, plus the map in the first five; runs in the order 4, 12, 20, 4, 20 ms, then two more at 20 ms without the map). For each run, every frame the app released was matched to SurfaceFlinger's record by its timestamp, so frames SurfaceFlinger dropped are counted too. Seconds with at least 40 presented frames only; two separate analyses of the same data agreed within about 1 percentage point on these figures:
+
+| Margin | Runs | Next frame 1 refresh later | `late` | Missed their refresh: late, presented a refresh late, or dropped | Delay, median |
+|---|---|---|---|---|---|
+| 4 ms | 2 | 88.7–89.2% | 6.8–7.4% | 15–18% | 86–92 ms |
+| 12 ms | 1 | 92.6% | 4.0–4.2% | 8–9% | 98–99 ms |
+| 20 ms | 4 | 90.5–94.5% | 1.9–3.3% | 5–8% | 108–113 ms |
+
+- Every frame released on time but less than about 15.75 ms before the vsync after its target missed that vsync; at 16–16.5 ms before it, about a quarter to a third did; from about 17 ms on, 1–6%. That is consistent with SurfaceFlinger taking the buffer one refresh ahead, and it is why a 4 ms margin left so many frames short.
+- The 12 ms margin has only one short run, so it is not clear whether it differs from 20 ms on the screen; 20 ms missed fewer frames in every run.
+- The two analyses split the missed frames between "presented late" and "dropped" differently, so only their sum is given.
 
 **Cost and limits:**
 - Each frame is held until its display time, up to about the delay after it arrives, so touches respond later. The added touch-to-screen delay was not measured.

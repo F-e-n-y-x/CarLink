@@ -15,9 +15,9 @@ class PacingDelayTest {
 
     @Test fun settlesWhereNineInTenFramesAreReadyInTime() {
         val delay = PacingDelay(90 * ms)
-        // Needs spread evenly over 40..99 ms: the 90th percentile is 93 ms, plus the 4 ms margin.
+        // Needs spread evenly over 40..99 ms: the 90th percentile is 93 ms, plus the 20 ms margin.
         repeat(1_000) { i -> delay.onFrame((40 + (i * 7) % 60) * ms) }
-        assertEquals(97 * ms, delay.nanos)
+        assertEquals(113 * ms, delay.nanos)
     }
 
     @Test fun risesQuicklyAndFallsSlowly() {
@@ -29,7 +29,7 @@ class PacingDelayTest {
             assertTrue(delay.nanos - previous in 0..ms)
             previous = delay.nanos
         }
-        assertEquals(154 * ms, delay.nanos)
+        assertEquals(170 * ms, delay.nanos)
         // Back to a 60 fps list that needs 60 ms: it waits until the slow frames are a tenth of the window,
         // then falls half a millisecond per frame.
         repeat(300) {
@@ -37,13 +37,13 @@ class PacingDelayTest {
             assertTrue(previous - delay.nanos in 0..ms / 2)
             previous = delay.nanos
         }
-        assertEquals(64 * ms, delay.nanos)
+        assertEquals(80 * ms, delay.nanos)
     }
 
     @Test fun aFewSlowFramesDoNotRaiseIt() {
-        val delay = PacingDelay(64 * ms)
+        val delay = PacingDelay(80 * ms)
         repeat(1_000) { i -> delay.onFrame(if (i % 20 == 0) 400 * ms else 60 * ms) }
-        assertEquals(64 * ms, delay.nanos)
+        assertEquals(80 * ms, delay.nanos)
     }
 
     @Test fun staysWithinItsBounds() {
