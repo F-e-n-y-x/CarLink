@@ -146,6 +146,7 @@ class CarPlayMediaFocusForwardingTest {
         CarPlayMediaKeys.onMediaAudioChanged(true)
         shadowOf(Looper.getMainLooper()).idle()
         if (clearInitialGrant) clearInvocations(sink)
-        return ReflectionHelpers.getField<AudioFocusRequest>(CarPlayMediaKeys, "focusRequest").onAudioFocusChangeListener
+        val request = ReflectionHelpers.getField<AudioFocusRequest>(CarPlayMediaKeys, "focusRequest")
+        return ReflectionHelpers.callInstanceMethod(request, "getOnAudioFocusChangeListener")
     }
 }
