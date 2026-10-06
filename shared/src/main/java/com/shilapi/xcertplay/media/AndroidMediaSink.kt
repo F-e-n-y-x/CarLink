@@ -39,6 +39,7 @@ internal fun audioTrackAttributesForFocus(track: AudioTrack, configured: AudioAt
 internal class AudioFocusCoordinator(
     context: Context?,
     private val enabled: Boolean,
+    private val autoYieldOnCall: Boolean = true,
     private val report: (String) -> Unit = {},
 ) {
     private data class Entry(val channel: AudioChannel, val attributes: AudioAttributes)
@@ -47,15 +48,38 @@ internal class AudioFocusCoordinator(
     private val active = LinkedHashMap<AudioTrack, Entry>()
     private var request: AudioFocusRequest? = null
     private var requestedChannel: AudioChannel? = null
-    private val listener = AudioManager.OnAudioFocusChangeListener { change ->
+    @Volatile private var yieldedOnCall = false
+    internal val listener = AudioManager.OnAudioFocusChangeListener { change ->
         synchronized(this) {
             runCatching { report("Audio: focus change=$change activeTracks=${active.size}") }
             when (change) {
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> setVolume(DUCKED_VOLUME)
-                AudioManager.AUDIOFOCUS_GAIN -> setVolume(FULL_VOLUME)
-                // Keep CarPlay audio running on permanent or transient loss. Some head units
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    if (autoYieldOnCall) {
+                        Log.i(TAG, "Audio: auto-yielding focus on incoming/active call (loss transient)")
+                        yieldedOnCall = true
+                        setVolume(0f)
+                    }
+                }
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    if (yieldedOnCall) {
+                        Log.i(TAG, "Audio: call ended, restoring focus and volume")
+                        yieldedOnCall = false
+                    }
+                    setVolume(FULL_VOLUME)
+                }
+                // Keep CarPlay audio running on permanent loss. Some head units
                 // do not send a later gain callback after taking focus back.
             }
+        }
+    }
+
+    @Synchronized
+    fun onCallEnded() {
+        if (yieldedOnCall) {
+            Log.i(TAG, "Audio: explicit call ended signal, restoring volume")
+            yieldedOnCall = false
+            setVolume(FULL_VOLUME)
         }
     }
 
@@ -131,6 +155,7 @@ class AndroidMediaSink(
     private val preferSoftwareHevcDecoder: Boolean = false,
     private val advancedAudioChannelMapping: Boolean = false,
     private val audioFocusEnabled: Boolean = false,
+    private val audioFocusAutoYield: Boolean = true,
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
     context: Context? = null,
@@ -146,8 +171,13 @@ class AndroidMediaSink(
     private val audioFocusCoordinator = AudioFocusCoordinator(
         appContext,
         audioFocusEnabled,
+        audioFocusAutoYield,
         onAudioDiagnostic,
     )
+
+    fun onCallEnded() {
+        audioFocusCoordinator.onCallEnded()
+    }
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
     private val defaultSurface = surface

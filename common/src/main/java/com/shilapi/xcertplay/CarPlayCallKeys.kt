@@ -33,6 +33,7 @@ internal object CarPlayCallKeys {
             val app = context.applicationContext
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
+                    CarPlayBackgroundSession.snapshot()?.sink?.onCallEnded()
                     if (!BydOutputSettings.carPlayCallControls(context)) return
                     val keyCode = intent.getIntExtra(CarPlayCallKeyPolicy.EXTRA_KEYCODE, -1)
                     val controller = currentController()

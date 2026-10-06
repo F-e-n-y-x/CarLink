@@ -643,6 +643,14 @@ class DiPlayActivity : ComponentActivity() {
         section(content, getString(R.string.car_button_in_carplay), R.drawable.ic_dp_car) { card -> carButtonCard = card; carButtonControls(card) }
         section(content, getString(R.string.audio_routing), R.drawable.ic_dp_audio) { card ->
             toggle(card, getString(R.string.contrib_audio_home_toggle_audio_focus), getString(R.string.contrib_audio_home_toggle_audio_focus_desc), AirPlayPersistence.loadAudioFocusEnabled(this)) { AirPlayPersistence.saveAudioFocusEnabled(this, it) }
+            toggle(
+                card,
+                getString(R.string.audio_focus_auto_yield),
+                getString(R.string.audio_focus_auto_yield_desc),
+                AirPlayPersistence.loadAudioFocusAutoYield(this),
+            ) {
+                AirPlayPersistence.saveAudioFocusAutoYield(this, it)
+            }
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
                 toggle(card, getString(R.string.advanced_audio_channel_mapping),
                     getString(R.string.use_usage_content_type_routing_instead_of_stream_type),
