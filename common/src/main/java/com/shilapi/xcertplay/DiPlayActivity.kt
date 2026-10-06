@@ -2729,12 +2729,11 @@ class DiPlayActivity : ComponentActivity() {
         preview.addView(text, LinearLayout.LayoutParams(0, -2, 1f))
         parent.addView(preview)
         parent.addView(button(getString(R.string.choose_image), false) {
-            runCatching { iconPicker.launch("image/*") }.onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
+            launchCarButtonImagePicker(
+                openDocument = { iconDocumentPicker.launch(arrayOf("image/*")) },
+                getContent = { iconPicker.launch("image/*") },
+            ).onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, matchButton(16, 60))
-        parent.addView(button(getString(R.string.browse_image_files), false) {
-            runCatching { iconDocumentPicker.launch(arrayOf("image/*")) }
-                .onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
-        }, matchButton(10, 60))
         if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
             AirPlayPersistence.clearCustomAirPlayIcon(this)
             refreshCarButton()

@@ -2474,7 +2474,10 @@ class CarPlayHostActivity : ComponentActivity() {
                 isAllCaps = false
                 setOnClickListener {
                     externalActivityInProgress = true
-                    runCatching { imagePicker.launch("image/*") }.onFailure {
+                    launchCarButtonImagePicker(
+                        openDocument = { imageDocumentPicker.launch(arrayOf("image/*")) },
+                        getContent = { imagePicker.launch("image/*") },
+                    ).onFailure {
                         externalActivityInProgress = false
                         appendLog("No image picker: ${it.javaClass.simpleName}")
                         android.widget.Toast.makeText(this@CarPlayHostActivity,
@@ -2487,26 +2490,6 @@ class CarPlayHostActivity : ComponentActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
-        )
-        actions.addView(
-            Button(this).apply {
-                text = getString(R.string.browse_image_files)
-                isAllCaps = false
-                setOnClickListener {
-                    externalActivityInProgress = true
-                    runCatching { imageDocumentPicker.launch(arrayOf("image/*")) }.onFailure {
-                        externalActivityInProgress = false
-                        appendLog("No document picker: ${it.javaClass.simpleName}")
-                        android.widget.Toast.makeText(this@CarPlayHostActivity,
-                            getString(R.string.this_head_unit_has_no_image_picker),
-                            android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }
-            },
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(8) },
         )
         actions.addView(
             Button(this).apply {

@@ -155,7 +155,6 @@
     <string name="check_that_storage_is_available_or_choose_another_save_loc">Перевірте доступність сховища або виберіть інше місце збереження.</string>
     <string name="choose_how_to_connect_follow_the_setup_steps_and_save_your">Виберіть спосіб підключення, виконайте кроки налаштування й збережіть дані точки доступу автомобіля.</string>
     <string name="choose_image">Вибрати зображення</string>
-    <string name="browse_image_files">Переглянути файли зображень</string>
     <string name="choose_iphone">Вибрати iPhone</string>
     <string name="choose_location">Вибрати місце</string>
     <string name="choose_save_location">Вибрати місце збереження</string>
