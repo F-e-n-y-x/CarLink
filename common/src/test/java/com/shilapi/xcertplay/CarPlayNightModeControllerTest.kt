@@ -170,7 +170,7 @@ class CarPlayNightModeControllerTest {
 
     @Test fun ambientDoesNotRegisterBeforeResumeOrInFixedModes() {
         val light = Light()
-        val controller = CarPlayNightModeController(light, Clock(), false) {}
+        val controller = CarPlayNightModeController(light, Clock(), false, onNightChanged = {})
         controller.configure(CarPlayNightMode.AMBIENT, false)
         assertEquals(0, light.starts)
         controller.configure(CarPlayNightMode.NIGHT, false)
