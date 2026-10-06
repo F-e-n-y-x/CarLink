@@ -150,6 +150,7 @@
     <string name="check_that_storage_is_available_or_choose_another_save_loc">请检查存储空间，或选择其他保存位置。</string>
     <string name="choose_how_to_connect_follow_the_setup_steps_and_save_your">选择连接方式，按步骤操作并保存车机热点信息。</string>
     <string name="choose_image">选择图片</string>
+    <string name="browse_image_files">浏览图片文件</string>
     <string name="choose_iphone">选择 iPhone</string>
     <string name="choose_location">选择位置</string>
     <string name="choose_save_location">选择保存位置</string>
