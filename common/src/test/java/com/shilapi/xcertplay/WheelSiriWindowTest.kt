@@ -136,11 +136,13 @@ class WheelSiriWindowTest {
         settings.setTheme(android.R.style.Theme_Material_NoActionBar)
         WheelZoomSettings.setEnabled(settings, true)
         WheelZoomSettings.setJoystick(settings, true)
+        WheelZoomSettings.setSiriKey(settings, true)
+        // Joystick and map zoom show only on a BYD head unit.
+        org.robolectric.Shadows.shadowOf(settings.packageManager)
+            .installPackage(android.content.pm.PackageInfo().apply { packageName = "com.byd.amapservice" })
         val controls = LinearLayout(settings)
-        for (name in listOf("siriKeyControls", "wheelKeyControls")) {
-            settings.javaClass.getDeclaredMethod(name, LinearLayout::class.java)
-                .apply { isAccessible = true }.invoke(settings, controls)
-        }
+        settings.javaClass.getDeclaredMethod("wheelKeysSettings", LinearLayout::class.java)
+            .apply { isAccessible = true }.invoke(settings, controls)
         fun labels(view: View): List<String> = when (view) {
             is ViewGroup -> (0 until view.childCount).flatMap { labels(view.getChildAt(it)) }
             is TextView -> listOf(view.text.toString())
@@ -151,6 +153,10 @@ class WheelSiriWindowTest {
             R.string.wheel_keys_service_off)) {
             assertEquals(1, texts.count { it == settings.getString(label) })
         }
+        // The setup sits above the features it serves.
+        assertTrue(texts.indexOf(settings.getString(R.string.wheel_keys_service_off)) <
+            texts.indexOf(settings.getString(R.string.wheel_siri_key)))
+        assertTrue(texts.any { it == settings.getString(R.string.wheel_joystick) })
     }
 
     private fun learn(done: (WheelKey) -> Unit) {

@@ -1105,11 +1105,7 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it); markReconnectNeeded() }
         }
         filteredSection(content, SettingsSection.WHEEL_KEYS,
-            getString(R.string.settings_wheel_keys), R.drawable.ic_dp_controls) { card ->
-            siriKeyControls(card)
-            // The joystick and map zoom use BYD's media and custom keys.
-            if (CarHotspotSetup.isBydHeadUnit(this)) wheelKeyControls(card)
-        }
+            getString(R.string.settings_wheel_keys), R.drawable.ic_dp_controls, ::wheelKeysSettings)
         filteredSection(content, SettingsSection.CONNECTION_SETUP,
             getString(R.string.connection_setup), R.drawable.ic_dp_connection) { card ->
             card.addView(label(getString(R.string.choose_how_to_connect_follow_the_setup_steps_and_save_your), 16, MUTED))
@@ -1389,7 +1385,7 @@ class DiPlayActivity : ComponentActivity() {
                         val allowed = DiLink51ClusterMonitor.hasAccess(this)
                         card.addView(label(if (allowed) getString(R.string.usage_access_enabled)
                             else getString(R.string.usage_access_setup_needed_for_automatic_mode), 14, if (allowed) MUTED else WARNING))
-                        card.addView(button(getString(R.string.automatic_map_setup_adb), false) { showClusterAccessSetup() }, matchButton(10, 56))
+                        card.addView(actionButton(getString(R.string.automatic_map_setup_adb), false) { showClusterAccessSetup() }, matchButton(10, 56))
                         if (!automatic) {
                             val themes = DiLink51ClusterLayout.Theme.entries
                             choice(card, getString(R.string.instrument_theme), themes.map { it.localizedLabel(this) }, themes.indexOf(DiLink51ClusterLayout.theme(this))) {
@@ -2224,6 +2220,17 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */
+    // One place for the key service setup, above every feature that needs it.
+    private fun wheelKeysSettings(card: LinearLayout) {
+        // The joystick and map zoom use BYD's media and custom keys.
+        val byd = CarHotspotSetup.isBydHeadUnit(this)
+        val bydKeysOn = byd && (WheelZoomSettings.joystick(this) ||
+            (wheelMapZoomAvailable() && WheelZoomSettings.enabled(this)))
+        if (WheelZoomSettings.siriKey(this) || bydKeysOn) wheelKeyServiceControls(card)
+        siriKeyControls(card)
+        if (byd) wheelKeyControls(card)
+    }
+
     // Map zoom only works where the dashboard map card used to show these controls.
     private fun wheelMapZoomAvailable(): Boolean {
         if (!AirPlayPersistence.loadClusterMapEnabled(this)) return false
@@ -2249,7 +2256,6 @@ class DiPlayActivity : ComponentActivity() {
         val zoom = zoomAvailable && WheelZoomSettings.enabled(this)
         val joystick = WheelZoomSettings.joystick(this)
         if (!zoom && !joystick) return
-        if (!WheelZoomSettings.siriKey(this)) wheelKeyServiceControls(card)
         if (zoom) {
             val behaviours = WheelZoomSettings.Behaviour.entries
             choice(card, getString(R.string.wheel_zoom_behaviour),
@@ -2292,7 +2298,6 @@ class DiPlayActivity : ComponentActivity() {
             render()
         }
         if (!WheelZoomSettings.siriKey(this)) return
-        wheelKeyServiceControls(card)
         wheelKeyAssignButton(card, WheelZoomSettings.Role.SIRI, getString(R.string.wheel_key_role_siri))
     }
 
@@ -2304,7 +2309,7 @@ class DiPlayActivity : ComponentActivity() {
             else -> R.string.wheel_keys_service_off
         }), 14, if (connected) MUTED else WARNING))
         if (!connected) {
-            card.addView(button(getString(R.string.wheel_keys_enable_adb), false) {
+            card.addView(actionButton(getString(R.string.wheel_keys_enable_adb), false) {
                 Thread({
                     val access = WheelKeyService.enableOverAdb(this)
                     runOnUiThread {
@@ -3116,7 +3121,7 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.loadClusterMarkerVerticalStep(this))
         card.addView(label(getString(R.string.safe_area_mapping_summary,
             rect.width, rect.height, rect.left, rect.top, 1920, 720), 14, MUTED))
-        card.addView(button(getString(R.string.cluster_safe_area_edit), false) {
+        card.addView(actionButton(getString(R.string.cluster_safe_area_edit), false) {
             openClusterSafeAreaEditor()
         }, matchButton(10, 56))
         card.addView(button(getString(R.string.cluster_safe_area_reset), false) {
@@ -4054,14 +4059,20 @@ class DiPlayActivity : ComponentActivity() {
         setOnClickListener { click() }
     }
 
+    // For an action whose label happens to contain the separator, such as "Turn on … · ADB".
+    private fun actionButton(title: String, primary: Boolean, click: () -> Unit) =
+        button(title, primary, click).apply { action = true; text = title }
+
     /**
      * Text in the "Title · Value" form opens a choice, so it reads as a setting row:
      * start-aligned, muted value, chevron. Any other text stays a centred action button.
      * The plain text is unchanged, so callers and tests keep matching "Title · Value".
      */
     private class SettingButton(context: android.content.Context) : Button(context) {
+        var action = false
+
         override fun setText(text: CharSequence?, type: BufferType?) {
-            val split = text?.indexOf(VALUE_SEPARATOR) ?: -1
+            val split = if (action) -1 else text?.indexOf(VALUE_SEPARATOR) ?: -1
             if (text == null || split <= 0) {
                 super.setText(text, type)
                 gravity = Gravity.CENTER
