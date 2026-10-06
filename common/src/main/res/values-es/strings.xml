@@ -151,6 +151,7 @@
     <string name="check_that_storage_is_available_or_choose_another_save_loc">Comprueba que el almacenamiento esté disponible o elige otro lugar de guardado.</string>
     <string name="choose_how_to_connect_follow_the_setup_steps_and_save_your">Elige cómo conectarte, sigue los pasos de configuración y guarda los datos de tu punto de acceso del coche.</string>
     <string name="choose_image">Elegir imagen</string>
+    <string name="browse_image_files">Explorar archivos de imagen</string>
     <string name="choose_iphone">Elegir iPhone</string>
     <string name="choose_location">Elegir ubicación</string>
     <string name="choose_save_location">Elegir lugar de guardado</string>
