@@ -591,6 +591,7 @@
     <string name="wheel_key_role_select">اختيار</string>
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">لا شيء</string>
+    <string name="wheel_key_in_use">هذا الزر مخصّص بالفعل لـ %1$s. اختر زرًا آخر.</string>
     <string name="wheel_siri_key">زر Siri على المقود</string>
     <string name="wheel_siri_key_description">يفتح Siri بزر على المقود تختاره عندما تكون CarPlay على الشاشة. الزر الذي تحتفظ به السيارة لنفسها لا يعمل إلا مع خدمة أزرار المقود، التي تعمل أيضًا عندما تكون CarPlay في الخلفية. من دون CarPlay، أو أثناء مكالمة، يحتفظ الزر بوظيفته في السيارة.</string>
     <string name="wheel_key_role_back">رجوع</string>

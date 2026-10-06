@@ -635,6 +635,7 @@
     <string name="wheel_key_role_select">select</string>
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">none</string>
+    <string name="wheel_key_in_use">That key is already the %1$s key. Choose another key.</string>
     <string name="wheel_siri_key">Siri key on the wheel</string>
     <string name="wheel_siri_key_description">Opens Siri with a wheel key you choose while CarPlay is on the screen. A key that the car keeps for itself works only with the wheel key service, which also works when CarPlay is in the background. Without CarPlay, or during a call, the key keeps the car\'s own action.</string>
     <string name="wheel_key_role_back">back</string>

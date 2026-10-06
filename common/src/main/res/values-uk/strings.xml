@@ -603,6 +603,7 @@
     <string name="wheel_key_role_select">вибрати</string>
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">немає</string>
+    <string name="wheel_key_in_use">Ця кнопка вже призначена: %1$s. Оберіть іншу кнопку.</string>
     <string name="wheel_siri_key">Кнопка Siri на кермі</string>
     <string name="wheel_siri_key_description">Відкриває Siri кнопкою на кермі, яку ви оберете, поки CarPlay на екрані. Кнопка, яку авто залишає собі, працює лише зі службою кнопок керма; служба працює й коли CarPlay у фоні. Без CarPlay або під час дзвінка кнопка зберігає свою дію в авто.</string>
     <string name="wheel_key_role_back">назад</string>

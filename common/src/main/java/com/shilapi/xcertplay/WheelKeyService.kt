@@ -46,6 +46,7 @@ class WheelKeyService : AccessibilityService() {
     private var learning: WheelZoomSettings.Role? = null
     private var learnt: ((WheelZoomSettings.Role, WheelKey) -> Unit)? = null
     private var learningCancelled: (() -> Unit)? = null
+    private var learningRefused: ((WheelZoomSettings.Role) -> Unit)? = null
     private val endLearning = Runnable { clearLearning() }
     private val endTimedMode = Runnable {
         refreshEligibility()
@@ -141,10 +142,17 @@ class WheelKeyService : AccessibilityService() {
             onFirstPress = {
                 learning?.let { role ->
                     val done = learnt
+                    val refused = learningRefused
                     clearLearning(notify = false)
-                    WheelZoomSettings.assign(this, role, key)
-                    Log.i(TAG, "$role key is now $key")
-                    done?.invoke(role, key)
+                    val taken = WheelZoomSettings.conflict(this, role, key)
+                    if (taken != null) {
+                        Log.i(TAG, "$role key $key refused: it is the $taken key")
+                        refused?.invoke(taken)
+                    } else {
+                        WheelZoomSettings.assign(this, role, key)
+                        Log.i(TAG, "$role key is now $key")
+                        done?.invoke(role, key)
+                    }
                     WheelZoomKeys.Action.CONSUME
                 } ?: siriPress(role, calling, event.eventTime) ?: joystickPress(role, calling)
             },
@@ -245,6 +253,7 @@ class WheelKeyService : AccessibilityService() {
         learning = null
         learnt = null
         learningCancelled = null
+        learningRefused = null
         handler.removeCallbacks(endLearning)
         cancelled?.invoke()
     }
@@ -292,12 +301,15 @@ class WheelKeyService : AccessibilityService() {
         fun connected(): Boolean = running != null
 
         /** The next key pressed is assigned to [role]; [done] runs on the service's thread. */
-        fun learn(role: WheelZoomSettings.Role, cancelled: () -> Unit = {}, done: (WheelZoomSettings.Role, WheelKey) -> Unit): Boolean {
+        /** A key that another active role uses goes to [refused] with that role, unassigned. */
+        fun learn(role: WheelZoomSettings.Role, cancelled: () -> Unit = {}, refused: (WheelZoomSettings.Role) -> Unit = {},
+            done: (WheelZoomSettings.Role, WheelKey) -> Unit): Boolean {
             val service = running ?: return false
             if (!WheelZoomSettings.anyEnabled(service)) return false
             service.clearLearning()
             service.learnt = done
             service.learningCancelled = cancelled
+            service.learningRefused = refused
             service.learning = role
             service.handler.postDelayed(service.endLearning, LEARNING_TIMEOUT_MILLIS)
             return true
@@ -630,6 +642,23 @@ object WheelZoomSettings {
     fun anyEnabled(context: Context): Boolean = enabled(context) || joystick(context) || siriKey(context)
 
     fun isSiriKey(context: Context, key: WheelKey): Boolean = siriKey(context) && key(context, Role.SIRI) == key
+
+    /**
+     * The active role that already has [key], when [role] would share it with the Siri key: [roleOf] gives a
+     * shared key to the earlier role, so the Siri key would never fire. Zoom and joystick keys keep their rules.
+     */
+    fun conflict(context: Context, role: Role, key: WheelKey): Role? {
+        val zoom = enabled(context)
+        val joystick = joystick(context)
+        val active = Role.entries.filter {
+            when (it) {
+                Role.SIRI -> siriKey(context)
+                Role.MODE, Role.ZOOM_IN, Role.ZOOM_OUT -> zoom || joystick
+                else -> joystick
+            }
+        }
+        return active.firstOrNull { it != role && (it == Role.SIRI || role == Role.SIRI) && key(context, it) == key }
+    }
 
     fun key(context: Context, role: Role): WheelKey? =
         WheelKey.decode(prefs(context).getString("key_${role.name}", null)) ?: role.defaultKey

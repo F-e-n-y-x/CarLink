@@ -591,6 +591,7 @@
     <string name="wheel_key_role_select">выбрать</string>
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">нет</string>
+    <string name="wheel_key_in_use">Эта кнопка уже назначена: %1$s. Выберите другую кнопку.</string>
     <string name="wheel_siri_key">Кнопка Siri на руле</string>
     <string name="wheel_siri_key_description">Открывает Siri кнопкой на руле, которую вы выберете, пока CarPlay на экране. Кнопка, которую автомобиль оставляет себе, работает только со службой кнопок руля; служба работает и когда CarPlay в фоне. Без CarPlay или во время звонка кнопка сохраняет своё действие в автомобиле.</string>
     <string name="wheel_key_role_back">назад</string>

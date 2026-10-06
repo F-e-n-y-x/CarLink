@@ -285,4 +285,38 @@ class WheelKeyServiceTest {
         WheelZoomSettings.setSiriKey(service, false)
         assertFalse(WheelZoomSettings.isSiriKey(service, assigned))
     }
+
+    @Test fun theSiriKeyRefusesAKeyThatAnActiveRoleUses() {
+        WheelZoomSettings.setSiriKey(service, true)
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.SIRI, WheelKey(KeyEvent.KEYCODE_F6, 0, "?"))
+        var taken: WheelZoomSettings.Role? = null
+        assertTrue(WheelKeyService.learn(WheelZoomSettings.Role.SIRI, refused = { taken = it }) { _, _ -> learned++ })
+        assertTrue(key(KeyEvent.KEYCODE_F1, true))
+        assertTrue(key(KeyEvent.KEYCODE_F1, false))
+        assertEquals(WheelZoomSettings.Role.MODE, taken)
+        assertEquals(0, learned)
+        assertEquals(KeyEvent.KEYCODE_F6, WheelZoomSettings.key(service, WheelZoomSettings.Role.SIRI)?.code)
+    }
+
+    @Test fun aZoomKeyRefusesTheSiriKey() {
+        WheelZoomSettings.setSiriKey(service, true)
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.SIRI, WheelKey(KeyEvent.KEYCODE_F6, 0, "?"))
+        var taken: WheelZoomSettings.Role? = null
+        assertTrue(WheelKeyService.learn(WheelZoomSettings.Role.MODE, refused = { taken = it }) { _, _ -> learned++ })
+        assertTrue(key(KeyEvent.KEYCODE_F6, true))
+        assertTrue(key(KeyEvent.KEYCODE_F6, false))
+        assertEquals(WheelZoomSettings.Role.SIRI, taken)
+        assertEquals(KeyEvent.KEYCODE_F1, WheelZoomSettings.key(service, WheelZoomSettings.Role.MODE)?.code)
+    }
+
+    @Test fun onlyConflictsWithAnActiveSiriKeyAreRefused() {
+        val mode = WheelKey(KeyEvent.KEYCODE_F1, 0, "?")
+        // Zoom and joystick keep their own rules; the Siri setting is off.
+        assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.ZOOM_IN, mode))
+        assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode).takeIf { WheelZoomSettings.siriKey(service) })
+        WheelZoomSettings.setSiriKey(service, true)
+        assertEquals(WheelZoomSettings.Role.MODE, WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode))
+        WheelZoomSettings.setEnabled(service, false)
+        assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode))
+    }
 }

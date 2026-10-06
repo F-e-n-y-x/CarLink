@@ -1682,20 +1682,43 @@ class DiPlayActivity : ComponentActivity() {
         lateinit var assign: android.widget.Button
         assign = button(current(), false) {
             val cancelled = { runOnUiThread { assign.text = current() } }
-            val started = WheelKeyService.learn(role, cancelled) { _, key -> runOnUiThread { assign.text = current(key) } } ||
+            val refused = { taken: WheelZoomSettings.Role ->
+                runOnUiThread {
+                    assign.text = current()
+                    toast(getString(R.string.wheel_key_in_use, getString(wheelKeyRoleName(taken))))
+                }
+            }
+            val started = WheelKeyService.learn(role, cancelled, refused) { _, key -> runOnUiThread { assign.text = current(key) } } ||
                 // Without the service the Siri key is learnt from this window, so only keys that reach apps.
-                (role == WheelZoomSettings.Role.SIRI && learnInWindow(role, cancelled) { assign.text = current(it) })
+                (role == WheelZoomSettings.Role.SIRI && learnInWindow(role, cancelled, refused) { assign.text = current(it) })
             if (started) assign.text = getString(R.string.wheel_key_press, name)
             else toast(getString(R.string.wheel_keys_service_off))
         }
         card.addView(assign, matchButton(10, 56))
     }
 
-    private class WindowKeyLearning(val role: WheelZoomSettings.Role, val cancelled: () -> Unit, val done: (WheelKey) -> Unit)
+    private fun wheelKeyRoleName(role: WheelZoomSettings.Role): Int = when (role) {
+        WheelZoomSettings.Role.MODE -> R.string.wheel_key_role_mode
+        WheelZoomSettings.Role.ZOOM_IN -> R.string.wheel_key_role_zoom_in
+        WheelZoomSettings.Role.ZOOM_OUT -> R.string.wheel_key_role_zoom_out
+        WheelZoomSettings.Role.JOYSTICK -> R.string.wheel_key_role_joystick
+        WheelZoomSettings.Role.PREVIOUS -> R.string.wheel_key_role_previous
+        WheelZoomSettings.Role.NEXT -> R.string.wheel_key_role_next
+        WheelZoomSettings.Role.SELECT -> R.string.wheel_key_role_select
+        WheelZoomSettings.Role.SIRI -> R.string.wheel_key_role_siri
+    }
 
-    private fun learnInWindow(role: WheelZoomSettings.Role, cancelled: () -> Unit, done: (WheelKey) -> Unit): Boolean {
+    private class WindowKeyLearning(
+        val role: WheelZoomSettings.Role,
+        val cancelled: () -> Unit,
+        val refused: (WheelZoomSettings.Role) -> Unit,
+        val done: (WheelKey) -> Unit,
+    )
+
+    private fun learnInWindow(role: WheelZoomSettings.Role, cancelled: () -> Unit,
+        refused: (WheelZoomSettings.Role) -> Unit, done: (WheelKey) -> Unit): Boolean {
         cancelKeyLearning()
-        windowLearning = WindowKeyLearning(role, cancelled, done)
+        windowLearning = WindowKeyLearning(role, cancelled, refused, done)
         handler.postDelayed(endWindowLearning, WheelKeyService.LEARNING_TIMEOUT_MILLIS)
         return true
     }
@@ -1714,9 +1737,15 @@ class DiPlayActivity : ComponentActivity() {
             handler.removeCallbacks(endWindowLearning)
             windowLearning = null
             val key = WheelKey.of(event)
-            WheelZoomSettings.assign(this, learning.role, key)
-            Log.i(WheelKeyService.TAG, "${learning.role} key is now $key (learnt without the service)")
-            learning.done(key)
+            val taken = WheelZoomSettings.conflict(this, learning.role, key)
+            if (taken != null) {
+                Log.i(WheelKeyService.TAG, "${learning.role} key $key refused: it is the $taken key (learnt without the service)")
+                learning.refused(taken)
+            } else {
+                WheelZoomSettings.assign(this, learning.role, key)
+                Log.i(WheelKeyService.TAG, "${learning.role} key is now $key (learnt without the service)")
+                learning.done(key)
+            }
         }
         return true
     }
