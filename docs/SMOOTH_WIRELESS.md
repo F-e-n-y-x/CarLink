@@ -2,7 +2,7 @@
 
 The Wi-Fi channel and the size of the picture can affect how smooth wireless CarPlay feels. The numbers below were measured on a 2024 BYD Tang (DiLink 5.0, 2560×1440 screen) with an iPhone on iOS 27, parked, while scrolling the same Apple Music list. Other cars, firmware and phones may behave differently; interference, scanning and decoder limits can also contribute.
 
-This guide describes current development source, including channel-policy and rotation changes merged after public preview 0.2.12. Those changes are not in the published 0.2.12 APK. Wi-Fi Direct requires Android 10 or newer.
+This guide describes 0.2.13 channel-policy and rotation behavior. Wi-Fi Direct is available on Android 9+ with suitable firmware. Android 9 uses the legacy group/channel path and cannot verify the negotiated frequency; see [Android 9 limits](ANDROID9_WIFI_DIRECT.md). Android 10+ retains actual-frequency verification. The contributor measurements below describe their specified Tang setup, not every device.
 
 ## 1. Wi-Fi channel
 
@@ -15,7 +15,7 @@ On this Tang, running Wi-Fi Direct on a different 5 GHz channel from the car's j
 
 A 2.4 GHz Wi-Fi Direct channel alongside the 5 GHz network was smooth in this test. The result is consistent with radio channel contention, but does not establish the same radio capabilities or cause on every head unit.
 
-- **Auto** (the default) can reuse a compatible saved configuration. Beside an established 5 GHz station connection, it prioritizes an eligible saved frequency or a supported matching station channel, followed by explicit 2.4 GHz attempts before other 5 GHz attempts. An unpinned saved system-default request is deferred in that case. If explicit attempts are rejected, later 5 GHz or system-default fallbacks remain possible; Auto cannot guarantee a band or eliminate contention. Without a station connection, a compatible saved configuration may still be tried before the usual 5 GHz-first fallback order. See the diagnostic report for the actual frequency.
+- **Auto** (the default) can reuse a compatible saved configuration. Beside an established 5 GHz station connection, it prioritizes an eligible saved frequency or a supported matching station channel, followed by explicit 2.4 GHz attempts before other 5 GHz attempts. An unpinned saved system-default request is deferred in that case. If explicit attempts are rejected, later 5 GHz or system-default fallbacks remain possible; Auto cannot guarantee a band or eliminate contention. Without a station connection, a compatible saved configuration may still be tried before the usual 5 GHz-first fallback order. See the diagnostic report for the verified frequency on Android 10+, or the explicitly unverified requested channel on Android 9.
 - If you choose a channel by hand and the car joins a 5 GHz network, try a supported 2.4 GHz channel (1–11), or go back to Auto. Firmware and local regulatory limits still apply.
 
 ## 2. Picture size and screen rotation
