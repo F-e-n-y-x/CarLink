@@ -34,7 +34,9 @@ class CarButtonImagePickerTest {
             buttons.single { it.text == activity.getString(R.string.browse_image_files) }.performClick()
             val documentIntent = shadowOf(activity).nextStartedActivityForResult.intent
             assertEquals(Intent.ACTION_OPEN_DOCUMENT, documentIntent.action)
-            assertEquals("image/*", documentIntent.type)
+            val acceptedTypes = listOfNotNull(documentIntent.type) +
+                (documentIntent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)?.toList() ?: emptyList())
+            assertTrue("image/*" in acceptedTypes)
             assertTrue(documentIntent.hasCategory(Intent.CATEGORY_OPENABLE))
         } finally {
             controller.pause().stop().destroy()
