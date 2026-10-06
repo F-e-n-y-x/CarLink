@@ -683,4 +683,39 @@
     <string name="car_button_description">CarPlay 会在应用列表中显示此图标和名称。点按即可返回车辆自带的界面。更改将在 CarPlay 下次连接时生效。</string>
     <string name="car_button_saved_next_connection">已保存。CarPlay 将在下次连接时显示新的图标和名称。</string>
     <string name="this_head_unit_has_no_image_picker">此车机没有图片选择器。</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="ambient_title">氛围灯</string>
+    <string name="ambient_configuration">氛围灯配置</string>
+    <string name="ambient_static">固定</string>
+    <string name="ambient_energy">随声音强弱</string>
+    <string name="ambient_beat">随节拍</string>
+    <string name="ambient_tempo">随BPM（估算）</string>
+    <string name="ambient_bass">鼓点优先</string>
+    <string name="ambient_smart">智能跟随</string>
+    <string name="ambient_slow">舒缓</string>
+    <string name="ambient_standard">标准</string>
+    <string name="ambient_fast">快速</string>
+    <string name="ambient_enabled">已开启</string>
+    <string name="ambient_disabled">已关闭</string>
+    <string name="ambient_summary">%1$s · %2$s · %3$s · %4$d色 · 亮度%5$d</string>
+    <string name="ambient_enable">开启氛围灯控制</string>
+    <string name="ambient_enable_description">关闭后尝试恢复接管前的原车颜色、亮度和区域。需要已有的ADB授权。</string>
+    <string name="ambient_music">音乐律动</string>
+    <string name="ambient_music_description">播放时随音乐变化；关闭律动则使用固定颜色和亮度。两种模式在暂停或断开后均降到全部区域最低档，保存后生效。</string>
+    <string name="ambient_color_mode">颜色变化方式</string>
+    <string name="ambient_speed">亮度过渡速度</string>
+    <string name="ambient_palette">原车颜色编号（多选）</string>
+    <string name="ambient_palette_summary">颜色 · 已选%1$d种</string>
+    <string name="ambient_select_all">全选</string>
+    <string name="ambient_select_one">至少选择一种颜色</string>
+    <string name="ambient_brightness">亮度上限</string>
+    <string name="ambient_minimum">0（最低亮度）</string>
+    <string name="ambient_area">区域</string>
+    <string name="ambient_front">前排</string>
+    <string name="ambient_rear">后排</string>
+    <string name="ambient_all">全部</string>
+    <string name="ambient_parked_notice">请在车辆停放时配置。本功能针对部分BYD氛围灯接口，不能保证所有车型和固件兼容。亮度0代表原车最低档，不代表断电关闭。</string>
+    <string name="ambient_checking">正在检查…</string>
+    <string name="ambient_unavailable">只读检查失败：已有ADB授权或支持的氛围灯接口不可用，灯光设置未保存。请在停车时单独配置访问权限，本功能不会启用ADB或申请授权。</string>
 </resources>

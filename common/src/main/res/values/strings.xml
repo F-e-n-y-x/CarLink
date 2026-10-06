@@ -683,4 +683,39 @@
     <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
     <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
     <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="ambient_title">Ambient lighting</string>
+    <string name="ambient_configuration">Ambient light settings</string>
+    <string name="ambient_static">Fixed</string>
+    <string name="ambient_energy">Sound energy</string>
+    <string name="ambient_beat">Beat</string>
+    <string name="ambient_tempo">Estimated BPM</string>
+    <string name="ambient_bass">Bass priority</string>
+    <string name="ambient_smart">Smart follow</string>
+    <string name="ambient_slow">Smooth</string>
+    <string name="ambient_standard">Standard</string>
+    <string name="ambient_fast">Fast</string>
+    <string name="ambient_enabled">On</string>
+    <string name="ambient_disabled">Off</string>
+    <string name="ambient_summary">%1$s · %2$s · %3$s · %4$d colors · brightness %5$d</string>
+    <string name="ambient_enable">Enable ambient light control</string>
+    <string name="ambient_enable_description">Turning this off attempts to restore the original lamp colors, brightness and area. Existing ADB authorization is required.</string>
+    <string name="ambient_music">Follow music</string>
+    <string name="ambient_music_description">When playing, follow the music or use fixed colors and brightness if disabled. Pausing or disconnecting holds all zones at the lowest level in either mode. Changes apply after saving.</string>
+    <string name="ambient_color_mode">Color changes</string>
+    <string name="ambient_speed">Brightness transition speed</string>
+    <string name="ambient_palette">OEM color numbers (multiple selections)</string>
+    <string name="ambient_palette_summary">Colors · %1$d selected</string>
+    <string name="ambient_select_all">Select all</string>
+    <string name="ambient_select_one">Select at least one color</string>
+    <string name="ambient_brightness">Maximum brightness</string>
+    <string name="ambient_minimum">0 (lowest level)</string>
+    <string name="ambient_area">Area</string>
+    <string name="ambient_front">Front</string>
+    <string name="ambient_rear">Rear</string>
+    <string name="ambient_all">All</string>
+    <string name="ambient_parked_notice">Configure while parked. Experimental support for selected BYD lamp interfaces; compatibility is not guaranteed for every model or firmware. Level 0 means the lowest OEM level, not power off.</string>
+    <string name="ambient_checking">Checking…</string>
+    <string name="ambient_unavailable">Read-only check failed: existing ADB authorization or a supported lamp interface is unavailable. No light settings were saved. Configure access separately while parked; this feature does not enable ADB or request authorization.</string>
 </resources>

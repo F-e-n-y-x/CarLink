@@ -49,6 +49,10 @@ import com.shilapi.xcertplay.hud.BydVehicleField
 import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.hud.BydVehicleProbeOutcome
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.media.AmbientColorMode
+import com.shilapi.xcertplay.media.AmbientColorSpeed
+import com.shilapi.xcertplay.media.AmbientMusicController
+import com.shilapi.xcertplay.media.AmbientMusicSettings
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.WifiP2pChannels
@@ -66,6 +70,7 @@ import kotlin.math.roundToInt
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var page = "home"
+    internal var ambientSupportCheck: (Context) -> java.util.concurrent.CompletableFuture<Boolean> = AmbientMusicController::checkSupport
     private var clusterSafeAreaDialog: Dialog? = null
     private var clusterContentRequestVersion = 0L
     private var pendingCarHotspotSetup = false
@@ -652,6 +657,11 @@ class DiPlayActivity : ComponentActivity() {
             }
             mediaChannelControl(card)
             navigationChannelControl(card)
+        }
+        section(content, getString(R.string.ambient_title)) { card ->
+            card.addView(button(ambientConfigurationLabel(AmbientMusicSettings.load(this)), false) {
+                showAmbientConfiguration()
+            }, matchButton(0, 60))
         }
         section(content, getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),
@@ -3187,6 +3197,98 @@ class DiPlayActivity : ComponentActivity() {
         parent.addView(result.rowView)
         return result.switch
     }
+    private fun ambientConfigurationLabel(value: AmbientMusicSettings.Values): String {
+        val mode = if (!value.music) getString(R.string.ambient_static) else when (value.colorMode) {
+            AmbientColorMode.ENERGY -> getString(R.string.ambient_energy)
+            AmbientColorMode.BEAT -> getString(R.string.ambient_beat)
+            AmbientColorMode.TEMPO -> getString(R.string.ambient_tempo)
+            AmbientColorMode.BASS -> getString(R.string.ambient_bass)
+            AmbientColorMode.SMART -> getString(R.string.ambient_smart)
+        }
+        val speed = when (value.speed) { AmbientColorSpeed.SLOW -> getString(R.string.ambient_slow); AmbientColorSpeed.STANDARD -> getString(R.string.ambient_standard); AmbientColorSpeed.FAST -> getString(R.string.ambient_fast) }
+        return getString(R.string.ambient_summary, getString(if (value.enabled) R.string.ambient_enabled else R.string.ambient_disabled), mode, speed, value.selectedColors.size, value.brightness)
+    }
+
+    private fun showAmbientConfiguration() {
+        var draft = AmbientMusicSettings.load(this)
+        val body = column().apply { setPadding(dp(24), dp(12), dp(24), dp(12)) }
+        body.addView(label(getString(R.string.ambient_parked_notice), 14, MUTED))
+        toggle(body, getString(R.string.ambient_enable), getString(R.string.ambient_enable_description), draft.enabled) {
+            draft = draft.copy(enabled = it)
+        }
+        toggle(body, getString(R.string.ambient_music), getString(R.string.ambient_music_description), draft.music) {
+            draft = draft.copy(music = it)
+        }
+        choice(body, getString(R.string.ambient_color_mode), listOf(getString(R.string.ambient_energy), getString(R.string.ambient_beat), getString(R.string.ambient_tempo), getString(R.string.ambient_bass), getString(R.string.ambient_smart)), draft.colorMode.ordinal, reconnects = false) {
+            draft = draft.copy(colorMode = AmbientColorMode.entries[it])
+        }
+        choice(body, getString(R.string.ambient_speed), listOf(getString(R.string.ambient_slow), getString(R.string.ambient_standard), getString(R.string.ambient_fast)), draft.speed.ordinal, reconnects = false) {
+            draft = draft.copy(speed = AmbientColorSpeed.entries[it])
+        }
+        val paletteButton = button(getString(R.string.ambient_palette_summary, draft.selectedColors.size), false) {}
+        paletteButton.setOnClickListener {
+            val checked = BooleanArray(31) { it + 1 in draft.selectedColors }
+            val paletteDialog = AlertDialog.Builder(this).setTitle(getString(R.string.ambient_palette))
+                .setMultiChoiceItems((1..31).map { it.toString() }.toTypedArray(), checked) { _, index, selected -> checked[index] = selected }
+                .setNeutralButton(getString(R.string.ambient_select_all), null)
+                .setPositiveButton(getString(R.string.save), null)
+                .setNegativeButton(getString(R.string.cancel), null).create()
+            paletteDialog.setOnShowListener {
+                paletteDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    checked.fill(true)
+                    for (index in checked.indices) paletteDialog.listView.setItemChecked(index, true)
+                }
+                paletteDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val selected = checked.indices.filter { checked[it] }.map { it + 1 }
+                    if (selected.isEmpty()) toast(getString(R.string.ambient_select_one))
+                    else {
+                        draft = draft.copy(selectedColors = selected, color = selected.first())
+                        paletteButton.text = "颜色 · 已选${selected.size}种"
+                        paletteDialog.dismiss()
+                    }
+                }
+            }
+            paletteDialog.show()
+        }
+        body.addView(paletteButton, matchButton(0, 60)); body.addView(space(12))
+        choice(body, getString(R.string.ambient_brightness), (0..6).map { if (it == 0) getString(R.string.ambient_minimum) else it.toString() }, draft.brightness, reconnects = false) {
+            draft = draft.copy(brightness = it)
+        }
+        choice(body, getString(R.string.ambient_area), listOf(getString(R.string.ambient_front), getString(R.string.ambient_rear), getString(R.string.ambient_all)), draft.area - 1, reconnects = false) {
+            draft = draft.copy(area = it + 1)
+        }
+        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.ambient_configuration))
+            .setView(ScrollView(this).apply { addView(body) })
+            .setPositiveButton(getString(R.string.save), null)
+            .setNegativeButton(getString(R.string.cancel), null).create()
+        dialog.setOnShowListener {
+            val save = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            save.setOnClickListener {
+                val selected = draft.copy(colorCycle = draft.music)
+                fun commit() {
+                    AmbientMusicSettings.save(this, selected)
+                    dialog.dismiss()
+                    render()
+                }
+                if (!selected.enabled) commit()
+                else {
+                    save.isEnabled = false
+                    save.text = getString(R.string.ambient_checking)
+                    ambientSupportCheck(applicationContext).whenComplete { supported, _ ->
+                        runOnUiThread {
+                            if (!dialog.isShowing || isFinishing || isDestroyed) return@runOnUiThread
+                            save.isEnabled = true
+                            save.text = getString(R.string.save)
+                            if (supported == true) commit()
+                            else toast(getString(R.string.ambient_unavailable))
+                        }
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
+
     // [announcesReconnect] labels a choice whose [save] reconnects by itself.
     private fun choice(parent: LinearLayout, title: String, options: List<String>, current: Int, reconnects: Boolean = true,
         announcesReconnect: Boolean = reconnects, enabled: Boolean = true, save: (Int) -> Unit) {
