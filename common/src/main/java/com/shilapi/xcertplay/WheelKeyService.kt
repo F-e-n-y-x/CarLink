@@ -20,6 +20,7 @@ import com.shilapi.xcertplay.airplay.AirPlayKnobState
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.glance.CarPlayGlance
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.media.NavigationPlayback
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydOutputSettings
 
@@ -39,6 +40,7 @@ import com.shilapi.xcertplay.hud.BydOutputSettings
  */
 class WheelKeyService : AccessibilityService() {
     private val keys = WheelZoomKeys()
+    private val navigationKeys = NavigationWheelKeyPolicy()
     private val joystick = WheelJoystick()
     private val handler = Handler(Looper.getMainLooper())
     private var learning: WheelZoomSettings.Role? = null
@@ -81,6 +83,7 @@ class WheelKeyService : AccessibilityService() {
 
     override fun onServiceConnected() {
         running = this
+        NavigationWheelSettings.recordAuthorization(this)
         CarPlayCallKeys.install(this)
         refreshEligibility()
         handler.removeCallbacks(pollEligibility)
@@ -121,6 +124,7 @@ class WheelKeyService : AccessibilityService() {
             if (!down) Log.i(TAG, "CarPlay voice key ${event.keyCode}: Siri sent=${CarPlayBackgroundSession.snapshot()?.controller?.requestSiri() == true}")
             return true
         }
+        if (navigationKeys.owns(event.keyCode, event.deviceId, event.downTime)) return navigationKey(event)
         val key = WheelKey(event.keyCode, event.scanCode, deviceName(event.deviceId))
         refreshEligibility()
         val calling = inCall()
@@ -147,7 +151,7 @@ class WheelKeyService : AccessibilityService() {
             },
         )
         when (action) {
-            WheelZoomKeys.Action.PASS -> return false
+            WheelZoomKeys.Action.PASS -> return navigationKey(event)
             WheelZoomKeys.Action.CONSUME -> Unit
             WheelZoomKeys.Action.MODE_ON -> announce(zoomOn = true)
             WheelZoomKeys.Action.MODE_OFF -> announce(zoomOn = false)
@@ -156,6 +160,37 @@ class WheelKeyService : AccessibilityService() {
         }
         rearmTimedMode()
         return true
+    }
+
+    private fun navigationKey(event: KeyEvent): Boolean = navigationKeys.onKey(
+        event.action, event.keyCode, event.deviceId, event.downTime, event.repeatCount,
+        eligible = navigationStream() != null,
+    ) { delta -> adjustNavigation(delta) }
+
+    private fun navigationStream(): Int? {
+        if (!NavigationWheelSettings.enabled(this) || running !== this || inCall() || session() == null) return null
+        val playback = NavigationPlayback.snapshot()
+        if (!playback.active || playback.priorityVoiceActive) return null
+        // Usage routing and a rejected legacy route cannot identify a safe volume stream.
+        return playback.legacyStreamType?.takeIf { it in 1..20 && it != AudioManager.STREAM_MUSIC }
+    }
+
+    private fun adjustNavigation(delta: Int): Boolean {
+        val stream = navigationStream() ?: return false
+        val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return try {
+            val minimum = navigationWheelMinimum(stream, audio::getStreamMinVolume)
+            val current = audio.getStreamVolume(stream)
+            val maximum = audio.getStreamMaxVolume(stream)
+            val target = navigationWheelTarget(current, minimum, maximum, delta) ?: return false
+            if (navigationStream() != stream) return false
+            audio.setStreamVolume(stream, target, AudioManager.FLAG_SHOW_UI)
+            // Failed/unsupported writes leave the initial press with the head unit.
+            audio.getStreamVolume(stream) == target
+        } catch (error: Exception) {
+            Log.w(TAG, "navigation volume unavailable for stream $stream", error)
+            false
+        }
     }
 
     private fun eligibleRoute(): Any? = if (WheelZoomSettings.enabled(this)) mapRoute() else null
@@ -317,8 +352,10 @@ class WheelKeyService : AccessibilityService() {
             if (access != LocalAdb.Access.READY) return@use access
             if (!mayAsk && !needsRestore(context)) return@use if (connected()) access else LocalAdb.Access.UNREACHABLE
             val allowed = applyServiceSettings(context, adb::shell) {
-                mayAsk || WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context)
+                mayAsk || WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context) ||
+                    NavigationWheelSettings.restoreAllowed(context)
             }
+            if (allowed && mayAsk) NavigationWheelSettings.recordAuthorization(context)
             if (allowed) Log.i(TAG, "wheel key service allowed over adb")
             if (allowed) access else LocalAdb.Access.UNREACHABLE
         }
@@ -359,7 +396,7 @@ class WheelKeyService : AccessibilityService() {
         }
 
         internal fun needsRestore(context: Context): Boolean = !connected() &&
-            (WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context))
+            (WheelZoomSettings.enabled(context) || WheelZoomSettings.joystick(context) || NavigationWheelSettings.restoreAllowed(context))
 
         /**
          * Android takes the service off the allowed list when the app is force-stopped (BYD's system does

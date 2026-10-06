@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_wheel_volume">导航播报时滚轮调导航音量</string>
+    <string name="navigation_wheel_volume_description">CarPlay语音播报期间，音量键调节所选导航声道；其他时间交给车机处理。需要授权方向盘按键无障碍服务，通话、地图缩放和摇杆操作优先。兼容性取决于车机，自动路由或媒体声道不拦截。</string>
+    <string name="navigation_wheel_service_required">请在Android设置中授权方向盘按键无障碍服务，或使用已有的ADB授权入口。</string>
+</resources>
