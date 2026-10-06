@@ -74,7 +74,7 @@ class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String
                 if (bodySize > MAX_BODY) break
                 val body = readFully(input, bodySize) ?: break
                 stats.received(HEADER_LEN + bodySize)
-                onMessage(header, body)
+                onMessage(header, body, stats)
                 stats.processed()
             }
         } catch (error: Exception) {
@@ -87,12 +87,16 @@ class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String
         }
     }
 
-    private fun onMessage(header: ByteArray, body: ByteArray) {
+    private fun onMessage(header: ByteArray, body: ByteArray, stats: StreamReceiveStats) {
         when (header[OPCODE_OFFSET].toInt() and 0xff) {
             OP_VIDEO_FRAME -> {
                 val payload = if (body.size >= ScreenCodec.TAG_SIZE) {
+                    val start = System.nanoTime()
                     ScreenCodec.decryptFrame(key, frameCounter.get(), header, body)
-                        .also { frameCounter.incrementAndGet() }
+                        .also {
+                            stats.decrypted(System.nanoTime() - start, body.size)
+                            frameCounter.incrementAndGet()
+                        }
                 } else {
                     body
                 }
@@ -100,7 +104,7 @@ class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String
                     Log.i(
                         TAG,
                         "video first decrypted frame sealed=${body.size} plain=${payload.size} " +
-                        "head=${payload.hexPrefix(16)}",
+                        "head=${payload.hexPrefix(16)} chacha=${AirPlayCrypto.chachaImplementation}",
                     )
                 }
                 listener.onFrame(ScreenCodec.lengthPrefixedToAnnexB(payload))
