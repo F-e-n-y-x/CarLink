@@ -619,7 +619,7 @@
     <string name="wheel_key_role_siri">Siri</string>
     <string name="wheel_key_none">無</string>
     <string name="wheel_key_in_use">此按鍵已用於%1$s。請選擇其他按鍵。</string>
-    <string name="wheel_siri_key">方向盤 Siri 鍵</string>
+    <string name="wheel_siri_key">方向盤 Siri 按鍵</string>
     <string name="wheel_siri_key_description">在 CarPlay 顯示於螢幕時，用你選擇的方向盤按鍵開啟 Siri。車輛自身保留的按鍵只能搭配方向盤按鍵服務使用，該服務在 CarPlay 處於背景時也可使用。未連接 CarPlay 或通話時，該按鍵保留車輛原有功能。</string>
     <string name="wheel_key_role_back">返回</string>
     <string name="wheel_key_service_label">DiPlay 方向盤按鍵</string>
