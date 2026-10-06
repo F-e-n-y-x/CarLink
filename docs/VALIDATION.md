@@ -1,3 +1,19 @@
+# DiPlay 0.2.13 — 2026-10-06
+
+**DRAFT: final release validation is pending. Replace these fields with actual measured results before publication. Earlier per-PR checks are not a substitute for the final signed artifact.**
+
+- Final source commit/tree and clean build revision: **PENDING**.
+- Integrated source validation passed **1,487 unit cases: 1,486 passed, one existing macOS shared wildcard-bind assumption skip, zero failures/errors**. Module counts: 815 shared, 668 common, four Home. These checks cover the reviewed application source; final release version/docs/packaging identity is verified separately.
+- Mobile/Home/map-host/Automotive identity-free source-only debug APK builds and debug lint passed. Zero errors/fatal findings; existing warning counts are 18 Mobile, five Home, two map-host and four Automotive.
+- Production-signed mobile release APK and release lint: **PENDING**.
+- APK identity: expected `com.shihab.diplay`, `0.2.13`, versionCode `32`, minimum SDK `28`, target SDK `37`, non-debuggable; **PENDING actual APK/embedded-revision verification**.
+- Certificate SHA-256 and match against the published 0.2.12 APK: **PENDING measured comparison**.
+- Selected runtime-authentication input match, absence of signing keystores/extra credential containers, public-tree and source-archive checks: **PENDING**.
+- Release APK/source/checksum filenames, byte lengths, SHA-256 and uploaded/tagged-source verification: **PENDING**.
+- Android 9 Wi-Fi Direct is implemented through the firmware-dependent legacy path; requested frequency remains unverified on API 28. This is distinct from Android 10+ group-frequency validation.
+- Experimental call controls/dashboard calls, buffered music, side panel and hotspot repair retain their stated opt-in/default-off/confirmation gates. Source tests cover readiness, bounded buffers, session ownership, cancellation and retryable compensation; no new maintainer physical test of the complete corrected release is claimed.
+- See [0.2.13 release notes](RELEASE-NOTES-0.2.13.md) for all 35 contributions, attributed hardware evidence, remaining acceptance and report-export steps. Historical validation below remains unchanged.
+
 # DiPlay 0.2.12 — 2026-10-04
 
 - The final combined source was tested and built at `c1a7f670dfe99860d21d57ebbb383a7e75772eef`, including corrected PR #230 `7504bf38` and #235 `1eac74af`, plus the contributions merged since 0.2.11. Later release preparation changes documentation and reconciles merge history; publishing checks require application code and build inputs to remain unchanged from the signed build.
