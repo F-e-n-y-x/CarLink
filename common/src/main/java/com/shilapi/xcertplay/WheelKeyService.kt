@@ -673,7 +673,9 @@ object WheelZoomSettings {
         WheelKeyService.settingsChanged()
     }
 
-    fun roleOf(context: Context, key: WheelKey): Role? = Role.entries.firstOrNull { key(context, it) == key }
+    /** The zoom or joystick role with [key]; [isSiriKey] checks the Siri role, which has its own switch. */
+    fun roleOf(context: Context, key: WheelKey): Role? =
+        Role.entries.firstOrNull { it != Role.SIRI && key(context, it) == key }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }

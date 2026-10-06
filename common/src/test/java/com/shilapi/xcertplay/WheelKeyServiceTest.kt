@@ -265,6 +265,9 @@ class WheelKeyServiceTest {
         WheelZoomSettings.setSiriKey(service, false)
         assertFalse(key(KeyEvent.KEYCODE_F6, true))
         assertFalse(key(KeyEvent.KEYCODE_F6, false))
+        WheelZoomSettings.setEnabled(service, true) // the stored Siri key must not come back through the zoom roles
+        assertFalse(key(KeyEvent.KEYCODE_F6, true))
+        assertFalse(key(KeyEvent.KEYCODE_F6, false))
         assertEquals(0, siriRequests)
     }
 
