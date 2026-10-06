@@ -1081,7 +1081,7 @@ class CarPlayHostActivity : ComponentActivity() {
         if (CarPlayCallKeys.onKey(this, event.keyCode, event.action == KeyEvent.ACTION_DOWN, controller)) return true
 
         // The wheel key service, when it runs, takes an assigned Siri key before this window sees it.
-        if (WheelZoomSettings.isSiriKey(this, WheelKey.of(event)) && !inCall(this)) {
+        if (WheelZoomSettings.siriKey(this) && WheelZoomSettings.isSiriKey(this, WheelKey.of(event)) && !inCall(this)) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && siriKey.opens(event.eventTime)) {
                 val message = "Siri: assigned key ${event.keyCode} sent=${controller?.requestSiri() == true}"
                 Log.i(WheelKeyService.TAG, message)

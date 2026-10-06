@@ -130,7 +130,12 @@ class WheelKeyService : AccessibilityService() {
         val calling = inCall(this)
         if (calling) clearLearning()
         val enabled = WheelZoomSettings.enabled(this)
-        val role = if (WheelZoomSettings.anyEnabled(this)) WheelZoomSettings.roleOf(this, key) else null
+        // roleOf ignores whether a role is on, so it could hand the Siri key to an inactive default role.
+        val role = when {
+            WheelZoomSettings.isSiriKey(this, key) -> WheelZoomSettings.Role.SIRI
+            WheelZoomSettings.anyEnabled(this) -> WheelZoomSettings.roleOf(this, key)
+            else -> null
+        }
         val controller = CarPlayBackgroundSession.snapshot()?.controller
         val action = keys.onKey(
             role = role.takeIf { enabled },
@@ -181,7 +186,7 @@ class WheelKeyService : AccessibilityService() {
 
     // Without a CarPlay session, or in a call, the key keeps the car's own action.
     private fun siriPress(role: WheelZoomSettings.Role?, calling: Boolean, eventTime: Long): WheelZoomKeys.Action? {
-        if (role != WheelZoomSettings.Role.SIRI || !WheelZoomSettings.siriKey(this) || calling || session() == null) return null
+        if (role != WheelZoomSettings.Role.SIRI || calling || session() == null) return null
         if (siriKey.opens(eventTime)) Log.i(TAG, "Siri key sent=${requestSiri()}")
         return WheelZoomKeys.Action.CONSUME
     }

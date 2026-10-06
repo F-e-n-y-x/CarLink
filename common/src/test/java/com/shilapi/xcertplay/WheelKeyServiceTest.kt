@@ -313,10 +313,23 @@ class WheelKeyServiceTest {
         val mode = WheelKey(KeyEvent.KEYCODE_F1, 0, "?")
         // Zoom and joystick keep their own rules; the Siri setting is off.
         assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.ZOOM_IN, mode))
-        assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode).takeIf { WheelZoomSettings.siriKey(service) })
         WheelZoomSettings.setSiriKey(service, true)
         assertEquals(WheelZoomSettings.Role.MODE, WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode))
         WheelZoomSettings.setEnabled(service, false)
         assertNull(WheelZoomSettings.conflict(service, WheelZoomSettings.Role.SIRI, mode))
+    }
+
+    @Test fun theSiriKeyWinsOverAnotherRoleWithTheSameKey() {
+        siriSetUp()
+        // MODE keeps F1 while zoom is off, so learning allowed the same key for Siri.
+        WheelZoomSettings.assign(service, WheelZoomSettings.Role.SIRI, WheelKey(KeyEvent.KEYCODE_F1, 0, "?"))
+        assertTrue(key(KeyEvent.KEYCODE_F1, true, time = 0))
+        assertTrue(key(KeyEvent.KEYCODE_F1, false, time = 0))
+        assertEquals(1, siriRequests)
+        // Zoom turned on later still leaves the key to Siri.
+        WheelZoomSettings.setEnabled(service, true)
+        assertTrue(key(KeyEvent.KEYCODE_F1, true, time = 1_000))
+        assertTrue(key(KeyEvent.KEYCODE_F1, false, time = 1_000))
+        assertEquals(2, siriRequests)
     }
 }
