@@ -1604,7 +1604,7 @@ class DiPlayActivity : ComponentActivity() {
         val zoom = WheelZoomSettings.enabled(this)
         val joystick = WheelZoomSettings.joystick(this)
         if (!zoom && !joystick) return
-        wheelKeyServiceControls(card)
+        if (!WheelZoomSettings.siriKey(this)) wheelKeyServiceControls(card)
         if (zoom) {
             val behaviours = WheelZoomSettings.Behaviour.entries
             choice(card, getString(R.string.wheel_zoom_behaviour),

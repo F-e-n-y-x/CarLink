@@ -4,6 +4,11 @@ import android.content.Context
 import android.media.AudioManager
 import android.os.Handler
 import android.view.KeyEvent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.airplay.AirPlaySession
 import com.shilapi.xcertplay.airplay.CarPlayMediaButton
 import com.shilapi.xcertplay.hud.BydCarPlayCall
@@ -125,6 +130,27 @@ class WheelSiriWindowTest {
         settings.dispatchKeyEvent(key(KeyEvent.KEYCODE_F7, false))
         assertEquals(0, learned)
         assertEquals(KeyEvent.KEYCODE_F6, WheelZoomSettings.key(settings, WheelZoomSettings.Role.SIRI)?.code)
+    }
+
+    @Test fun siriZoomAndJoystickShowTheirSharedServiceSetupOnlyOnce() {
+        settings.setTheme(android.R.style.Theme_Material_NoActionBar)
+        WheelZoomSettings.setEnabled(settings, true)
+        WheelZoomSettings.setJoystick(settings, true)
+        val controls = LinearLayout(settings)
+        for (name in listOf("siriKeyControls", "wheelKeyControls")) {
+            settings.javaClass.getDeclaredMethod(name, LinearLayout::class.java)
+                .apply { isAccessible = true }.invoke(settings, controls)
+        }
+        fun labels(view: View): List<String> = when (view) {
+            is ViewGroup -> (0 until view.childCount).flatMap { labels(view.getChildAt(it)) }
+            is TextView -> listOf(view.text.toString())
+            else -> emptyList()
+        }
+        val texts = labels(controls)
+        for (label in listOf(R.string.wheel_keys_enable_adb, R.string.wheel_keys_open_settings,
+            R.string.wheel_keys_service_off)) {
+            assertEquals(1, texts.count { it == settings.getString(label) })
+        }
     }
 
     private fun learn(done: (WheelKey) -> Unit) {

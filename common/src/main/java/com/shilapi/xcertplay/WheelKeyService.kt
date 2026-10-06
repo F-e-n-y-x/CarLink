@@ -119,6 +119,16 @@ class WheelKeyService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return false
         val down = event.action == KeyEvent.ACTION_DOWN
+        val physicalKey = PhysicalWheelKey(event.deviceId, event.keyCode, event.scanCode)
+        if (keys.hasConsumedPress(physicalKey)) {
+            refreshEligibility()
+            val calling = inCall(this)
+            if (calling) clearLearning()
+            keys.onKey(null, down, event.repeatCount == 0, eligibleRoute() != null, calling,
+                physicalKey = physicalKey)
+            rearmTimedMode()
+            return true
+        }
         if (CarPlayCallKeys.onKey(this, event.keyCode, down)) return true
         if (BydOutputSettings.carPlayCallControls(this) &&
             CarPlayMediaButton.opensSiriWhileCarPlay(event.keyCode) && session() != null) {
@@ -143,7 +153,7 @@ class WheelKeyService : AccessibilityService() {
             firstPress = event.repeatCount == 0,
             mapShown = eligibleRoute() != null,
             inCall = calling,
-            physicalKey = PhysicalWheelKey(event.deviceId, event.keyCode, event.scanCode),
+            physicalKey = physicalKey,
             onFirstPress = {
                 learning?.let { role ->
                     val done = learnt
@@ -477,6 +487,8 @@ class WheelZoomKeys {
         private set
     private var route: Any? = null
     private val presses = WheelKeyPresses()
+
+    internal fun hasConsumedPress(key: Any): Boolean = presses.hasConsumedPress(key)
 
     /** A new phone/stream or a lost map never inherits the old session's zoom mode. */
     fun updateEligibility(route: Any?): Boolean {
