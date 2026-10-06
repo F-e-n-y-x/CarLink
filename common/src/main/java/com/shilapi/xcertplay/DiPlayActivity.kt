@@ -158,7 +158,9 @@ class DiPlayActivity : ComponentActivity() {
             permissionHelp(getString(R.string.location), getString(R.string.allow_precise_location_for_diplay_in_the_head_unit_s_app_p))
         }
     }
-    private val iconPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    private val iconPicker = registerForActivityResult(ActivityResultContracts.GetContent(), ::cropIcon)
+    private val iconDocumentPicker = registerForActivityResult(ActivityResultContracts.OpenDocument(), ::cropIcon)
+    private fun cropIcon(uri: Uri?) {
         if (uri != null) iconCrop.launch(Intent(this, ImageCropActivity::class.java).setData(uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
     }
     private val iconCrop = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -2729,6 +2731,10 @@ class DiPlayActivity : ComponentActivity() {
         parent.addView(button(getString(R.string.choose_image), false) {
             runCatching { iconPicker.launch("image/*") }.onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, matchButton(16, 60))
+        parent.addView(button(getString(R.string.browse_image_files), false) {
+            runCatching { iconDocumentPicker.launch(arrayOf("image/*")) }
+                .onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
+        }, matchButton(10, 60))
         if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
             AirPlayPersistence.clearCustomAirPlayIcon(this)
             refreshCarButton()
