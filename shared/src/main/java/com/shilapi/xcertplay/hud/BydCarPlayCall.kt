@@ -111,7 +111,7 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
  */
 object BydCarPlayCall {
     private const val TAG = "DiPlay-BYD-Call"
-    private const val WATCHER_READY_MILLIS = 8_000L
+    @Volatile internal var watcherReadyMillis = 8_000L
     private const val WATCHER_PROBE_INTERVAL_MILLIS = 250L
 
     private val shell = BydAdbShell(TAG)
@@ -264,13 +264,13 @@ object BydCarPlayCall {
         shell.run(app, "setsid nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
         // The child is a fresh app_process that initializes BYD's vehicle API before it reports ready;
         // on DiLink 3 that took up to several seconds while CarPlay streamed, longer than three probes.
-        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(WATCHER_READY_MILLIS)
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(watcherReadyMillis)
         while (true) {
             if (probe(app, token, appPid)) { watcherRunning = true; return true }
             if (System.nanoTime() >= deadline) break
             Thread.sleep(WATCHER_PROBE_INTERVAL_MILLIS)
         }
-        Log.w(TAG, "call watcher not ready after ${WATCHER_READY_MILLIS} ms")
+        Log.w(TAG, "call watcher not ready after $watcherReadyMillis ms")
         return false
     }
 

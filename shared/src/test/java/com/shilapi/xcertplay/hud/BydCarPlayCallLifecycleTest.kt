@@ -29,6 +29,7 @@ class BydCarPlayCallLifecycleTest {
     }
 
     @Before fun setup() {
+        BydCarPlayCall.watcherReadyMillis = 500L
         drain()
         ReflectionHelpers.getField<CarPlayCallState>(BydCarPlayCall, "state").clear()
         ReflectionHelpers.setField(BydCarPlayCall, "shown", null)
