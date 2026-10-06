@@ -29,7 +29,10 @@ class CarButtonImagePickerTest {
             val buttons = (0 until controls.childCount).mapNotNull { controls.getChildAt(it) as? Button }
 
             buttons.single { it.text == activity.getString(R.string.choose_image) }.performClick()
-            assertEquals(Intent.ACTION_GET_CONTENT, shadowOf(activity).nextStartedActivityForResult.intent.action)
+            val galleryIntent = shadowOf(activity).nextStartedActivityForResult.intent
+            assertEquals(Intent.ACTION_GET_CONTENT, galleryIntent.action)
+            assertEquals("image/*", galleryIntent.type)
+            assertTrue(galleryIntent.hasCategory(Intent.CATEGORY_OPENABLE))
 
             buttons.single { it.text == activity.getString(R.string.browse_image_files) }.performClick()
             val documentIntent = shadowOf(activity).nextStartedActivityForResult.intent
@@ -37,7 +40,10 @@ class CarButtonImagePickerTest {
             val acceptedTypes = listOfNotNull(documentIntent.type) +
                 (documentIntent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)?.toList() ?: emptyList())
             assertTrue("image/*" in acceptedTypes)
-            assertTrue(documentIntent.hasCategory(Intent.CATEGORY_OPENABLE))
+            // OpenDocument puts its filter in EXTRA_MIME_TYPES; unlike GetContent,
+            // the AndroidX contract does not add CATEGORY_OPENABLE.
+            assertEquals(listOf("image/*"), documentIntent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)?.toList())
+            assertTrue(!documentIntent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false))
         } finally {
             controller.pause().stop().destroy()
             CarPlayBackgroundSession.clear()
