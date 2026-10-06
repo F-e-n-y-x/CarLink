@@ -51,6 +51,7 @@ internal object CarPlayMediaKeys {
     private var controller: CarPlayController? = null
     private var session: MediaSession? = null
     private var focusRequest: AudioFocusRequest? = null
+    private var focusOwner: Any? = null
     private var focusHeld = false
     private var appContext: Context? = null
     private var mediaAudioActive = false
@@ -161,6 +162,8 @@ internal object CarPlayMediaKeys {
     }
 
     private fun start(context: Context) {
+        val expectedController = controller ?: return
+        val owner = Any().also { focusOwner = it }
         val audio = context.getSystemService(AudioManager::class.java)
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -170,9 +173,7 @@ internal object CarPlayMediaKeys {
                     .build(),
             )
             .setOnAudioFocusChangeListener({ change ->
-                Log.i(TAG, "audio focus change=$change")
-                // Only a permanent loss moves the car's media keys elsewhere; transient losses come back.
-                if (change == AudioManager.AUDIOFOCUS_LOSS) synchronized(this) { focusHeld = false }
+                onFocusChanged(expectedController, owner, change)
             }, mainHandler)
             .build()
         val granted = audio?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -186,7 +187,26 @@ internal object CarPlayMediaKeys {
         Log.i(TAG, "media keys active focusGranted=$granted")
     }
 
+    private fun onFocusChanged(expectedController: CarPlayController, owner: Any, change: Int) {
+        val current = synchronized(this) {
+            if (controller !== expectedController || focusOwner !== owner) false
+            else {
+                // Only permanent loss moves media keys elsewhere; transient losses come back.
+                if (change == AudioManager.AUDIOFOCUS_LOSS) focusHeld = false
+                else if (change == AudioManager.AUDIOFOCUS_GAIN) focusHeld = true
+                true
+            }
+        }
+        if (!current) return
+        Log.i(TAG, "audio focus change=$change")
+        // Resolve the matching sink and invoke it outside the media-key monitor. An abandoned
+        // request must never mute a newer controller, and these owners must not nest locks.
+        val background = CarPlayBackgroundSession.snapshot()
+        if (background?.controller === expectedController) background.sink.onMediaAudioFocusChanged(change)
+    }
+
     private fun releaseLocked() {
+        focusOwner = null
         artworkOwner = null
         artworkQueue.clear()
         session?.let {
