@@ -348,7 +348,7 @@ class WheelKeyService : AccessibilityService() {
             if (access != LocalAdb.Access.READY) return@use access
             if (!mayAsk && !needsRestore(context)) return@use if (connected()) access else LocalAdb.Access.UNREACHABLE
             val allowed = applyServiceSettings(context, adb::shell) {
-                mayAsk || WheelZoomSettings.anyEnabled(context)
+                mayAsk || wanted(context)
             }
             if (allowed) Log.i(TAG, "wheel key service allowed over adb")
             if (allowed) access else LocalAdb.Access.UNREACHABLE
@@ -389,12 +389,18 @@ class WheelKeyService : AccessibilityService() {
                 Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
         }
 
-        internal fun needsRestore(context: Context): Boolean = !connected() &&
-            WheelZoomSettings.anyEnabled(context)
+        internal fun needsRestore(context: Context): Boolean = !connected() && wanted(context)
+
+        /**
+         * The call controls need the service too: outside the CarPlay screen the call key reaches DiPlay
+         * only through it, and without it BYD's window manager opens its own phone app instead.
+         */
+        internal fun wanted(context: Context): Boolean = WheelZoomSettings.anyEnabled(context) ||
+            BydOutputSettings.carPlayCallControls(context)
 
         /**
          * Android takes the service off the allowed list when the app is force-stopped (BYD's system does
-         * that), and an update or a crash can leave it unbound. With a wheel key setting on, DiPlay
+         * that), and an update or a crash can leave it unbound. With a wheel key setting or the call controls on, DiPlay
          * puts it back over the car's adb, already allowed, when it is still not running a few seconds after
          * DiPlay starts, so the keys work without a visit to the settings.
          */

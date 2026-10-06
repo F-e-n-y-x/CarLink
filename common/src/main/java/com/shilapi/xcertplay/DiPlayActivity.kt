@@ -1792,6 +1792,14 @@ class DiPlayActivity : ComponentActivity() {
             getString(R.string.carplay_call_controls_experimental_description),
             BydOutputSettings.carPlayCallControls(this)) {
             BydOutputSettings.setCarPlayCallControls(this, it)
+            if (it && !WheelKeyService.connected()) {
+                Thread({
+                    val access = WheelKeyService.enableOverAdb(this)
+                    if (access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                        runOnUiThread { toast(getString(R.string.wheel_keys_adb_failed, access.name)) }
+                    }
+                }, "diplay-call-keys-enable").start()
+            }
         }
         toggle(card, getString(R.string.carplay_calls_on_dashboard),
             getString(R.string.carplay_calls_on_dashboard_description),

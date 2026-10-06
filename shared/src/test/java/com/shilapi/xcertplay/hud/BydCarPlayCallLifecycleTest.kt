@@ -190,7 +190,7 @@ class BydCarPlayCallLifecycleTest {
         BydOutputSettings.setCarPlayCalls(app, true)
         BydCarPlayCall.onFrame(ringing("ordered")); drain()
         val prepare = Shell.commands.indexOfFirst { it.contains(" prepare - ") }
-        val launch = Shell.commands.indexOfFirst { it.startsWith("nohup") }
+        val launch = Shell.commands.indexOfFirst { it.startsWith("setsid nohup ") }
         val probe = Shell.commands.indexOfFirst { it.contains(" probe - ") }
         val show = Shell.commands.indexOfFirst { it.contains(" ringing ") }
         assertTrue(prepare >= 0 && prepare < launch && launch < probe && probe < show)
@@ -268,8 +268,8 @@ class BydCarPlayCallLifecycleTest {
     class Shell {
         @Implementation fun run(context: Context, command: String): String? {
             commands.add(command)
-            if (command.startsWith("nohup") && rejectWatcher) return "nohup: watcher launch refused"
-            if (command.startsWith("nohup") && emptyWatcherReply) return ""
+            if (command.startsWith("setsid nohup ") && rejectWatcher) return "nohup: watcher launch refused"
+            if (command.startsWith("setsid nohup ") && emptyWatcherReply) return ""
             if (command.contains(" cancel - ") && omitCancelCompletion) return ""
             if (command.contains(" probe ")) return if (rejectWatcher || omitReadiness) "watch=ERR" else "watch=0"
             if (rejectPhase?.let { command.contains(" $it ") } == true) return "write=ERR call write refused"

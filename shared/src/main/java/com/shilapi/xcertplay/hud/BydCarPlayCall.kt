@@ -110,6 +110,8 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
  */
 object BydCarPlayCall {
     private const val TAG = "DiPlay-BYD-Call"
+    private const val WATCHER_READY_MILLIS = 8_000L
+    private const val WATCHER_PROBE_INTERVAL_MILLIS = 250L
 
     private val shell = BydAdbShell(TAG)
     private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-carplay-call").apply { isDaemon = true } }
@@ -255,12 +257,19 @@ object BydCarPlayCall {
         watcherRunning = false
         val apk = app.applicationInfo.sourceDir
         val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} $appPid"
-        // nohup's parent reply/exit status says nothing about child initialization.
-        shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
-        repeat(3) { attempt ->
+        // adbd's legacy shell: stream kills its process group when the command returns, which
+        // takes a plain nohup child with it before it initializes; setsid moves it out of that
+        // group. The parent reply/exit status says nothing about child initialization.
+        shell.run(app, "setsid nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
+        // The child is a fresh app_process that initializes BYD's vehicle API before it reports ready;
+        // on DiLink 3 that took up to several seconds while CarPlay streamed, longer than three probes.
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(WATCHER_READY_MILLIS)
+        while (true) {
             if (probe(app, token, appPid)) { watcherRunning = true; return true }
-            if (attempt < 2) Thread.sleep(100)
+            if (System.nanoTime() >= deadline) break
+            Thread.sleep(WATCHER_PROBE_INTERVAL_MILLIS)
         }
+        Log.w(TAG, "call watcher not ready after ${WATCHER_READY_MILLIS} ms")
         return false
     }
 
