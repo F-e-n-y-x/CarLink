@@ -34,10 +34,16 @@ object AppLocale {
             val locales = context.getSystemService(LocaleManager::class.java).applicationLocales
             if (locales.isEmpty) return SYSTEM
             val selected = locales[0]
-            return if (selected.language == "zh" && selected.country in setOf("TW", "HK", "MO")) {
-                TRADITIONAL_CHINESE
-            } else {
-                selected.language
+            if (selected.language != "zh") return selected.language
+            // An explicit BCP 47 script is more specific than the region's usual script.
+            return when (selected.script) {
+                "Hant" -> TRADITIONAL_CHINESE
+                "Hans" -> SIMPLIFIED_CHINESE
+                else -> if (selected.country in setOf("TW", "HK", "MO")) {
+                    TRADITIONAL_CHINESE
+                } else {
+                    SIMPLIFIED_CHINESE
+                }
             }
         }
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

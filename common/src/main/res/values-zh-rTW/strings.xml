@@ -66,7 +66,7 @@
     <string name="driving_side_left">左側</string>
     <string name="enabled_value">已啟用</string>
     <string name="disabled_value">已停用</string>
-    <string name="mapping_aaos_buses">AAOS 匯串流排</string>
+    <string name="mapping_aaos_buses">AAOS 音訊匯流排</string>
     <string name="mapping_mobile_compatible">行動裝置相容</string>
     <string name="status_hotspot_ready">熱點已就緒：%1$s、%2$s、%3$s，頻道 %4$s</string>
     <string name="status_waiting_reenumeration">正在等待 iPhone 重新列舉</string>
@@ -192,7 +192,7 @@
     <string name="done">完成</string>
     <string name="drag_to_move_pinch_to_zoom">拖曳以移動，雙指縮放</string>
     <string name="draw_outside_safe_area">允許繪製到安全區域外</string>
-    <string name="driving_side">駕駛方向</string>
+    <string name="driving_side">駕駛座位置</string>
     <string name="efficient_video">高效率影片</string>
     <string name="enable_the_car_s_bluetooth_and_pair_your_iphone_first">請先開啟車機藍牙並配對 iPhone。</string>
     <string name="error">錯誤</string>
@@ -260,7 +260,7 @@
     <string name="music_buffer">音樂快取</string>
     <string name="resolution_native">原生</string>
     <string name="navigation_on_hud_and_instrument_cluster">HUD 和儀表板導航</string>
-    <string name="navigation_stream_type">導航音訊串串流類型</string>
+    <string name="navigation_stream_type">導航音訊串流類型</string>
     <string name="nearby_devices">附近的裝置</string>
     <string name="nearby_devices_connects_your_iphone_microphone_enables_sir">「附近的裝置」權限用於連線 iPhone；麥克風權限用於 Siri 和通話。較舊版本的 Android 也需要位置權限來設定無線連線。USB 模式可能會要求建立本機 VPN 連線。</string>
     <string name="nothing_is_sent_automatically_protocol_payloads_and_creden">報告不會自動傳送，不包含通訊協定資料和認證資訊。</string>
@@ -330,7 +330,7 @@
     <string name="s_3_tap_check_and_enable_below_this_enables_the_cluster_ma">3. 點一下下方的「檢查並啟用」。這會啟用儀表板地圖和自動主題跟隨。進行中的 CarPlay 工作階段會重新連線一次，之後即可中斷電腦連線。</string>
     <string name="s_500_ms">500 毫秒</string>
     <string name="s_5_ghz">5 GHz</string>
-    <string name="s_60_fps_smoother_motion">60 fps · 更串流暢</string>
+    <string name="s_60_fps_smoother_motion">60 fps · 動態更流暢</string>
     <string name="s_60_lightest_load" formatted="false">60% · 最低負載</string>
     <string name="s_80_lighter_load" formatted="false">80% · 較低負載</string>
     <string name="safe_area">安全區域</string>
@@ -386,7 +386,7 @@
     <string name="use_a_usb_data_cable_and_unlock_your_iphone_allow_trust_an">請使用 USB 傳輸線並解鎖 iPhone。\niPhone 出現提示時，允許「信任」並使用 CarPlay。</string>
     <string name="use_hevc_leave_off_for_the_widest_head_unit_compatibility">使用 HEVC。關閉後可相容更多車機。</string>
     <string name="use_software_hevc_decoder">使用 HEVC 軟體解碼器</string>
-    <string name="use_usage_content_type_routing_instead_of_stream_type">使用 usage / content-type 路由取代串串流類型</string>
+    <string name="use_usage_content_type_routing_instead_of_stream_type">使用 usage / content-type 路由取代串流類型</string>
     <string name="use_your_last_connection_type_and_selected_iphone">使用上次的連線方式和已選擇的 iPhone。</string>
     <string name="vpn_consent_was_denied">VPN 授權遭拒</string>
     <string name="waiting_for_iphone_over_usb">正在等待透過 USB 連線的 iPhone</string>
@@ -457,7 +457,7 @@
     <string name="turn_card_distance_km">%1$.1f 公里</string>
     <string name="turn_card_exit">出口 %1$d</string>
     <string name="center_map_follows_dashboard">主螢幕地圖與儀表板同步</string>
-    <string name="center_map_follows_dashboard_description">開啟：主螢幕卡片镜像儀表板地圖。關閉：主螢幕不顯示該卡片，儀表板地圖只出現在儀表板上。不會改變 CarPlay 主螢幕自己的畫面。</string>
+    <string name="center_map_follows_dashboard_description">開啟：主螢幕卡片鏡像儀表板地圖。關閉：主螢幕不顯示該卡片，儀表板地圖只出現在儀表板上。不會改變 CarPlay 主螢幕自己的畫面。</string>
     <string name="dashboard_map_only_in_small_and_full_navi">僅在小螢幕或全螢幕導航時顯示儀表板地圖 · 需要 ADB</string>
     <string name="dashboard_map_only_in_small_and_full_navi_description">DiPlay 讀取你在方向盤選單中選擇的導航模式。在「關閉」和「導航時開啟」模式下，儀表板只顯示箭頭，因此 iPhone 不會傳送地圖；在小螢幕導航和全螢幕導航模式下會傳送，切換後一至兩秒內生效。需要在車機上開啟網路 ADB。</string>
     <string name="check_adb_access">檢查 ADB 存取權限</string>
@@ -502,7 +502,7 @@
     <string name="adb_enabled_not_approved">ADB 已開啟，但尚未授權這個 DiPlay 測試版。</string>
     <string name="probe_adb_and_vehicle_data">偵測舊版車機</string>
     <string name="probe_vehicle_data_again">重新偵測舊版車機</string>
-    <string name="probing_vehicle_data">正在讀取本韌體的比亞迪欄位錄錄並驗證所需欄位…</string>
+    <string name="probing_vehicle_data">正在讀取本韌體的比亞迪欄位目錄並驗證所需欄位…</string>
     <string name="vehicle_probe_failed">車輛資料偵測失敗：%1$s</string>
     <string name="vehicle_probe_lost_saved_fields">本次偵測未確認以下已儲存欄位：%1$s。舊設定已保留。</string>
     <string name="replace_saved_vehicle_data_anyway">仍然取代已儲存的車輛資料</string>
@@ -532,7 +532,7 @@
     <string name="video_cannot_play">此影片無法在車機螢幕上播放。受保護的影片（例如 Apple TV+）需要取得授權的接收器。</string>
     <string name="safe_area_mapping_summary">安全區域：%1$d x %2$d，位於 (%3$d, %4$d)，畫面 %5$d x %6$d</string>
     <string name="navigation_widget_label">CarPlay 導航</string>
-    <string name="navigation_widget_description">來自 CarPlay 的下一個轉弯、距離、到達時間和歌曲</string>
+    <string name="navigation_widget_description">來自 CarPlay 的下一個轉彎、距離、到達時間和歌曲</string>
     <string name="widget_not_connected">CarPlay 未連線</string>
     <string name="widget_no_route">無路線</string>
     <string name="widget_distance_meters">%1$d 公尺</string>
@@ -542,15 +542,15 @@
     <string name="widget_hours_minutes">%1$d 小時 %2$02d 分鐘</string>
     <string name="center_map_card">中控螢幕上的儀表板地圖</string>
     <string name="shows_the_iphone_s_cluster_map_virtual_stream_description">向 iPhone 申請獨立的 CarPlay 儀表/桌面地圖串流（Stream 111），供無液晶儀表車機的中控桌面浮動卡片或第三方桌面內嵌使用。</string>
-    <string name="center_map_card_virtual_description">在中控螢幕桌面上顯示標準 16:9 比例的浮動地圖卡片，比例自然不再呈细長條狀，支援隨意拖曳與雙指縮放。</string>
+    <string name="center_map_card_virtual_description">在中控螢幕桌面上顯示標準 16:9 比例的浮動地圖卡片，比例自然不再呈細長條狀，支援隨意拖曳與雙指縮放。</string>
     <string name="center_map_auto_hide">離開桌面時自動隱藏卡片</string>
     <string name="center_map_auto_hide_description">開啟音樂、倒車影像、全螢幕設定等App時自動隱藏浮動視窗，返回桌面時自動恢復</string>
-    <string name="center_map_auto_hide_active">離開桌面自動隱藏：已開啟（使用狀況访問權限 / 輔助使用服務）</string>
-    <string name="center_map_auto_hide_needed">離開桌面自動隱藏：未開啟。請開啟輔助使用服務或透過 ADB 授予使用狀況访問權限。</string>
+    <string name="center_map_auto_hide_active">離開桌面自動隱藏：已開啟（使用狀況存取權限 / 輔助使用服務）</string>
+    <string name="center_map_auto_hide_needed">離開桌面自動隱藏：未開啟。請開啟輔助使用服務或透過 ADB 授予使用狀況存取權限。</string>
     <string name="center_map_card_description">DiPlay 在背景運行時，儀表板地圖也會以卡片形式顯示在主螢幕上：比亞迪主螢幕、地圖主螢幕或你的預設啟動器。點選卡片開啟 CarPlay，拖曳可移動卡片，雙指縮放可調整大小。儀表板上的地圖不受影響。需要“顯示在其他App上層”權限。</string>
     <string name="center_map_overlay_allowed">顯示在其他App上層：已允許</string>
     <string name="center_map_overlay_missing">顯示在其他應用程式上層：未允許。請在應用程式設定中允許，或透過 ADB：adb shell appops set %1$s SYSTEM_ALERT_WINDOW allow</string>
-    <string name="center_map_usage_allowed">使用狀況访問權限：已允許，卡片只在主螢幕上顯示</string>
+    <string name="center_map_usage_allowed">使用狀況存取權限：已允許，卡片只在主螢幕上顯示</string>
     <string name="center_map_usage_missing">使用情況存取權：未允許，因此資訊卡會顯示在所有應用程式上層。透過 ADB：adb shell appops set %1$s GET_USAGE_STATS allow</string>
     <string name="center_map_no_permission_screen">此車機沒有該權限的設定介面，請透過 ADB 允許。</string>
     <string name="launcher_map_sharing">與其他啟動器共用即時地圖</string>
@@ -562,7 +562,7 @@
     <string name="adb_cluster_open">再試一次儀表地圖</string>
     <string name="adb_cluster_routing">正在透過ADB啟動儀表地圖…</string>
     <string name="adb_cluster_routed">儀表視窗已移動，等待 iPhone 地圖</string>
-    <string name="adb_cluster_route_failed">儀表啟動失敗，請導出診斷。</string>
+    <string name="adb_cluster_route_failed">儀表啟動失敗，請匯出診斷。</string>
     <string name="open_diplay_settings_hint">在 CarPlay 中用 %1$d 指向下滑動，以開啟 DiPlay 設定。</string>
     <string name="carplay_controls">CarPlay 操作</string>
     <string name="settings_gesture_fingers">開啟設定 · %1$d 指向下滑動（點選切換）</string>
