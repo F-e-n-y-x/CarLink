@@ -511,13 +511,16 @@ private class VideoDecoder(
     private val queuedPresentationUs = LongArray(64)
     private val queuedAtNanos = LongArray(64)
     private val queuedPaced = BooleanArray(64)
+    // Set on the paced frames queued just before a pause in the iPhone's frames: the decoder releases a
+    // frame only once about two more are queued, so they waited for that pause, which no display delay
+    // can hide.
+    private val queuedBeforePause = BooleanArray(64)
+    private val recentPacedSlots = IntArray(PAUSE_HELD_FRAMES) { -1 }
     private var queuedSlot = 0
     // The decoder releases a frame only once later input arrives, so a frame queued before a still-screen
     // gap waits for the next one; such waits are not decode time and are left out of the stats.
     private var lastQueuedNanos = 0L
     private var resumedAtNanos = 0L
-    // The local time of the latest paced frame queued: a frame released only after a pause in the
-    // iPhone's frames waited for that pause, which no display delay can hide.
     private var lastQueuedLocalNanos = 0L
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
@@ -799,7 +802,16 @@ private class VideoDecoder(
             queuedPresentationUs[queuedSlot] = presentationUs
             queuedAtNanos[queuedSlot] = queuedNow
             queuedPaced[queuedSlot] = presentNs > 0
-            if (presentNs > 0) lastQueuedLocalNanos = presentNs
+            queuedBeforePause[queuedSlot] = false
+            if (presentNs > 0) {
+                // A gap between consecutive iPhone frame times, not a decoder backlog, marks a pause.
+                if (lastQueuedLocalNanos != 0L && presentNs - lastQueuedLocalNanos > SENDER_PAUSE_NS) {
+                    recentPacedSlots.forEach { if (it >= 0) queuedBeforePause[it] = true }
+                }
+                lastQueuedLocalNanos = presentNs
+                recentPacedSlots.copyInto(recentPacedSlots, 1, 0, PAUSE_HELD_FRAMES - 1)
+                recentPacedSlots[0] = queuedSlot
+            }
             queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
             referenceChain.onQueued()
         } else {
@@ -846,8 +858,7 @@ private class VideoDecoder(
                     val delay = pacingDelay
                     val paced = render && delay != null && slot >= 0 && queuedPaced[slot]
                     val localNs = info.presentationTimeUs * 1000
-                    // Held until the iPhone sent more after a pause: no display delay could have hidden it.
-                    val pauseHeld = paced && lastQueuedLocalNanos - localNs > SENDER_PAUSE_NS
+                    val pauseHeld = paced && queuedBeforePause[slot]
                     val targetNs = if (paced && delay != null) {
                         if (!heldOverGap && !pauseHeld) delay.onFrame(now - localNs)
                         stats.onPacingDelay(delay.nanos)
@@ -929,9 +940,11 @@ private class VideoDecoder(
         const val SURFACE_DETACH_WAIT_MS = 700L
         // Longer input gaps are a still screen, not decoding work.
         const val STILL_GAP_NS = 500_000_000L
-        // Frames this far apart in iPhone time are a pause in its frames: about four frame intervals at
-        // 30 fps, where the decoder normally waits for two.
+        // Consecutive frames this far apart in iPhone time are a pause in its frames: about four frame
+        // intervals at 30 fps.
         const val SENDER_PAUSE_NS = 120_000_000L
+        // Frames before a pause that wait for it: the decoder holds about two, sometimes three.
+        const val PAUSE_HELD_FRAMES = 3
         val START_CODE = byteArrayOf(0x00, 0x00, 0x00, 0x01)
     }
 }
