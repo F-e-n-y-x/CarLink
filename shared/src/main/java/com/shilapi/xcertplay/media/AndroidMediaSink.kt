@@ -29,6 +29,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /** AudioTrack's attributes getter is only available from Android 10. */
@@ -187,8 +188,9 @@ class AndroidMediaSink(
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
     /**
-     * Smooth video: show main-screen frames at the iPhone's frame time plus this delay, 0 to show each
-     * as soon as it is decoded. Only a SurfaceView honours the timestamps, so the host sets it with one.
+     * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
+     * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
+     * decoded. Only a SurfaceView honours the timestamps, so the host sets it with one.
      */
     private val videoPacingDelayMillis: Int = 0,
 ) : MediaSink {
@@ -491,7 +493,6 @@ class AndroidMediaSink(
 private const val MAIN_SCREEN_TYPE = 110
 
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
-
 private class VideoDecoder(
     streamType: Int,
     surface: Surface?,
@@ -501,17 +502,23 @@ private class VideoDecoder(
     private val requestKeyFrame: () -> Unit,
     private val report: (String) -> Unit,
     statsLabel: String? = null,
-    private val pacingDelayNanos: Long = 0L,
+    pacingDelayNanos: Long = 0L,
 ) : Closeable {
     private val pacer = FramePacer()
-    // Decode latency: when each presentation time was queued (decode thread only).
+    private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
+    // Per queued presentation time (decode thread only): when it was queued, and whether it is a paced
+    // frame's local time rather than the queue time.
     private val queuedPresentationUs = LongArray(64)
     private val queuedAtNanos = LongArray(64)
+    private val queuedPaced = BooleanArray(64)
     private var queuedSlot = 0
     // The decoder releases a frame only once later input arrives, so a frame queued before a still-screen
     // gap waits for the next one; such waits are not decode time and are left out of the stats.
     private var lastQueuedNanos = 0L
     private var resumedAtNanos = 0L
+    // The local time of the latest paced frame queued: a frame released only after a pause in the
+    // iPhone's frames waited for that pause, which no display delay can hide.
+    private var lastQueuedLocalNanos = 0L
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
@@ -524,7 +531,7 @@ private class VideoDecoder(
     private val referenceChain = VideoReferenceChain()
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
-    private val stats = VideoStats(statsLabel ?: if (streamType == 110) "" else " stream=$streamType")
+    private val stats = VideoStats(statsLabel ?: if (streamType == MAIN_SCREEN_TYPE) "" else " stream=$streamType")
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {
@@ -533,8 +540,8 @@ private class VideoDecoder(
 
     fun submit(nalus: ByteArray, senderNanos: Long = 0L, arrivalNanos: Long = 0L) {
         stats.onReceived(nalus.size)
-        val presentNs = if (pacingDelayNanos > 0 && senderNanos > 0 && arrivalNanos > 0) {
-            pacer.target(senderNanos, arrivalNanos, pacingDelayNanos)
+        val presentNs = if (pacingDelay != null && senderNanos > 0 && arrivalNanos > 0) {
+            pacer.localTime(senderNanos, arrivalNanos)
         } else 0L
         queue.offer(VideoJob.Frame(nalus, presentNs = presentNs))
     }
@@ -545,11 +552,11 @@ private class VideoDecoder(
 
     /** Waits (bounded) until the decoder has moved to [surface], so the previous one can be destroyed. */
     fun setSurfaceAndWait(surface: Surface?) {
-        val done = java.util.concurrent.CountDownLatch(1)
+        val done = CountDownLatch(1)
         queue.offer(VideoJob.SurfaceChanged(surface, done))
         if (Thread.currentThread() !== thread) {
             try {
-                done.await(SURFACE_DETACH_WAIT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+                done.await(SURFACE_DETACH_WAIT_MS, TimeUnit.MILLISECONDS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -579,7 +586,11 @@ private class VideoDecoder(
                             } else feed(job.nalus, job.presentNs)
                         }
                         is VideoJob.SurfaceChanged -> try { changeSurface(job.surface) } finally { job.done?.countDown() }
-                        is VideoJob.RefreshPicture -> if (decoder != null) requestKeyFrameIfDue()
+                        // Once per new surface, so it skips the rate limit an earlier request may still hold.
+                        is VideoJob.RefreshPicture -> if (decoder != null) {
+                            lastKeyFrameRequestNs = System.nanoTime()
+                            requestKeyFrame()
+                        }
                         is VideoJob.Resync -> recover("video queue overflow")
                         null -> Unit
                     }
@@ -779,7 +790,7 @@ private class VideoDecoder(
         input.clear()
         if (annexB.size <= input.remaining()) {
             input.put(annexB)
-            // A paced frame carries its display time; MediaCodec returns it with the decoded output.
+            // A paced frame carries its local time; MediaCodec returns it with the decoded output.
             val presentationUs = if (presentNs > 0) presentNs / 1000 else System.nanoTime() / 1000
             codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
             val queuedNow = System.nanoTime()
@@ -787,6 +798,8 @@ private class VideoDecoder(
             lastQueuedNanos = queuedNow
             queuedPresentationUs[queuedSlot] = presentationUs
             queuedAtNanos[queuedSlot] = queuedNow
+            queuedPaced[queuedSlot] = presentNs > 0
+            if (presentNs > 0) lastQueuedLocalNanos = presentNs
             queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
             referenceChain.onQueued()
         } else {
@@ -813,10 +826,8 @@ private class VideoDecoder(
         requestKeyFrame()
     }
 
-    private fun queuedAt(presentationUs: Long): Long {
-        for (slot in queuedPresentationUs.indices) if (queuedPresentationUs[slot] == presentationUs) return queuedAtNanos[slot]
-        return 0L
-    }
+    private fun queuedSlotOf(presentationUs: Long): Int =
+        queuedPresentationUs.indices.firstOrNull { queuedPresentationUs[it] == presentationUs } ?: -1
 
     private fun drainOutput(codec: MediaCodec) {
         val info = MediaCodec.BufferInfo()
@@ -828,14 +839,24 @@ private class VideoDecoder(
                 index >= 0 -> {
                     val render = outputSurface != null
                     val now = System.nanoTime()
-                    val queued = queuedAt(info.presentationTimeUs)
+                    val slot = queuedSlotOf(info.presentationTimeUs)
+                    val queued = if (slot >= 0) queuedAtNanos[slot] else 0L
                     val heldOverGap = queued in 1 until resumedAtNanos
                     if (queued > 0 && !heldOverGap) stats.onDecodeLatency(now - queued)
-                    val targetNs = info.presentationTimeUs * 1000
-                    if (render && pacingDelayNanos > 0 && targetNs - now in 1..MAX_PACING_AHEAD_NS) {
+                    val delay = pacingDelay
+                    val paced = render && delay != null && slot >= 0 && queuedPaced[slot]
+                    val localNs = info.presentationTimeUs * 1000
+                    // Held until the iPhone sent more after a pause: no display delay could have hidden it.
+                    val pauseHeld = paced && lastQueuedLocalNanos - localNs > SENDER_PAUSE_NS
+                    val targetNs = if (paced && delay != null) {
+                        if (!heldOverGap && !pauseHeld) delay.onFrame(now - localNs)
+                        stats.onPacingDelay(delay.nanos)
+                        localNs + delay.nanos
+                    } else 0L
+                    if (targetNs - now in 1..MAX_PACING_AHEAD_NS) {
                         codec.releaseOutputBuffer(index, targetNs)
                     } else {
-                        if (render && pacingDelayNanos > 0 && !heldOverGap) stats.onLate()
+                        if (render && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
                         codec.releaseOutputBuffer(index, render)
                     }
                     if (render) stats.onRendered()
@@ -908,6 +929,9 @@ private class VideoDecoder(
         const val SURFACE_DETACH_WAIT_MS = 700L
         // Longer input gaps are a still screen, not decoding work.
         const val STILL_GAP_NS = 500_000_000L
+        // Frames this far apart in iPhone time are a pause in its frames: about four frame intervals at
+        // 30 fps, where the decoder normally waits for two.
+        const val SENDER_PAUSE_NS = 120_000_000L
         val START_CODE = byteArrayOf(0x00, 0x00, 0x00, 0x01)
     }
 }

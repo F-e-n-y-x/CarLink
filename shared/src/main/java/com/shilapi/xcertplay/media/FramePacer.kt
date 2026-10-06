@@ -1,17 +1,18 @@
 package com.shilapi.xcertplay.media
 
 /**
- * Turns the iPhone's per-frame time into a local display time, so frames are shown at an even pace
- * instead of whenever the link and the decoder hand them over.
+ * Turns the iPhone's per-frame time into a local time on System.nanoTime, so frames can be shown at an
+ * even pace instead of whenever the link and the decoder hand them over. The decoder adds the display
+ * delay ([PacingDelay]) on top.
  *
  * The offset between the iPhone's clock and System.nanoTime is a low percentile of
  * (arrival - sender time) over recent frames: the fastest frames show the link's base delay, and late
- * frames are absorbed by the fixed delay added on top. For the first [refreshEvery] frames the offset
+ * frames are absorbed by the display delay added on top. For the first [refreshEvery] frames the offset
  * follows that percentile at once, so a slow first frame (usually a keyframe) does not set it. After
  * that it moves at most [slewPerSecond] of the elapsed time, so a fast sample leaving the window does
  * not shift every later frame at once. It re-anchors at once when the base delay grows by more than
- * [resetNanos] or shrinks by more than [maxEarlyNanos], and a frame is never held longer than the delay
- * plus [maxEarlyNanos] after it arrived.
+ * [resetNanos] or shrinks by more than [maxEarlyNanos], and a frame's local time is never more than
+ * [maxEarlyNanos] after it arrived.
  */
 internal class FramePacer(
     private val window: Int = 240,
@@ -28,10 +29,11 @@ internal class FramePacer(
     private var lastArrivalNanos = 0L
 
     /**
-     * The System.nanoTime at which to show a frame stamped [senderNanos] that arrived at [arrivalNanos],
-     * [delayNanos] after the link's base delay; 0 to show it as soon as it is decoded (late or implausible).
+     * The local time of a frame stamped [senderNanos] that arrived at [arrivalNanos]: its sender time on
+     * System.nanoTime plus the link's base delay. 0 when that is implausible (far behind or ahead of its
+     * arrival), so the frame is shown as soon as it is decoded.
      */
-    fun target(senderNanos: Long, arrivalNanos: Long, delayNanos: Long): Long {
+    fun localTime(senderNanos: Long, arrivalNanos: Long): Long {
         residuals.addLast(arrivalNanos - senderNanos)
         if (residuals.size > window) residuals.removeFirst()
         val warmingUp = frames < refreshEvery
@@ -47,8 +49,8 @@ internal class FramePacer(
             offset += (candidate - offset).coerceIn(-step, step)
         }
         lastArrivalNanos = arrivalNanos
-        val target = senderNanos + offset + delayNanos
-        return if (target - arrivalNanos in -ONE_SECOND..delayNanos + maxEarlyNanos) target else 0L
+        val local = senderNanos + offset
+        return if (local - arrivalNanos in -ONE_SECOND..maxEarlyNanos) local else 0L
     }
 
     private companion object {

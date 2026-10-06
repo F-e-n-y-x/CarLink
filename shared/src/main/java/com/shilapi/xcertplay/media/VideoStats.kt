@@ -20,6 +20,7 @@ internal class VideoStats(
     private val decodeMicros = IntArray(1024)
     private var decodeSamples = 0
     private var late = 0
+    private var pacingDelayNanos = 0L
 
     @Synchronized fun onReceived(size: Int) {
         val now = nanoTime()
@@ -49,11 +50,15 @@ internal class VideoStats(
     /** A paced frame left the decoder after its display time and was shown at once. */
     @Synchronized fun onLate() { late++ }
 
+    /** Smooth video's current display delay ([PacingDelay]). */
+    @Synchronized fun onPacingDelay(ns: Long) { pacingDelayNanos = ns }
+
     private fun decodeSummary(): String {
         if (decodeSamples == 0) return ""
         val sorted = decodeMicros.copyOf(decodeSamples).also { it.sort() }
         fun percentileMs(p: Int) = sorted[(decodeSamples - 1) * p / 100] / 1000
-        return " decode p50=%dms p90=%dms late=%d".format(percentileMs(50), percentileMs(90), late)
+        val delay = if (pacingDelayNanos > 0) " delay=%dms".format(pacingDelayNanos / 1_000_000) else ""
+        return " decode p50=%dms p90=%dms late=%d".format(percentileMs(50), percentileMs(90), late) + delay
     }
 
     @Synchronized fun logIfDue(): String? {

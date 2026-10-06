@@ -4619,8 +4619,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         root.addView(viewport, index, texture.layoutParams)
         appendLog(if (smoothVideo) {
-            "Using SurfaceView video output: smooth video, frames shown at the iPhone's frame time + " +
-                "${smoothVideoDelayMillis(fps)} ms; picture adjustments unavailable"
+            "Using SurfaceView video output: smooth video, frames shown at the iPhone's frame time + a delay " +
+                "starting at ${smoothVideoDelayMillis(fps)} ms; picture adjustments unavailable"
         } else {
             "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
         })
@@ -4901,7 +4901,6 @@ class CarPlayHostActivity : ComponentActivity() {
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111
-
         private const val CENTER_MAP_IDLE_MILLIS = 3_000L // a reconnect is quicker; a session end is not
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L

@@ -682,7 +682,7 @@
     <string name="main_buffered_audio">缓冲音乐（实验性）</string>
     <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
     <string name="smooth_video">流畅视频（实验性）</string>
-    <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上固定延迟（60 fps 时为 90 毫秒）显示 CarPlay 主画面，而不是解码后立即显示。到达太晚的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。会重新连接 CarPlay。</string>
+    <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上一段短延迟显示 CarPlay 主画面，而不是解码后立即显示。延迟会自动调整，让大多数帧能及时解码；仍未按时准备好的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。会重新连接 CarPlay。</string>
     <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
     <string name="car_button_icon">图标</string>
     <string name="car_button_icon_custom">自定义图标</string>

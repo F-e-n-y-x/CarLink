@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.media
 
 import android.view.Surface
 import com.shilapi.xcertplay.airplay.VideoCodec
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -14,7 +15,7 @@ internal sealed interface VideoJob {
         val presentNs: Long = 0L,
     ) : VideoJob
     /** [done], when set, is counted down once the decoder no longer renders to its previous surface. */
-    data class SurfaceChanged(val surface: Surface?, val done: java.util.concurrent.CountDownLatch? = null) : VideoJob
+    data class SurfaceChanged(val surface: Surface?, val done: CountDownLatch? = null) : VideoJob
     /** Ask the iPhone for a keyframe, so a surface that just came back gets a picture without waiting for motion. */
     data object RefreshPicture : VideoJob
     data object Resync : VideoJob
