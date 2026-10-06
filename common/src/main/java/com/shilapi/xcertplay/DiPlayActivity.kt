@@ -185,6 +185,10 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Back on the home page finishes this activity while the session runs on, so the icon lands here.
+        if (savedInstanceState == null && isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
+            openProjection(); finish(); return
+        }
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
@@ -214,6 +218,11 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent); setIntent(intent)
+        // CarPlay runs in its own task, so the launcher icon resumes this one. Settings opened from
+        // CarPlay carry a "page" extra, which isLauncherIntent rejects.
+        if (isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
+            page = "home"; render(); openProjection(); return
+        }
         page = intent.getStringExtra("page") ?: "home"; render()
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
@@ -3381,6 +3390,10 @@ class DiPlayActivity : ComponentActivity() {
     // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     companion object {
+        internal fun isLauncherIntent(intent: Intent): Boolean =
+            intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+                intent.getStringExtra("page") == null
+
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
