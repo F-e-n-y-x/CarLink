@@ -212,6 +212,19 @@ class TelephonyMicrophoneTest {
         assertTrue(ShadowLog.getLogsForTag("xcertplay-usb").any { it.msg.contains("microphone start failed") })
     }
 
+    @Test fun telephonyKeepsRecordingWhenTheEchoCancellerLibraryIsMissing() {
+        sink.onMicrophoneStarted(telephony, config("telephony"))
+        assertEquals(AudioRecord.RECORDSTATE_RECORDING, awaitCapture().recordingState)
+        assertTrue(microphoneLog(), microphoneLog().contains("microphone echo canceller enabled=false"))
+        sink.onMicrophoneStopped(telephony)
+    }
+
+    @Test fun speechRecognitionNeverStartsTheEchoCanceller() {
+        sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
+        awaitCapture()
+        assertFalse(microphoneLog().contains("echo canceller"))
+    }
+
     private fun awaitCapture(): AudioRecord {
         assertTrue("Microphone capture did not start", readStarted.await(5, TimeUnit.SECONDS))
         return requireNotNull(recorder.get())

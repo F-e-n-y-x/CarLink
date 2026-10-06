@@ -621,6 +621,10 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="call_echo_cancellation">Cancelación de eco en llamadas</string>
+    <string name="call_echo_cancellation_description">Evita que la otra persona se oiga a sí misma cuando la llamada suena por los altavoces del coche. Se aplica la próxima vez que se conecte CarPlay.</string>
+    <string name="call_voice_filter">Voces más claras en llamadas</string>
+    <string name="call_voice_filter_description">Reduce los graves extra que algunos coches añaden al audio de las llamadas. Se aplica la próxima vez que se conecte CarPlay.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
     <string name="car_button_icon">Icono</string>
     <string name="car_button_icon_custom">Icono personalizado</string>

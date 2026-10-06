@@ -126,9 +126,20 @@ object BydCarPlayCall {
     private var retry: ScheduledFuture<*>? = null // one bounded retry for an unchanged call
     private var retryCard: CarPlayCallCard? = null
     private var retryUsed = false
+    @Volatile private var sessionActive = false
 
     fun attach(appContext: Context) {
         context = appContext.applicationContext
+    }
+
+    /**
+     * A CarPlay session started: start the call watcher now, before any call, so the first call
+     * reaches the car within a second instead of after the watcher's multi-second start.
+     */
+    fun sessionStarted() {
+        sessionActive = true
+        val app = context ?: return
+        writer.execute { arm(app) }
     }
 
     /** The current call, followed even while the setting is off so the wheel's call keys can act on it. */
@@ -141,21 +152,50 @@ object BydCarPlayCall {
         }
         Log.i(TAG, "CarPlay call ${card?.phase ?: "ended"}")
         val app = context ?: return
-        if (BydOutputSettings.carPlayCalls(app)) writer.execute { apply(app, card) }
+        if (BydOutputSettings.carPlayCalls(app)) writer.execute { apply(app, card); if (card == null) arm(app) }
     }
 
     /** The setting changed: show the current call now, or end the one DiPlay showed. */
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
         val card = if (enabled) current() else null
-        writer.execute { resetRetry(card); apply(app, card) }
+        writer.execute {
+            resetRetry(card)
+            apply(app, card)
+            if (enabled) arm(app) else disarm(app)
+        }
     }
 
     /** The session ended: forget the calls and end the one DiPlay showed. */
     fun end() {
+        sessionActive = false
         synchronized(state) { state.clear() }
         val app = context ?: return
-        writer.execute { resetRetry(null); apply(app, null) }
+        writer.execute { resetRetry(null); apply(app, null); disarm(app) }
+    }
+
+    /**
+     * Prepares a token and starts its watcher with no call on the car. A prepared token never writes
+     * to the car, and its watcher retires it silently if DiPlay dies; [apply] reuses it for the next call.
+     */
+    private fun arm(app: Context) {
+        if (!sessionActive || !BydOutputSettings.carPlayCalls(app) || current() != null) return
+        if (watcherToken != null || cleanupPending) return
+        val token = CarPlayCallWatchOwnership.newToken(app.packageName)
+        watcherToken = token
+        prepared = true
+        if (run(app, "prepare - $token ${android.os.Process.myPid()}") && ensureWatcher(app, token)) {
+            Log.i(TAG, "call watcher armed")
+            return
+        }
+        if (run(app, "cancel - $token")) clearLocalOwnership() else cleanupPending = true
+    }
+
+    /** Releases an armed token that never showed a call; [apply] leaves those alone when nothing is shown. */
+    private fun disarm(app: Context) {
+        val token = watcherToken ?: return
+        if (!prepared || shown != null) return
+        if (run(app, "cancel - $token")) clearLocalOwnership() else cleanupPending = true
     }
 
     private fun resetRetry(card: CarPlayCallCard?) {

@@ -633,6 +633,10 @@
     <string name="side_panel_full_screen">⤢ На весь екран</string>
     <string name="main_buffered_audio">Буферизована музика (експериментально)</string>
     <string name="main_buffered_audio_description">Застосунки, які це підтримують (наприклад, Apple Music), надсилають музику приблизно на дві хвилини наперед, тож короткі провали Wi-Fi не чути. Інші застосунки працюють як раніше. Перепідключає CarPlay.</string>
+    <string name="call_echo_cancellation">Придушення луни у дзвінках</string>
+    <string name="call_echo_cancellation_description">Співрозмовник не чує власної луни, коли дзвінок звучить через динаміки автомобіля. Застосовується під час наступного підключення CarPlay.</string>
+    <string name="call_voice_filter">Чіткіші голоси у дзвінках</string>
+    <string name="call_voice_filter_description">Прибирає зайві баси, які деякі автомобілі додають до звуку дзвінків. Застосовується під час наступного підключення CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобіля в CarPlay</string>
     <string name="car_button_icon">Значок</string>
     <string name="car_button_icon_custom">Власний значок</string>

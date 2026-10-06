@@ -681,6 +681,10 @@
     <string name="side_panel_full_screen">⤢ Full screen</string>
     <string name="main_buffered_audio">Buffered music (experimental)</string>
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="call_echo_cancellation">Call echo cancelling</string>
+    <string name="call_echo_cancellation_description">Stops the other person hearing themselves when a call plays through the car speakers. Applies the next time CarPlay connects.</string>
+    <string name="call_voice_filter">Clearer call voices</string>
+    <string name="call_voice_filter_description">Cuts the extra bass some cars add to call audio. Applies the next time CarPlay connects.</string>
     <string name="car_button_in_carplay">Car button in CarPlay</string>
     <string name="car_button_icon">Icon</string>
     <string name="car_button_icon_custom">Custom icon</string>

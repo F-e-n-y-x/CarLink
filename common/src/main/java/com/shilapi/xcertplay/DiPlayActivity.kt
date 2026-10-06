@@ -618,6 +618,10 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveMainBufferedAudio(this, it)
                 reconnectForClusterMap()
             }
+            toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
+                AirPlayPersistence.loadCallEchoCancellation(this)) { AirPlayPersistence.saveCallEchoCancellation(this, it) }
+            toggle(card, getString(R.string.call_voice_filter), getString(R.string.call_voice_filter_description),
+                AirPlayPersistence.loadCallVoiceFilter(this)) { AirPlayPersistence.saveCallVoiceFilter(this, it) }
             choice(card, getString(R.string.frame_rate), listOf(getString(R.string.s_30_fps_lighter_load), getString(R.string.s_60_fps_smoother_motion)), if (AirPlayPersistence.loadFps(this) == 60) 1 else 0) { AirPlayPersistence.saveFps(this, if (it == 1) 60 else 30) }
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it) }
             toggle(card, getString(R.string.right_hand_drive), getString(R.string.place_carplay_s_controls_closer_to_the_driver), AirPlayPersistence.loadRightHandDrive(this)) { AirPlayPersistence.saveRightHandDrive(this, it) }

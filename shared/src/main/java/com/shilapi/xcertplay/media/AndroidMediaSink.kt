@@ -186,7 +186,13 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
+    /** Cancel the call's speaker echo from the microphone in DiPlay, on top of any platform canceller. */
+    private val callEchoCancellation: Boolean = true,
+    /** Cut the bass that head units add when they play a call as music. */
+    private val callVoiceFilter: Boolean = true,
 ) : MediaSink {
+    // Far-end call audio by sample rate, shared between the call renderer and the call microphone.
+    private val callEchoReferences = ConcurrentHashMap<Int, EchoReference>()
     private val appContext = context?.applicationContext
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
@@ -345,7 +351,9 @@ class AndroidMediaSink(
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
             if (config.audioType == "telephony") enterCommunicationMode(id)
-            val uplink = microphoneUplinks.computeIfAbsent(id) { MicrophoneUplink(config, onAudioDiagnostic) }
+            val uplink = microphoneUplinks.computeIfAbsent(id) {
+                MicrophoneUplink(config, onAudioDiagnostic, callEchoReference(config.audioType, config.sampleRate))
+            }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
                 restoreAudioMode(id)
@@ -451,7 +459,20 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
+            callEchoReference(format.audioType, format.sampleRate),
+            callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also { audioRenderers[id] = it }
+    }
+
+    private fun callEchoReference(audioType: String?, sampleRate: Int): EchoReference? =
+        if (callEchoCancellation && audioType == TELEPHONY_AUDIO_TYPE && sampleRate > 0) {
+            callEchoReferences.computeIfAbsent(sampleRate) { EchoReference(it) }
+        } else {
+            null
+        }
+
+    private companion object {
+        const val TELEPHONY_AUDIO_TYPE = "telephony"
     }
 }
 
@@ -838,8 +859,14 @@ private class AudioRenderer(
     private val navigationStreamType: Int,
     private val mediaBufferMillis: Int,
     private val report: (String) -> Unit,
+    /** Receives the played call audio so the call microphone can cancel its echo. */
+    private val echoReference: EchoReference? = null,
+    voiceFilter: Boolean = false,
 ) : Closeable {
     private data class AudioPacket(val rtp: ByteArray, val sample: Int)
+
+    private val pcmChannels = if (format.channels >= 2) 2 else 1
+    private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
 
     private var trackAttributes: AudioAttributes? = null
     private var mappedChannel: AudioChannel? = null
@@ -1366,6 +1393,7 @@ private class AudioRenderer(
                 "audio first PCM type=${format.payloadType} bytes=$length",
             )
         }
+        voiceFilter?.process(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
@@ -1403,6 +1431,14 @@ private class AudioRenderer(
                     startPlayback(track)
                     Log.i(TAG, "audio playback started type=${format.payloadType}")
                 }
+            }
+            echoReference?.let { reference ->
+                val pending = if (playbackStarted) {
+                    totalWrittenFrames - (track.playbackHeadPosition.toLong() and 0xffffffffL)
+                } else {
+                    null
+                }
+                reference.append(data, offset + written - count, count, pcmChannels, pending, System.nanoTime())
             }
         }
     }

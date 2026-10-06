@@ -3731,6 +3731,8 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
             },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
+            callEchoCancellation = AirPlayPersistence.loadCallEchoCancellation(this),
+            callVoiceFilter = AirPlayPersistence.loadCallVoiceFilter(this),
         )
     }
 

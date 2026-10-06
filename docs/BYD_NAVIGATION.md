@@ -157,6 +157,13 @@ that every vehicle feature id/value or partial-write outcome is correct on a par
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
 
+BYD plays a third-party call as media, so the car's own echo canceller never sees it and the amplifier's bass applies to the voice. Two call settings, on by default and applied at the next connection, compensate inside DiPlay:
+
+- **Call echo cancelling** runs SpeexDSP's echo canceller (250 ms tail, BSD licensed, `shared/src/main/jni/speexdsp`) on the call microphone, using what DiPlay itself just played as the reference. It needs mono capture at the downlink sample rate; otherwise the call continues with the platform effects only (`microphone echo canceller enabled=false` in the log).
+- **Call voice filter** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback.
+
+With **CarPlay calls on the dashboard** on, DiPlay arms the call watcher when a CarPlay session starts, so the first call's caller name reaches the cluster and HUD without waiting for the watcher to launch. An armed watcher makes no vehicle writes; it is cancelled when the session ends or the setting is turned off.
+
 Both experimental settings default off. The opt-in feature is included for release testing;
 physical acceptance still needs confirmation on each target firmware: answering/ending a real call
 from the wheel, caller card and timer on cluster/HUD, microphone routing, cancellation/disable and

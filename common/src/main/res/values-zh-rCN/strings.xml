@@ -681,6 +681,10 @@
     <string name="side_panel_full_screen">⤢ 全屏</string>
     <string name="main_buffered_audio">缓冲音乐（实验性）</string>
     <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
+    <string name="call_echo_cancellation">通话回声消除</string>
+    <string name="call_echo_cancellation_description">通话通过车载扬声器播放时，避免对方听到自己的回声。下次连接 CarPlay 时生效。</string>
+    <string name="call_voice_filter">更清晰的通话人声</string>
+    <string name="call_voice_filter_description">削减部分车辆为通话音频额外添加的低音。下次连接 CarPlay 时生效。</string>
     <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
     <string name="car_button_icon">图标</string>
     <string name="car_button_icon_custom">自定义图标</string>

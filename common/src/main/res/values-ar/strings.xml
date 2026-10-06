@@ -621,6 +621,10 @@
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
     <string name="main_buffered_audio">موسيقى مخزّنة مسبقًا (تجريبي)</string>
     <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
+    <string name="call_echo_cancellation">إلغاء صدى المكالمات</string>
+    <string name="call_echo_cancellation_description">يمنع الطرف الآخر من سماع صوته عند تشغيل المكالمة عبر سماعات السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
+    <string name="call_voice_filter">أصوات مكالمات أوضح</string>
+    <string name="call_voice_filter_description">يخفض الجهير الزائد الذي تضيفه بعض السيارات إلى صوت المكالمات. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
     <string name="car_button_icon">الأيقونة</string>
     <string name="car_button_icon_custom">أيقونة مخصصة</string>
