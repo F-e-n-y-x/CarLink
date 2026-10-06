@@ -265,4 +265,48 @@ class CarPlayNightModeControllerTest {
         assertFalse(f.controller.night)
     }
 
+    @Test fun scheduledNightCrossesMidnightAndUpdatesWhileConnected() {
+        val clock = Clock()
+        val time = object : NightTimeSource {
+            override fun minuteOfDay() = ((17 * 60 + 59 + clock.now / 60_000) % (24 * 60)).toInt()
+            override fun millisUntilNextMinute() = 60_000L - clock.now % 60_000L
+        }
+        val output = mutableListOf<Boolean>()
+        val controller = CarPlayNightModeController(Light(), clock, false, output::add, time)
+        controller.configure(CarPlayNightMode.SCHEDULE, false,
+            schedule = CarPlayNightSchedule(18 * 60, 6 * 60))
+        controller.resume(false)
+        clock.advance(59_999)
+        assertFalse(controller.night)
+        clock.advance(1)
+        assertTrue(controller.night)
+        clock.advance(12 * 60 * 60 * 1_000L)
+        assertFalse(controller.night)
+        assertEquals(listOf(true, false), output)
+        controller.pause()
+        assertTrue(clock.tasks.isEmpty())
+    }
+
+    @Test fun scheduleUsesCurrentLocalClockAtEachTickAndSupportsDaytimeRanges() {
+        val clock = Clock()
+        var minute = 8 * 60 + 59
+        val time = object : NightTimeSource {
+            override fun minuteOfDay() = minute
+            override fun millisUntilNextMinute() = 60_000L
+        }
+        val controller = CarPlayNightModeController(Light(), clock, false, {}, time)
+        controller.configure(CarPlayNightMode.SCHEDULE, false,
+            schedule = CarPlayNightSchedule(9 * 60, 17 * 60))
+        controller.resume(false)
+        minute = 9 * 60
+        clock.advance(60_000)
+        assertTrue(controller.night)
+        minute = 17 * 60
+        clock.advance(60_000)
+        assertFalse(controller.night)
+        controller.configure(CarPlayNightMode.DAY, false)
+        assertTrue(clock.tasks.isEmpty())
+        assertFalse(CarPlayNightSchedule(6 * 60, 6 * 60).isNight(6 * 60))
+    }
+
 }

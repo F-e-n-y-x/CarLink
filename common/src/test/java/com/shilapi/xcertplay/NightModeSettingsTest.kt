@@ -47,6 +47,8 @@ class NightModeSettingsTest {
             AirPlayPersistence.saveCarPlayNightMode(activity, mode)
             renderSettings()
             assertAmbientVisible(mode == CarPlayNightMode.AMBIENT)
+            assertEquals(mode == CarPlayNightMode.SCHEDULE, button(R.string.carplay_night_start).isShown)
+            assertEquals(mode == CarPlayNightMode.SCHEDULE, button(R.string.carplay_night_end).isShown)
         }
     }
 
