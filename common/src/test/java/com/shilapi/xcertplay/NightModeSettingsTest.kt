@@ -130,7 +130,7 @@ class NightModeSettingsTest {
 
     private fun renderSettings() {
         page = LinearLayout(activity)
-        DiPlayActivity::class.java.getDeclaredMethod("settings", LinearLayout::class.java)
+        DiPlayActivity::class.java.getDeclaredMethod("displaySettings", LinearLayout::class.java)
             .apply { isAccessible = true }.invoke(activity, page)
         activity.setContentView(page)
     }
