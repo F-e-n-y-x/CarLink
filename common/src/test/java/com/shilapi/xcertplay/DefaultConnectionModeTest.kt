@@ -40,12 +40,17 @@ class DefaultConnectionModeTest {
 
     @Test fun fixedDefaultSurvivesManualTransportChangesWithoutChangingAutoConnectOrPhone() {
         DiPlayPreferences.savePhone(app, "00:11:22:33:44:55", "Test iPhone")
-        for (mode in DefaultConnectionMode.entries) {
+        val expectedModes = mapOf(
+            DefaultConnectionMode.LAST_USED to listOf(false, true),
+            DefaultConnectionMode.WIRELESS to listOf(true, true),
+            DefaultConnectionMode.USB to listOf(false, false),
+        )
+        for ((mode, expectedWireless) in expectedModes) {
             DiPlayPreferences.saveDefaultConnectionMode(app, mode)
             assertEquals(mode, DiPlayPreferences.defaultConnectionMode(app))
-            for (lastWireless in listOf(false, true)) {
+            for ((index, lastWireless) in listOf(false, true).withIndex()) {
                 AirPlayPersistence.saveWirelessEnabled(app, lastWireless)
-                assertEquals(mode.wireless(lastWireless), DiPlayPreferences.autoConnectWireless(app))
+                assertEquals(expectedWireless[index], DiPlayPreferences.autoConnectWireless(app))
                 assertEquals(lastWireless, AirPlayPersistence.loadWirelessEnabled(app))
             }
             assertFalse(DiPlayPreferences.autoConnect(app))
