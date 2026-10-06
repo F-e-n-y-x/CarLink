@@ -262,7 +262,7 @@ class DiPlayActivity : ComponentActivity() {
             startCarHotspotOnLaunch()
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
                 DiPlayPreferences.autoConnect(this) && intent.getStringExtra("page") == null) {
-                handler.post { connect(AirPlayPersistence.loadWirelessEnabled(this)) }
+                handler.post { connect(DiPlayPreferences.autoConnectWireless(this)) }
             }
         }
     }
@@ -512,7 +512,15 @@ class DiPlayActivity : ComponentActivity() {
             card.addView(label(destination + getString(R.string.nothing_is_sent_automatically_protocol_payloads_and_creden), 14, MUTED).apply { setPadding(0, dp(12), 0, 0) })
         }
         section(content, getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
-            toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.default_connection_description), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            val connectionModes = DefaultConnectionMode.entries
+            choice(card, getString(R.string.default_connection_mode), listOf(
+                getString(R.string.default_connection_last_used),
+                getString(R.string.default_connection_wireless),
+                getString(R.string.default_connection_usb)
+            ), connectionModes.indexOf(DiPlayPreferences.defaultConnectionMode(this)), reconnects = false) {
+                DiPlayPreferences.saveDefaultConnectionMode(this, connectionModes[it])
+            }
             adbToggle(card, R.string.open_after_the_car_starts,
                 R.string.availability_depends_on_your_head_unit_s_startup_settings,
                 read = { AirPlayPersistence.loadAutoStartOnBoot(this) },
