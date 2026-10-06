@@ -5,6 +5,7 @@ package com.shilapi.xcertplay
 import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
+import android.app.TimePickerDialog
 import android.view.Window
 import android.bluetooth.BluetoothManager
 import android.content.Context
@@ -555,6 +556,9 @@ class DiPlayActivity : ComponentActivity() {
             val ambientControls = column().apply {
                 visibility = if (nightMode == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
             }
+            val scheduleControls = column().apply {
+                visibility = if (nightMode == CarPlayNightMode.SCHEDULE) View.VISIBLE else View.GONE
+            }
             choice(
                 card,
                 getString(R.string.carplay_night_mode),
@@ -563,12 +567,14 @@ class DiPlayActivity : ComponentActivity() {
                     getString(R.string.carplay_night_ambient),
                     getString(R.string.carplay_night_day),
                     getString(R.string.carplay_night_night),
+                    getString(R.string.carplay_night_schedule),
                 ),
                 nightModes.indexOf(nightMode),
                 reconnects = false,
             ) { index ->
                 AirPlayPersistence.saveCarPlayNightMode(this, nightModes[index])
                 ambientControls.visibility = if (nightModes[index] == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
+                scheduleControls.visibility = if (nightModes[index] == CarPlayNightMode.SCHEDULE) View.VISIBLE else View.GONE
             }
             card.addView(label(getString(R.string.carplay_night_hint), 14, MUTED))
             card.addView(label(getString(R.string.carplay_night_time_note), 14, MUTED).apply {
@@ -582,6 +588,12 @@ class DiPlayActivity : ComponentActivity() {
                 0..60, 2, R.string.ambient_delay_summary, { AirPlayPersistence.loadAmbientDelaySeconds(this) },
                 save = { AirPlayPersistence.saveAmbientDelaySeconds(this, it) })
             card.addView(ambientControls)
+            scheduleControls.addView(label(getString(R.string.carplay_night_schedule_hint), 14, MUTED).apply {
+                setPadding(0, 0, 0, dp(18))
+            })
+            scheduleTimeControl(scheduleControls, start = true)
+            scheduleTimeControl(scheduleControls, start = false)
+            card.addView(scheduleControls)
             card.addView(button(getString(R.string.picture_adjustments), false) {
                 startActivity(Intent(this, CarPlayHostActivity::class.java)
                     .putExtra("picture_controls", true).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
@@ -2859,6 +2871,31 @@ class DiPlayActivity : ComponentActivity() {
         parent.addView(label(getString(R.string.changes_the_size_of_carplay_icons_and_text_applying_a_size), 14, MUTED).apply {
             setPadding(0, 0, 0, dp(18))
         })
+    }
+
+    private fun scheduleTimeControl(parent: LinearLayout, start: Boolean) {
+        val title = getString(if (start) R.string.carplay_night_start else R.string.carplay_night_end)
+        fun labelFor(minute: Int) = "$title · ${String.format(Locale.getDefault(), "%02d:%02d", minute / 60, minute % 60)}"
+        val initial = AirPlayPersistence.loadCarPlayNightSchedule(this)
+        val control = button(labelFor(if (start) initial.startMinute else initial.endMinute), false) {}
+        control.setOnClickListener {
+            val current = AirPlayPersistence.loadCarPlayNightSchedule(this)
+            val selected = if (start) current.startMinute else current.endMinute
+            TimePickerDialog(this, { _, hour, minute ->
+                val updatedMinute = hour * 60 + minute
+                val other = if (start) current.endMinute else current.startMinute
+                if (updatedMinute == other) {
+                    toast(getString(R.string.carplay_night_schedule_same_time))
+                } else {
+                    val updated = if (start) current.copy(startMinute = updatedMinute)
+                        else current.copy(endMinute = updatedMinute)
+                    AirPlayPersistence.saveCarPlayNightSchedule(this, updated)
+                    control.text = labelFor(updatedMinute)
+                }
+            }, selected / 60, selected % 60, true).show()
+        }
+        parent.addView(control, matchButton(0, 60))
+        parent.addView(space(12))
     }
 
     private fun connect(wireless: Boolean) {

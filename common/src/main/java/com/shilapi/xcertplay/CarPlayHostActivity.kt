@@ -400,6 +400,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var darkMode = false
     private var paintWaitingScreen: () -> Unit = {}
     private var carPlayNightMode = CarPlayNightMode.SYSTEM
+    private var nightSchedule = CarPlayNightSchedule()
     private var ambientLightThreshold = AmbientLightThreshold()
     private var ambientDelaySeconds = 2
     private var nightModeDiagnosticSource = ThemeModeDiagnostics.Source.CARPLAY_MODE
@@ -408,14 +409,15 @@ class CarPlayHostActivity : ComponentActivity() {
             light = AndroidAmbientLight(this),
             scheduler = MainThreadNightModeScheduler(),
             initialNight = darkMode,
-        ) { night ->
-            darkMode = night
-            paintWaitingScreen()
-            applyClusterTurnOverlay()
-            appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
-            logThemeState(nightModeDiagnosticSource, resources.configuration)
-            syncAirPlayDarkMode(nightModeDiagnosticSource)
-        }
+            onNightChanged = { night ->
+                darkMode = night
+                paintWaitingScreen()
+                applyClusterTurnOverlay()
+                appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
+                logThemeState(nightModeDiagnosticSource, resources.configuration)
+                syncAirPlayDarkMode(nightModeDiagnosticSource)
+            },
+        )
     }
     private val themeDiagnostics = ThemeModeDiagnostics()
     private var lastConfiguration: Configuration? = null
@@ -596,11 +598,13 @@ class CarPlayHostActivity : ComponentActivity() {
         carPlayNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         ambientLightThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         ambientDelaySeconds = AirPlayPersistence.loadAmbientDelaySeconds(this)
+        nightSchedule = AirPlayPersistence.loadCarPlayNightSchedule(this)
         nightModeController.configure(
             carPlayNightMode,
             nightModeOrNull(resources.configuration.uiMode) ?: false,
             ambientLightThreshold,
             ambientDelaySeconds,
+            nightSchedule,
         )
         gestureFingerCount = AirPlayPersistence.loadSettingsGestureFingers(this)
         displayScalePercent = AirPlayPersistence.loadDisplayScalePercent(this)
@@ -777,12 +781,16 @@ class CarPlayHostActivity : ComponentActivity() {
         val savedNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         val savedThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         val savedDelay = AirPlayPersistence.loadAmbientDelaySeconds(this)
+        val savedSchedule = AirPlayPersistence.loadCarPlayNightSchedule(this)
         val systemNight = nightModeOrNull(resources.configuration.uiMode) ?: false
-        if (savedNightMode != carPlayNightMode || savedThreshold != ambientLightThreshold || savedDelay != ambientDelaySeconds) {
+        if (savedNightMode != carPlayNightMode || savedThreshold != ambientLightThreshold ||
+            savedDelay != ambientDelaySeconds || savedSchedule != nightSchedule) {
             carPlayNightMode = savedNightMode
             ambientLightThreshold = savedThreshold
             ambientDelaySeconds = savedDelay
-            nightModeController.configure(carPlayNightMode, systemNight, ambientLightThreshold, ambientDelaySeconds)
+            nightSchedule = savedSchedule
+            nightModeController.configure(carPlayNightMode, systemNight, ambientLightThreshold, ambientDelaySeconds,
+                nightSchedule)
         }
         nightModeController.resume(systemNight)
         if (!menuOpen) {
