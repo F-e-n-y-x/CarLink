@@ -7,8 +7,16 @@ import java.util.concurrent.TimeUnit
 
 internal sealed interface VideoJob {
     data class Config(val codec: VideoCodec, val codecData: ByteArray) : VideoJob
-    data class Frame(val nalus: ByteArray, val receivedNs: Long = System.nanoTime()) : VideoJob
-    data class SurfaceChanged(val surface: Surface?) : VideoJob
+    data class Frame(
+        val nalus: ByteArray,
+        val receivedNs: Long = System.nanoTime(),
+        /** When to show this frame (System.nanoTime), or 0 to show it as soon as it is decoded. */
+        val presentNs: Long = 0L,
+    ) : VideoJob
+    /** [done], when set, is counted down once the decoder no longer renders to its previous surface. */
+    data class SurfaceChanged(val surface: Surface?, val done: java.util.concurrent.CountDownLatch? = null) : VideoJob
+    /** Ask the iPhone for a keyframe, so a surface that just came back gets a picture without waiting for motion. */
+    data object RefreshPicture : VideoJob
     data object Resync : VideoJob
 }
 

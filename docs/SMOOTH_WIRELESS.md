@@ -38,7 +38,48 @@ With rotation on, CarPlay gets a square picture that holds both a landscape and 
 - **You turn the screen often:** turn rotation on and keep **Smoother (1920)**, the default.
 - **Sharper (the screen's size):** on a screen wider than 1920 pixels it can request a larger supported square and may reduce smoothness. At 1920 pixels or below, both options have the same size limit.
 
-## 3. Checking it yourself
+## 3. Smooth video (experimental)
+
+**Settings → Display and performance → Smooth video (experimental)**, off by default.
+
+By default DiPlay shows each frame as soon as the decoder releases it. On the Tang, the decoder's output timing depended on later input:
+
+- **The decoder held frames.** `c2.qti.avc.decoder` released a frame only after about two more had been queued. Queue-to-output time was 45–50 ms (median) and 65–80 ms (p90) at about 50 fps, and on a still screen the last frame came out only with the next one.
+- **The iPhone's stream does not ask for that.** Its SPS signals `max_num_reorder_frames` 0, and the frames had no B slices.
+- **No decoder setting changed it.** These were tried:
+  - `KEY_LOW_LATENCY` (the decoder does not advertise it);
+  - `vendor.qti-ext-dec-picture-order.enable`;
+  - `vendor.qti-ext-dec-timestamp-reorder.value` 0;
+  - Constrained High flags in the SPS.
+
+The iPhone stamps each frame with its own time in the screen header. On the Tang at 60 fps these times fell on a 1/60 s grid, and frames the iPhone skipped left gaps of whole multiples. With this setting, DiPlay:
+
+- renders the main screen to a `SurfaceView`;
+- releases each frame with `releaseOutputBuffer(index, timestampNs)` at that time plus a fixed delay over the link's base delay;
+- takes the base delay from a low percentile of recent arrivals (frame time to arrival). After start-up the base moves at most 2 ms per second.
+
+The delay is three frame intervals plus 40 ms: 90 ms at 60 fps (measured), and 140 ms at 30 fps (derived, not measured). Frames that leave the decoder after their time are shown at once and counted as `late`.
+
+**Measured on my Tang** (USB, 2560×1440 at 60 fps, alternating off/on runs of about 50 s of scrolling, `rx` about 56 fps in every run). Intervals come from `dumpsys SurfaceFlinger --latency` for the video layer (the app window when off, the `SurfaceView` when on), counting only seconds with at least 40 presented frames:
+
+| Run | Smooth video | Seconds counted | Next frame 1 refresh later | 2 refreshes later | 3 or more | Presented fps |
+|---|---|---|---|---|---|---|
+| A1 | off | 9 | 63.6% | 32.5% | 3.9% | 42.4 |
+| B1 | on | 29 | 86.0% | 12.4% | 1.5% | 51.2 |
+| A2 | off | 31 | 63.8% | 31.4% | 4.8% | 42.1 |
+| B2 | on | 37 | 83.4% | 14.2% | 2.5% | 50.0 |
+
+- With the setting on, more of the received frames reached the screen and more of them came one refresh apart. This is consistent with the decoder's bunched output being spread back onto the iPhone's grid; it was not measured separately how much the `SurfaceView` alone contributes. An earlier run with a `SurfaceView` and no pacing gave 61–64% at one refresh, close to the off runs.
+- With 90 ms, in the 5 s windows of the on runs where `rx` was above 53 fps, `late` was 36–75 (about 13–26% of the frames received), so a share of frames still left the decoder after their time.
+- In a later wireless session (car hotspot) the main screen arrived at a steady 30 fps for over a minute while the setting was 60 fps. The delay stayed at 90 ms, and `late` was 98–128 per 5 s (about 65–85% of the frames received), so for that stretch the setting behaved much like off. A delay that follows the received frame rate or the measured lateness is not part of this change.
+- When DiPlay goes to the background, the main-screen decoder moves to an offscreen surface and keeps its state; on return the picture came back at once, with a short blink.
+
+**Cost and limits:**
+- Each frame is held until its display time, up to about the delay after it arrives, so touches respond later. The added touch-to-screen delay was not measured.
+- Picture adjustments do not apply, because the video no longer passes through the view they are applied to.
+- These runs were made on one car, parked. Other decoders may need a different delay, or none.
+
+## 4. Checking it yourself
 
 While CarPlay runs, DiPlay logs a `DiPlay-VideoStats` line every 5 s:
 
@@ -48,4 +89,5 @@ video stats rx=56.2fps shown=56.4fps maxGap=73ms kbps=28899 ...
 
 - `rx` counts frames received by DiPlay; `shown` counts decoder outputs released for rendering to its surface. These are windowed counters, not proof of every frame the phone sent or every physical display refresh.
 - If `shown` keeps up with `rx` but `rx` is low while you scroll, compare picture settings and the Wi-Fi link. The counters alone cannot distinguish phone encoding, transport delays or backpressure, and do not rule out every head-unit problem.
+- `decode p50/p90` is the time from queueing a frame into the decoder to dequeueing its output. Frames queued before an input gap of more than 0.5 s (a still screen) are left out. With smooth video on, `late` counts frames shown at once because they left the decoder after their display time, or had no usable display time.
 - `maxGap` is the largest interval between received frames shorter than 2 s; longer intervals are excluded. A static screen may also produce gaps because the iPhone need not send new frames. A single large value is not evidence of a stall by itself.

@@ -186,6 +186,11 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
+    /**
+     * Smooth video: show main-screen frames at the iPhone's frame time plus this delay, 0 to show each
+     * as soon as it is decoded. Only a SurfaceView honours the timestamps, so the host sets it with one.
+     */
+    private val videoPacingDelayMillis: Int = 0,
 ) : MediaSink {
     private val appContext = context?.applicationContext
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
@@ -250,8 +255,28 @@ class AndroidMediaSink(
         videoDecoders[type]?.setSurface(surface)
     }
 
+    /**
+     * Moves stream [type] onto [replacement] (smooth video's placeholder while the SurfaceView is gone) and
+     * returns once the decoder no longer renders to [leaving], as a SurfaceHolder destroy callback requires.
+     */
+    fun replaceSurface(type: Int, leaving: Surface, replacement: Surface) {
+        if (surfaces[type] !== leaving) return
+        surfaces[type] = replacement
+        videoDecoders[type]?.setSurfaceAndWait(replacement)
+    }
+
     fun clearSurface(type: Int, surface: Surface) {
         if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurface(null)
+    }
+
+    /** Like [clearSurface], but returns once the decoder has stopped rendering to [surface]. */
+    fun clearSurfaceAndWait(type: Int, surface: Surface) {
+        if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurfaceAndWait(null)
+    }
+
+    /** Requests a keyframe for stream [type], e.g. after its surface came back. */
+    fun refreshPicture(type: Int) {
+        videoDecoders[type]?.refreshPicture()
     }
 
     /**
@@ -298,6 +323,11 @@ class AndroidMediaSink(
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray) {
         videoDecoder(type).submit(naluBytes)
+        mirrorDecoders(type).forEach { it.submit(naluBytes) }
+    }
+
+    override fun onVideoFrame(type: Int, naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
+        videoDecoder(type).submit(naluBytes, senderNanos, arrivalNanos)
         mirrorDecoders(type).forEach { it.submit(naluBytes) }
     }
 
@@ -434,6 +464,8 @@ class AndroidMediaSink(
         requestKeyFrame = { requestVideoRecovery(type) },
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
+        // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
+        pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
     )
 
     @Synchronized
@@ -455,7 +487,11 @@ class AndroidMediaSink(
     }
 }
 
+/** CarPlay's main screen stream type. */
+private const val MAIN_SCREEN_TYPE = 110
+
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
+
 private class VideoDecoder(
     streamType: Int,
     surface: Surface?,
@@ -465,7 +501,17 @@ private class VideoDecoder(
     private val requestKeyFrame: () -> Unit,
     private val report: (String) -> Unit,
     statsLabel: String? = null,
+    private val pacingDelayNanos: Long = 0L,
 ) : Closeable {
+    private val pacer = FramePacer()
+    // Decode latency: when each presentation time was queued (decode thread only).
+    private val queuedPresentationUs = LongArray(64)
+    private val queuedAtNanos = LongArray(64)
+    private var queuedSlot = 0
+    // The decoder releases a frame only once later input arrives, so a frame queued before a still-screen
+    // gap waits for the next one; such waits are not decode time and are left out of the stats.
+    private var lastQueuedNanos = 0L
+    private var resumedAtNanos = 0L
     private val queue = VideoDecodeQueue()
     @Volatile private var running = true
     @Volatile private var decoder: MediaCodec? = null
@@ -485,13 +531,33 @@ private class VideoDecoder(
         queue.offer(VideoJob.Config(codec, codecData))
     }
 
-    fun submit(nalus: ByteArray) {
+    fun submit(nalus: ByteArray, senderNanos: Long = 0L, arrivalNanos: Long = 0L) {
         stats.onReceived(nalus.size)
-        queue.offer(VideoJob.Frame(nalus))
+        val presentNs = if (pacingDelayNanos > 0 && senderNanos > 0 && arrivalNanos > 0) {
+            pacer.target(senderNanos, arrivalNanos, pacingDelayNanos)
+        } else 0L
+        queue.offer(VideoJob.Frame(nalus, presentNs = presentNs))
     }
 
     fun setSurface(surface: Surface?) {
         queue.offer(VideoJob.SurfaceChanged(surface))
+    }
+
+    /** Waits (bounded) until the decoder has moved to [surface], so the previous one can be destroyed. */
+    fun setSurfaceAndWait(surface: Surface?) {
+        val done = java.util.concurrent.CountDownLatch(1)
+        queue.offer(VideoJob.SurfaceChanged(surface, done))
+        if (Thread.currentThread() !== thread) {
+            try {
+                done.await(SURFACE_DETACH_WAIT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
+    }
+
+    fun refreshPicture() {
+        queue.offer(VideoJob.RefreshPicture)
     }
 
     override fun close() {
@@ -510,9 +576,10 @@ private class VideoDecoder(
                             if (System.nanoTime() - job.receivedNs > MAX_FRAME_AGE_NS) {
                                 queue.discardFrames()
                                 recover("video backlog exceeded 250 ms")
-                            } else feed(job.nalus)
+                            } else feed(job.nalus, job.presentNs)
                         }
-                        is VideoJob.SurfaceChanged -> changeSurface(job.surface)
+                        is VideoJob.SurfaceChanged -> try { changeSurface(job.surface) } finally { job.done?.countDown() }
+                        is VideoJob.RefreshPicture -> if (decoder != null) requestKeyFrameIfDue()
                         is VideoJob.Resync -> recover("video queue overflow")
                         null -> Unit
                     }
@@ -685,7 +752,7 @@ private class VideoDecoder(
         lastConfig?.let(::configureDecoder)
     }
 
-    private fun feed(nalus: ByteArray) {
+    private fun feed(nalus: ByteArray, presentNs: Long = 0L) {
         val annexB = MediaCodecSupport.toAnnexB(nalus)
         val config = lastConfig ?: return
         if (outputSurface == null) return
@@ -712,7 +779,15 @@ private class VideoDecoder(
         input.clear()
         if (annexB.size <= input.remaining()) {
             input.put(annexB)
-            codec.queueInputBuffer(index, 0, annexB.size, System.nanoTime() / 1000, 0)
+            // A paced frame carries its display time; MediaCodec returns it with the decoded output.
+            val presentationUs = if (presentNs > 0) presentNs / 1000 else System.nanoTime() / 1000
+            codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
+            val queuedNow = System.nanoTime()
+            if (lastQueuedNanos != 0L && queuedNow - lastQueuedNanos > STILL_GAP_NS) resumedAtNanos = queuedNow
+            lastQueuedNanos = queuedNow
+            queuedPresentationUs[queuedSlot] = presentationUs
+            queuedAtNanos[queuedSlot] = queuedNow
+            queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
             referenceChain.onQueued()
         } else {
             recover("video frame exceeded codec input capacity")
@@ -738,6 +813,11 @@ private class VideoDecoder(
         requestKeyFrame()
     }
 
+    private fun queuedAt(presentationUs: Long): Long {
+        for (slot in queuedPresentationUs.indices) if (queuedPresentationUs[slot] == presentationUs) return queuedAtNanos[slot]
+        return 0L
+    }
+
     private fun drainOutput(codec: MediaCodec) {
         val info = MediaCodec.BufferInfo()
         while (running) {
@@ -747,7 +827,17 @@ private class VideoDecoder(
                 index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
                 index >= 0 -> {
                     val render = outputSurface != null
-                    codec.releaseOutputBuffer(index, render)
+                    val now = System.nanoTime()
+                    val queued = queuedAt(info.presentationTimeUs)
+                    val heldOverGap = queued in 1 until resumedAtNanos
+                    if (queued > 0 && !heldOverGap) stats.onDecodeLatency(now - queued)
+                    val targetNs = info.presentationTimeUs * 1000
+                    if (render && pacingDelayNanos > 0 && targetNs - now in 1..MAX_PACING_AHEAD_NS) {
+                        codec.releaseOutputBuffer(index, targetNs)
+                    } else {
+                        if (render && pacingDelayNanos > 0 && !heldOverGap) stats.onLate()
+                        codec.releaseOutputBuffer(index, render)
+                    }
                     if (render) stats.onRendered()
                     if (render && !renderedFrameLogged) {
                         renderedFrameLogged = true
@@ -812,6 +902,12 @@ private class VideoDecoder(
         const val MAX_INPUT_SIZE = 8 * 1024 * 1024
         const val INPUT_TIMEOUT_US = 10_000L
         const val MAX_FRAME_AGE_NS = 250_000_000L
+        // A paced frame more than this ahead is treated as a bad mapping and shown at once.
+        const val MAX_PACING_AHEAD_NS = 1_000_000_000L
+        // Covers VideoInputPump's 500 ms input wait plus a codec stop and release.
+        const val SURFACE_DETACH_WAIT_MS = 700L
+        // Longer input gaps are a still screen, not decoding work.
+        const val STILL_GAP_NS = 500_000_000L
         val START_CODE = byteArrayOf(0x00, 0x00, 0x00, 0x01)
     }
 }

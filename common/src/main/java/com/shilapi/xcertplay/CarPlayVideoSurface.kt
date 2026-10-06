@@ -5,9 +5,12 @@ import kotlin.math.roundToInt
 
 internal enum class CarPlayVideoSurfaceMode { TEXTURE, SURFACE }
 
-/** Decide from the attached window, not the declared manifest flag or vehicle model. */
-internal fun carPlayVideoSurfaceMode(hardwareAccelerated: Boolean): CarPlayVideoSurfaceMode =
-    if (hardwareAccelerated) CarPlayVideoSurfaceMode.TEXTURE else CarPlayVideoSurfaceMode.SURFACE
+/**
+ * Decide from the attached window, not the declared manifest flag or vehicle model. Smooth video also
+ * needs a SurfaceView: only the compositor honours the frame timestamps it releases with.
+ */
+internal fun carPlayVideoSurfaceMode(hardwareAccelerated: Boolean, smoothVideo: Boolean = false): CarPlayVideoSurfaceMode =
+    if (hardwareAccelerated && !smoothVideo) CarPlayVideoSurfaceMode.TEXTURE else CarPlayVideoSurfaceMode.SURFACE
 
 /** Integer compositor bounds retain overscan when a CarPlay view area crops the canvas. */
 internal data class CarPlaySurfaceBounds(val left: Int, val top: Int, val width: Int, val height: Int) {
@@ -21,6 +24,13 @@ internal data class CarPlaySurfaceBounds(val left: Int, val top: Int, val width:
         }
     }
 }
+
+/**
+ * Smooth video delay over the link's base delay. On my Tang the Qualcomm decoder released a frame only
+ * after about two more had been queued (p90 65-80 ms at about 50 fps), so the delay is three frame
+ * intervals plus 40 ms: 90 ms at 60 fps, measured; 140 ms at 30 fps, derived, not measured.
+ */
+internal fun smoothVideoDelayMillis(fps: Int): Int = 40 + 3_000 / fps.coerceIn(30, 60)
 
 /** Texture wrappers are ours to release; SurfaceHolder surfaces belong to the framework. */
 internal class CarPlayVideoSurfaceOwner<T : Any>(

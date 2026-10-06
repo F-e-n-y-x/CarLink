@@ -681,6 +681,8 @@
     <string name="side_panel_full_screen">⤢ Full screen</string>
     <string name="main_buffered_audio">Buffered music (experimental)</string>
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="smooth_video">Smooth video (experimental)</string>
+    <string name="smooth_video_description">Shows each main-screen CarPlay frame at the time the iPhone stamped on it plus a fixed delay (90 ms at 60 fps), instead of as soon as it is decoded. Frames that arrive too late are shown at once. Scrolling can look more even, but touches respond later. Picture adjustments do not apply. Reconnects CarPlay.</string>
     <string name="car_button_in_carplay">Car button in CarPlay</string>
     <string name="car_button_icon">Icon</string>
     <string name="car_button_icon_custom">Custom icon</string>

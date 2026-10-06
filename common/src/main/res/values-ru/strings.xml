@@ -621,6 +621,8 @@
     <string name="side_panel_full_screen">⤢ На весь экран</string>
     <string name="main_buffered_audio">Буферизованная музыка (экспериментально)</string>
     <string name="main_buffered_audio_description">Приложения, которые это поддерживают (например, Apple Music), присылают музыку примерно на две минуты вперёд, поэтому короткие провалы Wi-Fi не слышны. Остальные приложения работают как раньше. Переподключает CarPlay.</string>
+    <string name="smooth_video">Плавное видео (экспериментально)</string>
+    <string name="smooth_video_description">Показывает каждый кадр главного экрана CarPlay по времени, которое отметил на нём iPhone, плюс постоянный запас (90 мс при 60 кадрах/с), а не сразу после декодирования. Кадры, пришедшие слишком поздно, показываются сразу. Прокрутка может стать ровнее, но отклик на касание запаздывает. Настройки картинки не применяются. Переподключает CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
     <string name="car_button_icon">Значок</string>
     <string name="car_button_icon_custom">Свой значок</string>

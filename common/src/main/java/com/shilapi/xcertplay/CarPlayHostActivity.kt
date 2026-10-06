@@ -274,6 +274,13 @@ class CarPlayHostActivity : ComponentActivity() {
     private var videoView: View? = null
     private var fallbackVideoView: SurfaceView? = null
     private var fallbackVideoBounds: CarPlaySurfaceBounds? = null
+    // Smooth video (a setting): SurfaceView output with frames released at the iPhone's frame time.
+    private var smoothVideo = false
+    // A SurfaceView loses its surface whenever the activity stops. Parking the decoder on an offscreen
+    // ImageReader meanwhile keeps it and its reference frames, as the TextureView path does; the reader
+    // drops each frame at once, so the decoder never runs out of output buffers.
+    private var parkingReader: android.media.ImageReader? = null
+    private var parkingSurface: Surface? = null
     private var videoSurfaceProbe: ViewTreeObserver.OnPreDrawListener? = null
     private var pictureBinding: CarPlayPicture.Binding? = null
     private var picturePanel: View? = null
@@ -519,6 +526,8 @@ class CarPlayHostActivity : ComponentActivity() {
             videoSurfaceOwner.replace(surface, releaseOnDetach = false)
             appendLog("SurfaceView video surface created valid=${surface.isValid}")
             attachSurface(surface)
+            // A still CarPlay screen sends no frames, so ask for one instead of showing the parked gap.
+            if (smoothVideo) sink?.refreshPicture(SCREEN_TYPE_MAIN)
             videoView?.let { updateVideoLayout(it.width, it.height) }
         }
 
@@ -529,7 +538,14 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
-            videoSurfaceOwner.clear(holder.surface)
+            val surface = holder.surface
+            if (smoothVideo && videoSurfaceOwner.current === surface) {
+                // Both return once the decoders no longer render to the surface being destroyed; the
+                // owner's detach below then finds nothing left to clear.
+                sink?.replaceSurface(SCREEN_TYPE_MAIN, surface, parkingSurface ?: newParkingSurface())
+                sink?.clearSurfaceAndWait(SCREEN_TYPE_ALT, surface)
+            }
+            videoSurfaceOwner.clear(surface)
             appendLog("SurfaceView video surface destroyed")
         }
     }
@@ -1307,6 +1323,10 @@ class CarPlayHostActivity : ComponentActivity() {
         mainHandler.removeCallbacks(expireOldLogLines)
         mainHandler.removeCallbacks(pollConfiguration)
         videoSurfaceOwner.clear()
+        parkingSurface?.let { sink?.clearSurfaceAndWait(SCREEN_TYPE_MAIN, it) }
+        parkingReader?.close()
+        parkingReader = null
+        parkingSurface = null
         currentSurfaceTexture = null
         fallbackVideoView = null
         fallbackVideoBounds = null
@@ -1477,6 +1497,7 @@ class CarPlayHostActivity : ComponentActivity() {
         safeAreaEditor = buildSafeAreaEditor().apply { visibility = View.GONE }
         root.addView(safeAreaEditor, FrameLayout.LayoutParams(-1, -1))
         videoView = video
+        smoothVideo = AirPlayPersistence.loadSmoothVideo(this)
         observeVideoWindow(video)
         gestureOverlay = gestureLayer
         settingsGestureHint = gestureHint
@@ -3731,6 +3752,8 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
             },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
+            // Only a SurfaceView honours release timestamps; smooth video always selects one.
+            videoPacingDelayMillis = if (smoothVideo) smoothVideoDelayMillis(fps) else 0,
         )
     }
 
@@ -4291,6 +4314,12 @@ class CarPlayHostActivity : ComponentActivity() {
             return
         }
         if (controller == null && adoptBackgroundSession()) return
+        // The video view is chosen once per activity; a changed Smooth video setting needs a new one.
+        if (controller == null && AirPlayPersistence.loadSmoothVideo(this) != smoothVideo) {
+            appendLog("Smooth video setting changed; rebuilding the video view")
+            recreate()
+            return
+        }
         val size = activeDisplaySize ?: return
         val transportReady = if (wirelessEnabled) wirelessPermissionsReady else vpnReady
         val locationReady = !locationReportingEnabled || locationPermissionAvailable
@@ -4545,8 +4574,9 @@ class CarPlayHostActivity : ComponentActivity() {
                 if (!texture.isAttachedToWindow) return true
                 removeVideoSurfaceProbe()
                 if (isDestroyed || videoView !== texture) return true
-                val mode = carPlayVideoSurfaceMode(texture.isHardwareAccelerated)
-                appendLog("Video output mode=$mode windowHardwareAccelerated=${texture.isHardwareAccelerated}")
+                val mode = carPlayVideoSurfaceMode(texture.isHardwareAccelerated, smoothVideo)
+                appendLog("Video output mode=$mode windowHardwareAccelerated=${texture.isHardwareAccelerated} " +
+                    "smoothVideo=$smoothVideo")
                 if (mode == CarPlayVideoSurfaceMode.TEXTURE) return true
                 useFallbackVideoSurface(texture)
                 return false // Measure the replacement before drawing the software window.
@@ -4588,7 +4618,20 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         root.addView(viewport, index, texture.layoutParams)
-        appendLog("Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable")
+        appendLog(if (smoothVideo) {
+            "Using SurfaceView video output: smooth video, frames shown at the iPhone's frame time + " +
+                "${smoothVideoDelayMillis(fps)} ms; picture adjustments unavailable"
+        } else {
+            "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
+        })
+    }
+
+    private fun newParkingSurface(): Surface {
+        val size = sessionDisplay?.let { it.width to it.height } ?: (1920 to 1080)
+        val reader = android.media.ImageReader.newInstance(size.first, size.second, android.graphics.ImageFormat.PRIVATE, 3)
+        reader.setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, mainHandler)
+        parkingReader = reader
+        return reader.surface.also { parkingSurface = it }
     }
 
     private fun attachSurface(surface: Surface) {
@@ -4858,6 +4901,7 @@ class CarPlayHostActivity : ComponentActivity() {
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111
+
         private const val CENTER_MAP_IDLE_MILLIS = 3_000L // a reconnect is quicker; a session end is not
         const val LOG_RETENTION_MILLIS = 5 * 60_000L
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L
