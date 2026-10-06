@@ -6,7 +6,7 @@ Install the mobile APK on an **Android 9+ head unit (API 28+)** that permits APK
 
 [Download website](https://shihabal3amri.github.io/DiPlay/) · [Release and assets](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.13) · [Full source comparison](https://github.com/shihabal3amri/DiPlay/compare/v0.2.12...v0.2.13)
 
-> DRAFT: covers all 35 reviewed contributions since v0.2.12. Confirm the final merged inventory before publication. Final APK identity, validation, checksums and update-signature evidence remain pending below.
+This preview includes all **35 merged contributions since v0.2.12**, including reviewed and repaired #313, #314 and #317.
 
 ## Connection and wireless reliability
 
@@ -64,7 +64,7 @@ Install the mobile APK on an **Android 9+ head unit (API 28+)** that permits APK
 
 ## Updating and reporting problems
 
-Use the official mobile release APK for the same package/variant you already installed. In-place updating preserves settings and pairing records when its signing certificate matches your existing installation. **[PENDING: verify and state the 0.2.12 → 0.2.13 signing-certificate match before publishing this update advice.]**
+Use the official mobile release APK for the same package/variant you already installed. In-place updating preserves settings and pairing records when its signing certificate matches your existing installation. The APK certificate was verified against the published 0.2.12 APK and matches, so the same public package can be updated in place.
 
 If a problem remains, reproduce it on **0.2.13**, including the first connection attempt through the failure, then:
 
@@ -79,15 +79,14 @@ Android 9 Wi-Fi Direct, model-specific cluster routing, hotspot repair and the o
 
 This public preview is not Apple-certified. It uses the same experimental accessory identity recovered from public Carlinkit firmware as 0.2.12; its runtime private key is extractable from the APK, and future iOS acceptance remains uncertain. The separate Android release-signing key is not bundled. Private identity/signing inputs remain excluded from Git and the source archive; see [BUILD.md](BUILD.md) and the existing notices.
 
-**[PENDING — replace this section with final measured release evidence before publication.]**
-
-- Final source commit and tree: **PENDING**.
-- Integrated source checks: **1,487 unit cases: 1,486 passed, one existing macOS shared wildcard-bind skip, zero failures/errors** (815 shared, 668 common, four Home).
-- All four Mobile/Home/map-host/Automotive debug lint and identity-free source APK builds passed. Lint has zero errors/fatal findings; existing warning counts are 18 Mobile, five Home, two map-host and four Automotive.
-- Signed mobile APK: **PENDING filename, package ID, versionName 0.2.13, versionCode 32, minimum/target SDK and embedded revision checks**.
-- Signature compatibility with the published 0.2.12 APK: **PENDING verified certificate comparison**.
-- Public source/authentication-boundary checks, asset checksums and uploaded-asset identity: **PENDING**.
-- Corrected experimental-feature hardware acceptance: no new maintainer vehicle test is claimed; release-testing feedback is requested.
+- The production-signed APK was built from clean source commit [`6fb0fa4a09e77a84a437da5159147a6f6141ed61`](https://github.com/shihabal3amri/DiPlay/commit/6fb0fa4a09e77a84a437da5159147a6f6141ed61), tree `2065f45e57475d4dc51b9b9cd1f955ad3faccdec`. Its embedded Git revision matches that commit. Subsequent release preparation changes documentation and reconciles merge history; application code and build inputs remain unchanged. The tag and source ZIP identify the final release commit.
+- Complete integrated source validation checked **1,487 unit cases: 1,486 passed, zero failures/errors and one existing macOS wildcard-bind assumption skip** (815 shared, 668 common, four Home). The merged #313/#314/#317 application tree matches this tested tree; all three exact PR heads passed GitHub Android checks before merging.
+- Mobile, Home, map-host and Automotive identity-free source-only debug builds and lint passed. Lint has zero errors/fatal findings; existing warnings remain (18 mobile, five Home, two map-host, four Automotive). Production mobile release build/lint passed with four existing warnings.
+- APK: **`DiPlay-0.2.13.apk`**, 38,512,753 bytes; package **`com.shihab.diplay`**, version **0.2.13**, versionCode **32**, minimum SDK **28**, target SDK **37**, not debuggable. Traditional Chinese resources are packaged.
+- APK SHA-256: `aed9eac786e7c0e80a2929dc2f0c2e1d0df318ca8fd83ae7c2988a98bb4cd7e6`. The public certificate SHA-256 is `87b38b12788dcb202a961215f2572e30ec2dc9d8ef4bc070d05f77e49291a363` and matches the published 0.2.12 APK.
+- The two intentionally selected runtime authentication assets match 0.2.12 byte for byte. No Android signing keystore or extra credential container is packaged. Manifest permissions and native-library entries are unchanged; rebuilt project native libraries differ only in their validated GNU build-ID descriptors.
+- Public-tree and source-archive checks exclude runtime identities, signing keys, private directories and build outputs from Git and the corresponding source ZIP. Release assets include the APK, tagged source ZIP and **`SHA256SUMS.txt`**. Publication checks require uploaded bytes, checksums, release notes and the tag/source commit to match the verified local artifacts.
+- Experimental-feature hardware acceptance still needs release feedback; no new maintainer vehicle test of the complete corrected build is claimed.
 
 ## Contributors
 

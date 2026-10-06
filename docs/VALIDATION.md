@@ -1,18 +1,16 @@
 # DiPlay 0.2.13 — 2026-10-06
 
-**DRAFT: final release validation is pending. Replace these fields with actual measured results before publication. Earlier per-PR checks are not a substitute for the final signed artifact.**
-
-- Final source commit/tree and clean build revision: **PENDING**.
-- Integrated source validation passed **1,487 unit cases: 1,486 passed, one existing macOS shared wildcard-bind assumption skip, zero failures/errors**. Module counts: 815 shared, 668 common, four Home. These checks cover the reviewed application source; final release version/docs/packaging identity is verified separately.
-- Mobile/Home/map-host/Automotive identity-free source-only debug APK builds and debug lint passed. Zero errors/fatal findings; existing warning counts are 18 Mobile, five Home, two map-host and four Automotive.
-- Production-signed mobile release APK and release lint: **PENDING**.
-- APK identity: expected `com.shihab.diplay`, `0.2.13`, versionCode `32`, minimum SDK `28`, target SDK `37`, non-debuggable; **PENDING actual APK/embedded-revision verification**.
-- Certificate SHA-256 and match against the published 0.2.12 APK: **PENDING measured comparison**.
-- Selected runtime-authentication input match, absence of signing keystores/extra credential containers, public-tree and source-archive checks: **PENDING**.
-- Release APK/source/checksum filenames, byte lengths, SHA-256 and uploaded/tagged-source verification: **PENDING**.
-- Android 9 Wi-Fi Direct is implemented through the firmware-dependent legacy path; requested frequency remains unverified on API 28. This is distinct from Android 10+ group-frequency validation.
-- Experimental call controls/dashboard calls, buffered music, side panel and hotspot repair retain their stated opt-in/default-off/confirmation gates. Source tests cover readiness, bounded buffers, session ownership, cancellation and retryable compensation; no new maintainer physical test of the complete corrected release is claimed.
-- See [0.2.13 release notes](RELEASE-NOTES-0.2.13.md) for all 35 contributions, attributed hardware evidence, remaining acceptance and report-export steps. Historical validation below remains unchanged.
+- Production-signed source commit `6fb0fa4a09e77a84a437da5159147a6f6141ed61`, tree `2065f45e57475d4dc51b9b9cd1f955ad3faccdec`, was clean before and after Gradle. APK metadata embeds that exact revision. Later release preparation changes documentation and merge history only; publication checks require application code/build inputs to remain unchanged. The release tag and source ZIP identify the final release commit.
+- Integrated application source at `917d84ee66e263e8a68a59e457e3fef669b3c83e` / tree `06317cf484a2807f3b2a641a0b86cd33673fec4c` matches main after #313/#314/#317 merged. **1,487 unit cases: 1,486 passed, one existing macOS shared wildcard-bind assumption skip, zero failures/errors**. Counts: 815 shared, 668 common, four Home. The signed build adds the reviewed mobile version metadata and documentation; runtime application source is unchanged from those tests.
+- Mobile/Home/map-host/Automotive identity-free source-only debug APK builds and debug lint passed. Zero errors/fatal findings; existing warnings are 18 Mobile, five Home, two map-host and four Automotive. The production mobile release build and release lint passed with zero errors/fatal findings and four existing warnings.
+- Verified APK: `DiPlay-0.2.13.apk`, 38,512,753 bytes; package `com.shihab.diplay`, version `0.2.13`, versionCode `32`, minimum SDK `28`, target SDK `37`, not debuggable; Traditional Chinese resources present. SHA-256 `aed9eac786e7c0e80a2929dc2f0c2e1d0df318ca8fd83ae7c2988a98bb4cd7e6`.
+- Certificate SHA-256 `87b38b12788dcb202a961215f2572e30ec2dc9d8ef4bc070d05f77e49291a363` matches the actual published 0.2.12 APK, preserving in-place updates. Both selected runtime-authentication inputs match 0.2.12 byte for byte. No Android signing keystore or extra credential containers are packaged; manifest permissions are unchanged.
+- Native library entries are unchanged. The four AndroidX native libraries are byte-identical to 0.2.12; the six rebuilt project libraries differ only in validated 20-byte GNU build-ID descriptors. All other ELF bytes are identical. JNI sources, native build definitions, dependencies and NDK configuration are unchanged.
+- Public-tree checks exclude credential containers/private-key blocks. The tagged source ZIP excludes runtime identities, signing keys, private directories and build outputs. `SHA256SUMS.txt` accompanies APK/source; publication verification requires the uploaded artifacts and notes to match the local verified bytes and the tag to identify the archived commit.
+- All three reviewed exact PR heads passed GitHub Android checks before merging: #313 `690945d`, repaired #314 `54ce82b` (two reproduced script-selection failures fixed; 16 locale cases pass), and #317 `1240f8e`. Translation completeness, format arguments, commands and link destinations were audited.
+- Android 9 Wi-Fi Direct uses a firmware-dependent legacy path with unverified requested frequency; Android 10+ retains negotiated-frequency verification. This does not establish universal model support.
+- Experimental call keys/dashboard calls, buffered music and side panel retain their default-off gates. Hotspot repair requires an explicit confirmed Check/Apply/Restore action. Source tests cover readiness, bounded queues, session ownership, cancellation and compensation; no new maintainer physical test of the complete corrected release is claimed.
+- See [0.2.13 release notes](RELEASE-NOTES-0.2.13.md) for all 35 contributions, credits, attributed hardware evidence and diagnostic export steps. Historical validation below is unchanged.
 
 # DiPlay 0.2.12 — 2026-10-04
 
