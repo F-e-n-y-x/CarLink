@@ -7,6 +7,7 @@ import android.view.Surface
 import com.shilapi.xcertplay.media.AndroidMediaSink
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +26,11 @@ class CarPlayMediaFocusForwardingTest {
     private val app get() = RuntimeEnvironment.getApplication()
     private val controllers = mutableListOf<CarPlayController>()
     private val sinks = mutableListOf<AndroidMediaSink>()
+
+    @Before fun resetFocusResponse() {
+        shadowOf(app.getSystemService(AudioManager::class.java))
+            .setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+    }
 
     @After fun cleanup() {
         controllers.forEach(CarPlayMediaKeys::detach)
@@ -78,12 +84,68 @@ class CarPlayMediaFocusForwardingTest {
         verify(sink, never()).onMediaAudioFocusChanged(anyInt())
     }
 
-    private fun start(controller: CarPlayController, sink: AndroidMediaSink): AudioManager.OnAudioFocusChangeListener {
+    @Test fun immediateStartGrantIsForwardedWithoutWaitingForPlatformGainCallback() {
+        val controller = mock(CarPlayController::class.java).also(controllers::add)
+        val sink = spy(AndroidMediaSink()).also(sinks::add)
+        start(controller, sink, clearInitialGrant = false)
+        verify(sink).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_GAIN)
+    }
+
+    @Test fun immediateRegrantRestoresFocusButRejectedRequestDoesNot() {
+        val controller = mock(CarPlayController::class.java).also(controllers::add)
+        val sink = spy(AndroidMediaSink()).also(sinks::add)
+        val listener = start(controller, sink)
+        listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+        clearInvocations(sink)
+        val audio = shadowOf(app.getSystemService(AudioManager::class.java))
+        audio.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_FAILED)
+        CarPlayMediaKeys.onMediaAudioChanged(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink, never()).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_GAIN)
+        audio.setNextFocusRequestResponse(AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+        CarPlayMediaKeys.onMediaAudioChanged(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_GAIN)
+    }
+
+    @Test fun queuedRealLossInvalidatesEarlierImmediateGrantBeforeItCanRestoreAudio() {
+        val controller = mock(CarPlayController::class.java).also(controllers::add)
+        val sink = spy(AndroidMediaSink()).also(sinks::add)
+        val listener = start(controller, sink)
+        listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+        clearInvocations(sink)
+        // Deliver a real loss ahead of the synthetic grant by processing it while the successful
+        // request dispatch is still pending on the main handler.
+        CarPlayMediaKeys::class.java.getDeclaredMethod("regainFocusLocked").apply { isAccessible = true }
+            .let { method -> synchronized(CarPlayMediaKeys) { method.invoke(CarPlayMediaKeys) } }
+        listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+        verify(sink, never()).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_GAIN)
+    }
+
+    @Test fun queuedImmediateGrantCannotRestoreAReleasedRequest() {
+        val controller = mock(CarPlayController::class.java).also(controllers::add)
+        val sink = spy(AndroidMediaSink()).also(sinks::add)
+        val listener = start(controller, sink)
+        listener.onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS)
+        clearInvocations(sink)
+        CarPlayMediaKeys::class.java.getDeclaredMethod("regainFocusLocked").apply { isAccessible = true }
+            .let { method -> synchronized(CarPlayMediaKeys) { method.invoke(CarPlayMediaKeys) } }
+        CarPlayMediaKeys.detach(controller)
+        shadowOf(Looper.getMainLooper()).idle()
+        verify(sink, never()).onMediaAudioFocusChanged(AudioManager.AUDIOFOCUS_GAIN)
+    }
+
+    private fun start(controller: CarPlayController, sink: AndroidMediaSink,
+        clearInitialGrant: Boolean = true): AudioManager.OnAudioFocusChangeListener {
         CarPlayBackgroundSession.store(controller, sink, 800, 480, Any(),
             CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) {}
         CarPlayMediaKeys.attach(app, controller)
         CarPlayMediaKeys.onMediaAudioChanged(true)
         shadowOf(Looper.getMainLooper()).idle()
+        if (clearInitialGrant) clearInvocations(sink)
         return ReflectionHelpers.getField<AudioFocusRequest>(CarPlayMediaKeys, "focusRequest").onAudioFocusChangeListener
     }
 }

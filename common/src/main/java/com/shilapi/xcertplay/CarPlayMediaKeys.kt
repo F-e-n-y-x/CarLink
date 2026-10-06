@@ -52,6 +52,7 @@ internal object CarPlayMediaKeys {
     private var session: MediaSession? = null
     private var focusRequest: AudioFocusRequest? = null
     private var focusOwner: Any? = null
+    private var focusEventRevision = 0L
     private var focusHeld = false
     private var appContext: Context? = null
     private var mediaAudioActive = false
@@ -150,6 +151,7 @@ internal object CarPlayMediaKeys {
         if (focusHeld) return
         val audio = appContext?.getSystemService(AudioManager::class.java) ?: return
         focusHeld = audio.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        if (focusHeld) forwardGrantedFocusLocked()
         Log.i(TAG, "audio focus regained=$focusHeld")
     }
 
@@ -164,6 +166,7 @@ internal object CarPlayMediaKeys {
     private fun start(context: Context) {
         val expectedController = controller ?: return
         val owner = Any().also { focusOwner = it }
+        focusEventRevision = 0L
         val audio = context.getSystemService(AudioManager::class.java)
         val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
             .setAudioAttributes(
@@ -179,6 +182,7 @@ internal object CarPlayMediaKeys {
         val granted = audio?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         focusRequest = request
         focusHeld = granted
+        if (granted) forwardGrantedFocusLocked()
         session = MediaSession(context, "DiPlay CarPlay").apply {
             setCallback(callback, mainHandler)
             setMetadata(androidMetadata(nowPlaying, shownArtworkLocked()))
@@ -187,10 +191,23 @@ internal object CarPlayMediaKeys {
         Log.i(TAG, "media keys active focusGranted=$granted")
     }
 
-    private fun onFocusChanged(expectedController: CarPlayController, owner: Any, change: Int) {
+    private fun forwardGrantedFocusLocked() {
+        val expectedController = controller ?: return
+        val owner = focusOwner ?: return
+        val revision = focusEventRevision
+        // Immediate grants do not promise a later focus callback. Defer dispatch until the caller
+        // releases the media-key monitor. A newer real focus event invalidates this observation,
+        // as do a controller or request replacement while the queued work waits.
+        mainHandler.post { onFocusChanged(expectedController, owner, AudioManager.AUDIOFOCUS_GAIN, revision) }
+    }
+
+    private fun onFocusChanged(expectedController: CarPlayController, owner: Any, change: Int,
+        grantedRevision: Long? = null) {
         val current = synchronized(this) {
-            if (controller !== expectedController || focusOwner !== owner) false
+            if (controller !== expectedController || focusOwner !== owner ||
+                (grantedRevision != null && grantedRevision != focusEventRevision)) false
             else {
+                focusEventRevision += 1
                 // Only permanent loss moves media keys elsewhere; transient losses come back.
                 if (change == AudioManager.AUDIOFOCUS_LOSS) focusHeld = false
                 else if (change == AudioManager.AUDIOFOCUS_GAIN) focusHeld = true
