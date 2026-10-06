@@ -190,6 +190,7 @@ class CarPlayController(
             } else {
                 IphoneUsbMatcher.appleVendor()
             },
+            onDiagnostic = ::connectionDiagnostic,
         )
     }
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -1296,7 +1297,8 @@ class CarPlayController(
             val bluetoothStarted = System.nanoTime()
             try {
                 connectBluetoothSocket(socket, device.address)
-                connectionDiagnostic("Bluetooth connect completed elapsedMs=${elapsedMillis(bluetoothStarted)}")
+                connectionDiagnostic("Bluetooth connect completed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
+                    "socketReportedConnected=${runCatching { socket.isConnected }.getOrNull() ?: "unknown"}")
             } catch (error: Throwable) {
                 connectionDiagnostic(
                     "Bluetooth connect failed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
@@ -1306,12 +1308,19 @@ class CarPlayController(
                 throw error
             }
             debugLog("wireless RFCOMM connected address=${device.address}")
+            logBluetoothConnectionSnapshot(device, "after-connect")
             if (isStaleWirelessRun(generation)) {
                 return
             }
             val stream = synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
-                BluetoothRfcommDuplexStream(socket).also { bluetoothStream = it }
+                try {
+                    BluetoothRfcommDuplexStream(socket, ::connectionDiagnostic).also { bluetoothStream = it }
+                } finally {
+                    // The stream owns the connected socket and also closes it if stream getters
+                    // fail. Do not retain a second socket owner in bootstrap teardown.
+                    if (bluetoothSocket === socket) bluetoothSocket = null
+                }
             }
             val channel = Iap2Session.openWireless(
                 stream,
@@ -1857,7 +1866,7 @@ class CarPlayController(
         )
         val connection = requireUsbManager().openDevice(device)
             ?: throw IphoneUsbException.DeviceUnavailable("Could not open the iPhone NCM connection")
-        return NcmUsbBridge.open(connection, function)
+        return NcmUsbBridge.open(connection, function, onDiagnostic = ::connectionDiagnostic)
     }
 
     private fun runStack(usbSession: Iap2UsbSession, ncm: NcmUsbBridge) {
@@ -2236,11 +2245,20 @@ class CarPlayController(
                 connectionDiagnostic("Bluetooth snapshot point=$point unavailable reason=connect-permission")
                 return
             }
-            val uuids = device.uuids
+            val bondState = device.bondState
+            val bondName = when (bondState) {
+                BluetoothDevice.BOND_NONE -> "NONE"
+                BluetoothDevice.BOND_BONDING -> "BONDING"
+                BluetoothDevice.BOND_BONDED -> "BONDED"
+                else -> "UNKNOWN"
+            }
+            val cachedServices = runCatching { device.uuids }
+            val uuids = cachedServices.getOrNull()
             val service = UUID.fromString(IAP2_IPHONE_UUID)
             connectionDiagnostic(
                 "Bluetooth snapshot point=$point enabled=${bluetoothAdapter?.isEnabled} " +
-                    "bondState=${device.bondState} cachedServiceCount=${uuids?.size ?: "unknown"} " +
+                    "bondState=$bondState bondName=$bondName cachedServicesReadable=${cachedServices.isSuccess} " +
+                    "cachedServiceCount=${uuids?.size ?: "unknown"} " +
                     "cachedIap2Service=${uuids?.any { it.uuid == service } ?: "unknown"}",
             )
         } catch (error: RuntimeException) {
