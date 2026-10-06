@@ -426,9 +426,11 @@ class WheelKeyService : AccessibilityService() {
     }
 }
 
-// Android is in a call or communication audio mode during CarPlay and Bluetooth calls (and ringing).
+// CarPlay's iAP2 call state can be active even when the head unit leaves Android's mode normal.
+// Native Bluetooth calls also use a call/communication audio mode.
 internal fun inCall(context: Context): Boolean =
-    (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.mode.let { it != null && it != AudioManager.MODE_NORMAL }
+    BydNavigationOutputs.carPlayCall() != null ||
+        (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.mode.let { it != null && it != AudioManager.MODE_NORMAL }
 
 /** Use the input-device ID for a held press; saved assignments still use the stable device name. */
 private data class PhysicalWheelKey(val device: Int, val code: Int, val scan: Int)
@@ -436,6 +438,8 @@ private data class PhysicalWheelKey(val device: Int, val code: Int, val scan: In
 /** Keep the system's key stream well-formed even if settings/calls/routes change mid-press. */
 internal class WheelKeyPresses {
     private val consumed = mutableMapOf<Any, Boolean>()
+
+    fun hasConsumedPress(key: Any): Boolean = consumed[key] == true
 
     fun filter(key: Any?, down: Boolean, firstPress: Boolean, decide: () -> WheelZoomKeys.Action): WheelZoomKeys.Action {
         key ?: return WheelZoomKeys.Action.PASS

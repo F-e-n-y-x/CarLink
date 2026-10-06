@@ -67,6 +67,7 @@ import kotlin.math.roundToInt
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var windowLearning: WindowKeyLearning? = null
+    private val windowLearningPresses = WheelKeyPresses()
     private val endWindowLearning = Runnable { cancelKeyLearning() }
     private var page = "home"
     private var clusterSafeAreaDialog: Dialog? = null
@@ -1731,9 +1732,17 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val learning = windowLearning
-        if (learning == null || event.keyCode == KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return super.dispatchKeyEvent(event)
+        val action = windowLearningPresses.filter(
+            Triple(event.deviceId, event.keyCode, event.scanCode),
+            event.action == KeyEvent.ACTION_DOWN, event.repeatCount == 0,
+        ) {
+            val learning = windowLearning
+            if (learning == null || event.keyCode == KeyEvent.KEYCODE_BACK) return@filter WheelZoomKeys.Action.PASS
+            if (inCall(this) || !WheelZoomSettings.siriKey(this)) {
+                cancelKeyLearning()
+                return@filter WheelZoomKeys.Action.PASS
+            }
             handler.removeCallbacks(endWindowLearning)
             windowLearning = null
             val key = WheelKey.of(event)
@@ -1746,8 +1755,9 @@ class DiPlayActivity : ComponentActivity() {
                 Log.i(WheelKeyService.TAG, "${learning.role} key is now $key (learnt without the service)")
                 learning.done(key)
             }
+            WheelZoomKeys.Action.CONSUME
         }
-        return true
+        return action != WheelZoomKeys.Action.PASS || super.dispatchKeyEvent(event)
     }
 
     /** The 0.2.9 Dashboard song setting, shown once: in the BYD navigation card, or under Advanced vehicle data. */
