@@ -79,11 +79,6 @@ class AirPlaySession(
     internal var cipher: ControlCipher? = null
     internal var encBuf = ByteArray(0)
     internal var deviceBtMac = ""
-    /** iPhone iOS version reported in the AirPlay SETUP plist (e.g. "17.7.2"); often empty/"not_reported". */
-    internal var peerOsVersion = ""
-    /** AirPlay sourceVersion from the SETUP plist (e.g. "775.3.1"); reliably reported and used as the
-     *  iOS-generation proxy for deciding whether the Wi-Fi iAP2 tunnel can open. */
-    internal var peerSourceVersion = ""
     internal val activeStreams = linkedSetOf<Int>()
 
     /** Counts the iPhone's cluster stream setups; 0 while no cluster stream is up. */
@@ -655,10 +650,6 @@ class AirPlaySession(
         val model = string(dict["model"])
         debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"])))
         if (deviceId.isNotEmpty()) deviceBtMac = deviceId
-        val osVersion = string(dict["osVersion"])
-        if (osVersion.isNotEmpty()) peerOsVersion = osVersion
-        val sourceVersion = string(dict["sourceVersion"])
-        if (sourceVersion.isNotEmpty()) peerSourceVersion = sourceVersion
         if (name.isNotEmpty() || deviceId.isNotEmpty() || wifiMac.isNotEmpty()) {
             listener.onDeviceInfo(this, AirPlayDeviceInfo(name, deviceId, wifiMac, model))
         }
