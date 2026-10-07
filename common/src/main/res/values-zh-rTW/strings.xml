@@ -209,7 +209,7 @@
     <string name="hevc_software_decoder">HEVC 軟體解碼器</string>
     <string name="hide_bottom_bar">隱藏底部導覽列</string>
     <string name="hide_keyboard">隱藏鍵盤</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">開啟 CarPlay 時隱藏車機系統列。</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">在 DiPlay 與 CarPlay 中隱藏對應的系統列。</string>
     <string name="hide_the_navigation_bar">隱藏導覽列</string>
     <string name="hide_the_status_bar">隱藏狀態列</string>
     <string name="hide_top_bar">隱藏頂部狀態列</string>
@@ -234,7 +234,7 @@
     <string name="keep_your_iphone_nearby_with_bluetooth_and_wi_fi_on_allow">請將 iPhone 放在附近並開啟藍牙和 Wi-Fi。\niPhone 出現提示時，允許使用 CarPlay。</string>
     <string name="language_app_language">應用程式語言</string>
     <string name="language_apply">套用</string>
-    <string name="language_hint">選擇 DiPlay 的語言。「跟隨系統」會使用裝置語言。</string>
+    <string name="language_hint">「跟隨系統」會使用裝置語言。</string>
     <string name="language_section_title">語言</string>
     <string name="language_system_default">跟隨系統</string>
     <string name="later">稍後</string>

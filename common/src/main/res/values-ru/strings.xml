@@ -90,7 +90,7 @@
     <string name="language_section_title">Язык</string>
     <string name="language_app_language">Язык приложения</string>
     <string name="language_system_default">Системный по умолчанию</string>
-    <string name="language_hint">Выберите язык DiPlay. «Системный» следует языку устройства.</string>
+    <string name="language_hint">«Системный» следует языку устройства.</string>
     <string name="language_apply">Применить</string>
     <string name="common_cancel">Отмена</string>
     <string name="a_familiar_drive">Привычная поездка.</string>
@@ -209,7 +209,7 @@
     <string name="hevc_software_decoder">Программный декодер HEVC</string>
     <string name="hide_bottom_bar">Скрыть нижнюю панель</string>
     <string name="hide_keyboard">Скрыть клавиатуру</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Скрывать системные панели автомобиля, пока открыт CarPlay.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Скрывать выбранную системную панель в DiPlay и CarPlay.</string>
     <string name="hide_the_navigation_bar">Скрыть панель навигации</string>
     <string name="hide_the_status_bar">Скрыть панель состояния</string>
     <string name="hide_top_bar">Скрыть верхнюю панель</string>

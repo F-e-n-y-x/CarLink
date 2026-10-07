@@ -90,7 +90,7 @@
     <string name="language_section_title">Idioma</string>
     <string name="language_app_language">Idioma de la aplicación</string>
     <string name="language_system_default">Predeterminado del sistema</string>
-    <string name="language_hint">Elige un idioma para DiPlay. «Sistema» sigue el idioma del dispositivo.</string>
+    <string name="language_hint">«Sistema» sigue el idioma del dispositivo.</string>
     <string name="language_apply">Aplicar</string>
     <string name="common_cancel">Cancelar</string>
     <string name="a_familiar_drive">Un trayecto familiar.</string>
@@ -209,7 +209,7 @@
     <string name="hevc_software_decoder">Decodificador por software HEVC</string>
     <string name="hide_bottom_bar">Ocultar barra inferior</string>
     <string name="hide_keyboard">Ocultar teclado</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Oculta las barras del sistema del coche mientras CarPlay está abierto.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Oculta la barra del sistema correspondiente en DiPlay y CarPlay.</string>
     <string name="hide_the_navigation_bar">Ocultar barra de navegación</string>
     <string name="hide_the_status_bar">Ocultar barra de estado</string>
     <string name="hide_top_bar">Ocultar barra superior</string>
