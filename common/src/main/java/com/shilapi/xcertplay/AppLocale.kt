@@ -86,6 +86,25 @@ object AppLocale {
         return context.createConfigurationContext(configuration)
     }
 
+    /**
+     * Before Android 13, some head units run apps in a compatibility mode that puts the system language
+     * back into the activity's resources after [wrap]. Writes the chosen language again; returns true
+     * if it had to.
+     */
+    @Suppress("DEPRECATION")
+    fun enforce(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= 33) return false
+        val locale = locale(preference(context)) ?: return false
+        val resources = context.resources
+        if (resources.configuration.locales[0] == locale) return false
+        val configuration = Configuration(resources.configuration).apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+        resources.updateConfiguration(configuration, resources.displayMetrics)
+        return true
+    }
+
     fun showPicker(activity: Activity) {
         var selected = ALL.indexOf(preference(activity)).coerceAtLeast(0)
         AlertDialog.Builder(activity)

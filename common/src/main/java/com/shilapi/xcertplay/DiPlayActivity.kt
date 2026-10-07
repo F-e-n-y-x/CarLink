@@ -182,9 +182,11 @@ class DiPlayActivity : ComponentActivity() {
     private var interfaceOverride: Configuration? = null
 
     private fun enforceInterfaceSize(): Boolean {
-        val override = interfaceOverride ?: return false
+        val language = AppLocale.enforce(this)
+        if (language) android.util.Log.i("DiPlayUi", "app language re-applied")
+        val override = interfaceOverride ?: return language
         val found = resources.displayMetrics.densityDpi
-        if (!InterfaceSize.enforce(resources, override)) return false
+        if (!InterfaceSize.enforce(resources, override)) return language
         android.util.Log.i("DiPlayUi", "interface size re-applied: $found -> ${override.densityDpi} dpi")
         return true
     }

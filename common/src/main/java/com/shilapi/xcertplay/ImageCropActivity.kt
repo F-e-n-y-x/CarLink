@@ -45,6 +45,7 @@ class ImageCropActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLocale.enforce(this)
         interfaceOverride?.let { InterfaceSize.enforce(resources, it) }
         val uri = intent.data
         if (uri == null) {

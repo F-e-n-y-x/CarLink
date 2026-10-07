@@ -28,4 +28,22 @@ class InterfaceSizeActivityTest {
             AppLocale.save(RuntimeEnvironment.getApplication(), AppLocale.SYSTEM)
         }
     }
+
+    @Test
+    fun theChosenLanguageIsWrittenBackWhenTheSystemLanguageReturns() {
+        val app = RuntimeEnvironment.getApplication()
+        AppLocale.save(app, AppLocale.SPANISH)
+        try {
+            @Suppress("DEPRECATION")
+            app.resources.updateConfiguration(
+                android.content.res.Configuration(app.resources.configuration).apply { setLocale(java.util.Locale.ENGLISH) },
+                app.resources.displayMetrics,
+            )
+            assertEquals(true, AppLocale.enforce(app))
+            assertEquals("es", app.resources.configuration.locales[0].language)
+            assertEquals(false, AppLocale.enforce(app))
+        } finally {
+            AppLocale.save(app, AppLocale.SYSTEM)
+        }
+    }
 }
