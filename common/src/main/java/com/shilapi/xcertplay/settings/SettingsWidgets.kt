@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.settings
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -122,10 +123,52 @@ object SettingsWidgets {
             textCol.addView(descView)
             row.addView(textCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             row.addView(switch)
+            // The whole row is the target; the switch stays out of the focus order so D-pad stops once.
+            switch.isFocusable = false
+            row.isFocusable = true
+            row.background = android.graphics.drawable.RippleDrawable(
+                ColorStateList.valueOf(ROW_RIPPLE), null, android.graphics.drawable.ColorDrawable(Color.WHITE))
+            row.foreground = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = theme.dp(context, 12).toFloat()
+                    setStroke(theme.dp(context, 3), theme.accent)
+                })
+            }
+            row.setOnClickListener { if (switch.isEnabled) switch.toggle() }
+            switch.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            row.accessibilityDelegate = object : View.AccessibilityDelegate() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: android.view.accessibility.AccessibilityNodeInfo) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = Switch::class.java.name
+                    info.isCheckable = true
+                    info.isChecked = switch.isChecked
+                    info.isEnabled = switch.isEnabled
+                }
+            }
+            clampDescription(descView)
         }
 
         return SwitchRowResult(row, switch)
     }
+
+    /** Long help stays two lines until tapped; screen readers still get the full text. */
+    private fun clampDescription(view: TextView) {
+        view.maxLines = COLLAPSED_DESCRIPTION_LINES
+        view.ellipsize = android.text.TextUtils.TruncateAt.END
+        view.post {
+            if ((view.layout?.getEllipsisCount(view.lineCount - 1) ?: 0) == 0) return@post
+            view.setOnClickListener {
+                view.maxLines = Int.MAX_VALUE
+                view.ellipsize = null
+                view.setOnClickListener(null)
+                view.isClickable = false
+            }
+        }
+    }
+
+    private const val COLLAPSED_DESCRIPTION_LINES = 2
+    private const val ROW_RIPPLE = 0x336F9FD9
 
     fun <T> createChoiceRow(
         context: Context,
