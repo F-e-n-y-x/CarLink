@@ -56,14 +56,26 @@ object InterfaceSize {
         }
     }
 
-    /** Applies the override for [base] to [activity]; call from attachBaseContext. */
-    internal fun attach(activity: ContextThemeWrapper, base: Context): Configuration? =
-        override(base.resources.configuration, preference(base))?.also(activity::applyOverrideConfiguration)
+    /**
+     * Keep window dimensions out of the context override. Android merges that override into every
+     * configuration callback; explicit dimensions there would hide rotation and split-screen resizes.
+     * The scaled dimensions are written to the live resources by [enforce] instead.
+     */
+    internal fun contextOverride(scaled: Configuration): Configuration = Configuration().apply {
+        densityDpi = scaled.densityDpi
+        setLocales(scaled.locales)
+        setLayoutDirection(scaled.locales[0])
+    }
 
-    /** Whether [reported] already shows the dimensions of the [applied] override. */
-    internal fun reportsScaled(applied: Configuration?, reported: Configuration): Boolean =
-        applied != null && reported.screenWidthDp == applied.screenWidthDp &&
-            reported.screenHeightDp == applied.screenHeightDp
+    /** Applies the density override for [base] to [activity]; call from attachBaseContext. */
+    internal fun attach(activity: ContextThemeWrapper, base: Context): Configuration? =
+        override(base.resources.configuration, preference(base))?.also {
+            activity.applyOverrideConfiguration(contextOverride(it))
+        }
+
+    /** Callbacks retain the context's scaled density, but report the system's fresh window dimensions. */
+    internal fun configurationChange(reported: Configuration, systemDensityDpi: Int, choice: Int): Configuration? =
+        override(Configuration(reported).apply { densityDpi = systemDensityDpi }, choice)
 
     /** An override with another density needs a new activity: applyOverrideConfiguration works once. */
     internal fun needsRecreate(applied: Configuration?, next: Configuration?): Boolean =

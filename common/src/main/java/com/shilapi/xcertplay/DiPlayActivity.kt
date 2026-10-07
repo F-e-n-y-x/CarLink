@@ -242,6 +242,8 @@ class DiPlayActivity : ComponentActivity() {
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
 
     private var interfaceOverride: Configuration? = null
+    private var interfaceSystemDensityDpi = 0
+    private var interfaceRecreateRequested = false
 
     private fun enforceInterfaceSize(): Boolean {
         val language = AppLocale.enforce(this)
@@ -256,6 +258,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) {
         val base = AppLocale.wrap(newBase)
         super.attachBaseContext(base)
+        interfaceSystemDensityDpi = base.resources.configuration.densityDpi
         interfaceOverride = InterfaceSize.attach(this, base)
     }
 
@@ -313,12 +316,22 @@ class DiPlayActivity : ComponentActivity() {
     }
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (!InterfaceSize.reportsScaled(interfaceOverride, newConfig)) {
-            val next = InterfaceSize.override(newConfig, InterfaceSize.preference(this))
-            if (InterfaceSize.needsRecreate(interfaceOverride, next)) { recreate(); return }
-            interfaceOverride = next
-        }
+        if (updateInterfaceSize(newConfig)) return
         render()
+    }
+
+    /** True while a density change is recreating this activity. */
+    private fun updateInterfaceSize(configuration: Configuration): Boolean {
+        if (interfaceRecreateRequested) return true
+        val next = InterfaceSize.configurationChange(configuration, interfaceSystemDensityDpi,
+            InterfaceSize.preference(this))
+        if (InterfaceSize.needsRecreate(interfaceOverride, next)) {
+            interfaceRecreateRequested = true
+            recreate()
+            return true
+        }
+        interfaceOverride = next
+        return false
     }
     private fun openOverlayPermission() {
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
@@ -390,6 +403,7 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (updateInterfaceSize(newConfig)) return
         render()
     }
 

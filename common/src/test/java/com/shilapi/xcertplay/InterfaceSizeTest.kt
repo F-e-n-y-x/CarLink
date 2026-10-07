@@ -76,9 +76,36 @@ class InterfaceSizeTest {
         assertEquals(true, InterfaceSize.needsRecreate(applied, split))
         assertEquals(true, InterfaceSize.needsRecreate(null, applied))
         assertEquals(false, InterfaceSize.needsRecreate(null, null))
-        assertEquals(true, InterfaceSize.reportsScaled(applied, screen(1440, 720, 267)))
-        assertEquals(false, InterfaceSize.reportsScaled(applied, screen(2666, 1333, 144)))
-        assertEquals(false, InterfaceSize.reportsScaled(null, screen(2666, 1333, 144)))
+    }
+
+    @Test
+    fun theContextOverrideDoesNotFreezeWindowDimensions() {
+        val scaled = InterfaceSize.override(screen(1280, 800, 160), 150)!!
+        val contextOverride = InterfaceSize.contextOverride(scaled)
+        val rotated = screen(800, 1280, 160).apply { updateFrom(contextOverride) }
+
+        assertEquals(240, rotated.densityDpi)
+        assertEquals(800, rotated.screenWidthDp)
+        assertEquals(1280, rotated.screenHeightDp)
+        assertEquals(800, rotated.smallestScreenWidthDp)
+        val next = InterfaceSize.configurationChange(rotated, 160, 150)!!
+        assertEquals(240, next.densityDpi)
+        assertEquals(533, next.screenWidthDp)
+        assertEquals(853, next.screenHeightDp)
+        assertEquals(false, InterfaceSize.needsRecreate(scaled, next))
+    }
+
+    @Test
+    fun automaticScalingReevaluatesASplitWindowFromTheSystemDensity() {
+        val scaled = InterfaceSize.override(screen(2666, 1333, 144), InterfaceSize.AUTO)!!
+        val split = screen(1333, 1225, 144).apply { updateFrom(InterfaceSize.contextOverride(scaled)) }
+        val next = InterfaceSize.configurationChange(split, 144, InterfaceSize.AUTO)!!
+
+        assertEquals(245, next.densityDpi)
+        assertEquals(783, next.screenWidthDp)
+        assertEquals(720, next.screenHeightDp)
+        assertEquals(true, InterfaceSize.needsRecreate(scaled, next))
+        assertNull(InterfaceSize.configurationChange(screen(480, 800, 267), 144, InterfaceSize.AUTO))
     }
 
     @Test
