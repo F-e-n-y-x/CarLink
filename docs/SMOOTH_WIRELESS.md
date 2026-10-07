@@ -38,7 +38,75 @@ With rotation on, CarPlay gets a square picture that holds both a landscape and 
 - **You turn the screen often:** turn rotation on and keep **Smoother (1920)**, the default.
 - **Sharper (the screen's size):** on a screen wider than 1920 pixels it can request a larger supported square and may reduce smoothness. At 1920 pixels or below, both options have the same size limit.
 
-## 3. Checking it yourself
+## 3. Smooth video (experimental)
+
+**Settings → Display and performance → Smooth video (experimental)**, off by default.
+
+By default DiPlay shows each frame as soon as the decoder releases it. On the Tang, the decoder's output timing depended on later input:
+
+- **The decoder held frames.** `c2.qti.avc.decoder` released a frame only after about two more had been queued. With the setting off (runs A1 and A2 below, about 56 fps), queue-to-output time (`decode p50/p90`) was 48–56 ms (median) and 69–77 ms (p90) in most 5 s windows, and on a still screen the last frame came out only with the next one.
+- **The iPhone's stream does not ask for that.** Its SPS signals `max_num_reorder_frames` 0, and the frames had no B slices.
+- **No decoder setting changed it.** These were tried:
+  - `KEY_LOW_LATENCY` (the decoder does not advertise it);
+  - `vendor.qti-ext-dec-picture-order.enable`;
+  - `vendor.qti-ext-dec-timestamp-reorder.value` 0;
+  - Constrained High flags in the SPS.
+
+The iPhone stamps each frame with its own time in the screen header. On the Tang at 60 fps these times fell on a 1/60 s grid, and frames the iPhone skipped left gaps of whole multiples. With this setting, DiPlay:
+
+- renders the main screen to a `SurfaceView`;
+- maps that time onto the head unit's clock, adding the link's base delay: a low percentile of recent arrivals (frame time to arrival). For the first 30 frames the base follows that percentile at once. After that it moves at most 2 ms per second, unless it rises by more than 0.5 s or falls by more than 100 ms, when it jumps to the new value;
+- releases each frame with `releaseOutputBuffer(index, timestampNs)` at that local time plus a display delay.
+
+The display delay adjusts itself. For each frame it can time, DiPlay notes how long after its local time the decoder released it. Frames released only after a pause in the iPhone's frames are not counted: the last three frames before a gap of more than 120 ms between consecutive iPhone frame times, since the decoder holds about two, and frames queued before a still screen of more than 0.5 s. Every 15 counted frames, the delay's goal is set to the 90th percentile of the last 120 counted frames plus a 20 ms margin, kept between 30 and 200 ms, aiming for about nine in ten frames ready in time. The margin is a refresh plus 4 ms because SurfaceFlinger takes a buffer about one refresh before the vsync it is shown at (measured below). It rises by at most 1 ms per frame and falls by at most 0.5 ms per frame, so a change spreads over many frames instead of shifting every later frame at once. It starts at three frame intervals of the frame-rate setting plus 40 ms: 90 ms at 60 fps, 140 ms at 30 fps. Frames that still leave the decoder after their time are shown at once and counted as `late`, and the stats line shows the current `delay`.
+
+**Measured on my Tang with a fixed 90 ms delay**, with an earlier version of this change that set up its own `SurfaceView` before the current one existed, and before the delay adjusted itself (USB, 2560×1440 at 60 fps, alternating off/on captures of 41–53 s while scrolling on and off, `rx` about 56 fps while scrolling). Intervals come from `dumpsys SurfaceFlinger --latency` for the video layer (the app window when off, the `SurfaceView` when on), counting only seconds with at least 40 presented frames:
+
+| Run | Smooth video | Seconds counted | Next frame 1 refresh later | 2 refreshes later | 3 or more | Presented fps |
+|---|---|---|---|---|---|---|
+| A1 | off | 9 | 63.6% | 32.5% | 3.9% | 42.4 |
+| B1 | on | 29 | 86.0% | 12.4% | 1.5% | 51.2 |
+| A2 | off | 31 | 63.8% | 31.4% | 4.8% | 42.1 |
+| B2 | on | 37 | 83.4% | 14.2% | 2.5% | 50.0 |
+
+- With the setting on, more of the received frames reached the screen and more of them came one refresh apart. This is consistent with the decoder's bunched output being spread back onto the iPhone's grid; it was not measured separately how much the `SurfaceView` alone contributes. An earlier USB run with a `SurfaceView` and no pacing, counted the same way (8 seconds), gave 63.4% at one refresh, close to the off runs.
+- With the fixed 90 ms, in the 5 s windows of the on runs where `rx` was above 53 fps, `late` was 36–75 (about 13–26% of the frames received), so a share of frames still left the decoder after their time.
+- The main screen sometimes arrived at a steady 30 fps for over a minute while the setting was 60 fps. Over USB right after run B2 (no touches), `rx` was 29–34 fps and `late` was 49–112 per 5 s (about 31–75% of the frames received). In a later wireless session (car hotspot, while I switched between CarPlay apps, the map among them), `late` was 98–128 per 5 s (about 62–85%). So for those stretches most frames were released as soon as they left the decoder, as with the setting off; what reached the screen was not captured then. This is why the delay now adjusts itself.
+- When DiPlay goes to the background, the main-screen decoder moves to an offscreen surface and keeps its state, and on return DiPlay asks the iPhone for a new keyframe. In the car the picture came back at once, with a short blink.
+
+**Measured on my Tang with the adjusting delay and a 4 ms margin**, the first version of the adjusting delay (car hotspot, 2560×1440 at 60 fps, one session of about 3 minutes: lists, the map, lists again, background and back; not an A/B run):
+
+- `SurfaceView` layer in `dumpsys SurfaceFlinger --latency`, seconds with at least 40 presented frames (108 s, nearly all lists): the next frame came 1 refresh later for 88.7% of frames, 2 refreshes later for 9.1%, and 3 or more for 1.7%; 51.2 presented fps.
+- Per 5 s window of the main screen:
+
+| Content | Windows | `rx` | `delay` | `late`, share of frames received |
+|---|---|---|---|---|
+| Lists | 21 | 43–60 fps | 76–116 ms, one window 190 ms | median 8%, 18 windows 3–12%, the others 15%, 20% and 35% |
+| Map | 9 | 25–41 fps | 97–155 ms | median 16%, 10–34% |
+
+- On the map the iPhone sent frames in bursts, with gaps of up to about 0.5 s (`maxGap` 468–488 ms in every window), so the share at one refresh does not describe it.
+- The 190 ms window followed a still screen of about a second while I switched apps; it is also the window with 35% `late`.
+- This build still counted frames held over a pause in the iPhone's frames as `late`. The build in this change leaves them out, so its `late` reads lower for the same picture.
+- This session used the car hotspot and the fixed-delay table used USB, on a different run, so the two are not a like-for-like comparison.
+
+**Margin, measured on my Tang** (car hotspot, 2560×1440 at 60 fps; one connection per run, about 1–1.5 minutes of scrolling each, plus the map in the first five; runs in the order 4, 12, 20, 4, 20 ms, then two more at 20 ms without the map). For each run, every frame the app released was matched to SurfaceFlinger's record by its timestamp, so frames SurfaceFlinger dropped are counted too. Seconds with at least 40 presented frames only; two separate analyses of the same data agreed within about 1 percentage point on these figures:
+
+| Margin | Runs | Next frame 1 refresh later | `late` | Missed their refresh: late, presented a refresh late, or dropped | Delay, median |
+|---|---|---|---|---|---|
+| 4 ms | 2 | 88.7–89.2% | 6.8–7.4% | 15–18% | 86–92 ms |
+| 12 ms | 1 | 92.6% | 4.0–4.2% | 8–9% | 98–99 ms |
+| 20 ms | 4 | 90.5–94.5% | 1.9–3.3% | 5–8% | 108–113 ms |
+
+- Every frame released on time but less than about 15.75 ms before the vsync after its target missed that vsync; at 16–16.5 ms before it, about a quarter to a third did; from about 17 ms on, 1–6%. That is consistent with SurfaceFlinger taking the buffer one refresh ahead, and it is why a 4 ms margin left so many frames short.
+- The 12 ms margin has only one short run, so it is not clear whether it differs from 20 ms on the screen; 20 ms missed fewer frames in every run.
+- The two analyses split the missed frames between "presented late" and "dropped" differently, so only their sum is given.
+
+**Cost and limits:**
+- Each frame is held until its display time, up to about the delay after it arrives, so touches respond later. The added touch-to-screen delay was not measured.
+- Picture adjustments do not apply, because the video no longer passes through the view they are applied to.
+- These runs were made on one car, parked, with one decoder. Other decoders were not tried.
+
+## 4. Checking it yourself
 
 While CarPlay runs, DiPlay logs a `DiPlay-VideoStats` line every 5 s:
 
@@ -48,4 +116,5 @@ video stats rx=56.2fps shown=56.4fps maxGap=73ms kbps=28899 ...
 
 - `rx` counts frames received by DiPlay; `shown` counts decoder outputs released for rendering to its surface. These are windowed counters, not proof of every frame the phone sent or every physical display refresh.
 - If `shown` keeps up with `rx` but `rx` is low while you scroll, compare picture settings and the Wi-Fi link. The counters alone cannot distinguish phone encoding, transport delays or backpressure, and do not rule out every head-unit problem.
+- `decode p50/p90` is the time from queueing a frame into the decoder to dequeueing its output. Frames queued before an input gap of more than 0.5 s (a still screen) are left out of both `decode p50/p90` and `late`. With smooth video on, `late` counts frames shown at once because they left the decoder after their display time, or had no usable display time; frames held over a pause in the iPhone's frames are left out too, since no delay could have hidden them. `delay` is the display delay at the last paced frame.
 - `maxGap` is the largest interval between received frames shorter than 2 s; longer intervals are excluded. A static screen may also produce gaps because the iPhone need not send new frames. A single large value is not evidence of a stall by itself.

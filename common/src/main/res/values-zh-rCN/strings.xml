@@ -106,7 +106,6 @@
     <string name="app_permissions">应用权限</string>
     <string name="app_settings">应用设置</string>
     <string name="apply_and_reconnect">应用并重新连接</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">需要重新连接的设置会在应用时重连 CarPlay。其他改动将在下次连接时生效。</string>
     <string name="audio">音频</string>
     <string name="audio_routing">音频路由</string>
     <string name="auto">自动</string>
@@ -136,7 +135,7 @@
     <string name="carplay_control_running">CarPlay 控制通道运行中</string>
     <string name="carplay_control_window_ended">CarPlay 控制会话已结束</string>
     <string name="carplay_icon">CarPlay 图标</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘上的CarPlay地图 · 实验性</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">仪表盘上的CarPlay地图（实验性）</string>
     <string name="carplay_service_already_running">CarPlay 服务已在运行</string>
     <string name="carplay_session_already_running">CarPlay 会话已在运行</string>
     <string name="carplay_session_ended_reconnecting">CarPlay 会话已结束；正在重新连接</string>
@@ -189,7 +188,6 @@
     <string name="disconnect">断开连接</string>
     <string name="discovering_iphone">正在查找 iPhone</string>
     <string name="display_and_performance">显示与性能</string>
-    <string name="display_video">显示与视频</string>
     <string name="done">完成</string>
     <string name="drag_to_move_pinch_to_zoom">拖动以移动，双指缩放</string>
     <string name="draw_outside_safe_area">允许绘制到安全区域外</string>
@@ -229,7 +227,6 @@
     <string name="i2c_device">I2C 设备</string>
     <string name="i2c_device_path_contains_u_0000">I2C 设备路径包含 U+0000</string>
     <string name="i2c_device_path_is_required">必须填写 I2C 设备路径</string>
-    <string name="identity_appearance">身份与外观</string>
     <string name="image_is_not_ready">图片尚未准备好</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">在 CarPlay 界面用三指向下滑动，可打开 DiPlay 设置。</string>
     <string name="instrument_contrast">仪表盘对比度</string>
@@ -364,7 +361,6 @@
     <string name="starting">正在启动</string>
     <string name="starting_airplay_service">正在启动 AirPlay 服务</string>
     <string name="starting_wireless_hotspot">正在启动无线热点</string>
-    <string name="startup">启动</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">仍在等待使用访问权限。请确认命令已在本车机上成功运行，然后重试。</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">点按数字测试。14 = 比亚迪主驾扬声器。</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">车机无法启动 CarPlay Wi-Fi。请检查 Wi-Fi 并关闭其他投屏应用，正在重试…</string>
@@ -397,7 +393,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P（5 GHz）</string>
     <string name="wi_fi_session">Wi-Fi 会话</string>
     <string name="widest_width">较宽边</string>
-    <string name="window">窗口</string>
     <string name="wireless_carplay">无线 CarPlay</string>
     <string name="wireless_carplay_2">无线 CarPlay</string>
     <string name="wireless_carplay_active">无线 CarPlay 已启用</string>
@@ -410,7 +405,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">WPA2/WPA3 密码长度必须为 8–63 个字符</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">WPA3 过渡模式</string>
-    <string name="your_drive_your_way">按你的习惯设置。</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">暂时找不到 iPhone。请解锁手机并检查蓝牙。</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">地图、音乐与通话，\n在车机屏幕上畅享 CarPlay。</string>
     <string name="your_phone_your_drive">你的手机，畅享旅程。</string>
@@ -673,7 +667,7 @@
     <string name="carplay_rotation_smoother">更流畅（1920）</string>
     <string name="carplay_rotation_sharper">更清晰（屏幕尺寸）</string>
     <string name="auto_grant_incomplete">未验证全部请求权限。请检查下方各项状态；开启网络 ADB 后重试，或使用手动设置。现有权限保持不变。</string>
-    <string name="carplay_call_controls_experimental">CarPlay 通话按键（实验功能）</string>
+    <string name="carplay_call_controls_experimental">CarPlay 通话按键（实验性）</string>
     <string name="carplay_call_controls_experimental_description">启用尚未验证的 DiLink 3 通话、语音和播放/暂停按键。仍需实车测试。默认关闭；仪表通话卡片为独立设置。</string>
     <string name="side_panel">CarPlay 旁的侧边面板（实验性）</string>
     <string name="side_panel_description">CarPlay 可移到屏幕的三分之二，DiPlay 在其余部分显示自己的面板：横屏时在乘客一侧，竖屏时在底部（时钟，以及已读取时的电量）。可在会话菜单中显示或隐藏。下次连接时生效。</string>
@@ -681,6 +675,8 @@
     <string name="side_panel_full_screen">⤢ 全屏</string>
     <string name="main_buffered_audio">缓冲音乐（实验性）</string>
     <string name="main_buffered_audio_description">支持此功能的应用（如 Apple Music）会提前发送约两分钟的音乐，因此短暂的 Wi-Fi 中断不会被听到。其他应用保持原样。会重新连接 CarPlay。</string>
+    <string name="smooth_video">流畅视频（实验性）</string>
+    <string name="smooth_video_description">按 iPhone 为每一帧标记的时间加上一段短延迟显示 CarPlay 主画面，而不是解码后立即显示。延迟会自动调整，让大多数帧能及时解码；仍未按时准备好的帧会立即显示。滚动可能更均匀，但触控响应会变慢。画面调整不适用。会重新连接 CarPlay。</string>
     <string name="car_button_in_carplay">CarPlay 中的车辆按钮</string>
     <string name="car_button_icon">图标</string>
     <string name="car_button_icon_custom">自定义图标</string>
