@@ -77,6 +77,32 @@ object CarPlayRotation {
         return side
     }
 
+    /**
+     * The landscape and portrait areas, each width to height, of a [side] square for a screen that turns.
+     * CarPlay's window is [windowWidth] x [windowHeight] now, on a screen of [screenWidth] x [screenHeight]
+     * in the same orientation. System bars keep their screen edges when the screen turns (a head unit's
+     * navigation bar stays at the bottom), so the other window loses the same width and height to them,
+     * not the swapped amounts: with a 120 px navigation bar, a 2560x1440 screen gives 2560x1320 and
+     * 1440x2440, not 1320x2560. Without a known screen size, the other window is the turned one.
+     */
+    internal fun turningAreas(
+        side: Int,
+        windowWidth: Int,
+        windowHeight: Int,
+        screenWidth: Int,
+        screenHeight: Int,
+    ): Pair<Pair<Int, Int>, Pair<Int, Int>> {
+        val known = screenWidth >= windowWidth && screenHeight >= windowHeight && windowWidth > 0 && windowHeight > 0
+        val barsWidth = if (known) screenWidth - windowWidth else 0
+        val barsHeight = if (known) screenHeight - windowHeight else 0
+        val other = if (known) (screenHeight - barsWidth) to (screenWidth - barsHeight) else windowHeight to windowWidth
+        val now = windowWidth to windowHeight
+        val (landscape, portrait) = if (windowWidth >= windowHeight) now to other else other to now
+        fun even(value: Long) = value.toInt() and 1.inv()
+        return (side to even(side.toLong() * landscape.second / landscape.first)) to
+            (even(side.toLong() * portrait.first / portrait.second) to side)
+    }
+
     /** Whether [decoder] accepts a [side] x [side] stream when asked to configure for it. */
     private fun configures(decoder: String, mime: String, side: Int): Boolean {
         var codec: MediaCodec? = null

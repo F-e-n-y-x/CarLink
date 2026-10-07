@@ -3502,7 +3502,6 @@ class CarPlayHostActivity : ComponentActivity() {
             if (SplitScreenSettings.enabled(this) && !inSplitScreen) SplitScreenSettings.window(this, portrait) else null
         }
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
-        val shortPixels = minOf(display.widthPixels, display.heightPixels)
         val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
             CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), hevcEnabled, hevcSoftwareDecoderEnabled)
         } else null
@@ -3520,10 +3519,12 @@ class CarPlayHostActivity : ComponentActivity() {
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
                 sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
         } else {
-            val areaShort = (shortPixels.toLong() * square / longPixels).toInt() and 1.inv()
+            val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            val (landscape, portrait) = CarPlayRotation.turningAreas(square, size.width, size.height,
+                screen.widthPixels, screen.heightPixels)
             CarPlayViewAreas.build(square, square, listOf(
-                CarPlayViewAreas.Screen(square, areaShort, portrait = false),
-                CarPlayViewAreas.Screen(areaShort, square, portrait = true),
+                CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
+                CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
             ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
                 rightHandDrive = rightHandDrive)
         }
