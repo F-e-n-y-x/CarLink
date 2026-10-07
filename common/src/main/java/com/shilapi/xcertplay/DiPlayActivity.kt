@@ -591,10 +591,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             marginEnd = dp(if (compact) 8 else 12)
         })
         if (page != "home" || !compact) {
-            addView(button(if (page == "home") getString(R.string.car_home) else getString(R.string.back), false) {
-                if (page == "home") startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
+            val home = page == "home"
+            addView(headerButton(
+                getString(if (home) R.string.car_home else R.string.back),
+                if (home) R.drawable.ic_dp_home else R.drawable.ic_dp_back,
+                minWidth = if (compact) dp(80) else dp(130),
+            ) {
+                if (home) startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
                 else navigateBack()
-            }, LinearLayout.LayoutParams(if (compact) dp(80) else dp(130), if (compact) dp(36) else dp(56)))
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, if (compact) dp(36) else dp(56)))
         }
     }
 
@@ -625,16 +630,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun settingsHeader(compact: Boolean): LinearLayout = row().apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(button(getString(R.string.back), false, ::navigateBack),
-            LinearLayout.LayoutParams(if (compact) dp(78) else dp(112), if (compact) dp(48) else dp(52)))
+        addView(headerButton(getString(R.string.back), R.drawable.ic_dp_back, if (compact) dp(78) else dp(112), ::navigateBack),
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, if (compact) dp(48) else dp(52)))
         addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true).apply {
             setPadding(dp(12), 0, dp(12), 0)
         }, LinearLayout.LayoutParams(0, if (compact) dp(48) else dp(52), 1f))
         addView(appearanceButton(), LinearLayout.LayoutParams(dp(48), dp(48)).apply {
             marginEnd = dp(if (compact) 8 else 12)
         })
-        addView(button(getString(R.string.settings_search), false) { showSettingsSearch() },
-            LinearLayout.LayoutParams(if (compact) dp(92) else dp(140), if (compact) dp(48) else dp(52)))
+        addView(headerButton(getString(R.string.settings_search), R.drawable.ic_dp_search, if (compact) dp(92) else dp(140)) {
+            showSettingsSearch()
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, if (compact) dp(48) else dp(52)))
     }
 
     private fun appearanceButton(): ImageButton = iconButton(
@@ -4331,6 +4337,20 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         searchIndexSink?.add(title.substringBefore(VALUE_SEPARATOR))
         setOnClickListener { click() }
     }
+
+    // Wraps its content so the icon stays next to the label instead of at the button edge.
+    private fun headerButton(title: String, icon: Int, minWidth: Int, click: () -> Unit) =
+        button(title, false, click).apply {
+            val size = dp(22)
+            setCompoundDrawablesRelative(
+                getDrawable(icon)?.mutate()?.apply { setTint(TEXT); setBounds(0, 0, size, size) },
+                null, null, null,
+            )
+            compoundDrawablePadding = dp(8)
+            setPadding(dp(14), 0, dp(18), 0)
+            minimumWidth = minWidth
+            this.minWidth = minWidth
+        }
 
     private fun iconButton(icon: Int, description: String, click: () -> Unit) = ImageButton(this).apply {
         setImageResource(icon)
