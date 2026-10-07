@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import android.graphics.drawable.ColorDrawable
 import android.os.Looper
 import android.view.Surface
 import android.view.View
@@ -55,6 +56,17 @@ class AdaptiveSettingsUiTest {
 
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_overview) })
         assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_quick_settings) })
+    }
+
+    @Test fun savedLightAppearanceThemesTheSettingsCanvasAndSystemBars() {
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.LIGHT)
+        val screen = openSettings()
+        val palette = ReflectionHelpers.getField<DiPlayPalette>(screen, "palette")
+        val scroll = ReflectionHelpers.getField<ScrollView>(screen, "rootScroll")
+
+        assertSame(DiPlayPalette.LIGHT, palette)
+        assertEquals(DiPlayPalette.LIGHT.background, (scroll.background as ColorDrawable).color)
+        assertEquals(DiPlayPalette.LIGHT.systemBar, screen.window.navigationBarColor)
     }
 
     @Test fun readinessAsksForAnIphoneBeforeWirelessCanConnect() {
@@ -345,6 +357,10 @@ class AdaptiveSettingsUiTest {
         assertTrue(text(R.string.wheel_siri_key) in vehicle)
         assertTrue(text(R.string.settings_wheel_keys) in vehicle)
         assertTrue(text(R.string.side_panel) in advanced)
+        assertTrue(display.any { it.startsWith(text(R.string.settings_app_appearance)) })
+        assertFalse(audio.any { it.startsWith(text(R.string.settings_app_appearance)) })
+        assertFalse(vehicle.any { it.startsWith(text(R.string.settings_app_appearance)) })
+        assertFalse(advanced.any { it.startsWith(text(R.string.settings_app_appearance)) })
         listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.right_hand_drive, R.string.car_button_in_carplay,
             R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation).forEach {
             assertFalse(text(it), text(it) in display)

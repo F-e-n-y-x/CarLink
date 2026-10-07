@@ -60,6 +60,7 @@ import com.shilapi.xcertplay.settings.SettingsWidgets
 import com.shilapi.xcertplay.transport.EvChargingConnectors
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -118,6 +119,8 @@ internal object SettingsInformationArchitecture {
 /** DiAuto's visual language, with a connection flow for an independent CarPlay receiver. */
 class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
+    private var appNight = true
+    private var palette = DiPlayPalette.DARK
     private var windowLearning: WindowKeyLearning? = null
     private val windowLearningPresses = WheelKeyPresses()
     private val endWindowLearning = Runnable { cancelKeyLearning() }
@@ -269,15 +272,12 @@ class DiPlayActivity : ComponentActivity() {
             openProjection(); finish(); return
         }
         enforceInterfaceSize()
+        refreshAppearance(renderOnChange = false)
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
         WindowCompat.setDecorFitsSystemWindows(window, true)
-        window.statusBarColor = BG; window.navigationBarColor = BG
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = false
-            hide(WindowInsetsCompat.Type.statusBars())
-        }
+        applyWindowAppearance()
         setupError = runCatching { DiPlayBootstrap.ensure(this, AirPlayPersistence.loadMfiTarget(this)) }.exceptionOrNull()?.let {
             android.util.Log.e("DiPlaySetup", "CarPlay authentication could not be loaded", it)
             getString(R.string.setup_error_auth)
@@ -325,6 +325,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (updateInterfaceSize(newConfig)) return
+        refreshAppearance(renderOnChange = false)
         render()
     }
 
@@ -439,6 +440,8 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun render() {
         enforceInterfaceSize()
+        refreshAppearance(renderOnChange = false)
+        applyWindowAppearance()
         // A pending assignment belongs to the widgets being replaced, never to another page.
         cancelKeyLearning()
         // A restore still waiting for layout keeps its target: the old page was never laid out.
@@ -1275,6 +1278,22 @@ class DiPlayActivity : ComponentActivity() {
         if (settingsSectionFilter?.contains(SettingsSection.BYD_ADB) != false) bydAdbSettings(content)
         filteredSection(content, SettingsSection.DISPLAY_AND_PERFORMANCE,
             getString(R.string.display_and_performance), R.drawable.ic_dp_display) { card ->
+            val appearances = AppAppearance.entries
+            choice(
+                card,
+                getString(R.string.settings_app_appearance),
+                listOf(
+                    getString(R.string.settings_app_appearance_dark),
+                    getString(R.string.settings_app_appearance_light),
+                    getString(R.string.settings_app_appearance_auto),
+                ),
+                appearances.indexOf(AirPlayPersistence.loadAppAppearance(this)),
+                reconnects = false,
+            ) { index ->
+                AirPlayPersistence.saveAppAppearance(this, appearances[index])
+                handler.post { render() }
+            }
+            card.addView(label(getString(R.string.settings_app_appearance_description), 14, MUTED))
             val nightModes = CarPlayNightMode.entries
             val nightMode = AirPlayPersistence.loadCarPlayNightMode(this)
             val ambientControls = column().apply {
@@ -4046,7 +4065,7 @@ class DiPlayActivity : ComponentActivity() {
     private fun paintChannel(index: Int, selected: Boolean) {
         val target = channelButtons.getOrNull(index) ?: return
         target.isSelected = selected
-        target.setTextColor(if (selected) BG else TEXT)
+        target.setTextColor(if (selected) ON_ACCENT else TEXT)
         target.background = android.graphics.drawable.RippleDrawable(
             ColorStateList.valueOf(RIPPLE),
             rounded(if (selected) ACCENT else SURFACE, if (selected) ACCENT else BORDER),
@@ -4170,7 +4189,7 @@ class DiPlayActivity : ComponentActivity() {
             label = title,
             description = description,
             checked = value,
-            theme = SettingsTheme.CARD,
+            theme = SettingsTheme.card(palette),
             contentDescription = title,
             enabled = enabled,
             onChanged = save,
@@ -4208,8 +4227,8 @@ class DiPlayActivity : ComponentActivity() {
         typeface = if (bold) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.create("sans-serif", Typeface.NORMAL)
         setLineSpacing(dp(3).toFloat(), 1f)
     }
-    private fun button(title: String, primary: Boolean, click: () -> Unit) = SettingButton(this).apply {
-        isAllCaps = false; textSize = 18f; setTextColor(if (primary) BG else TEXT)
+    private fun button(title: String, primary: Boolean, click: () -> Unit) = SettingButton(this, MUTED, ACCENT).apply {
+        isAllCaps = false; textSize = 18f; setTextColor(if (primary) ON_ACCENT else TEXT)
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE), rounded(if (primary) ACCENT else BUTTON, if (primary) ACCENT else BORDER), null)
         setPadding(dp(16), 0, dp(16), 0); minHeight = dp(56); stateListAnimator = null
@@ -4229,7 +4248,11 @@ class DiPlayActivity : ComponentActivity() {
      * start-aligned, muted value, chevron. Any other text stays a centred action button.
      * The plain text is unchanged, so callers and tests keep matching "Title · Value".
      */
-    private class SettingButton(context: android.content.Context) : Button(context) {
+    private class SettingButton(
+        context: android.content.Context,
+        private val muted: Int,
+        private val accent: Int,
+    ) : Button(context) {
         var action = false
 
         override fun setText(text: CharSequence?, type: BufferType?) {
@@ -4241,19 +4264,19 @@ class DiPlayActivity : ComponentActivity() {
                 return
             }
             val styled = android.text.SpannableString(text).apply {
-                setSpan(android.text.style.ForegroundColorSpan(MUTED), split, text.length,
+                setSpan(android.text.style.ForegroundColorSpan(muted), split, text.length,
                     android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             super.setText(styled, BufferType.SPANNABLE)
             gravity = Gravity.CENTER_VERTICAL or Gravity.START
             setCompoundDrawablesRelativeWithIntrinsicBounds(null, null,
-                context.getDrawable(R.drawable.ic_dp_chevron)?.mutate()?.apply { setTint(ACCENT) }, null)
+                context.getDrawable(R.drawable.ic_dp_chevron)?.mutate()?.apply { setTint(accent) }, null)
         }
     }
     // Remote and D-pad users need to see where they are; touch mode never shows it.
     private fun focusRing(radiusDp: Int = 20) = android.graphics.drawable.StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-            setColor(Color.TRANSPARENT); cornerRadius = dp(radiusDp).toFloat(); setStroke(dp(3), ACCENT)
+            setColor(Color.TRANSPARENT); cornerRadius = dp(radiusDp).toFloat(); setStroke(dp(3), FOCUS_RING)
         })
     }
 
@@ -4322,6 +4345,50 @@ class DiPlayActivity : ComponentActivity() {
     }
     // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
+
+    private fun refreshAppearance(renderOnChange: Boolean): Boolean {
+        val now = Calendar.getInstance()
+        val resolved = resolveAppNight(
+            appearance = AirPlayPersistence.loadAppAppearance(this),
+            carPlayMode = AirPlayPersistence.loadCarPlayNightMode(this),
+            schedule = AirPlayPersistence.loadCarPlayNightSchedule(this),
+            systemNight = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+                Configuration.UI_MODE_NIGHT_YES,
+            minuteOfDay = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE),
+            hostNight = AppAppearanceRuntime.hostNight(),
+        )
+        if (resolved == appNight && palette === DiPlayPalette.of(resolved)) return false
+        appNight = resolved
+        palette = DiPlayPalette.of(resolved)
+        if (renderOnChange) render()
+        return true
+    }
+
+    private fun applyWindowAppearance() {
+        window.statusBarColor = palette.systemBar
+        window.navigationBarColor = palette.systemBar
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = palette.systemBarIconsAreDark
+            isAppearanceLightNavigationBars = palette.systemBarIconsAreDark
+            hide(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+
+    private val BG get() = palette.background
+    private val SURFACE get() = palette.surface
+    private val BUTTON get() = palette.button
+    private val BORDER get() = palette.outline
+    private val ACCENT get() = palette.accent
+    private val ON_ACCENT get() = palette.onAccent
+    private val RAIL_SELECTED get() = palette.railSelected
+    private val RAIL_SELECTED_BORDER get() = palette.railSelectedOutline
+    private val TEXT get() = palette.primaryText
+    private val MUTED get() = palette.secondaryText
+    private val WARNING get() = palette.warning
+    private val READY get() = palette.success
+    private val RIPPLE get() = palette.ripple
+    private val FOCUS_RING get() = palette.focusRing
+
     companion object {
         internal fun isLauncherIntent(intent: Intent): Boolean =
             intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
@@ -4330,19 +4397,6 @@ class DiPlayActivity : ComponentActivity() {
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
-        private val BG = Color.rgb(12, 17, 27)
-        private val SURFACE = Color.rgb(21, 30, 44)
-        // One step lighter than a card, so a button reads as a button even where its 1 px border is faint.
-        private val BUTTON = Color.rgb(31, 43, 61)
-        private val BORDER = Color.rgb(42, 56, 75)
-        private val ACCENT = com.shilapi.xcertplay.settings.SettingsTheme.CARD.accent
-        private val RAIL_SELECTED = Color.rgb(24, 54, 92)
-        private val RAIL_SELECTED_BORDER = Color.rgb(42, 82, 130)
-        private val TEXT = com.shilapi.xcertplay.settings.SettingsTheme.CARD.textPrimary
-        private val MUTED = com.shilapi.xcertplay.settings.SettingsTheme.CARD.textSecondary
-        private val WARNING = Color.rgb(255, 196, 128)
-        private val READY = Color.rgb(127, 205, 154)
-        private const val RIPPLE = 0x336F9FD9
         private const val VALUE_SEPARATOR = " · "
         private const val SEARCH_HIGHLIGHT_MILLIS = 900L
         private const val SPACER = "spacer"

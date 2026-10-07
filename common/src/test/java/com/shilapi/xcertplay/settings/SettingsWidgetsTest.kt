@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RadioButton
 import android.widget.TextView
+import com.shilapi.xcertplay.DiPlayPalette
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
@@ -80,6 +81,18 @@ class SettingsWidgetsTest {
         assertEquals(listOf("Title", "First line\nSecond line"), texts.map { it.text.toString() })
         assertTrue(texts.all { it.lineSpacingExtra == SettingsTheme.CARD.dp(context, 3).toFloat() })
         assertEquals("Title", row.switch.contentDescription)
+    }
+
+    @Test fun lightCardUsesTheResolvedSemanticPalette() {
+        val theme = SettingsTheme.card(DiPlayPalette.LIGHT)
+        val row = SettingsWidgets.createSwitchRow(context, "Title", "Details", false,
+            theme, onChanged = {})
+        val texts = views(row.rowView).filterIsInstance<TextView>().filter { it !== row.switch }.toList()
+        assertEquals(DiPlayPalette.LIGHT.primaryText, texts[0].currentTextColor)
+        assertEquals(DiPlayPalette.LIGHT.secondaryText, texts[1].currentTextColor)
+        assertEquals(DiPlayPalette.LIGHT.accent, row.switch.buttonTintList!!.defaultColor)
+        assertEquals(DiPlayPalette.LIGHT.ripple, theme.ripple)
+        assertEquals(DiPlayPalette.LIGHT.focusRing, theme.focusRing)
     }
 
     @Test @Config(sdk = [28]) fun android9HotspotChoiceDoesNotExposeUnavailableWifiDirect() {

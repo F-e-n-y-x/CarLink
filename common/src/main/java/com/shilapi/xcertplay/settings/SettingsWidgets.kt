@@ -127,12 +127,12 @@ object SettingsWidgets {
             switch.isFocusable = false
             row.isFocusable = true
             row.background = android.graphics.drawable.RippleDrawable(
-                ColorStateList.valueOf(ROW_RIPPLE), null, android.graphics.drawable.ColorDrawable(Color.WHITE))
+                ColorStateList.valueOf(theme.ripple), null, android.graphics.drawable.ColorDrawable(Color.WHITE))
             row.foreground = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
                     cornerRadius = theme.dp(context, 12).toFloat()
-                    setStroke(theme.dp(context, 3), theme.accent)
+                    setStroke(theme.dp(context, 3), theme.focusRing)
                 })
             }
             row.setOnClickListener { if (switch.isEnabled) switch.toggle() }
@@ -168,8 +168,6 @@ object SettingsWidgets {
     }
 
     private const val COLLAPSED_DESCRIPTION_LINES = 2
-    private const val ROW_RIPPLE = 0x336F9FD9
-
     fun <T> createChoiceRow(
         context: Context,
         label: String,
