@@ -53,12 +53,17 @@ class DiLink4ClusterDisplayTest {
         assertFalse(DiLink4ClusterDisplay.accepts("Passenger display", 1280, 480))
     }
 
-    @Test fun smallerProjectionSurfacesWithTheSameShapeAreAccepted() {
+    @Test fun observedProjectionGeometriesAreAcceptedWithoutReusingTheMeasuredProfile() {
         assertTrue(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1920, 720))
         assertTrue(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1280, 480))
         assertFalse(DiLink4ClusterDisplay.matches(DiLink4ClusterDisplay.NAME, 1280, 480))
         assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1280, 720))
         assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1920, 1080))
         assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 640, 240))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 960, 360))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 2560, 960))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 0, 0))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, -1280, -480))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, Int.MAX_VALUE, Int.MAX_VALUE))
     }
 }
