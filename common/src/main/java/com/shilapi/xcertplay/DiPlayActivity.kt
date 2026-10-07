@@ -4277,6 +4277,7 @@ class DiPlayActivity : ComponentActivity() {
     }
     private fun headerButton(title: String, icon: Int, compact: Boolean, click: () -> Unit) = button(title, false, click).apply {
         if (compact) textSize = 16f
+        includeFontPadding = false
         setTextColor(Color.WHITE)
         setSingleLine(true)
         gravity = Gravity.CENTER
@@ -4287,6 +4288,20 @@ class DiPlayActivity : ComponentActivity() {
         }
         setCompoundDrawablesRelative(drawable, null, null, null)
         compoundDrawablePadding = dp(8)
+        doOnLayout {
+            // Centre the icon on the visible glyphs, rather than the font's line box.
+            val textBounds = android.graphics.Rect()
+            paint.getTextBounds(title, 0, title.length, textBounds)
+            if (!textBounds.isEmpty && baseline >= 0) {
+                val glyphCentre = baseline + (textBounds.top + textBounds.bottom) / 2f
+                val drawableCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
+                val offset = (glyphCentre - drawableCentre).roundToInt()
+                drawable?.setBounds(0, offset, iconSize, iconSize + offset)
+                // Move the aligned icon/text group to the button's visual centre.
+                contentOffsetY = drawableCentre - glyphCentre
+                invalidate()
+            }
+        }
     }
 
     private fun button(title: String, primary: Boolean, click: () -> Unit) = SettingButton(this).apply {
@@ -4321,6 +4336,14 @@ class DiPlayActivity : ComponentActivity() {
      */
     private class SettingButton(context: android.content.Context) : Button(context) {
         var action = false
+        var contentOffsetY = 0f
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            val checkpoint = canvas.save()
+            canvas.translate(0f, contentOffsetY)
+            super.onDraw(canvas)
+            canvas.restoreToCount(checkpoint)
+        }
 
         override fun setText(text: CharSequence?, type: BufferType?) {
             val split = if (action) -1 else text?.indexOf(VALUE_SEPARATOR) ?: -1
