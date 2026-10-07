@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Looper
+import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -15,6 +16,8 @@ import android.widget.TextView
 import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
+import com.shilapi.xcertplay.orchestration.CarPlayController
+import com.shilapi.xcertplay.media.AndroidMediaSink
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -25,6 +28,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -332,7 +336,7 @@ class AdaptiveSettingsUiTest {
         val advanced = visibleIn(R.string.settings_advanced)
 
         assertTrue(audio.any { it.startsWith(text(R.string.music_buffer)) })
-        listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.contrib_audio_home_toggle_audio_focus).forEach {
+        listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.contrib_audio_home_toggle_audio_focus).forEach {
             assertTrue(text(it), text(it) in advanced)
             assertFalse(text(it), text(it) in audio)
         }
@@ -341,9 +345,44 @@ class AdaptiveSettingsUiTest {
         assertTrue(text(R.string.wheel_siri_key) in vehicle)
         assertTrue(text(R.string.settings_wheel_keys) in vehicle)
         assertTrue(text(R.string.side_panel) in advanced)
-        listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.right_hand_drive, R.string.car_button_in_carplay,
+        listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.right_hand_drive, R.string.car_button_in_carplay,
             R.string.side_panel, R.string.split_screen_areas, R.string.carplay_rotation).forEach {
             assertFalse(text(it), text(it) in display)
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
+    fun experimentalCallProcessingIsOptInAndMarksTheActiveSessionForReconnect() {
+        assertFalse(AirPlayPersistence.loadCallEchoCancellation(context))
+        assertFalse(AirPlayPersistence.loadCallVoiceFilter(context))
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            listOf(R.string.call_echo_cancellation, R.string.call_voice_filter).forEach { title ->
+                PendingReconnect.clear()
+                ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+                val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                    .single { it.contentDescription == screen.getString(title) }
+                assertFalse(setting.isChecked)
+                setting.performClick()
+
+                assertTrue(PendingReconnect.isPending(session))
+                assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+                assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+                assertEquals(0, stops)
+                assertEquals(null, shadowOf(screen).nextStartedActivity)
+            }
+            assertTrue(AirPlayPersistence.loadCallEchoCancellation(context))
+            assertTrue(AirPlayPersistence.loadCallVoiceFilter(context))
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
         }
     }
 

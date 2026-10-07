@@ -186,10 +186,10 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
-    /** Cancel the call's speaker echo from the microphone in DiPlay, on top of any platform canceller. */
-    private val callEchoCancellation: Boolean = true,
+    /** Opt-in call echo cancellation, replacing a controllable platform canceller while available. */
+    private val callEchoCancellation: Boolean = false,
     /** Cut the bass that head units add when they play a call as music. */
-    private val callVoiceFilter: Boolean = true,
+    private val callVoiceFilter: Boolean = false,
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -197,8 +197,8 @@ class AndroidMediaSink(
      */
     private val videoPacingDelayMillis: Int = 0,
 ) : MediaSink {
-    // Far-end call audio by sample rate, shared between the call renderer and the call microphone.
-    private val callEchoReferences = ConcurrentHashMap<Int, EchoReference>()
+    // Each downlink publishes its own reference; a mic must match that stream and sample rate.
+    private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
     private val appContext = context?.applicationContext
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
@@ -481,7 +481,10 @@ class AndroidMediaSink(
     }
 
     override fun onAudioStopped(id: AudioStreamId) {
-        audioRenderers.remove(id)?.close()
+        synchronized(this) {
+            audioRenderers.remove(id)?.close()
+            callEchoReferences.remove(id)
+        }
         updateMediaAudio(id, false)
     }
 
@@ -499,7 +502,8 @@ class AndroidMediaSink(
         try {
             if (config.audioType == "telephony") enterCommunicationMode(id)
             val uplink = microphoneUplinks.computeIfAbsent(id) {
-                MicrophoneUplink(config, onAudioDiagnostic, callEchoReference(config.audioType, config.sampleRate))
+                MicrophoneUplink(config, onAudioDiagnostic,
+                    if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
             }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
@@ -569,6 +573,7 @@ class AndroidMediaSink(
         audioFocusCoordinator.close()
         audioRenderers.values.forEach(AudioRenderer::close)
         audioRenderers.clear()
+        callEchoReferences.clear()
         val hadMedia = synchronized(mediaAudioTypes) { mediaAudioTypes.isNotEmpty().also { mediaAudioTypes.clear() } }
         if (hadMedia) onMediaAudioChanged(false)
         try {
@@ -609,6 +614,13 @@ class AndroidMediaSink(
         val existing = audioRenderers[id]
         if (existing?.format == format) return existing
         existing?.close()
+        // A replacement owns a fresh ring: the old worker can still finish a blocking write.
+        val echoReference = if (callEchoCancellation && format.audioType == TELEPHONY_AUDIO_TYPE && format.sampleRate > 0) {
+            EchoReference(format.sampleRate).also { callEchoReferences[id] = it }
+        } else {
+            callEchoReferences.remove(id)
+            null
+        }
         return AudioRenderer(
             format,
             advancedAudioChannelMapping,
@@ -619,17 +631,10 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
-            callEchoReference(format.audioType, format.sampleRate),
+            echoReference,
             callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also { audioRenderers[id] = it }
     }
-
-    private fun callEchoReference(audioType: String?, sampleRate: Int): EchoReference? =
-        if (callEchoCancellation && audioType == TELEPHONY_AUDIO_TYPE && sampleRate > 0) {
-            callEchoReferences.computeIfAbsent(sampleRate) { EchoReference(it) }
-        } else {
-            null
-        }
 
     private companion object {
         const val TELEPHONY_AUDIO_TYPE = "telephony"

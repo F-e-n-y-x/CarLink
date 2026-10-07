@@ -3,6 +3,12 @@ package com.shilapi.xcertplay.media
 import android.util.Log
 import java.io.Closeable
 
+/** One active mono call canceller; the uplink owns its processing and teardown. */
+internal interface CallEchoCanceller : Closeable {
+    val frameSamples: Int
+    fun process(frame: ByteArray, reference: ShortArray): Boolean
+}
+
 /**
  * SpeexDSP's acoustic echo canceller with residual echo suppression, for 16-bit mono call audio.
  * Apple expects the accessory to cancel echo; head units that play third-party calls as music do
@@ -10,14 +16,14 @@ import java.io.Closeable
  */
 internal class SpeexEchoCanceller private constructor(
     private var handle: Long,
-    val frameSamples: Int,
-) : Closeable {
+    override val frameSamples: Int,
+) : CallEchoCanceller {
     private val mic = ShortArray(frameSamples)
     private val out = ShortArray(frameSamples)
 
     /** Cancels [reference]'s echo from one PCM16LE [frame] in place; false leaves the frame untouched. */
     @Synchronized
-    fun process(frame: ByteArray, reference: ShortArray): Boolean {
+    override fun process(frame: ByteArray, reference: ShortArray): Boolean {
         if (handle == 0L || frame.size < frameSamples * 2 || reference.size < frameSamples) return false
         for (i in 0 until frameSamples) {
             mic[i] = ((frame[2 * i + 1].toInt() shl 8) or (frame[2 * i].toInt() and 0xff)).toShort()

@@ -54,19 +54,24 @@ Java_com_shilapi_xcertplay_media_SpeexEchoCanceller_nativeProcess(
         JNIEnv *env, jclass clazz, jlong handle, jshortArray mic, jshortArray reference, jshortArray out) {
     (void) clazz;
     Canceller *c = (Canceller *) (intptr_t) handle;
-    if (c == NULL) return JNI_FALSE;
+    if (c == NULL || mic == NULL || reference == NULL || out == NULL) return JNI_FALSE;
     if ((*env)->GetArrayLength(env, mic) < c->frame ||
         (*env)->GetArrayLength(env, reference) < c->frame ||
         (*env)->GetArrayLength(env, out) < c->frame) return JNI_FALSE;
-    jshort *m = (*env)->GetShortArrayElements(env, mic, NULL);
-    jshort *r = (*env)->GetShortArrayElements(env, reference, NULL);
-    jshort *o = (*env)->GetShortArrayElements(env, out, NULL);
+    jshort *m = NULL;
+    jshort *r = NULL;
+    jshort *o = NULL;
     jboolean ok = JNI_FALSE;
-    if (m != NULL && r != NULL && o != NULL) {
-        speex_echo_cancellation(c->echo, m, r, o);
-        speex_preprocess_run(c->preprocess, o);
-        ok = JNI_TRUE;
-    }
+    m = (*env)->GetShortArrayElements(env, mic, NULL);
+    if (m == NULL) goto cleanup;
+    r = (*env)->GetShortArrayElements(env, reference, NULL);
+    if (r == NULL) goto cleanup;
+    o = (*env)->GetShortArrayElements(env, out, NULL);
+    if (o == NULL) goto cleanup;
+    speex_echo_cancellation(c->echo, m, r, o);
+    speex_preprocess_run(c->preprocess, o);
+    ok = JNI_TRUE;
+cleanup:
     if (o != NULL) (*env)->ReleaseShortArrayElements(env, out, o, ok ? 0 : JNI_ABORT);
     if (r != NULL) (*env)->ReleaseShortArrayElements(env, reference, r, JNI_ABORT);
     if (m != NULL) (*env)->ReleaseShortArrayElements(env, mic, m, JNI_ABORT);

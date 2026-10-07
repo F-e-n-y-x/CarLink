@@ -537,17 +537,17 @@ object AirPlayPersistence {
             .putInt(KEY_MEDIA_BUFFER_MS, com.shilapi.xcertplay.media.MediaAudioBuffer.sanitize(millis)).apply()
     }
 
-    /** DiPlay's own echo canceller on CarPlay call audio; on by default, applies at reconnect. */
+    /** DiPlay's own experimental echo canceller on CarPlay call audio; opt-in, applies at reconnect. */
     fun loadCallEchoCancellation(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_ECHO_CANCELLATION, true)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_ECHO_CANCELLATION, false)
 
     fun saveCallEchoCancellation(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_ECHO_CANCELLATION, enabled).apply()
     }
 
-    /** Bass cut on CarPlay call audio; on by default, applies at reconnect. */
+    /** Experimental bass cut on CarPlay call audio; opt-in, applies at reconnect. */
     fun loadCallVoiceFilter(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_VOICE_FILTER, true)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_VOICE_FILTER, false)
 
     fun saveCallVoiceFilter(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_VOICE_FILTER, enabled).apply()
