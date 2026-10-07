@@ -409,6 +409,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private var menuOpen = false
     private var latestStage = "Preparing CarPlay"
     private var darkMode = false
+    private var hostAppearanceResumed = false
     private var paintWaitingScreen: () -> Unit = {}
     private var carPlayNightMode = CarPlayNightMode.SYSTEM
     private var nightSchedule = CarPlayNightSchedule()
@@ -422,6 +423,7 @@ class CarPlayHostActivity : ComponentActivity() {
             initialNight = darkMode,
             onNightChanged = { night ->
                 darkMode = night
+                if (hostAppearanceResumed) AppAppearanceRuntime.publishHost(this, night)
                 paintWaitingScreen()
                 applyClusterTurnOverlay()
                 appendLog("CarPlay switched to ${if (night) "night" else "day"} mode")
@@ -800,6 +802,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        hostAppearanceResumed = true
         val savedNightMode = AirPlayPersistence.loadCarPlayNightMode(this)
         val savedThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         val savedDelay = AirPlayPersistence.loadAmbientDelaySeconds(this)
@@ -815,6 +818,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 nightSchedule)
         }
         nightModeController.resume(systemNight)
+        AppAppearanceRuntime.publishHost(this, darkMode)
         if (!menuOpen) {
             displayScalePercent = AirPlayPersistence.loadDisplayScalePercent(this)
             displayScaleTenths = CarPlayDisplayScale.sanitize((displayScalePercent + 5) / 10)
@@ -1204,6 +1208,8 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        hostAppearanceResumed = false
+        AppAppearanceRuntime.clearHost(this)
         nightModeController.pause()
         super.onPause()
     }
@@ -1300,6 +1306,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         resetSidePanel()
+        hostAppearanceResumed = false
+        AppAppearanceRuntime.clearHost(this)
         nightModeController.pause()
         pictureBinding?.close()
         pictureBinding = null

@@ -60,6 +60,7 @@ object AirPlayPersistence {
     private const val KEY_MANUFACTURER = "manufacturer"
     private const val KEY_MODEL = "model"
     private const val KEY_OEM_LABEL = "oem_label"
+    private const val KEY_APP_APPEARANCE = "app_appearance"
     private const val KEY_CARPLAY_NIGHT_MODE = "carplay_night_mode"
     private const val KEY_CARPLAY_NIGHT_START = "carplay_night_start_minute"
     private const val KEY_CARPLAY_NIGHT_END = "carplay_night_end_minute"
@@ -478,6 +479,15 @@ object AirPlayPersistence {
     fun saveAmbientLightThreshold(context: Context, threshold: AmbientLightThreshold) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_AMBIENT_LUX_THRESHOLD, threshold.lux).apply()
+    }
+
+    fun loadAppAppearance(context: Context): AppAppearance = AppAppearance.fromKey(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_APP_APPEARANCE, null),
+    )
+
+    fun saveAppAppearance(context: Context, appearance: AppAppearance) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_APP_APPEARANCE, appearance.key).apply()
     }
 
     fun loadCarPlayNightMode(context: Context): CarPlayNightMode = CarPlayNightMode.fromKey(
