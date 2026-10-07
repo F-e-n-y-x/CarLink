@@ -50,5 +50,15 @@ class DiLink4ClusterDisplayTest {
     @Test fun similarDisplayNamesAreNotAccepted() {
         assertFalse(DiLink4ClusterDisplay.matches("shared_${DiLink4ClusterDisplay.NAME}_0", 1920, 720))
         assertFalse(DiLink4ClusterDisplay.matches("Passenger display", 1920, 720))
+        assertFalse(DiLink4ClusterDisplay.accepts("Passenger display", 1280, 480))
+    }
+
+    @Test fun smallerProjectionSurfacesWithTheSameShapeAreAccepted() {
+        assertTrue(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1920, 720))
+        assertTrue(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1280, 480))
+        assertFalse(DiLink4ClusterDisplay.matches(DiLink4ClusterDisplay.NAME, 1280, 480))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1280, 720))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 1920, 1080))
+        assertFalse(DiLink4ClusterDisplay.accepts(DiLink4ClusterDisplay.NAME, 640, 240))
     }
 }

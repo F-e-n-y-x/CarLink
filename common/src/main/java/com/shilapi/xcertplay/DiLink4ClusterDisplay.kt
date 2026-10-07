@@ -12,6 +12,15 @@ internal object DiLink4ClusterDisplay {
     fun matches(name: String, width: Int, height: Int): Boolean =
         name == NAME && width == 1920 && height == 720
 
+    /**
+     * BYD's projection surface on other clusters keeps the same 8:3 shape at a smaller size
+     * (a DiLink 3 car reported 1280x480). Those use the generic per-display stream, not [streamConfig].
+     */
+    fun accepts(name: String, width: Int, height: Int): Boolean =
+        name == NAME && width >= MIN_WIDTH && width * 3 == height * 8
+
+    private const val MIN_WIDTH = 960
+
     const val STREAM_WIDTH = 1920
     const val STREAM_HEIGHT = 720
 
