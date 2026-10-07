@@ -630,6 +630,9 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun home(content: LinearLayout) {
         val compact = isCompactLayout
+        fun homeButton(title: String, primary: Boolean, click: () -> Unit) = button(title, primary, click).apply {
+            if (compact) cornerReferenceHeight = 62
+        }
         val wide = resources.configuration.screenWidthDp >= 850
         val body = column()
         val left = column()
@@ -642,11 +645,11 @@ class DiPlayActivity : ComponentActivity() {
         card.addView(label(getString(R.string.wireless_carplay), 12, ACCENT, true).apply { letterSpacing = .12f })
         status = label(getString(R.string.ready_when_you_are), 24, TEXT, true).apply { setPadding(0, dp(10), 0, dp(16)) }
         card.addView(status)
-        connectButton = button(getString(R.string.connect_phone), true) {
+        connectButton = homeButton(getString(R.string.connect_phone), true) {
             if (CarPlayBackgroundSession.hasSession()) openProjection()
             else connect(true)
         }
-        card.addView(connectButton, matchButton(height = if (compact) 60 else 68))
+        card.addView(connectButton, matchButton(height = if (compact) 54 else 68))
         val connectionHint = when (AirPlayPersistence.loadWirelessHotspotMode(this)) {
             WirelessHotspotMode.EXISTING_WIFI -> getString(R.string.existing_wifi_hint)
             WirelessHotspotMode.MANUAL -> getString(R.string.hotspot_hint_manual)
@@ -661,17 +664,17 @@ class DiPlayActivity : ComponentActivity() {
         }
         if (startupProblem != null) {
             card.addView(label(hotspotResultText(startupProblem), 15, WARNING))
-            if (!compact) card.addView(button(getString(R.string.open_car_hotspot_settings), false) { openCarWifiSettings() }, matchButton(10, 56))
+            if (!compact) card.addView(homeButton(getString(R.string.open_car_hotspot_settings), false) { openCarWifiSettings() }, matchButton(10, 56))
         } else if (carHotspotOff()) {
             card.addView(label(getString(R.string.msg_car_hotspot_off, AirPlayPersistence.loadManualHotspotSsid(this)), 15, WARNING).apply { setPadding(0, dp(14), 0, 0) })
-            if (!compact) card.addView(button(getString(R.string.open_car_hotspot_settings), false) { openCarWifiSettings() }, matchButton(10, 56))
+            if (!compact) card.addView(homeButton(getString(R.string.open_car_hotspot_settings), false) { openCarWifiSettings() }, matchButton(10, 56))
         }
-        card.addView(button(getString(R.string.choose_iphone), false) { choosePhone() }, matchButton(16, if (compact) 52 else 56))
-        disconnectButton = button(getString(R.string.disconnect), false) {
+        card.addView(homeButton(getString(R.string.choose_iphone), false) { choosePhone() }, matchButton(16, if (compact) 46 else 56))
+        disconnectButton = homeButton(getString(R.string.disconnect), false) {
             disconnectButton?.isEnabled = false
             CarPlayBackgroundSession.stop { runOnUiThread { refreshStatus() } }
         }.apply { visibility = View.GONE }
-        card.addView(disconnectButton, matchButton(10, if (compact) 52 else 56))
+        card.addView(disconnectButton, matchButton(10, if (compact) 46 else 56))
         val right = column().apply { gravity = Gravity.CENTER_HORIZONTAL }
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.ic_carplay)
@@ -682,10 +685,10 @@ class DiPlayActivity : ComponentActivity() {
             gravity = Gravity.CENTER
             addView(logo, LinearLayout.LayoutParams(dp(96), dp(96)))
         }
-        right.addView(button(getString(R.string.connect_with_usb), false) { connect(false) }, matchButton(height = if (compact) 60 else 68))
+        right.addView(homeButton(getString(R.string.connect_with_usb), false) { connect(false) }, matchButton(height = if (compact) 54 else 68))
         if (!compact) right.addView(label(getString(R.string.plug_your_iphone_into_a_usb_data_port_allow_carplay_when_y), 14, MUTED).apply { gravity = Gravity.CENTER; setPadding(dp(8), dp(10), dp(8), dp(24)) })
         else right.addView(space(16))
-        right.addView(button(getString(R.string.settings), false) { page = "settings"; render() }, matchButton(height = if (compact) 60 else 68))
+        right.addView(homeButton(getString(R.string.settings), false) { page = "settings"; render() }, matchButton(height = if (compact) 54 else 68))
         if (!compact) right.addView(label(getString(R.string.make_diplay_feel_right_for_your_car), 14, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, dp(10), 0, dp(24)) })
         else right.addView(space(12))
         right.addView(label(getString(R.string.home_public_preview, version()), 12, MUTED).apply { letterSpacing = .08f })
@@ -4335,7 +4338,7 @@ class DiPlayActivity : ComponentActivity() {
         setOnClickListener { click() }
         doOnLayout {
             // Short buttons retain the full-size button's corner proportions.
-            val radius = minOf(dp(20).toFloat(), height * 20f / 56f)
+            val radius = minOf(dp(20).toFloat(), height * 20f / cornerReferenceHeight)
             background = android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE),
                 rounded(if (primary) ACCENT else BUTTON, if (primary) ACCENT else BORDER).apply {
                     cornerRadius = radius
@@ -4355,6 +4358,7 @@ class DiPlayActivity : ComponentActivity() {
      */
     private class SettingButton(context: android.content.Context) : Button(context) {
         var action = false
+        var cornerReferenceHeight = 56
         var contentOffsetY = 0f
 
         override fun onDraw(canvas: android.graphics.Canvas) {
