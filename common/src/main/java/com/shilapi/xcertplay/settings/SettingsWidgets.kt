@@ -75,19 +75,19 @@ object SettingsWidgets {
             isChecked = checked
             this.contentDescription = contentDescription
             isEnabled = enabled
+            // Card switches need explicit tints too: the platform track is invisible on a light card.
+            thumbTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(theme.accent, theme.textSecondary),
+            )
+            trackTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                intArrayOf(theme.accentTrack, theme.trackOff),
+            )
             if (theme.isOverlay) {
                 showText = false
-                thumbTintList = ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                    intArrayOf(theme.accent, theme.textSecondary),
-                )
-                trackTintList = ColorStateList(
-                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                    intArrayOf(theme.accentTrack, theme.trackOff),
-                )
             } else {
                 minHeight = theme.dp(context, 56)
-                buttonTintList = ColorStateList.valueOf(theme.accent)
             }
             setOnCheckedChangeListener { _, isChecked -> onChanged(isChecked) }
         }

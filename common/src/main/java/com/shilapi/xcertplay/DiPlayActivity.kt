@@ -646,6 +646,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             this,
             if (appNight) AppAppearance.LIGHT else AppAppearance.DARK,
         )
+        rememberLaunchAppearance()
         requestAppearanceRender(focusAppearanceButton = true)
     }.apply { tag = APPEARANCE_BUTTON_TAG }
 
@@ -1367,6 +1368,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 reconnects = false,
             ) { index ->
                 AirPlayPersistence.saveAppAppearance(this, appearances[index])
+                rememberLaunchAppearance()
                 handler.post { checkForAppearanceChange() }
             }
             card.addView(label(getString(R.string.settings_app_appearance_description), 14, MUTED))
@@ -4512,15 +4514,16 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (resolved == appNight && palette === DiPlayPalette.of(resolved)) return false
         appNight = resolved
         palette = DiPlayPalette.of(resolved)
-        rememberLaunchAppearance()
         return true
     }
 
-    // The system draws the next launch's starting window from the manifest theme, before any app code runs.
-    // API 33 is the first release that lets the app choose that theme; older head units keep the dark frame.
+    // The system draws the next launch's starting window before any app code runs. API 33 is the first
+    // release that lets the app choose it; older head units keep the dark frame. Auto stays dark: the time
+    // of the next launch is unknown, and a dark frame in daylight is safer than a bright frame at night.
     private fun rememberLaunchAppearance() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        splashScreen.setSplashScreenTheme(if (appNight) R.style.Theme_Xcertplay else R.style.Theme_Xcertplay_Light)
+        val light = AirPlayPersistence.loadAppAppearance(this) == AppAppearance.LIGHT
+        splashScreen.setSplashScreenTheme(if (light) R.style.Theme_Xcertplay_Light else R.style.Theme_Xcertplay)
     }
 
     private fun applyWindowAppearance() {

@@ -90,7 +90,11 @@ class SettingsWidgetsTest {
         val texts = views(row.rowView).filterIsInstance<TextView>().filter { it !== row.switch }.toList()
         assertEquals(DiPlayPalette.LIGHT.primaryText, texts[0].currentTextColor)
         assertEquals(DiPlayPalette.LIGHT.secondaryText, texts[1].currentTextColor)
-        assertEquals(DiPlayPalette.LIGHT.accent, row.switch.buttonTintList!!.defaultColor)
+        assertEquals(DiPlayPalette.LIGHT.trackOff, row.switch.trackTintList!!.getColorForState(intArrayOf(), 0))
+        assertEquals(
+            DiPlayPalette.LIGHT.accent,
+            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+        )
         assertEquals(DiPlayPalette.LIGHT.ripple, theme.ripple)
         assertEquals(DiPlayPalette.LIGHT.focusRing, theme.focusRing)
     }
