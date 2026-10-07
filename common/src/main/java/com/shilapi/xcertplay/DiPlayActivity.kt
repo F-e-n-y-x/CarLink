@@ -620,7 +620,8 @@ class DiPlayActivity : ComponentActivity() {
         gravity = Gravity.CENTER_VERTICAL
         addView(headerButton(getString(R.string.back), R.drawable.ic_dp_back, compact, ::navigateBack),
             LinearLayout.LayoutParams(-2, if (compact) dp(44) else dp(52)))
-        addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true).apply {
+        addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true,
+            centreGlyphs = resources.configuration.locales[0].language == "zh").apply {
             setPadding(dp(12), 0, dp(12), 0)
         }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
         addView(headerButton(getString(R.string.settings_search), R.drawable.ic_dp_search, compact) { showSettingsSearch() },
@@ -4270,7 +4271,25 @@ class DiPlayActivity : ComponentActivity() {
     private fun card() = column().apply { background = rounded(SURFACE, BORDER); setPadding(dp(24), dp(24), dp(24), dp(24)) }
     private fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(-1, -2) }
     private fun row() = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(-1, -2) }
-    private fun label(value: String, size: Int, color: Int, bold: Boolean = false) = TextView(this).apply {
+    private class HeaderTitleView(context: android.content.Context) : TextView(context) {
+        private val glyphBounds = android.graphics.Rect()
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            val value = text.toString()
+            paint.getTextBounds(value, 0, value.length, glyphBounds)
+            val checkpoint = canvas.save()
+            if (!glyphBounds.isEmpty && baseline >= 0) {
+                val glyphCentre = baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
+                val contentCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
+                canvas.translate(0f, contentCentre - glyphCentre)
+            }
+            super.onDraw(canvas)
+            canvas.restoreToCount(checkpoint)
+        }
+    }
+
+    private fun label(value: String, size: Int, color: Int, bold: Boolean = false, centreGlyphs: Boolean = false) =
+        (if (centreGlyphs) HeaderTitleView(this) else TextView(this)).apply {
         text = value; textSize = size.toFloat(); setTextColor(color); gravity = Gravity.CENTER_VERTICAL
         typeface = if (bold) Typeface.create("sans-serif-medium", Typeface.NORMAL) else Typeface.create("sans-serif", Typeface.NORMAL)
         setLineSpacing(dp(3).toFloat(), 1f)
