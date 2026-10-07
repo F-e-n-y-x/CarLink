@@ -95,6 +95,33 @@ class SettingsWidgetsTest {
         assertEquals(DiPlayPalette.LIGHT.focusRing, theme.focusRing)
     }
 
+    @Test fun lightOverlayUsesSemanticTextAndControlColors() {
+        val theme = SettingsTheme.overlay(DiPlayPalette.LIGHT)
+        val row = SettingsWidgets.createSwitchRow(
+            context,
+            "Title",
+            "Details",
+            true,
+            theme,
+            onChanged = {},
+        )
+        val label = (row.rowView as ViewGroup).getChildAt(0) as TextView
+
+        assertEquals(DiPlayPalette.LIGHT.overlaySecondaryText, label.currentTextColor)
+        assertEquals(
+            DiPlayPalette.LIGHT.overlayAccent,
+            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+        )
+        assertEquals(
+            DiPlayPalette.LIGHT.overlayAccentTrack,
+            row.switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+        )
+        assertEquals(
+            DiPlayPalette.LIGHT.overlayTrackOff,
+            row.switch.trackTintList!!.getColorForState(intArrayOf(), 0),
+        )
+    }
+
     @Test @Config(sdk = [28]) fun android9HotspotChoiceDoesNotExposeUnavailableWifiDirect() {
         val row = ConnectionSettingsSection.createHotspotModeChoice(context, WirelessHotspotMode.MANUAL,
             onSelected = {})

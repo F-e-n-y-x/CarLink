@@ -20,12 +20,15 @@ import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.media.AndroidMediaSink
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -69,6 +72,10 @@ class AdaptiveSettingsUiTest {
 
         assertSame(DiPlayPalette.LIGHT, palette)
         assertEquals(DiPlayPalette.LIGHT.background, (scroll.background as ColorDrawable).color)
+        assertEquals(
+            DiPlayPalette.LIGHT.background,
+            (screen.window.decorView.background as ColorDrawable).color,
+        )
         assertEquals(DiPlayPalette.LIGHT.systemBar, screen.window.navigationBarColor)
     }
 
@@ -100,11 +107,35 @@ class AdaptiveSettingsUiTest {
         assertSame(DiPlayPalette.LIGHT, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
 
         AirPlayPersistence.saveCarPlayNightMode(screen, CarPlayNightMode.NIGHT)
-        ReflectionHelpers.callInstanceMethod<Unit>(screen, "checkForAppearanceChange")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
 
         assertSame(DiPlayPalette.DARK, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
         val scroll = ReflectionHelpers.getField<ScrollView>(screen, "rootScroll")
         assertEquals(DiPlayPalette.DARK.background, (scroll.background as ColorDrawable).color)
+    }
+
+    @Test fun hostAppearancePublishedOffMainRepaintsOnMain() {
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.AUTO)
+        AirPlayPersistence.saveCarPlayNightMode(context, CarPlayNightMode.DAY)
+        val screen = openSettings()
+        assertSame(DiPlayPalette.LIGHT, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
+        val owner = Any()
+        val failure = AtomicReference<Throwable?>()
+
+        val publisher = Thread {
+            try {
+                AppAppearanceRuntime.publishHost(owner, true)
+            } catch (throwable: Throwable) {
+                failure.set(throwable)
+            }
+        }
+        publisher.start()
+        publisher.join()
+
+        assertNull(failure.get())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertSame(DiPlayPalette.DARK, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
+        AppAppearanceRuntime.clearHost(owner)
     }
 
     @Test

@@ -54,7 +54,18 @@ class DiPlayPaletteTest {
             assertContrastAtLeast(palette.success, palette.background, 4.5)
             // The legacy dark danger role is used for graphical/status emphasis, not body text.
             assertContrastAtLeast(palette.danger, palette.background, 3.0)
+            assertContrastAtLeast(palette.overlayPrimaryText, palette.overlayBackground, 4.5)
+            assertContrastAtLeast(palette.overlaySecondaryText, palette.overlayBackground, 4.5)
+            assertContrastAtLeast(palette.overlayAccent, palette.overlayBackground, 4.5)
+            assertContrastAtLeast(palette.overlayOnAccent, palette.overlayAccent, 4.5)
+            assertContrastAtLeast(palette.overlayDanger, palette.overlayBackground, 3.0)
         }
+        assertContrastAtLeast(DiPlayPalette.LIGHT.accentTrack, DiPlayPalette.LIGHT.trackOff, 3.0)
+        assertContrastAtLeast(
+            DiPlayPalette.LIGHT.overlayAccentTrack,
+            DiPlayPalette.LIGHT.overlayTrackOff,
+            3.0,
+        )
         assertTrue(DiPlayPalette.LIGHT.systemBarIconsAreDark)
     }
 

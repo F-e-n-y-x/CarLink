@@ -69,7 +69,7 @@ internal object AppAppearanceRuntime {
             hostNight = night
             if (changed) observers.values.toList() else emptyList()
         }
-        callbacks.forEach { callback -> runCatching { callback(night) } }
+        callbacks.forEach { callback -> callback(night) }
     }
 
     fun clearHost(owner: Any) {
@@ -80,7 +80,7 @@ internal object AppAppearanceRuntime {
             hostNight = null
             observers.values.toList()
         }
-        callbacks.forEach { callback -> runCatching { callback(null) } }
+        callbacks.forEach { callback -> callback(null) }
     }
 
     /** Returns an idempotent removal callback. Callers remain responsible for lifecycle cleanup. */

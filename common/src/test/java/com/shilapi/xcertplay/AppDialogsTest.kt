@@ -1,5 +1,6 @@
 package com.shilapi.xcertplay
 
+import android.content.ContextWrapper
 import android.graphics.drawable.ColorDrawable
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -35,6 +36,15 @@ class AppDialogsTest {
 
         assertDialogColors(existingContext, DiPlayPalette.LIGHT)
         assertDialogColors(context.appDialogBuilder().context, DiPlayPalette.DARK)
+    }
+
+    @Test fun dialogUsesTheOwnersCurrentAppearanceInsteadOfResolvingItAgain() {
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.DARK)
+        val lightOwner = object : ContextWrapper(context), AppAppearanceOwner {
+            override val currentAppNight = false
+        }
+
+        assertDialogColors(lightOwner.appDialogContext(), DiPlayPalette.LIGHT)
     }
 
     private fun assertDialogColors(themedContext: android.content.Context, palette: DiPlayPalette) {

@@ -76,7 +76,7 @@ internal data class DiPlayPalette(
             secondaryText = Color.rgb(90, 100, 116),
             accent = Color.rgb(36, 90, 156),
             onAccent = Color.WHITE,
-            accentTrack = Color.rgb(135, 169, 209),
+            accentTrack = Color.rgb(36, 90, 156),
             trackOff = Color.rgb(167, 181, 199),
             warning = Color.rgb(122, 69, 0),
             success = Color.rgb(40, 107, 63),
@@ -90,7 +90,7 @@ internal data class DiPlayPalette(
             overlaySecondaryText = Color.rgb(75, 86, 101),
             overlayAccent = Color.rgb(35, 100, 58),
             overlayOnAccent = Color.WHITE,
-            overlayAccentTrack = Color.rgb(149, 196, 164),
+            overlayAccentTrack = Color.rgb(35, 100, 58),
             overlayTrackOff = Color.rgb(168, 180, 190),
             overlayDanger = Color.rgb(155, 48, 48),
         )

@@ -16,6 +16,7 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -116,9 +117,10 @@ internal object SettingsInformationArchitecture {
 }
 
 /** DiAuto's visual language, with a connection flow for an independent CarPlay receiver. */
-class DiPlayActivity : ComponentActivity() {
+class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val handler = Handler(Looper.getMainLooper())
     private var appNight = true
+    override val currentAppNight: Boolean get() = appNight
     private var palette = DiPlayPalette.DARK
     private var appearanceObserverRemoval: (() -> Unit)? = null
     private var appearanceUpdatesResumed = false
@@ -387,10 +389,10 @@ class DiPlayActivity : ComponentActivity() {
             return
         }
         handler.removeCallbacks(tick); handler.post(tick)
-        startAppearanceUpdates()
         // Back from the car settings: refresh the car hotspot reminder on the home page.
         if (!initialLaunch && !adbSwitchChangePending && !pausedForAdbSwitchChange &&
             (page == "home" || page == "settings" || page == "connection")) render()
+        startAppearanceUpdates()
         pausedForAdbSwitchChange = false
         if (initialLaunch) {
             initialLaunch = false
@@ -4455,14 +4457,23 @@ class DiPlayActivity : ComponentActivity() {
     private fun startAppearanceUpdates() {
         appearanceUpdatesResumed = true
         appearanceObserverRemoval?.invoke()
-        appearanceObserverRemoval = AppAppearanceRuntime.observeHost { checkForAppearanceChange() }
+        appearanceObserverRemoval = AppAppearanceRuntime.observeHost {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                checkForAppearanceChange()
+            } else {
+                handler.post { if (appearanceUpdatesResumed) checkForAppearanceChange() }
+            }
+        }
         handler.removeCallbacks(appearancePoll)
         handler.post(appearancePoll)
         applyPendingAppearanceRender()
     }
 
     private fun checkForAppearanceChange() {
-        if (refreshAppearance()) requestAppearanceRender()
+        if (refreshAppearance()) {
+            NavigationWidgetUpdater.requestUpdate(applicationContext)
+            requestAppearanceRender()
+        }
     }
 
     private fun requestAppearanceRender(focusAppearanceButton: Boolean = false) {
@@ -4505,6 +4516,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun applyWindowAppearance() {
+        window.setBackgroundDrawable(ColorDrawable(palette.background))
         window.statusBarColor = palette.systemBar
         window.navigationBarColor = palette.systemBar
         WindowInsetsControllerCompat(window, window.decorView).apply {

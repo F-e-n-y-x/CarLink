@@ -66,6 +66,18 @@ class AppAppearanceTest {
         assertEquals(listOf(null, true, false, null), observed)
     }
 
+    @Test fun runtimeDoesNotHideObserverFailures() {
+        val owner = Any()
+        AppAppearanceRuntime.observeHost { night ->
+            if (night != null) error("observer failed")
+        }
+
+        val failure = runCatching { AppAppearanceRuntime.publishHost(owner, true) }.exceptionOrNull()
+
+        assertTrue(failure is IllegalStateException)
+        assertEquals("observer failed", failure?.message)
+    }
+
     @Test fun appearanceRepaintWaitsForEitherWheelKeyLearningPath() {
         assertFalse(shouldDeferAppearanceRender(windowKeyLearning = false, serviceKeyLearning = false))
         assertTrue(shouldDeferAppearanceRender(windowKeyLearning = true, serviceKeyLearning = false))

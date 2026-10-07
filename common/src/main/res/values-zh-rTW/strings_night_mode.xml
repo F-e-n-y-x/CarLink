@@ -5,7 +5,7 @@
     <string name="settings_app_appearance_dark">深色</string>
     <string name="settings_app_appearance_light">淺色</string>
     <string name="settings_app_appearance_auto">自動</string>
-    <string name="settings_app_appearance_description">自動模式會跟隨 CarPlay 的日夜模式。淺色和深色模式會保持固定，無需重新連線。</string>
+    <string name="settings_app_appearance_description">自動模式會跟隨已儲存的 CarPlay 日夜設定；CarPlay 開啟時則跟隨即時結果。淺色和深色模式會保持固定，無需重新連線。</string>
     <string name="settings_switch_to_light_appearance">切換至淺色外觀</string>
     <string name="settings_switch_to_dark_appearance">切換至深色外觀</string>
     <string name="carplay_night_system">依照 Android 系統</string>
