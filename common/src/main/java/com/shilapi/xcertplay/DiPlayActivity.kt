@@ -323,6 +323,11 @@ class DiPlayActivity : ComponentActivity() {
     /** True while a density change is recreating this activity. */
     private fun updateInterfaceSize(configuration: Configuration): Boolean {
         if (interfaceRecreateRequested) return true
+        // The activity handles real system density changes too. Its callback contains our installed
+        // density, while application resources retain the current unscaled system density.
+        applicationContext.resources.configuration.densityDpi.takeIf { it > 0 }?.let {
+            interfaceSystemDensityDpi = it
+        }
         val next = InterfaceSize.configurationChange(configuration, interfaceSystemDensityDpi,
             InterfaceSize.preference(this))
         if (InterfaceSize.needsRecreate(interfaceOverride, next)) {
