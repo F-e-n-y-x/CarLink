@@ -42,6 +42,12 @@ class InterfaceSizeActivityTest {
             assertEquals(true, AppLocale.enforce(app))
             assertEquals("es", app.resources.configuration.locales[0].language)
             assertEquals(false, AppLocale.enforce(app))
+            AppLocale.save(app, AppLocale.SYSTEM)
+            assertEquals(true, AppLocale.enforce(app))
+            assertEquals(
+                android.content.res.Resources.getSystem().configuration.locales[0],
+                app.resources.configuration.locales[0],
+            )
         } finally {
             AppLocale.save(app, AppLocale.SYSTEM)
         }

@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.LocaleList
 import android.content.Context
 import android.content.res.Configuration
+import android.content.res.Resources
 import com.shilapi.xcertplay.host.R
 import java.util.Locale
 
@@ -89,12 +90,13 @@ object AppLocale {
     /**
      * Before Android 13, some head units run apps in a compatibility mode that puts the system language
      * back into the activity's resources after [wrap]. Writes the chosen language again; returns true
-     * if it had to.
+     * if it had to. System default writes the system language back, because the process keeps the
+     * resources that an earlier choice changed.
      */
     @Suppress("DEPRECATION")
     fun enforce(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33) return false
-        val locale = locale(preference(context)) ?: return false
+        val locale = locale(preference(context)) ?: Resources.getSystem().configuration.locales[0]
         val resources = context.resources
         if (resources.configuration.locales[0] == locale) return false
         val configuration = Configuration(resources.configuration).apply {
