@@ -172,8 +172,8 @@ class CarPlayViewAreas private constructor(
 
 /**
  * Optional: CarPlay fills DiPlay's window in the head unit's split screen without reconnecting. The
- * window there is remembered (as fractions of the full window), so the next connection declares an area
- * of exactly that size.
+ * window there is remembered as fractions of the whole screen, which hiding or showing the system bars
+ * does not change, so the next connection declares an area of exactly that shape.
  */
 object SplitScreenSettings {
     private const val PREFS = "diplay_split_screen"
@@ -184,20 +184,32 @@ object SplitScreenSettings {
     fun setEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
 
     /**
-     * The split-screen window seen last on a [portrait] or landscape screen, as fractions of the full
-     * window. Before that: half the width side by side, or half the height on a portrait screen.
+     * The split-screen window seen last on a [portrait] or landscape screen, as fractions of the whole
+     * screen. Before that: half the width side by side, or half the height on a portrait screen.
      */
     fun window(context: Context, portrait: Boolean): Pair<Float, Float> {
         val key = if (portrait) "portrait" else "landscape"
-        val width = prefs(context).getFloat("${key}_width", 0f)
-        val height = prefs(context).getFloat("${key}_height", 0f)
+        val width = prefs(context).getFloat("${key}_screen_width", 0f)
+        val height = prefs(context).getFloat("${key}_screen_height", 0f)
         return if (width in 0.1f..1f && height in 0.1f..1f) width to height else if (portrait) 1f to 0.5f else 0.5f to 1f
     }
 
+    /** Remembers the split-screen window on a [portrait] or landscape screen as fractions of the whole screen. */
     fun saveWindow(context: Context, portrait: Boolean, width: Float, height: Float) {
         if (width !in 0.1f..1f || height !in 0.1f..1f) return
         val key = if (portrait) "portrait" else "landscape"
-        prefs(context).edit().putFloat("${key}_width", width).putFloat("${key}_height", height).apply()
+        prefs(context).edit().putFloat("${key}_screen_width", width).putFloat("${key}_screen_height", height).apply()
+    }
+
+    /**
+     * A split window given as fractions of a [screenWidth] x [screenHeight] screen, as fractions of the
+     * [windowWidth] x [windowHeight] full window CarPlay has on that screen (the screen minus the bars it
+     * shows then), which is what its area is sized against.
+     */
+    fun ofWindow(screenFraction: Pair<Float, Float>, screenWidth: Int, screenHeight: Int, windowWidth: Int, windowHeight: Int): Pair<Float, Float> {
+        if (screenWidth <= 0 || screenHeight <= 0 || windowWidth <= 0 || windowHeight <= 0) return screenFraction
+        return (screenFraction.first * screenWidth / windowWidth).coerceAtMost(1f) to
+            (screenFraction.second * screenHeight / windowHeight).coerceAtMost(1f)
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

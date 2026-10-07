@@ -92,15 +92,28 @@ object CarPlayRotation {
         screenWidth: Int,
         screenHeight: Int,
     ): Pair<Pair<Int, Int>, Pair<Int, Int>> {
+        val (landscape, portrait) = turnedWindows(windowWidth, windowHeight, screenWidth, screenHeight)
+        fun even(value: Long) = value.toInt() and 1.inv()
+        return (side to even(side.toLong() * landscape.second / landscape.first)) to
+            (even(side.toLong() * portrait.first / portrait.second) to side)
+    }
+
+    /**
+     * CarPlay's full window on a landscape and on a portrait screen, from the window now and the screen in
+     * the same orientation; see [turningAreas] for why the bars keep their edges.
+     */
+    internal fun turnedWindows(
+        windowWidth: Int,
+        windowHeight: Int,
+        screenWidth: Int,
+        screenHeight: Int,
+    ): Pair<Pair<Int, Int>, Pair<Int, Int>> {
         val known = screenWidth >= windowWidth && screenHeight >= windowHeight && windowWidth > 0 && windowHeight > 0
         val barsWidth = if (known) screenWidth - windowWidth else 0
         val barsHeight = if (known) screenHeight - windowHeight else 0
         val other = if (known) (screenHeight - barsWidth) to (screenWidth - barsHeight) else windowHeight to windowWidth
         val now = windowWidth to windowHeight
-        val (landscape, portrait) = if (windowWidth >= windowHeight) now to other else other to now
-        fun even(value: Long) = value.toInt() and 1.inv()
-        return (side to even(side.toLong() * landscape.second / landscape.first)) to
-            (even(side.toLong() * portrait.first / portrait.second) to side)
+        return if (windowWidth >= windowHeight) now to other else other to now
     }
 
     /** Whether [decoder] accepts a [side] x [side] stream when asked to configure for it. */

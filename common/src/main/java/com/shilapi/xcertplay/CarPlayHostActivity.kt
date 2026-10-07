@@ -3498,8 +3498,20 @@ class CarPlayHostActivity : ComponentActivity() {
         // the plain canvas and one area for it.
         val inSplitScreen = isMultiWindowActive()
         val dock = CarPlayDock.load(this).also { sessionDock = it }
+        // The whole screen and CarPlay's full window in each orientation: the system bars take their
+        // place in both, so a remembered split window is sized against the window of its orientation.
+        val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+        val screenLong = maxOf(screen.widthPixels, screen.heightPixels)
+        val screenShort = minOf(screen.widthPixels, screen.heightPixels)
+        val (landscapeWindow, portraitWindow) = CarPlayRotation.turnedWindows(size.width, size.height,
+            screen.widthPixels, screen.heightPixels)
         val splitWindow: (Boolean) -> Pair<Float, Float>? = { portrait ->
-            if (SplitScreenSettings.enabled(this) && !inSplitScreen) SplitScreenSettings.window(this, portrait) else null
+            if (SplitScreenSettings.enabled(this) && !inSplitScreen) {
+                val window = if (portrait) portraitWindow else landscapeWindow
+                SplitScreenSettings.ofWindow(SplitScreenSettings.window(this, portrait),
+                    if (portrait) screenShort else screenLong, if (portrait) screenLong else screenShort,
+                    window.first, window.second)
+            } else null
         }
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
         val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
@@ -3519,7 +3531,6 @@ class CarPlayHostActivity : ComponentActivity() {
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
                 sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
         } else {
-            val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
             val (landscape, portrait) = CarPlayRotation.turningAreas(square, size.width, size.height,
                 screen.widthPixels, screen.heightPixels)
             CarPlayViewAreas.build(square, square, listOf(
@@ -4215,11 +4226,15 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         val turned = previous != null && !split && (previous.height > previous.width) != portrait
         if (turned && !areas.turnsWithScreen) return false
-        val longWindow = maxOf(display.windowWidth, display.windowHeight).toFloat()
-        val shortWindow = minOf(display.windowWidth, display.windowHeight).toFloat()
-        if (split && longWindow > 0 && shortWindow > 0) {
-            if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / shortWindow, size.height / longWindow)
-            else SplitScreenSettings.saveWindow(this, false, size.width / longWindow, size.height / shortWindow)
+        if (split) {
+            // Against the whole screen, which the system bars (shown in BYD's split screen) do not change.
+            val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            val screenLong = maxOf(screen.widthPixels, screen.heightPixels).toFloat()
+            val screenShort = minOf(screen.widthPixels, screen.heightPixels).toFloat()
+            if (screenLong > 0 && screenShort > 0) {
+                if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / screenShort, size.height / screenLong)
+                else SplitScreenSettings.saveWindow(this, false, size.width / screenLong, size.height / screenShort)
+            }
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
         if (sidePanelShown) resetSidePanel() // a turn or the split screen ends the side panel
