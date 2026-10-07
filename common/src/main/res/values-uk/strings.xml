@@ -643,4 +643,12 @@
     <string name="settings_interface_size">Розмір інтерфейсу</string>
     <string name="settings_interface_size_auto">Автоматично</string>
     <string name="settings_interface_size_hint">Розмір тексту й елементів керування на екранах DiPlay. В автоматичному режимі вони збільшуються на великих екранах із низькою щільністю. CarPlay не змінюється.</string>
+    <string name="update_check">Перевірити оновлення</string>
+    <string name="update_checking">Перевірка…</string>
+    <string name="update_up_to_date">У вас вже найновіша версія</string>
+    <string name="update_download">Завантажити %1$s</string>
+    <string name="update_downloading">Завантаження · %1$d%%</string>
+    <string name="update_verifying">Перевірка…</string>
+    <string name="update_install">Установити %1$s</string>
+    <string name="update_failed">Не вдалося оновити</string>
 </resources>

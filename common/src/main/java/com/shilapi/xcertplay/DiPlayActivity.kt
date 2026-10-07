@@ -34,6 +34,7 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.core.view.doOnLayout
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -58,7 +59,13 @@ import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import com.shilapi.xcertplay.settings.SettingsTheme
 import com.shilapi.xcertplay.settings.SettingsWidgets
 import com.shilapi.xcertplay.transport.EvChargingConnectors
+import com.shilapi.xcertplay.update.UpdateCatalog
+import com.shilapi.xcertplay.update.UpdateClient
+import com.shilapi.xcertplay.update.UpdateChecksums
+import com.shilapi.xcertplay.update.UpdateRelease
+import com.shilapi.xcertplay.update.UpdateVersion
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -168,6 +175,12 @@ class DiPlayActivity : ComponentActivity() {
     private var vehicleProbeOutcome: BydVehicleProbeOutcome? = null
     private var adbCheckGeneration = 0
     private var adbStatus: TextView? = null
+    @Volatile private var updateStage = UpdateStage.IDLE
+    @Volatile private var updateGeneration = 0
+    @Volatile private var updateProgress: Int? = null
+    private var updateRelease: UpdateRelease? = null
+    private var updateFile: File? = null
+    private var updateMessage: String? = null
     private var carButtonCard: LinearLayout? = null
     private var bydAdbControls: LinearLayout? = null
     private var adbSwitchChangePending = false
@@ -1655,11 +1668,151 @@ class DiPlayActivity : ComponentActivity() {
         content.addView(label(getString(R.string.carplay_at_home_in_your_car), 20, MUTED).apply { setPadding(0, dp(8), 0, dp(24)) })
         section(content, "${getString(R.string.about_public_preview_prefix)}${version()}") { card ->
             card.addView(label(getString(R.string.an_independent_carplay_receiver_for_android_head_units_wir), 17, TEXT))
+            card.addView(updateRow())
         }
         section(content, getString(R.string.made_possible_by_open_source)) { card ->
             card.addView(label(getString(R.string.receiver_based_on_xcertplay_licensed_under_gpl_3_0_diplay), 16, MUTED))
         }
     }
+
+    private enum class UpdateStage { IDLE, CHECKING, AVAILABLE, DOWNLOADING, VERIFYING, READY, FAILED }
+
+    private fun updateRow(): View {
+        val container = column().apply { setPadding(0, dp(12), 0, 0) }
+        updateMessage?.let { container.addView(label(it, 14, MUTED)) }
+        when (updateStage) {
+            UpdateStage.IDLE, UpdateStage.FAILED ->
+                container.addView(button(getString(R.string.update_check), false) { checkForUpdates() },
+                    matchButton(if (updateMessage == null) 0 else 10, 60))
+            UpdateStage.CHECKING -> container.addView(label(getString(R.string.update_checking), 14, MUTED))
+            UpdateStage.AVAILABLE -> container.addView(
+                button(getString(R.string.update_download, updateRelease?.tagName.orEmpty()), true) { downloadUpdate() },
+                matchButton(10, 60))
+            UpdateStage.DOWNLOADING -> container.addView(label(getString(R.string.update_downloading, updateProgress ?: 0), 14, MUTED))
+            UpdateStage.VERIFYING -> container.addView(label(getString(R.string.update_verifying), 14, MUTED))
+            UpdateStage.READY -> container.addView(
+                button(getString(R.string.update_install, updateRelease?.tagName.orEmpty()), true) { installUpdate() },
+                matchButton(10, 60))
+        }
+        return container
+    }
+
+    private fun checkForUpdates() {
+        updateStage = UpdateStage.CHECKING
+        updateMessage = null
+        val generation = ++updateGeneration
+        render()
+        Thread({
+            val outcome = runCatching { latestRelease() }
+            runOnUiThread {
+                if (generation != updateGeneration || isFinishing || isDestroyed) return@runOnUiThread
+                outcome.fold(
+                    { release ->
+                        if (release == null) {
+                            updateMessage = getString(R.string.update_up_to_date)
+                            updateStage = UpdateStage.IDLE
+                        } else {
+                            updateRelease = release
+                            updateStage = UpdateStage.AVAILABLE
+                        }
+                        render()
+                    },
+                    { failure ->
+                        Log.w("DiPlay-Update", "update check failed", failure)
+                        updateMessage = failure.message ?: getString(R.string.update_failed)
+                        updateStage = UpdateStage.FAILED
+                        render()
+                    },
+                )
+            }
+        }, "diplay-update-check").start()
+    }
+
+    private fun latestRelease(): UpdateRelease? {
+        val json = UpdateClient.fetchText(
+            UpdateClient.RELEASES_URL,
+            "application/vnd.github+json",
+            userAgent(),
+        )
+        val release = UpdateCatalog.parse(json) ?: return null
+        return release.takeIf { UpdateVersion.isNewer(it.tagName, version()) }
+    }
+
+    private fun downloadUpdate() {
+        val release = updateRelease ?: return
+        updateStage = UpdateStage.DOWNLOADING
+        updateProgress = null
+        updateMessage = null
+        val generation = ++updateGeneration
+        render()
+        Thread({
+            val outcome = runCatching {
+                val directory = File(cacheDir, "update").apply { deleteRecursively() }
+                val checksumsFile = File(directory, UpdateCatalog.CHECKSUMS_FILE)
+                UpdateClient.download(release.checksumsUrl, checksumsFile) { _, _ -> }
+                val apkFile = File(directory, release.apkName)
+                UpdateClient.download(release.apkUrl, apkFile) { written, total ->
+                    val percent = total?.takeIf { it > 0 }?.let { (written * 100 / it).toInt() } ?: return@download
+                    if (percent != updateProgress) {
+                        updateProgress = percent
+                        refreshUpdateUi(generation)
+                    }
+                }
+                updateStage = UpdateStage.VERIFYING
+                refreshUpdateUi(generation)
+                val expected = UpdateChecksums.parse(checksumsFile.readText())
+                val actual = UpdateChecksums.sha256Hex(apkFile)
+                if (!UpdateChecksums.matches(expected, release.apkName, actual)) {
+                    throw IOException("Checksum mismatch for ${release.apkName}")
+                }
+                apkFile
+            }
+            runOnUiThread {
+                if (generation != updateGeneration || isFinishing || isDestroyed) return@runOnUiThread
+                outcome.fold(
+                    { file ->
+                        updateFile = file
+                        updateStage = UpdateStage.READY
+                        render()
+                    },
+                    { failure ->
+                        Log.w("DiPlay-Update", "update download failed", failure)
+                        updateMessage = failure.message ?: getString(R.string.update_failed)
+                        updateStage = UpdateStage.FAILED
+                        render()
+                    },
+                )
+            }
+        }, "diplay-update-download").start()
+    }
+
+    private fun installUpdate() {
+        val file = updateFile ?: return
+        if (packageManager.canRequestPackageInstalls()) {
+            installApk(file)
+        } else {
+            startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+        }
+    }
+
+    private fun installApk(file: File) {
+        val uri = FileProvider.getUriForFile(this, "$packageName.update-apks", file)
+        startActivity(
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+        )
+    }
+
+    private fun refreshUpdateUi(generation: Int) {
+        runOnUiThread {
+            if (generation != updateGeneration || isFinishing || isDestroyed || page != "about") return@runOnUiThread
+            render()
+        }
+    }
+
+    private fun userAgent() = "DiPlay/${version()}"
 
     // An opted-in connection prepares the hotspot in the controller instead of stopping at this reminder.
     private fun carHotspotOff(): Boolean =
