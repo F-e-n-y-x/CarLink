@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.widget.*
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.settings.SettingsWidgets
 
 /** An in-activity overlay: no dimmed background, decoder restart, or stream negotiation. */
 internal class CarPlayPicturePanel(
@@ -62,13 +63,12 @@ internal class CarPlayPicturePanel(
         original.apply {
             text = context.getString(R.string.picture_show_original)
             setTextColor(palette.overlayPrimaryText)
-            thumbTintList = android.content.res.ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(palette.overlayAccent, palette.overlaySecondaryText),
-            )
-            trackTintList = android.content.res.ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(palette.overlayAccentTrack, palette.overlayTrackOff),
+            SettingsWidgets.applyLargeSwitchStyle(
+                this,
+                palette.overlayAccent,
+                palette.overlaySecondaryText,
+                palette.overlayAccentTrack,
+                palette.overlayTrackOff,
             )
             isEnabled = adjustmentsAvailable
             setOnCheckedChangeListener { _, checked ->
@@ -105,13 +105,12 @@ internal class CarPlayPicturePanel(
             when (view) {
                 is Switch -> {
                     view.setTextColor(palette.overlayPrimaryText)
-                    view.thumbTintList = android.content.res.ColorStateList(
-                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                        intArrayOf(palette.overlayAccent, palette.overlaySecondaryText),
-                    )
-                    view.trackTintList = android.content.res.ColorStateList(
-                        arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                        intArrayOf(palette.overlayAccentTrack, palette.overlayTrackOff),
+                    SettingsWidgets.applyLargeSwitchStyle(
+                        view,
+                        palette.overlayAccent,
+                        palette.overlaySecondaryText,
+                        palette.overlayAccentTrack,
+                        palette.overlayTrackOff,
                     )
                 }
                 is SeekBar -> {

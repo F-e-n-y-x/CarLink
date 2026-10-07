@@ -68,10 +68,23 @@ class SettingsWidgetsTest {
         assertFalse(label.includeFontPadding)
         assertEquals(Color.rgb(170, 180, 190), label.currentTextColor)
         assertEquals(Color.rgb(127, 205, 154), row.switch.thumbTintList!!.getColorForState(
-            intArrayOf(android.R.attr.state_checked), 0))
+            intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked), 0))
         val heading = SettingsWidgets.createCategoryHeader(context, "Heading")
         assertEquals(Color.rgb(127, 205, 154), heading.currentTextColor)
         assertFalse(heading.includeFontPadding)
+    }
+
+    @Test fun switchesUseTheLargeTrackAndMarkTheDisabledState() {
+        for (theme in SettingsTheme.entries) {
+            val switch = SettingsWidgets.createSwitchRow(context, "Title", "Details", false, theme, onChanged = {}).switch
+            switch.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+            assertTrue(switch.measuredWidth >= theme.dp(context, 60))
+            assertTrue(switch.measuredHeight >= theme.dp(context, 34))
+            val enabledOff = switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled), 0)
+            val disabled = switch.trackTintList!!.getColorForState(intArrayOf(), 0)
+            assertEquals(theme.trackOff, enabledOff)
+            assertNotEquals(enabledOff, disabled)
+        }
     }
 
     @Test fun cardDescriptionsKeepMultilineSpacingAndTheirAccessibleTitle() {
@@ -90,10 +103,10 @@ class SettingsWidgetsTest {
         val texts = views(row.rowView).filterIsInstance<TextView>().filter { it !== row.switch }.toList()
         assertEquals(DiPlayPalette.LIGHT.primaryText, texts[0].currentTextColor)
         assertEquals(DiPlayPalette.LIGHT.secondaryText, texts[1].currentTextColor)
-        assertEquals(DiPlayPalette.LIGHT.trackOff, row.switch.trackTintList!!.getColorForState(intArrayOf(), 0))
+        assertEquals(DiPlayPalette.LIGHT.trackOff, row.switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled), 0))
         assertEquals(
             DiPlayPalette.LIGHT.accent,
-            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked), 0),
         )
         assertEquals(DiPlayPalette.LIGHT.ripple, theme.ripple)
         assertEquals(DiPlayPalette.LIGHT.focusRing, theme.focusRing)
@@ -114,15 +127,15 @@ class SettingsWidgetsTest {
         assertEquals(DiPlayPalette.LIGHT.overlaySecondaryText, label.currentTextColor)
         assertEquals(
             DiPlayPalette.LIGHT.overlayAccent,
-            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+            row.switch.thumbTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked), 0),
         )
         assertEquals(
             DiPlayPalette.LIGHT.overlayAccentTrack,
-            row.switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_checked), 0),
+            row.switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked), 0),
         )
         assertEquals(
             DiPlayPalette.LIGHT.overlayTrackOff,
-            row.switch.trackTintList!!.getColorForState(intArrayOf(), 0),
+            row.switch.trackTintList!!.getColorForState(intArrayOf(android.R.attr.state_enabled), 0),
         )
     }
 

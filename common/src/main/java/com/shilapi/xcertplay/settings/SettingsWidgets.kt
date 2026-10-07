@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -13,8 +15,10 @@ import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.host.R
+import kotlin.math.roundToInt
 
 object SettingsWidgets {
 
@@ -56,6 +60,43 @@ object SettingsWidgets {
         applyTextStyle(context, theme, bold = true)
     }
 
+    /**
+     * Replaces the platform switch (about a 36x14dp track) with a 60x34dp track and a 28dp thumb,
+     * so the state reads at arm's length on a head unit.
+     */
+    fun applyLargeSwitchStyle(switch: Switch, thumbOn: Int, thumbOff: Int, trackOn: Int, trackOff: Int) {
+        val density = switch.resources.displayMetrics.density
+        fun px(value: Int) = (value * density).roundToInt()
+        // Switch stretches the thumb to the full track height, so the inset keeps a margin around it.
+        val thumbInset = px(3)
+        switch.thumbDrawable = InsetDrawable(
+            GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setSize(px(28), px(28))
+                setColor(Color.WHITE)
+            },
+            thumbInset,
+        )
+        switch.trackDrawable = GradientDrawable().apply {
+            cornerRadius = px(17).toFloat()
+            setSize(px(60), px(34))
+            setColor(Color.WHITE)
+        }
+        switch.switchMinWidth = px(60)
+        switch.showText = false
+        switch.thumbTintList = switchStates(thumbOn, thumbOff)
+        switch.trackTintList = switchStates(trackOn, trackOff)
+    }
+
+    private fun switchStates(on: Int, off: Int) = ColorStateList(
+        arrayOf(
+            intArrayOf(-android.R.attr.state_enabled),
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(),
+        ),
+        intArrayOf(ColorUtils.setAlphaComponent(off, 0x61), on, off),
+    )
+
     fun createSwitchRow(
         context: Context,
         label: String,
@@ -75,20 +116,8 @@ object SettingsWidgets {
             isChecked = checked
             this.contentDescription = contentDescription
             isEnabled = enabled
-            // Card switches need explicit tints too: the platform track is invisible on a light card.
-            thumbTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(theme.accent, theme.textSecondary),
-            )
-            trackTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(theme.accentTrack, theme.trackOff),
-            )
-            if (theme.isOverlay) {
-                showText = false
-            } else {
-                minHeight = theme.dp(context, 56)
-            }
+            applyLargeSwitchStyle(this, theme.accent, theme.textSecondary, theme.accentTrack, theme.trackOff)
+            if (!theme.isOverlay) minHeight = theme.dp(context, 56)
             setOnCheckedChangeListener { _, isChecked -> onChanged(isChecked) }
         }
 
