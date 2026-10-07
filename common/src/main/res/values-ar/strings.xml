@@ -111,7 +111,6 @@
     <string name="app_permissions">أذونات التطبيق</string>
     <string name="app_settings">إعدادات التطبيق</string>
     <string name="apply_and_reconnect">تطبيق وإعادة الاتصال</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">تؤدي الإعدادات التي تتطلب اتصالًا جديدًا إلى إعادة اتصال CarPlay عند تطبيقها. تُطبق التغييرات الأخرى في اتصالك التالي.</string>
     <string name="audio">الصوت</string>
     <string name="audio_routing">توجيه الصوت</string>
     <string name="auto">تلقائي</string>
@@ -137,7 +136,7 @@
     <string name="carplay_control_running">التحكم في CarPlay قيد التشغيل</string>
     <string name="carplay_control_window_ended">انتهت نافذة التحكم في CarPlay</string>
     <string name="carplay_icon">أيقونة CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات · تجريبي</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">خريطة CarPlay على لوحة العدادات (تجريبي)</string>
     <string name="carplay_service_already_running">خدمة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_already_running">جلسة CarPlay قيد التشغيل بالفعل</string>
     <string name="carplay_session_ended_reconnecting">انتهت جلسة CarPlay؛ إعادة الاتصال</string>
@@ -188,7 +187,6 @@
     <string name="disconnect">قطع الاتصال</string>
     <string name="discovering_iphone">جارٍ اكتشاف iPhone</string>
     <string name="display_and_performance">العرض والأداء</string>
-    <string name="display_video">العرض والفيديو</string>
     <string name="done">تم</string>
     <string name="drag_to_move_pinch_to_zoom">اسحب للتحريك، وقرّب للتكبير</string>
     <string name="draw_outside_safe_area">الرسم خارج المنطقة الآمنة</string>
@@ -227,7 +225,6 @@
     <string name="i2c_device">جهاز I2C</string>
     <string name="i2c_device_path_contains_u_0000">مسار جهاز I2C يحتوي على U+0000</string>
     <string name="i2c_device_path_is_required">مسار جهاز I2C مطلوب</string>
-    <string name="identity_appearance">الهوية والمظهر</string>
     <string name="image_is_not_ready">الصورة غير جاهزة</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">في CarPlay، اسحب لأسفل بثلاثة أصابع لفتح إعدادات DiPlay.</string>
     <string name="instrument_contrast">تباين لوحة العدادات</string>
@@ -352,7 +349,6 @@
     <string name="starting">جارٍ البدء</string>
     <string name="starting_airplay_service">جارٍ بدء خدمة AirPlay</string>
     <string name="starting_wireless_hotspot">جارٍ بدء نقطة الاتصال اللاسلكية</string>
-    <string name="startup">البدء</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">ما زال بانتظار إذن الوصول للاستخدام. تحقق من نجاح تنفيذ الأمر لهذه السيارة ثم حاول مجدداً.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">اضغط رقماً للاختبار. 14 = مكبر صوت السائق في BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">تعذّر على وحدة القيادة بدء واي فاي CarPlay. تحقق من واي فاي وأغلق تطبيقات العرض الأخرى. إعادة المحاولة…</string>
@@ -385,7 +381,6 @@
     <string name="wi_fi_p2p_5_ghz">‏Wi-Fi P2P (5 GHz)</string>
     <string name="wi_fi_session">جلسة واي فاي</string>
     <string name="widest_width">أقصى عرض</string>
-    <string name="window">نافذة</string>
     <string name="wireless_carplay">CARPLAY اللاسلكي</string>
     <string name="wireless_carplay_2">CarPlay اللاسلكي</string>
     <string name="wireless_carplay_active">CarPlay اللاسلكي نشط</string>
@@ -396,7 +391,6 @@
     <string name="wireless_permissions">أذونات لاسلكية</string>
     <string name="wpa2_wpa3_password_must_be_8_63_characters">يجب أن تكون كلمة مرور WPA2/WPA3 من 8 إلى 63 حرفاً</string>
     <string name="wpa3_transition">انتقال WPA3</string>
-    <string name="your_drive_your_way">رحلتك بطريقتك.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">iPhone غير متاح. افتح قفله وتحقق من البلوتوث.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">خرائطك وموسيقاك ومحادثاتك.\nCarPlay، هنا على شاشة سيارتك.</string>
     <string name="your_phone_your_drive">هاتفك. رحلتك.</string>
@@ -625,6 +619,8 @@
     <string name="call_echo_cancellation_description">يمنع الطرف الآخر من سماع صوته عند تشغيل المكالمة عبر سماعات السيارة. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="call_voice_filter">أصوات مكالمات أوضح</string>
     <string name="call_voice_filter_description">يخفض الجهير الزائد الذي تضيفه بعض السيارات إلى صوت المكالمات. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
+    <string name="smooth_video">فيديو سلس (تجريبي)</string>
+    <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يعيد توصيل CarPlay.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
     <string name="car_button_icon">الأيقونة</string>
     <string name="car_button_icon_custom">أيقونة مخصصة</string>

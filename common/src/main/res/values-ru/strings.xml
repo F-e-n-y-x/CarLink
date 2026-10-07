@@ -111,7 +111,6 @@
     <string name="app_permissions">Разрешения приложения</string>
     <string name="app_settings">Настройки приложения</string>
     <string name="apply_and_reconnect">Применить и переподключиться</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Настройки, требующие нового подключения, переподключают CarPlay при применении. Остальные изменения применяются при следующем подключении.</string>
     <string name="audio">Звук</string>
     <string name="audio_routing">Маршрутизация звука</string>
     <string name="auto">Авто</string>
@@ -137,7 +136,7 @@
     <string name="carplay_control_running">Управление CarPlay работает</string>
     <string name="carplay_control_window_ended">Окно управления CarPlay завершено</string>
     <string name="carplay_icon">Значок CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборной панели · экспериментально</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборной панели (экспериментально)</string>
     <string name="carplay_service_already_running">Служба CarPlay уже работает</string>
     <string name="carplay_session_already_running">Сеанс CarPlay уже работает</string>
     <string name="carplay_session_ended_reconnecting">Сеанс CarPlay завершён; переподключение</string>
@@ -188,7 +187,6 @@
     <string name="disconnect">Отключить</string>
     <string name="discovering_iphone">Поиск iPhone</string>
     <string name="display_and_performance">Экран и производительность</string>
-    <string name="display_video">Экран и видео</string>
     <string name="done">Готово</string>
     <string name="drag_to_move_pinch_to_zoom">Перетаскивайте для перемещения, щипайте для масштабирования</string>
     <string name="draw_outside_safe_area">Рисовать за пределами безопасной области</string>
@@ -227,7 +225,6 @@
     <string name="i2c_device">Устройство I2C</string>
     <string name="i2c_device_path_contains_u_0000">Путь к устройству I2C содержит U+0000</string>
     <string name="i2c_device_path_is_required">Укажите путь к устройству I2C</string>
-    <string name="identity_appearance">Идентичность и оформление</string>
     <string name="image_is_not_ready">Изображение не готово</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">В CarPlay проведите тремя пальцами вниз, чтобы открыть настройки DiPlay.</string>
     <string name="instrument_contrast">Контраст приборов</string>
@@ -352,7 +349,6 @@
     <string name="starting">Запуск</string>
     <string name="starting_airplay_service">Запуск службы AirPlay</string>
     <string name="starting_wireless_hotspot">Запуск беспроводной точки доступа</string>
-    <string name="startup">Запуск</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">Всё ещё ожидаем доступ к использованию. Проверьте, что команда успешно выполнена для этого автомобиля, и повторите попытку.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">Нажмите число для теста. 14 = динамик водителя в BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">Головному устройству не удалось запустить Wi-Fi CarPlay. Проверьте Wi-Fi и закройте другие приложения проекции. Повтор…</string>
@@ -385,7 +381,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P (5 ГГц)</string>
     <string name="wi_fi_session">Сеанс Wi-Fi</string>
     <string name="widest_width">Наибольшая ширина</string>
-    <string name="window">Окно</string>
     <string name="wireless_carplay">БЕСПРОВОДНОЙ CARPLAY</string>
     <string name="wireless_carplay_2">Беспроводной CarPlay</string>
     <string name="wireless_carplay_active">Беспроводной CarPlay активен</string>
@@ -396,7 +391,6 @@
     <string name="wireless_permissions">Беспроводные разрешения</string>
     <string name="wpa2_wpa3_password_must_be_8_63_characters">Пароль WPA2/WPA3 должен содержать 8–63 символа</string>
     <string name="wpa3_transition">Переходный WPA3</string>
-    <string name="your_drive_your_way">Ваша поездка, ваш путь.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">iPhone недоступен. Разблокируйте его и проверьте Bluetooth.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">Ваши карты, музыка и разговоры.\nCarPlay прямо здесь на экране автомобиля.</string>
     <string name="your_phone_your_drive">ВАШ ТЕЛЕФОН. ВАША ПОЕЗДКА.</string>
@@ -625,6 +619,8 @@
     <string name="call_echo_cancellation_description">Собеседник не слышит своё эхо, когда звонок идёт через динамики автомобиля. Применяется при следующем подключении CarPlay.</string>
     <string name="call_voice_filter">Более чёткие голоса в звонках</string>
     <string name="call_voice_filter_description">Убирает лишние басы, которые некоторые автомобили добавляют к звуку звонков. Применяется при следующем подключении CarPlay.</string>
+    <string name="smooth_video">Плавное видео (экспериментально)</string>
+    <string name="smooth_video_description">Показывает каждый кадр главного экрана CarPlay по времени, которое отметил на нём iPhone, плюс небольшой запас, а не сразу после декодирования. Запас подстраивается сам, чтобы большинство кадров успевало декодироваться; кадры, всё равно не готовые к своему времени, показываются сразу. Прокрутка может стать ровнее, но отклик на касание запаздывает. Настройки картинки не применяются. Переподключает CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
     <string name="car_button_icon">Значок</string>
     <string name="car_button_icon_custom">Свой значок</string>

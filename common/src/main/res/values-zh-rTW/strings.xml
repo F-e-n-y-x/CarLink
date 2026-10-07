@@ -105,7 +105,6 @@
     <string name="app_permissions">App 權限</string>
     <string name="app_settings">App 設定</string>
     <string name="apply_and_reconnect">套用並重新連線</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">套用尺寸、解析度、音樂緩衝區和影格率設定時會重新連線 CarPlay。其他變更會在下次連線時生效。</string>
     <string name="audio">音訊</string>
     <string name="audio_routing">音訊路由</string>
     <string name="auto">自動</string>
@@ -135,7 +134,7 @@
     <string name="carplay_control_running">CarPlay 控制通道執行中</string>
     <string name="carplay_control_window_ended">CarPlay 控制工作階段已結束</string>
     <string name="carplay_icon">CarPlay 圖示</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">儀表板上的 CarPlay 地圖 · 實驗性</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">儀表板上的 CarPlay 地圖（實驗性）</string>
     <string name="carplay_service_already_running">CarPlay 服務已在執行</string>
     <string name="carplay_session_already_running">CarPlay 工作階段已在執行</string>
     <string name="carplay_session_ended_reconnecting">CarPlay 工作階段已結束；正在重新連線</string>
@@ -188,7 +187,6 @@
     <string name="disconnect">中斷連線</string>
     <string name="discovering_iphone">正在尋找 iPhone</string>
     <string name="display_and_performance">顯示方式與效能</string>
-    <string name="display_video">顯示方式與影片</string>
     <string name="done">完成</string>
     <string name="drag_to_move_pinch_to_zoom">拖曳以移動，雙指縮放</string>
     <string name="draw_outside_safe_area">允許繪製到安全區域外</string>
@@ -228,7 +226,6 @@
     <string name="i2c_device">I2C 裝置</string>
     <string name="i2c_device_path_contains_u_0000">I2C 裝置路徑包含 U+0000</string>
     <string name="i2c_device_path_is_required">必須填寫 I2C 裝置路徑</string>
-    <string name="identity_appearance">身分與外觀</string>
     <string name="image_is_not_ready">圖片尚未準備好</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">在 CarPlay 介面用三指向下滑動，即可開啟 DiPlay 設定。</string>
     <string name="instrument_contrast">儀表板對比度</string>
@@ -363,7 +360,6 @@
     <string name="starting">正在啟動</string>
     <string name="starting_airplay_service">正在啟動 AirPlay 服務</string>
     <string name="starting_wireless_hotspot">正在啟動無線熱點</string>
-    <string name="startup">啟動</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">仍在等待使用狀況存取權限。請確認指令已在此車機上成功執行，然後再試一次。</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">點一下數字進行測試。14 = 比亞迪主駕駛揚聲器。</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">車機無法啟動 CarPlay Wi-Fi。請檢查 Wi-Fi 並關閉其他投放 App，正在再試一次…</string>
@@ -396,7 +392,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P（5 GHz）</string>
     <string name="wi_fi_session">Wi-Fi 工作階段</string>
     <string name="widest_width">較寬邊</string>
-    <string name="window">視窗</string>
     <string name="wireless_carplay">無線 CarPlay</string>
     <string name="wireless_carplay_2">無線 CarPlay</string>
     <string name="wireless_carplay_active">無線 CarPlay 已啟用</string>
@@ -409,7 +404,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">WPA2/WPA3 密碼長度必須為 8–63 個字元</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">WPA3 過渡模式</string>
-    <string name="your_drive_your_way">依你的喜好設定。</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">暫時找不到 iPhone。請解鎖 iPhone 並檢查藍牙。</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">地圖、音樂與通話，\n在車機螢幕上暢享 CarPlay。</string>
     <string name="your_phone_your_drive">你的手機，暢享旅程。</string>
@@ -679,6 +673,8 @@
     <string name="call_echo_cancellation_description">通話透過車用喇叭播放時，避免對方聽到自己的回音。下次連線至 CarPlay 時生效。</string>
     <string name="call_voice_filter">更清晰的通話人聲</string>
     <string name="call_voice_filter_description">削減部分車輛為通話音訊額外加入的低音。下次連線至 CarPlay 時生效。</string>
+    <string name="smooth_video">流暢影片（實驗性）</string>
+    <string name="smooth_video_description">依 iPhone 為每一幀標記的時間加上一段短延遲顯示 CarPlay 主畫面，而不是解碼後立即顯示。延遲會自動調整，讓大多數畫面能及時解碼；仍未按時準備好的畫面會立即顯示。捲動可能更平順，但觸控反應會變慢。畫面調整不適用。變更後會重新連線至 CarPlay。</string>
     <string name="manual_grant_cmd_hint">或在電腦上執行以下 ADB 指令：</string>
     <string name="manual_grant_reason_adboff">此車機尚未啟用本機 ADB（連接埠 5555）。\n您可以在系統設定中手動啟用無障礙服務，或啟用網路 ADB。</string>
     <string name="retry_auto_grant">重試自動授權</string>
