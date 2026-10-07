@@ -241,8 +241,25 @@ class DiPlayActivity : ComponentActivity() {
 
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
 
+    private var interfaceOverride: Configuration? = null
+    private var interfaceSystemDensityDpi = 0
+    private var interfaceRecreateRequested = false
+
+    private fun enforceInterfaceSize(): Boolean {
+        val language = AppLocale.enforce(this)
+        if (language) android.util.Log.i("DiPlayUi", "app language re-applied")
+        val override = interfaceOverride ?: return language
+        val found = resources.displayMetrics.densityDpi
+        if (!InterfaceSize.enforce(resources, override)) return language
+        android.util.Log.i("DiPlayUi", "interface size re-applied: $found -> ${override.densityDpi} dpi")
+        return true
+    }
+
     override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(AppLocale.wrap(newBase))
+        val base = AppLocale.wrap(newBase)
+        super.attachBaseContext(base)
+        interfaceSystemDensityDpi = base.resources.configuration.densityDpi
+        interfaceOverride = InterfaceSize.attach(this, base)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -251,6 +268,7 @@ class DiPlayActivity : ComponentActivity() {
         if (savedInstanceState == null && isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
             openProjection(); finish(); return
         }
+        enforceInterfaceSize()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
@@ -304,7 +322,30 @@ class DiPlayActivity : ComponentActivity() {
         outState.putBoolean("byd_vehicle_advanced", bydVehicleAdvancedExpanded)
         super.onSaveInstanceState(outState)
     }
-    override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (updateInterfaceSize(newConfig)) return
+        render()
+    }
+
+    /** True while a density change is recreating this activity. */
+    private fun updateInterfaceSize(configuration: Configuration): Boolean {
+        if (interfaceRecreateRequested) return true
+        // The activity handles real system density changes too. Its callback contains our installed
+        // density, while application resources retain the current unscaled system density.
+        applicationContext.resources.configuration.densityDpi.takeIf { it > 0 }?.let {
+            interfaceSystemDensityDpi = it
+        }
+        val next = InterfaceSize.configurationChange(configuration, interfaceSystemDensityDpi,
+            InterfaceSize.preference(this))
+        if (InterfaceSize.needsRecreate(interfaceOverride, next)) {
+            interfaceRecreateRequested = true
+            recreate()
+            return true
+        }
+        interfaceOverride = next
+        return false
+    }
     private fun openOverlayPermission() {
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
         if (runCatching { startActivity(intent) }.isFailure) {
@@ -314,6 +355,8 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Results from the image picker and crop screens arrive before onResume.
+        enforceInterfaceSize()
         CenterMapOverlay.onDiPlayScreenShown()
     }
 
@@ -327,6 +370,8 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Returning from another activity can bring the head unit's own density back.
+        if (enforceInterfaceSize()) render()
         if (Build.VERSION.SDK_INT < 33 && AppLocale.preference(this) != languagePreferenceAtCreate) {
             recreate()
             return
@@ -371,6 +416,7 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
         super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (updateInterfaceSize(newConfig)) return
         render()
     }
 
@@ -380,12 +426,19 @@ class DiPlayActivity : ComponentActivity() {
         get() = resources.configuration.screenWidthDp < 550 ||
             resources.configuration.screenHeightDp < 450
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Some head units put their own density back without any other callback.
+        if (hasFocus && enforceInterfaceSize()) render()
+    }
+
     private val isExpandedSettingsLayout: Boolean
         get() = resources.configuration.let {
             SettingsLayoutPolicy.isExpanded(it.screenWidthDp, it.screenHeightDp, it.fontScale)
         }
 
     private fun render() {
+        enforceInterfaceSize()
         // A pending assignment belongs to the widgets being replaced, never to another page.
         cancelKeyLearning()
         // A restore still waiting for layout keeps its target: the old page was never laid out.
@@ -1284,6 +1337,10 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.adapt_pip_resolution), getString(R.string.adapt_pip_resolution_description), AirPlayPersistence.loadAdaptPipResolution(this)) {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
+            card.addView(button("${getString(R.string.settings_interface_size)} · ${InterfaceSize.displayName(this, InterfaceSize.preference(this))}", false) {
+                InterfaceSize.showPicker(this)
+            }, matchButton(12, 60))
+            card.addView(label(getString(R.string.settings_interface_size_hint), 14, MUTED))
         }
         filteredSection(content, SettingsSection.EXPERIMENTAL_DISPLAY,
             getString(R.string.settings_experimental_display), R.drawable.ic_dp_display) { card ->
