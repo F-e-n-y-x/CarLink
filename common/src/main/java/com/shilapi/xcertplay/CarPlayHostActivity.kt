@@ -3505,10 +3505,17 @@ class CarPlayHostActivity : ComponentActivity() {
         val screenShort = minOf(screen.widthPixels, screen.heightPixels)
         val (landscapeWindow, portraitWindow) = CarPlayRotation.turnedWindows(size.width, size.height,
             screen.widthPixels, screen.heightPixels)
+        // Before DiPlay has seen a split window, expect one from the screen, its bars and Android's divider.
+        val statusBar = systemDimension("status_bar_height")
+        val navigationBar = systemDimension("navigation_bar_height")
+        val divider = (systemDimension("docked_stack_divider_thickness") -
+            2 * systemDimension("docked_stack_divider_insets")).coerceAtLeast(0)
         val splitWindow: (Boolean) -> Pair<Float, Float>? = { portrait ->
             if (SplitScreenSettings.enabled(this) && !inSplitScreen) {
                 val window = if (portrait) portraitWindow else landscapeWindow
-                SplitScreenSettings.ofWindow(SplitScreenSettings.window(this, portrait),
+                val expected = SplitScreenSettings.expectedWindow(portrait, screenLong, screenShort,
+                    statusBar, navigationBar, divider)
+                SplitScreenSettings.ofWindow(SplitScreenSettings.window(this, portrait, expected),
                     if (portrait) screenShort else screenLong, if (portrait) screenLong else screenShort,
                     window.first, window.second)
             } else null
@@ -3542,6 +3549,9 @@ class CarPlayHostActivity : ComponentActivity() {
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
         if (square != null) appendLog("Turning screen: square canvas ${square}x$square, areas ${viewAreas?.areas}")
+        if (SplitScreenSettings.enabled(this) && !inSplitScreen) {
+            appendLog("Split screen expected from status bar=$statusBar navigation bar=$navigationBar divider=$divider px")
+        }
         val requestSummary = "Display request selected=${CarPlayUiScale.label(requestedPercent)} percent=$requestedPercent " +
             "surface=${size.width}x${size.height} resolution=${requestedResolutionPercent}% " +
             "base=${requestedResolutionDisplay.widthPixels}x${requestedResolutionDisplay.heightPixels} " +
@@ -4661,6 +4671,12 @@ class CarPlayHostActivity : ComponentActivity() {
         } else {
             "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
         })
+    }
+
+    /** A dimension of the platform's own resources in pixels, or 0 when this build has none by [name]. */
+    private fun systemDimension(name: String): Int {
+        val id = resources.getIdentifier(name, "dimen", "android")
+        return if (id != 0) runCatching { resources.getDimensionPixelSize(id) }.getOrDefault(0) else 0
     }
 
     private fun attachSurface(surface: Surface) {

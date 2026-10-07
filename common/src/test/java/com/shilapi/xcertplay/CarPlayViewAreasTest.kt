@@ -170,4 +170,16 @@ class CarPlayViewAreasTest {
         assertEquals(areas.areas.indexOf(landscapeArea), areas.indexFor(1270, 1208, splitScreen = true, portrait = false))
         assertEquals(areas.areas.indexOf(portraitArea), areas.indexFor(1440, 1154, splitScreen = true, portrait = true))
     }
+
+    @Test fun theExpectedSplitWindowMatchesTheHeadUnitsBeforeAnyIsSeen() {
+        // My Tang: 2560x1440, a 112 px status bar, a 120 px navigation bar and a 20 px divider. It gave
+        // 1270x1208 side by side and 1440x1154 stacked.
+        val landscape = SplitScreenSettings.expectedWindow(false, 2560, 1440, 112, 120, 20)!!
+        val portrait = SplitScreenSettings.expectedWindow(true, 2560, 1440, 112, 120, 20)!!
+        assertEquals(1270f / 2560, landscape.first, 1e-6f)
+        assertEquals(1208f / 1440, landscape.second, 1e-6f)
+        assertEquals(1f, portrait.first, 1e-6f)
+        assertEquals(1154f / 2560, portrait.second, 1e-6f)
+        assertNull(SplitScreenSettings.expectedWindow(true, 0, 0, 112, 120, 20))
+    }
 }

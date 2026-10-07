@@ -185,13 +185,41 @@ object SplitScreenSettings {
 
     /**
      * The split-screen window seen last on a [portrait] or landscape screen, as fractions of the whole
-     * screen. Before that: half the width side by side, or half the height on a portrait screen.
+     * screen. Before that: [expected] when known, else half the width side by side, or half the height on
+     * a portrait screen.
      */
-    fun window(context: Context, portrait: Boolean): Pair<Float, Float> {
+    fun window(context: Context, portrait: Boolean, expected: Pair<Float, Float>? = null): Pair<Float, Float> {
         val key = if (portrait) "portrait" else "landscape"
         val width = prefs(context).getFloat("${key}_screen_width", 0f)
         val height = prefs(context).getFloat("${key}_screen_height", 0f)
-        return if (width in 0.1f..1f && height in 0.1f..1f) width to height else if (portrait) 1f to 0.5f else 0.5f to 1f
+        return if (width in 0.1f..1f && height in 0.1f..1f) width to height
+        else expected ?: if (portrait) 1f to 0.5f else 0.5f to 1f
+    }
+
+    /**
+     * The split window to expect before DiPlay has seen one, as fractions of the whole screen: the screen
+     * halved across its long side less the [divider], with both system bars shown, as BYD shows them in
+     * split screen whatever the full-screen settings. On my Tang (2560x1440, bars of 112 and 120 px, a
+     * 20 px divider) that is 1270x1208 side by side and 1440x1154 stacked, the windows the head unit gave.
+     * Null when the screen size is unknown.
+     */
+    fun expectedWindow(
+        portrait: Boolean,
+        screenLong: Int,
+        screenShort: Int,
+        statusBar: Int,
+        navigationBar: Int,
+        divider: Int,
+    ): Pair<Float, Float>? {
+        if (screenLong <= 0 || screenShort <= 0) return null
+        val bars = statusBar.coerceAtLeast(0) + navigationBar.coerceAtLeast(0)
+        val gap = divider.coerceAtLeast(0)
+        val window = if (portrait) {
+            1f to ((screenLong - bars - gap) / 2).toFloat() / screenLong
+        } else {
+            ((screenLong - gap) / 2).toFloat() / screenLong to (screenShort - bars).toFloat() / screenShort
+        }
+        return window.takeIf { it.first in 0.1f..1f && it.second in 0.1f..1f }
     }
 
     /** Remembers the split-screen window on a [portrait] or landscape screen as fractions of the whole screen. */
