@@ -1424,11 +1424,6 @@ class CarPlayHostActivity : ComponentActivity() {
         val back = Button(this).apply {
             text = getString(R.string.back_to_diplay)
             isAllCaps = false
-            setTextColor(Color.rgb(12, 17, 27))
-            background = GradientDrawable().apply {
-                setColor(Color.rgb(166, 200, 255))
-                cornerRadius = dp(20).toFloat()
-            }
             setOnClickListener { showDiPlayHome() }
         }
         panel.addView(back, LinearLayout.LayoutParams(dp(300), dp(64)))
@@ -1444,6 +1439,12 @@ class CarPlayHostActivity : ComponentActivity() {
             stage.setTextColor(colors.text)
             instructions.setTextColor(colors.secondary)
             gestureHint.setTextColor(colors.secondary)
+            val buttonPalette = DiPlayPalette.of(darkMode)
+            back.setTextColor(buttonPalette.onAccent)
+            back.background = GradientDrawable().apply {
+                setColor(buttonPalette.accent)
+                cornerRadius = dp(20).toFloat()
+            }
         }
         paintWaitingScreen()
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))

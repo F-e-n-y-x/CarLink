@@ -83,7 +83,10 @@ internal object AppAppearanceRuntime {
         callbacks.forEach { callback -> callback(null) }
     }
 
-    /** Returns an idempotent removal callback. Callers remain responsible for lifecycle cleanup. */
+    /**
+     * Returns an idempotent removal callback. Callers remain responsible for lifecycle cleanup.
+     * Observers run on the publisher's thread and must not throw: an exception reaches the host's lifecycle callback.
+     */
     fun observeHost(observer: (Boolean?) -> Unit): () -> Unit {
         val token = Any()
         val initial = synchronized(lock) {

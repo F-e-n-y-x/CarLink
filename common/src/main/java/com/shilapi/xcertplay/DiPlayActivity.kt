@@ -284,6 +284,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         }
         enforceInterfaceSize()
         refreshAppearance()
+        rememberLaunchAppearance()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
@@ -1366,7 +1367,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 reconnects = false,
             ) { index ->
                 AirPlayPersistence.saveAppAppearance(this, appearances[index])
-                handler.post { requestAppearanceRender() }
+                handler.post { checkForAppearanceChange() }
             }
             card.addView(label(getString(R.string.settings_app_appearance_description), 14, MUTED))
             val nightModes = CarPlayNightMode.entries
@@ -4511,7 +4512,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (resolved == appNight && palette === DiPlayPalette.of(resolved)) return false
         appNight = resolved
         palette = DiPlayPalette.of(resolved)
+        rememberLaunchAppearance()
         return true
+    }
+
+    // The system draws the next launch's starting window from the manifest theme, before any app code runs.
+    // API 33 is the first release that lets the app choose that theme; older head units keep the dark frame.
+    private fun rememberLaunchAppearance() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        splashScreen.setSplashScreenTheme(if (appNight) R.style.Theme_Xcertplay else R.style.Theme_Xcertplay_Light)
     }
 
     private fun applyWindowAppearance() {
