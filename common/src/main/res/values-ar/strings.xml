@@ -621,6 +621,8 @@
     <string name="side_panel_full_screen">⤢ ملء الشاشة</string>
     <string name="main_buffered_audio">موسيقى مخزّنة مسبقًا (تجريبي)</string>
     <string name="main_buffered_audio_description">التطبيقات التي تدعم ذلك، مثل Apple Music، ترسل الموسيقى مسبقًا لمدة دقيقتين تقريبًا، فلا تُسمع الانقطاعات القصيرة في Wi-Fi. تعمل التطبيقات الأخرى كما كانت. يعيد توصيل CarPlay.</string>
+    <string name="smooth_video">فيديو سلس (تجريبي)</string>
+    <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يعيد توصيل CarPlay.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
     <string name="car_button_icon">الأيقونة</string>
     <string name="car_button_icon_custom">أيقونة مخصصة</string>

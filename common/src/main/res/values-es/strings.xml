@@ -621,6 +621,8 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="smooth_video">Vídeo fluido (experimental)</string>
+    <string name="smooth_video_description">Muestra cada fotograma de la pantalla principal de CarPlay en el momento que marcó el iPhone más un pequeño retardo, en lugar de en cuanto se decodifica. El retardo se ajusta solo para que la mayoría de los fotogramas se decodifiquen a tiempo; los que aun así no están listos a tiempo se muestran al instante. El desplazamiento puede verse más uniforme, pero el toque responde más tarde. Los ajustes de imagen no se aplican. Reconecta CarPlay.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
     <string name="car_button_icon">Icono</string>
     <string name="car_button_icon_custom">Icono personalizado</string>
