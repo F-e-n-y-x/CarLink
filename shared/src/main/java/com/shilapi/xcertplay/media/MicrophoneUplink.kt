@@ -82,29 +82,15 @@ internal class MicrophoneUplink(
             return false
         }
         val bufferSize = maxOf(minBuffer * 2, config.frameBytes * 4)
-        val nextRecorder = try {
-            AudioRecord.Builder()
-                .setAudioSource(source)
-                .setAudioFormat(
-                    AndroidAudioFormat.Builder()
-                        .setEncoding(AndroidAudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(config.sampleRate)
-                        .setChannelMask(channelMask)
-                        .build(),
-                )
-                .setBufferSizeInBytes(bufferSize)
-                .build()
-        } catch (error: Exception) {
-            Log.e(TAG, "microphone recorder creation failed", error)
-            stats.failure(MicrophoneFailureStage.RECORDER_CREATION, error)
-            nextEncoder?.close()
-            running.set(false)
-            return false
-        }
-        if (nextRecorder.state != AudioRecord.STATE_INITIALIZED) {
-            Log.w(TAG, "microphone recorder failed to initialize")
-            stats.failure(MicrophoneFailureStage.RECORDER_INITIALIZATION, code = nextRecorder.state)
-            nextRecorder.release()
+        // Some head units throw on VOICE_RECOGNITION at build(); VOICE_COMMUNICATION works there.
+        val nextRecorder = createRecorder(source, channelMask, bufferSize)
+            ?: if (source == MediaRecorder.AudioSource.VOICE_RECOGNITION) {
+                stats.useVoiceCommunicationSource()
+                createRecorder(MediaRecorder.AudioSource.VOICE_COMMUNICATION, channelMask, bufferSize)
+            } else {
+                null
+            }
+        if (nextRecorder == null) {
             nextEncoder?.close()
             running.set(false)
             return false
@@ -148,6 +134,33 @@ internal class MicrophoneUplink(
             release()
             false
         }
+    }
+
+    private fun createRecorder(source: Int, channelMask: Int, bufferSize: Int): AudioRecord? {
+        val recorder = try {
+            AudioRecord.Builder()
+                .setAudioSource(source)
+                .setAudioFormat(
+                    AndroidAudioFormat.Builder()
+                        .setEncoding(AndroidAudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(config.sampleRate)
+                        .setChannelMask(channelMask)
+                        .build(),
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .build()
+        } catch (error: Exception) {
+            Log.e(TAG, "microphone recorder creation failed source=$source", error)
+            stats.failure(MicrophoneFailureStage.RECORDER_CREATION, error)
+            return null
+        }
+        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+            Log.w(TAG, "microphone recorder failed to initialize source=$source")
+            stats.failure(MicrophoneFailureStage.RECORDER_INITIALIZATION, code = recorder.state)
+            recorder.release()
+            return null
+        }
+        return recorder
     }
 
     private fun createEchoCanceller(): CallEchoCanceller? {
