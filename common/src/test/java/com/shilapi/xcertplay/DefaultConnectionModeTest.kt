@@ -64,7 +64,7 @@ class DefaultConnectionModeTest {
         val activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
         val controls = LinearLayout(activity)
-        DiPlayActivity::class.java.getDeclaredMethod("settings", LinearLayout::class.java)
+        DiPlayActivity::class.java.getDeclaredMethod("connectionSettings", LinearLayout::class.java)
             .apply { isAccessible = true }.invoke(activity, controls)
         fun descendants(view: View): List<View> = listOf(view) +
             if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
