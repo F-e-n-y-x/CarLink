@@ -2569,6 +2569,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     launchCarButtonImagePicker(
                         openDocument = { imageDocumentPicker.launch(arrayOf("image/*")) },
                         getContent = { imagePicker.launch("image/*") },
+                        documentPickerIsSystem = documentPickerIsSystem(),
                     ).onFailure {
                         externalActivityInProgress = false
                         appendLog("No image picker: ${it.javaClass.simpleName}")
