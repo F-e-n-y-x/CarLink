@@ -17,10 +17,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowMediaCodec
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
@@ -283,6 +285,139 @@ class AndroidMediaSinkCodecDetachTest {
         assertTrue("nothing left to wait for", sink.beginSurfaceDetach(a, parkMain = true).await())
     }
 
+    @Test fun detachCannotMissAWorkerWhoseSurfaceWasCapturedBeforePublication() {
+        val a = newSurface()
+        val sink = AndroidMediaSink(videoPacingDelayMillis = 90).also { sinks += it }
+        sink.setSurface(110, a)
+        val registry = GatedRegistry().also { it.putGate = RegistryGate() }
+        sink.replaceField("videoDecoders", registry)
+        val creator = thread { sink.onVideoConfig(110, avcC) }
+        val gate = checkNotNull(registry.putGate)
+        var detach: BeginOnThread? = null
+        try {
+            assertTrue(gate.entered.await(5, TimeUnit.SECONDS))
+            assertTrue("an unpublished worker must not configure the old surface", codec.configuredSurfaces.isEmpty())
+            detach = BeginOnThread(sink, a)
+            awaitBlockedOnOwnership(detach.thread)
+            assertEquals(1L, detach.returned.count)
+            gate.release.countDown()
+            creator.join(5_000)
+            assertFalse(creator.isAlive)
+            assertTrue(detach.returned.await(5, TimeUnit.SECONDS))
+            assertEquals(true, detach.result.get())
+            assertNotNull("the registered worker participated in detach", detach.detach.get()?.requests?.singleOrNull())
+            assertNotSame(a, mainDecoder(sink).field<Surface?>("outputSurface"))
+        } finally {
+            gate.release.countDown()
+            creator.join(5_000)
+            detach?.thread?.join(5_000)
+        }
+    }
+
+    @Test fun detachCannotMissADecoderTransferringToTheClosingRegistry() {
+        val a = newSurface()
+        val sink = configuredSink(a)
+        holdWorkerInCodec(sink)
+        val registry = GatedRegistry(decoders(sink)).also { it.removeGate = RegistryGate() }
+        sink.replaceField("videoDecoders", registry)
+        val retire = thread { sink.onScreenStreamActive(110, false) }
+        val gate = checkNotNull(registry.removeGate)
+        var detach: BeginOnThread? = null
+        try {
+            assertTrue(gate.entered.await(5, TimeUnit.SECONDS))
+            assertTrue("active entry has already been removed", registry.isEmpty())
+            detach = BeginOnThread(sink, a)
+            awaitBlockedOnOwnership(detach.thread)
+            assertEquals(1L, detach.returned.count)
+            gate.release.countDown()
+            retire.join(5_000)
+            assertFalse(retire.isAlive)
+            assertTrue(detach.begun.await(5, TimeUnit.SECONDS))
+            assertEquals("the codec is still held after the transfer completes", 1L, detach.returned.count)
+            codec.release()
+            assertTrue(detach.returned.await(5, TimeUnit.SECONDS))
+            assertEquals(true, detach.result.get())
+        } finally {
+            gate.release.countDown()
+            codec.release()
+            retire.join(5_000)
+            detach?.thread?.join(5_000)
+        }
+    }
+
+    @Test fun releaseObserversSurviveRegistrationRacingWorkerExitAndRunOutsideOwnershipLock() {
+        val a = newSurface()
+        val sink = configuredSink(a)
+        holdWorkerInCodec(sink)
+        sink.close()
+        // A late accepted receive callback must not revive a closed sink after release was observed.
+        sink.onVideoCodec(110, com.shilapi.xcertplay.airplay.VideoCodec.H264)
+        sink.onVideoConfig(110, avcC)
+        sink.onVideoFrame(110, idr)
+        sink.onVideoFrame(110, idr, 1L, System.nanoTime())
+        assertTrue(decoders(sink).isEmpty())
+
+        val calls = AtomicInteger()
+        val released = CountDownLatch(1)
+        val delivered = CountDownLatch(9)
+        val peerFinished = AtomicReference<Boolean>()
+        sink.whenVideoReleased { throw IllegalStateException("observer failure must be isolated") }
+        sink.whenVideoReleased {
+            val peer = CountDownLatch(1)
+            thread { sink.clearSurface(110, a); peer.countDown() }
+            peerFinished.set(peer.await(5, TimeUnit.SECONDS))
+            calls.incrementAndGet()
+            delivered.countDown()
+            released.countDown()
+        }
+        assertEquals(1L, released.count)
+        val start = CountDownLatch(1)
+        val registrations = (0 until 8).map {
+            thread { start.await(); sink.whenVideoReleased { calls.incrementAndGet(); delivered.countDown() } }
+        }
+        start.countDown()
+        codec.release()
+        registrations.forEach { it.join(5_000); assertFalse(it.isAlive) }
+        assertTrue(released.await(5, TimeUnit.SECONDS))
+        assertTrue(delivered.await(5, TimeUnit.SECONDS))
+        assertTrue(sink.awaitVideoReleased(5_000))
+        assertEquals(true, peerFinished.get())
+        sink.whenVideoReleased { calls.incrementAndGet() } // registration after release is immediate
+        assertEquals("each successful observer runs exactly once", 10, calls.get())
+        assertTrue(decoders(sink).isEmpty())
+        assertEquals(listOf<Surface?>(a), codec.configuredSurfaces.toList())
+    }
+
+    @Test fun aStaleRetirementCannotRepublishAWorkerThatAlreadyReleasedItsCodec() {
+        val a = newSurface()
+        val sink = configuredSink(a)
+        holdWorkerInCodec(sink)
+        val decoder = mainDecoder(sink)
+        sink.close()
+        val notifying = CountDownLatch(1)
+        val finishNotification = CountDownLatch(1)
+        sink.whenVideoReleased {
+            notifying.countDown()
+            finishNotification.await(5, TimeUnit.SECONDS)
+        }
+        try {
+            codec.release()
+            assertTrue(notifying.await(5, TimeUnit.SECONDS))
+            assertTrue("cleanup finished but onExit is still notifying", decoder.field<Thread>("thread").isAlive)
+            assertTrue(sink.field<Set<Any>>("closingVideoDecoders").isEmpty())
+            // settleDetach can time out, pause, and only reach retire after onExit completed cleanup.
+            sink.javaClass.getDeclaredMethod("retire", Int::class.javaPrimitiveType, decoder.javaClass)
+                .apply { isAccessible = true }.invoke(sink, 110, decoder)
+            val alreadyReleased = CountDownLatch(1)
+            sink.whenVideoReleased { alreadyReleased.countDown() }
+            assertEquals("already-released registration must complete immediately", 0L, alreadyReleased.count)
+            assertTrue("the stale worker was not republished", sink.field<Set<Any>>("closingVideoDecoders").isEmpty())
+        } finally {
+            finishNotification.countDown()
+            decoder.field<Thread>("thread").join(5_000)
+        }
+    }
+
     // --- helpers ---
 
     private fun newSurface() = Surface(SurfaceTexture(0))
@@ -322,6 +457,56 @@ class AndroidMediaSinkCodecDetachTest {
             interruptedAfter.set(Thread.currentThread().isInterrupted)
             returned.countDown()
         }
+    }
+
+    private class BeginOnThread(sink: AndroidMediaSink, surface: Surface) {
+        val begun = CountDownLatch(1)
+        val returned = CountDownLatch(1)
+        val detach = AtomicReference<AndroidMediaSink.SurfaceDetach>()
+        val result = AtomicReference<Boolean>()
+        val thread = thread(name = "surface-destroyed-during-registration") {
+            val pending = sink.beginSurfaceDetach(surface, parkMain = true)
+            detach.set(pending)
+            begun.countDown()
+            result.set(pending.await())
+            returned.countDown()
+        }
+    }
+
+    /** Registry hooks pause the actual mutation, not a duplicate implementation of the ownership lock. */
+    private class RegistryGate {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        fun pause() {
+            entered.countDown()
+            check(release.await(10, TimeUnit.SECONDS)) { "registry gate timed out" }
+        }
+    }
+
+    private class GatedRegistry(entries: Map<Int, Any> = emptyMap()) : ConcurrentHashMap<Int, Any>(entries) {
+        var putGate: RegistryGate? = null
+        var removeGate: RegistryGate? = null
+        override fun put(key: Int, value: Any): Any? {
+            putGate?.pause()
+            return super.put(key, value)
+        }
+        override fun remove(key: Int, value: Any): Boolean {
+            val removed = super.remove(key, value)
+            if (removed) removeGate?.pause()
+            return removed
+        }
+    }
+
+    private fun awaitBlockedOnOwnership(worker: Thread) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (worker.isAlive && worker.state != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+            java.util.concurrent.locks.LockSupport.parkNanos(1_000_000)
+        }
+        assertEquals("detach waits for the in-progress registry mutation", Thread.State.BLOCKED, worker.state)
+    }
+
+    private fun Any.replaceField(name: String, value: Any) {
+        javaClass.getDeclaredField(name).apply { isAccessible = true }.set(this, value)
     }
 
     private fun decoders(sink: AndroidMediaSink): Map<Int, Any> = sink.field("videoDecoders")

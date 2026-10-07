@@ -209,10 +209,15 @@ class AndroidMediaSink(
 
     private val screenStateLock = Any()
     private val activeScreenTypes = mutableSetOf<Int>()
-    private val defaultSurface = surface
+    private var defaultSurface = surface
     @Volatile private var screenStreamActiveChanged = onScreenStreamActiveChanged
     private val surfaces = ConcurrentHashMap<Int, Surface>()
     private val videoDecoders = ConcurrentHashMap<Int, VideoDecoder>()
+    // Surface capture, worker publication, retirement and detach snapshots share one ownership boundary.
+    // Native codec work and waits never run under this lock.
+    private val videoOwnershipLock = Any()
+    private var videoClosed = false
+    private val videoReleasedListeners = ArrayList<() -> Unit>()
     // Closed decoders whose workers may still hold a codec on a surface until they exit; a surface
     // detach also waits for them.
     private val closingVideoDecoders = ConcurrentHashMap.newKeySet<VideoDecoder>()
@@ -259,12 +264,17 @@ class AndroidMediaSink(
     }
 
     fun setSurface(type: Int, surface: Surface) {
-        surfaces[type] = surface
-        videoDecoders[type]?.setSurface(surface)
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            surfaces[type] = surface
+            videoDecoders[type]?.setSurface(surface)
+        }
     }
 
     fun clearSurface(type: Int, surface: Surface) {
-        if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurface(null)
+        synchronized(videoOwnershipLock) {
+            if (surfaces.remove(type, surface)) videoDecoders[type]?.setSurface(null)
+        }
     }
 
     /**
@@ -277,16 +287,19 @@ class AndroidMediaSink(
      */
     fun beginSurfaceDetach(surface: Surface, parkMain: Boolean): SurfaceDetach {
         val deadline = System.nanoTime() + detachTimeoutNanos
-        surfaces.entries.removeIf { it.value === surface } // a decoder created from now on must not start on it
         val requests = ArrayList<SurfaceDetachRequest>()
         val steps = ArrayList<() -> Boolean>()
-        for ((type, decoder) in videoDecoders.entries.toList()) {
-            val request = decoder.requestDetach(surface, park = parkMain && type == MAIN_SCREEN_TYPE)
-            requests += request
-            steps += { settleDetach(type, decoder, request, deadline) }
+        synchronized(videoOwnershipLock) {
+            surfaces.entries.removeIf { it.value === surface } // future workers must not start on it
+            if (defaultSurface === surface) defaultSurface = null
+            for ((type, decoder) in videoDecoders.entries.toList()) {
+                val request = decoder.requestDetach(surface, park = parkMain && type == MAIN_SCREEN_TYPE)
+                requests += request
+                steps += { settleDetach(type, decoder, request, deadline) }
+            }
+            closingVideoDecoders.removeIf { it.exited }
+            closingVideoDecoders.toList().forEach { closing -> steps += { closing.awaitExitUntil(deadline + detachGraceNanos) } }
         }
-        closingVideoDecoders.removeIf { it.exited }
-        closingVideoDecoders.toList().forEach { closing -> steps += { closing.awaitExitUntil(deadline + detachGraceNanos) } }
         return SurfaceDetach(requests, steps)
     }
 
@@ -314,16 +327,45 @@ class AndroidMediaSink(
 
     /** Closes a stream's decoder and keeps it visible to surface detaches until its worker exits. */
     private fun retire(type: Int, decoder: VideoDecoder) {
-        videoDecoders.remove(type, decoder)
-        closingVideoDecoders += decoder
-        decoder.close()
+        synchronized(videoOwnershipLock) {
+            // A timed-out detach can reach here after the worker has already completed cleanup. Its
+            // onExit removed both registrations; do not republish it after its sole release notification.
+            if (videoDecoders[type] !== decoder && decoder !in closingVideoDecoders) return
+            closingVideoDecoders += decoder
+            videoDecoders.remove(type, decoder)
+            decoder.close()
+        }
     }
 
     /** After [close], waits up to [timeoutMillis] for this sink's decoders to release their codecs. */
     fun awaitVideoReleased(timeoutMillis: Long): Boolean {
         val deadline = System.nanoTime() + timeoutMillis * 1_000_000L
-        closingVideoDecoders.removeIf { it.exited }
-        return closingVideoDecoders.toList().map { it.awaitExitUntil(deadline) }.all { it }
+        val closing = synchronized(videoOwnershipLock) { closingVideoDecoders.toList() }
+        return closing.map { it.awaitExitUntil(deadline) }.all { it }
+    }
+
+    /** After [close], observes actual release of the tracked stream codecs, outside ownership locks. */
+    fun whenVideoReleased(onReleased: () -> Unit) {
+        val alreadyReleased = synchronized(videoOwnershipLock) {
+            check(videoClosed) { "close before observing video release" }
+            if (videoDecoders.isEmpty() && closingVideoDecoders.isEmpty()) true
+            else {
+                videoReleasedListeners += onReleased
+                false
+            }
+        }
+        if (alreadyReleased) runCatching(onReleased)
+    }
+
+    private fun onVideoDecoderExit(decoder: VideoDecoder) {
+        val listeners = synchronized(videoOwnershipLock) {
+            closingVideoDecoders -= decoder
+            videoDecoders.entries.removeIf { it.value === decoder }
+            if (videoClosed && videoDecoders.isEmpty() && closingVideoDecoders.isEmpty()) {
+                videoReleasedListeners.toList().also { videoReleasedListeners.clear() }
+            } else emptyList()
+        }
+        listeners.forEach { runCatching(it) }
     }
 
     /** True when this sink paces main-screen frames (smooth video); fixed for its lifetime. */
@@ -339,22 +381,28 @@ class AndroidMediaSink(
      * starts at the next keyframe it asks for; null stops it. The stream's own surface is not affected.
      */
     fun setMirrorSurface(type: Int, key: String, surface: Surface?) {
-        val id = type to key
-        synchronized(mirrorLock) {
-            mirrorDecoders.remove(id)?.close()
-            if (surface == null) {
-                mirrorSurfaces.remove(id)
-                return
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            val id = type to key
+            synchronized(mirrorLock) {
+                mirrorDecoders.remove(id)?.close()
+                if (surface == null) {
+                    mirrorSurfaces.remove(id)
+                    return
+                }
+                mirrorSurfaces[id] = surface
             }
-            mirrorSurfaces[id] = surface
+            lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
         }
-        lastVideoConfig[type]?.let { (codec, data) -> mirrorDecoders(type).forEach { it.configure(codec, data) } }
     }
 
-    private fun mirrorDecoders(type: Int): List<VideoDecoder> = synchronized(mirrorLock) {
-        if (mirrorSurfaces.isEmpty()) return emptyList()
-        mirrorSurfaces.filterKeys { it.first == type }.map { (id, surface) ->
-            mirrorDecoders.getOrPut(id) { newVideoDecoder(type, surface, " stream=$type mirror=${id.second}") }
+    private fun mirrorDecoders(type: Int): List<VideoDecoder> = synchronized(videoOwnershipLock) {
+        if (videoClosed) return emptyList()
+        synchronized(mirrorLock) {
+            if (mirrorSurfaces.isEmpty()) return emptyList()
+            mirrorSurfaces.filterKeys { it.first == type }.map { (id, surface) ->
+                mirrorDecoders.getOrPut(id) { newVideoDecoder(type, surface, " stream=$type mirror=${id.second}") }
+            }
         }
     }
 
@@ -366,36 +414,50 @@ class AndroidMediaSink(
     }
 
     override fun onVideoCodec(type: Int, codec: VideoCodec) {
-        pendingVideoCodec[type] = codec
+        synchronized(videoOwnershipLock) {
+            if (!videoClosed) pendingVideoCodec[type] = codec
+        }
     }
 
     override fun onVideoConfig(type: Int, codecData: ByteArray) {
-        val codec = pendingVideoCodec[type] ?: VideoCodec.H264
-        lastVideoConfig[type] = codec to codecData
-        videoDecoder(type).configure(codec, codecData)
-        mirrorDecoders(type).forEach { it.configure(codec, codecData) }
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            val codec = pendingVideoCodec[type] ?: VideoCodec.H264
+            lastVideoConfig[type] = codec to codecData
+            videoDecoder(type).configure(codec, codecData)
+            mirrorDecoders(type).forEach { it.configure(codec, codecData) }
+        }
     }
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray) {
-        videoDecoder(type).submit(naluBytes)
-        mirrorDecoders(type).forEach { it.submit(naluBytes) }
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            videoDecoder(type).submit(naluBytes)
+            mirrorDecoders(type).forEach { it.submit(naluBytes) }
+        }
     }
 
     override fun onVideoFrame(type: Int, naluBytes: ByteArray, senderNanos: Long, arrivalNanos: Long) {
-        videoDecoder(type).submit(naluBytes, senderNanos, arrivalNanos)
-        mirrorDecoders(type).forEach { it.submit(naluBytes) }
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            videoDecoder(type).submit(naluBytes, senderNanos, arrivalNanos)
+            mirrorDecoders(type).forEach { it.submit(naluBytes) }
+        }
     }
 
     override fun onScreenStreamActive(type: Int, active: Boolean) {
-        if (!active) {
-            videoRecoveryHandlers.remove(type)
-            videoDiagnosticHandlers.remove(type)
-            videoDecoders[type]?.let { retire(type, it) }
-            synchronized(mirrorLock) {
-                mirrorDecoders.keys.filter { it.first == type }.forEach { mirrorDecoders.remove(it)?.close() }
+        synchronized(videoOwnershipLock) {
+            if (videoClosed) return
+            if (!active) {
+                videoRecoveryHandlers.remove(type)
+                videoDiagnosticHandlers.remove(type)
+                videoDecoders[type]?.let { retire(type, it) }
+                synchronized(mirrorLock) {
+                    mirrorDecoders.keys.filter { it.first == type }.forEach { mirrorDecoders.remove(it)?.close() }
+                }
+                lastVideoConfig.remove(type)
+                pendingVideoCodec.remove(type)
             }
-            lastVideoConfig.remove(type)
-            pendingVideoCodec.remove(type)
         }
         synchronized(screenStateLock) {
             if (active) activeScreenTypes.add(type) else activeScreenTypes.remove(type)
@@ -478,16 +540,19 @@ class AndroidMediaSink(
     }
 
     fun close() {
+        synchronized(videoOwnershipLock) {
+            videoClosed = true
+            videoDecoders.entries.toList().forEach { (type, decoder) -> retire(type, decoder) }
+            synchronized(mirrorLock) {
+                mirrorDecoders.values.forEach(VideoDecoder::close)
+                mirrorDecoders.clear()
+                mirrorSurfaces.clear()
+            }
+        }
         synchronized(screenStateLock) {
             activeScreenTypes.forEach { screenStreamActiveChanged?.invoke(it, false) }
             activeScreenTypes.clear()
             screenStreamActiveChanged = null
-        }
-        videoDecoders.entries.toList().forEach { (type, decoder) -> retire(type, decoder) }
-        synchronized(mirrorLock) {
-            mirrorDecoders.values.forEach(VideoDecoder::close)
-            mirrorDecoders.clear()
-            mirrorSurfaces.clear()
         }
         videoRecoveryHandlers.clear()
         videoDiagnosticHandlers.clear()
@@ -506,14 +571,18 @@ class AndroidMediaSink(
         }
     }
 
-    private fun videoDecoder(type: Int): VideoDecoder =
-        videoDecoders.computeIfAbsent(type) {
+    private fun videoDecoder(type: Int): VideoDecoder = synchronized(videoOwnershipLock) {
+        videoDecoders[type] ?: run {
             // A decoder that replaces a closed one picks up the stream's codec configuration.
-            newVideoDecoder(type, surfaces[type] ?: defaultSurface)
-                .also { decoder -> lastVideoConfig[type]?.let { (codec, data) -> decoder.configure(codec, data) } }
+            val decoder = newVideoDecoder(type, surfaces[type] ?: defaultSurface, startImmediately = false)
+            videoDecoders[type] = decoder
+            lastVideoConfig[type]?.let { (codec, data) -> decoder.configure(codec, data) }
+            decoder.start()
+            decoder
         }
+    }
 
-    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null) = VideoDecoder(
+    private fun newVideoDecoder(type: Int, surface: Surface?, statsLabel: String? = null, startImmediately: Boolean = true) = VideoDecoder(
         type,
         surface,
         videoWidth,
@@ -522,10 +591,10 @@ class AndroidMediaSink(
         requestKeyFrame = { requestVideoRecovery(type) },
         report = { videoDiagnosticHandlers[type]?.invoke(it) },
         statsLabel = statsLabel,
-        onExit = { closingVideoDecoders -= it },
+        onExit = ::onVideoDecoderExit,
         // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
         pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
-    )
+    ).also { if (startImmediately) it.start() }
 
     @Synchronized
     private fun audioRenderer(id: AudioStreamId, format: AudioFormat): AudioRenderer {
@@ -555,6 +624,8 @@ private const val MAIN_SCREEN_TYPE = 110
  * decoder worker creates and closes it, after the codec no longer renders to it.
  */
 internal class ParkingOutput(width: Int, height: Int) {
+    private val consumerLock = Any()
+    private var closed = false
     private val thread = android.os.HandlerThread("carplay-video-parking").apply { start() }
     private val reader: android.media.ImageReader
     val surface: Surface
@@ -566,7 +637,11 @@ internal class ParkingOutput(width: Int, height: Int) {
             reader = android.media.ImageReader.newInstance(
                 width.coerceAtLeast(1), height.coerceAtLeast(1), android.graphics.ImageFormat.PRIVATE, 3,
             )
-            reader.setOnImageAvailableListener({ it.acquireLatestImage()?.close() }, android.os.Handler(thread.looper))
+            reader.setOnImageAvailableListener({ source ->
+                synchronized(consumerLock) {
+                    if (!closed) source.acquireLatestImage()?.close()
+                }
+            }, android.os.Handler(thread.looper))
             surface = reader.surface
         } catch (error: Throwable) {
             thread.quitSafely()
@@ -575,8 +650,16 @@ internal class ParkingOutput(width: Int, height: Int) {
     }
 
     fun close() {
-        reader.close()
-        thread.quitSafely()
+        try {
+            synchronized(consumerLock) {
+                if (!closed) {
+                    closed = true
+                    reader.close()
+                }
+            }
+        } finally {
+            thread.quitSafely()
+        }
     }
 }
 
@@ -626,7 +709,9 @@ private class VideoDecoder(
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
     private val stats = VideoStats(statsLabel ?: if (streamType == MAIN_SCREEN_TYPE) "" else " stream=$streamType")
-    private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
+    private val thread = Thread(::run, "carplay-video").apply { isDaemon = true }
+
+    fun start() { thread.start() }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {
         queue.offer(VideoJob.Config(codec, codecData))
