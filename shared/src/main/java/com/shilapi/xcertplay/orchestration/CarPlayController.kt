@@ -377,6 +377,7 @@ class CarPlayController(
                 )
                 armWirelessHandoffWatchdog(wirelessGeneration.get())
                 maybeCompleteWirelessHandoff()
+                maybeFastFallbackWirelessHandoff(wirelessGeneration.get())
             }
             uiListener?.onCommand(session, type, params)
         }
@@ -1553,6 +1554,7 @@ class CarPlayController(
                 if (isStaleWirelessRun(generation) || activeSession !== session) return
                 if (!watchdog.sessionEstablished()) return
                 wirelessConnectionProof.rendered(generation, session)
+                maybeFastFallbackWirelessHandoff(generation)
                 val firstFrame = synchronized(this) {
                     if (reportedFrameSession === session) false else {
                         reportedFrameSession = session
@@ -1647,7 +1649,65 @@ class CarPlayController(
         }
     }
 
+    /**
+     * AirPlay sourceVersions at or below [AIRPLAY_SOURCE_VERSION_NO_WIFI_IAP_TUNNEL] correspond to iOS
+     * generations that never open the type-130 iAP-over-AirPlay tunnel, so there is no point waiting the
+     * full [WIRELESS_HANDOFF_TIMEOUT_MILLIS] for it. The reliably-reported AirPlay sourceVersion is used
+     * because the iPhone's osVersion is often "not_reported". Unknown sourceVersions (not yet parsed) are
+     * treated as supported so an iOS 18+ phone still gets the full wait and the chance to release Bluetooth.
+     */
+    private fun iosSupportsWirelessIapTunnel(): Boolean {
+        val source = activeSession?.peerSourceVersion
+        if (source.isNullOrEmpty()) return true
+        return !iosVersionAtMost(source, AIRPLAY_SOURCE_VERSION_NO_WIFI_IAP_TUNNEL)
+    }
+
+    private fun iosVersionAtMost(value: String, threshold: String): Boolean {
+        val a = parseVersionComponents(value) ?: return false
+        val b = parseVersionComponents(threshold) ?: return false
+        val n = maxOf(a.size, b.size)
+        for (i in 0 until n) {
+            val x = a.getOrElse(i) { 0 }
+            val y = b.getOrElse(i) { 0 }
+            if (x != y) return x < y
+        }
+        return true
+    }
+
+    private fun parseVersionComponents(value: String): List<Int>? {
+        val parts = value.split('.').mapNotNull { it.takeWhile(Char::isDigit).toIntOrNull() }
+        return parts.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * On iOS versions that cannot open the Wi-Fi iAP2 tunnel, complete the wireless handoff fallback as
+     * soon as the screen has rendered, instead of waiting for a tunnel that will never come. Safe no-op
+     * when the tunnel is already ready, the handoff already completed, or iOS supports the tunnel.
+     */
+    private fun maybeFastFallbackWirelessHandoff(generation: Int) {
+        if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get()) return
+        if (!wirelessHandoffRequested.get() || wirelessTunnelReady.get() || wirelessActiveReported.get()) return
+        if (iosSupportsWirelessIapTunnel()) return
+        if (!wirelessConnectionProof.hasRenderedFrame(generation)) return
+        debugLog(
+            "wireless handoff: AirPlay sourceVersion ${activeSession?.peerSourceVersion} does not open " +
+                "the Wi-Fi iAP2 tunnel; falling back without waiting",
+        )
+        Thread(
+            { handleWirelessHandoffTimeout(generation) },
+            "xcertplay-wireless-handoff-fastfallback",
+        ).apply {
+            isDaemon = true
+            start()
+        }
+    }
+
     private fun armWirelessHandoffWatchdog(generation: Int) {
+        val timeout = if (iosSupportsWirelessIapTunnel()) {
+            WIRELESS_HANDOFF_TIMEOUT_MILLIS
+        } else {
+            WIRELESS_HANDOFF_UNSUPPORTED_TIMEOUT_MILLIS
+        }
         mainHandler.postDelayed(
             {
                 if (
@@ -1668,7 +1728,7 @@ class CarPlayController(
                     start()
                 }
             },
-            WIRELESS_HANDOFF_TIMEOUT_MILLIS,
+            timeout,
         )
     }
 
@@ -2641,7 +2701,7 @@ class CarPlayController(
         CarPlayStatus.WirelessActive ->
             "STEP handoff/complete: tunnel iAP2 ready; Bluetooth bootstrap released"
         CarPlayStatus.WirelessActiveFallback ->
-            "STEP handoff/fallback: rendered video preserved; tunnel iAP2 unavailable; Bluetooth bootstrap released"
+            "STEP handoff/fallback: rendered video preserved; tunnel iAP2 unavailable; Bluetooth bootstrap preserved"
         CarPlayStatus.DiscoveringIphone ->
             "STEP usb/discover: searching for an iPhone USB device"
         CarPlayStatus.WaitingForIphone ->
@@ -2684,6 +2744,14 @@ class CarPlayController(
         private const val PERMISSION_POLL_TIMEOUT_MILLIS = 120_000L
         private const val DEVICE_AVAILABILITY_POLL_INTERVAL_MILLIS = 2_000L
         private const val WIRELESS_HANDOFF_TIMEOUT_MILLIS = 45_000L
+        // iOS versions at or below this never open the type-130 iAP-over-AirPlay tunnel, so we fall
+        // back quickly once the screen has rendered instead of waiting the full timeout (issue #52).
+        private const val WIRELESS_HANDOFF_UNSUPPORTED_TIMEOUT_MILLIS = 5_000L
+        // AirPlay sourceVersion at or below this corresponds to iOS generations that never open the
+        // type-130 iAP-over-AirPlay tunnel. The iPhone's osVersion is frequently "not_reported" in the
+        // SETUP plist, so we use the reliably-reported AirPlay sourceVersion as the iOS-generation proxy
+        // (e.g. iOS 17.7.2 reports 775.3.1). iOS 18+ reports a higher sourceVersion and opens the tunnel.
+        private const val AIRPLAY_SOURCE_VERSION_NO_WIFI_IAP_TUNNEL = "775.3.1"
         private const val RFCOMM_CONNECT_TIMEOUT_MILLIS = 15_000L
         private const val MAXIMUM_REENUMERATION_ATTEMPTS = 2
         private const val EXECUTOR_CLOSE_TIMEOUT_MILLIS = 2_000L

@@ -86,7 +86,7 @@ class WirelessHandoffWatchdogTest {
         assertEquals(0, confirmations)
     }
 
-    @Test fun renderedVideoWithoutTunnelReleasesOnlyBootstrapAndReportsFallbackOnce() {
+    @Test fun renderedVideoWithoutTunnelPreservesBootstrapAndReportsFallbackOnce() {
         proofCall("rendered", 0, session)
         timeout()
         timeout()
@@ -94,7 +94,7 @@ class WirelessHandoffWatchdogTest {
         assertEquals(0, hotspotCloses)
         assertSame(session, ReflectionHelpers.getField(controller, "activeSession"))
         assertEquals(listOf(CarPlayStatus.WirelessActiveFallback), statuses)
-        verify(bootstrap, times(1)).close()
+        verify(bootstrap, never()).close()
         assertTrue(diagnostics.any { it.startsWith("STEP handoff/fallback:") && it.contains("tunnel iAP2 unavailable") })
         assertFalse(diagnostics.any { it.startsWith("STEP handoff/complete:") })
         assertEquals(0, confirmations)
