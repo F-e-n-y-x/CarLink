@@ -1,5 +1,9 @@
 package com.shilapi.xcertplay
 
+import android.content.Context
+import android.content.res.Configuration
+import java.util.Calendar
+
 /** Stable preference values; never persist enum ordinals. */
 enum class AppAppearance(val key: String) {
     DARK("dark"),
@@ -32,6 +36,19 @@ internal fun resolveAppNight(
 
 internal fun shouldDeferAppearanceRender(windowKeyLearning: Boolean, serviceKeyLearning: Boolean): Boolean =
     windowKeyLearning || serviceKeyLearning
+
+internal fun Context.resolveAppNightNow(hostNight: Boolean? = AppAppearanceRuntime.hostNight()): Boolean {
+    val now = Calendar.getInstance()
+    return resolveAppNight(
+        appearance = AirPlayPersistence.loadAppAppearance(this),
+        carPlayMode = AirPlayPersistence.loadCarPlayNightMode(this),
+        schedule = AirPlayPersistence.loadCarPlayNightSchedule(this),
+        systemNight = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES,
+        minuteOfDay = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE),
+        hostNight = hostNight,
+    )
+}
 
 /**
  * The resumed CarPlay host owns the live controller result. Identity ownership prevents a stale

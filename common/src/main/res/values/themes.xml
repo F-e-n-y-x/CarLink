@@ -8,6 +8,16 @@
         <item name="android:windowBackground">#0C111B</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+    <style name="Theme.Xcertplay.Dialog.Dark" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#A6C8FF</item>
+        <item name="android:windowBackground">#151E2C</item>
+    </style>
+    <style name="Theme.Xcertplay.Dialog.Light" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#245A9C</item>
+        <item name="android:windowBackground">#F8FAFD</item>
+    </style>
     <style name="Theme.AdbCluster" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>

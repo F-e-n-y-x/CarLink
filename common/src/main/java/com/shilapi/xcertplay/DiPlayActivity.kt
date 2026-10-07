@@ -60,7 +60,6 @@ import com.shilapi.xcertplay.settings.SettingsWidgets
 import com.shilapi.xcertplay.transport.EvChargingConnectors
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -1183,7 +1182,8 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun showSettingsSearch() {
         val index = buildSettingsSearchIndex()
-        val input = EditText(this).apply {
+        val dialogContext = appDialogContext()
+        val input = EditText(dialogContext).apply {
             setSingleLine()
             hint = getString(R.string.settings_search_hint)
             // Landscape head units would otherwise cover the results with a full-screen editor.
@@ -1191,8 +1191,8 @@ class DiPlayActivity : ComponentActivity() {
                 android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
         }
         val results = mutableListOf<SettingsSearchResult>()
-        val adapter = android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1)
-        val list = android.widget.ListView(this).apply { this.adapter = adapter }
+        val adapter = android.widget.ArrayAdapter<String>(dialogContext, android.R.layout.simple_list_item_1)
+        val list = android.widget.ListView(dialogContext).apply { this.adapter = adapter }
         val empty = label(getString(R.string.settings_search_empty), 15, MUTED).apply {
             setPadding(dp(8), dp(12), dp(8), dp(12)); visibility = View.GONE
         }
@@ -1214,7 +1214,7 @@ class DiPlayActivity : ComponentActivity() {
             // Short screens keep the results above the keyboard.
             addView(list, LinearLayout.LayoutParams(-1, dp(if (resources.configuration.screenHeightDp < 600) 160 else 320)))
         }
-        val dialog = AlertDialog.Builder(this)
+        val dialog = appDialogBuilder()
             .setTitle(getString(R.string.settings_search))
             .setView(body)
             .setNegativeButton(getString(R.string.cancel), null)
@@ -1925,7 +1925,7 @@ class DiPlayActivity : ComponentActivity() {
     })
 
     private fun carHotspotOffDialog() {
-        AlertDialog.Builder(this).setTitle(getString(R.string.car_hotspot_is_off))
+        appDialogBuilder().setTitle(getString(R.string.car_hotspot_is_off))
             .setMessage(getString(R.string.msg_car_hotspot_connect, AirPlayPersistence.loadManualHotspotSsid(this)))
             .setPositiveButton(getString(R.string.open_car_settings)) { _, _ -> openCarWifiSettings() }
             .setNeutralButton(getString(R.string.connect)) { _, _ -> connect(true) }
@@ -2061,7 +2061,7 @@ class DiPlayActivity : ComponentActivity() {
             val choices = listOf(WifiP2pChannels.AUTO) + WifiP2pChannels.channels
             val current = AirPlayPersistence.loadWifiP2pPreferredChannel(this)
             var selection = current
-            AlertDialog.Builder(this).setTitle(R.string.wifi_direct_channel_title)
+            appDialogBuilder().setTitle(R.string.wifi_direct_channel_title)
                 .setSingleChoiceItems(choices.map(::wifiDirectChannelLabel).toTypedArray(),
                     choices.indexOf(current)) { _, which -> selection = choices[which] }
                 .setPositiveButton(R.string.save) { _, _ ->
@@ -2124,7 +2124,7 @@ class DiPlayActivity : ComponentActivity() {
         val channels = AirPlayPersistence.AUDIO_CHANNELS
         val labels = channels.map(Int::toString).toTypedArray()
         var selection = current.coerceIn(channels.first, channels.last)
-        AlertDialog.Builder(this).setTitle(title)
+        appDialogBuilder().setTitle(title)
             .setSingleChoiceItems(labels, selection) { _, which ->
                 selection = which
                 preview.play(which, navigation)
@@ -2168,14 +2168,15 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun askHotspotCredentials(existingWifi: Boolean = false, done: (String, String) -> Unit) {
+        val dialogContext = appDialogContext()
         val fields = column().apply { setPadding(dp(24), dp(12), dp(24), dp(12)) }
         fields.addView(label(getString(if (existingWifi) R.string.existing_wifi_instructions else R.string.copy_these_from_the_car_s_hotspot_settings_use_5_ghz_if_av), 16, MUTED))
-        val ssid = EditText(this).apply {
+        val ssid = EditText(dialogContext).apply {
             hint = getString(if (existingWifi) R.string.existing_wifi_ssid else R.string.hotspot_name)
             setText(if (existingWifi) AirPlayPersistence.loadExistingWifiSsid(this@DiPlayActivity) else storedSsid())
             setSingleLine()
         }
-        val password = EditText(this).apply {
+        val password = EditText(dialogContext).apply {
             hint = getString(if (existingWifi) R.string.existing_wifi_password else R.string.hotspot_password)
             setText(if (existingWifi) AirPlayPersistence.loadExistingWifiPassphrase(this@DiPlayActivity) else storedPassword())
             setSingleLine()
@@ -2196,7 +2197,7 @@ class DiPlayActivity : ComponentActivity() {
             if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { hideKeyboard(); true } else false
         }
         fields.addView(ssid); fields.addView(password)
-        fields.addView(CheckBox(this).apply {
+        fields.addView(CheckBox(dialogContext).apply {
             text = getString(R.string.show_password)
             setOnCheckedChangeListener { _, checked ->
                 password.transformationMethod = if (checked) null else android.text.method.PasswordTransformationMethod.getInstance()
@@ -2206,8 +2207,8 @@ class DiPlayActivity : ComponentActivity() {
         val error = label("", 14, WARNING)
         error.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         fields.addView(error)
-        val dialog = AlertDialog.Builder(this).setTitle(getString(if (existingWifi) R.string.existing_wifi_details else R.string.car_hotspot_details))
-            .setView(ScrollView(this).apply { addView(fields) })
+        val dialog = appDialogBuilder().setTitle(getString(if (existingWifi) R.string.existing_wifi_details else R.string.car_hotspot_details))
+            .setView(ScrollView(dialogContext).apply { addView(fields) })
             .setPositiveButton(getString(R.string.save_details), null).setNegativeButton(getString(R.string.cancel)) { _, _ -> hideKeyboard() }
             .setNeutralButton(getString(R.string.hide_keyboard), null).create()
         dialog.setOnShowListener {
@@ -2299,8 +2300,8 @@ class DiPlayActivity : ComponentActivity() {
         body.addView(label(getString(R.string.s_3_tap_check_and_enable_below_this_enables_the_cluster_ma), 16, TEXT))
         val status = label(if (DiLink51ClusterMonitor.hasAccess(this)) getString(R.string.permission_enabled_ready) else getString(R.string.permission_not_enabled), 16, TEXT)
         body.addView(status)
-        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.automatic_cluster_map_setup))
-            .setView(ScrollView(this).apply { addView(body) })
+        val dialog = appDialogBuilder().setTitle(getString(R.string.automatic_cluster_map_setup))
+            .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setNegativeButton(getString(R.string.close), null)
             .setPositiveButton(getString(R.string.check_and_enable), null).create()
         dialog.setOnShowListener {
@@ -2325,7 +2326,7 @@ class DiPlayActivity : ComponentActivity() {
             toast(getString(R.string.usb_auto_confirm_status_on))
             return
         }
-        AlertDialog.Builder(this)
+        appDialogBuilder()
             .setTitle(getString(R.string.usb_auto_confirm_title))
             .setMessage(getString(R.string.usb_auto_confirm_dialog_msg))
             .setPositiveButton(getString(R.string.btn_auto_apply_permissions)) { _, _ ->
@@ -2358,7 +2359,7 @@ class DiPlayActivity : ComponentActivity() {
         if (usbPermissionOperation != null || isFinishing || isDestroyed) return
         val operation = usbPermissionOperationFactory(applicationContext)
         usbPermissionOperation = operation
-        val progress = AlertDialog.Builder(this)
+        val progress = appDialogBuilder()
             .setTitle(R.string.auto_grant_title)
             .setMessage(R.string.auto_grant_msg)
             .setNegativeButton(R.string.cancel) { _, _ -> cancelUsbPermissionSetup() }
@@ -2380,7 +2381,7 @@ class DiPlayActivity : ComponentActivity() {
                 progress.dismiss()
                 render()
                 if (result.complete) {
-                    AlertDialog.Builder(this)
+                    appDialogBuilder()
                         .setTitle(R.string.auto_grant_success_title)
                         .setMessage(R.string.auto_grant_success_msg)
                         .setPositiveButton(R.string.close, null)
@@ -2425,7 +2426,7 @@ class DiPlayActivity : ComponentActivity() {
             typeface = Typeface.MONOSPACE
             setTextIsSelectable(true)
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            setBackgroundColor(0x22FFFFFF)
+            setBackgroundColor(BUTTON)
         })
         body.addView(button(getString(R.string.copy_command), false) {
             getSystemService(android.content.ClipboardManager::class.java).setPrimaryClip(
@@ -2434,9 +2435,9 @@ class DiPlayActivity : ComponentActivity() {
             toast(getString(R.string.copied_to_the_car_clipboard_run_the_command_on_your_comput))
         }, matchButton(8, 50))
 
-        AlertDialog.Builder(this)
+        appDialogBuilder()
             .setTitle(getString(R.string.permissions_and_connection_help))
-            .setView(ScrollView(this).apply { addView(body) })
+            .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setPositiveButton(getString(R.string.close)) { _, _ -> render() }
             .show()
     }
@@ -3384,17 +3385,17 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
                 AirPlayPersistence.loadClusterMarkerVerticalStep(this))
         val editor = SafeAreaEditorView(this).apply {
-            setBackgroundColor(Color.rgb(35, 39, 45))
+            setBackgroundColor(SURFACE)
             setRect(initial, 1920, 720)
         }
         // A standalone dialog gives the weighted preview an exact available height.
         // AlertDialog's wrap-content custom panel can collapse it to zero.
-        val dialog = Dialog(this).apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
+        val dialog = appDialog().apply { requestWindowFeature(Window.FEATURE_NO_TITLE) }
         val panel = column().apply {
             setPadding(dp(16), dp(8), dp(16), dp(8))
-            setBackgroundColor(Color.rgb(35, 39, 45))
+            setBackgroundColor(SURFACE)
         }
-        panel.addView(label(getString(R.string.cluster_safe_area_edit), 18, Color.WHITE, true))
+        panel.addView(label(getString(R.string.cluster_safe_area_edit), 18, TEXT, true))
         panel.addView(label(getString(R.string.cluster_safe_area_live_hint), 14, MUTED))
         panel.addView(ClusterSafeAreaPreviewFrame(this, editor), LinearLayout.LayoutParams(-1, 0, 1f))
         val actions = row()
@@ -3481,7 +3482,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun textInput(title: String, current: String, secret: Boolean, save: (String) -> Unit) {
-        val input = EditText(this).apply {
+        val input = EditText(appDialogContext()).apply {
             setText(current)
             setSingleLine()
             inputType = if (secret) {
@@ -3490,7 +3491,7 @@ class DiPlayActivity : ComponentActivity() {
                 android.text.InputType.TYPE_CLASS_TEXT
             }
         }
-        AlertDialog.Builder(this).setTitle(title).setView(input)
+        appDialogBuilder().setTitle(title).setView(input)
             .setPositiveButton(getString(R.string.save)) { _, _ -> save(input.text.toString().let { if (secret) it else it.trim() }) }
             .setNegativeButton(getString(R.string.cancel), null).show()
     }
@@ -3511,14 +3512,14 @@ class DiPlayActivity : ComponentActivity() {
         val control = button(summary(), false) {}
         control.setOnClickListener {
             val fields = column().apply { setPadding(dp(24), dp(8), dp(24), dp(8)) }
-            val input = EditText(this).apply {
+            val input = EditText(appDialogContext()).apply {
                 setSingleLine()
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER
                 setText(load().toString())
             }
             fields.addView(input)
             fields.addView(label(getString(hintId), 14, MUTED))
-            val dialog = AlertDialog.Builder(this).setTitle(title).setView(fields)
+            val dialog = appDialogBuilder().setTitle(title).setView(fields)
                 .setPositiveButton(getString(if (reconnects && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save), null)
                 .setNegativeButton(getString(R.string.cancel), null)
                 .setNeutralButton(getString(R.string.resolution_reset_defaults), null).create()
@@ -3589,14 +3590,14 @@ class DiPlayActivity : ComponentActivity() {
         val control = button(summary(), false) {}
         control.setOnClickListener {
             val fields = column().apply { setPadding(dp(24), dp(8), dp(24), dp(8)) }
-            val input = EditText(this).apply {
+            val input = EditText(appDialogContext()).apply {
                 setSingleLine()
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER
                 setText(load().toString())
             }
             fields.addView(input)
             fields.addView(label(getString(hintId), 14, MUTED))
-            val dialog = AlertDialog.Builder(this).setTitle(title).setView(fields)
+            val dialog = appDialogBuilder().setTitle(title).setView(fields)
                 .setPositiveButton(getString(if (reconnects && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save), null)
                 .setNegativeButton(getString(R.string.cancel), null)
                 .setNeutralButton(getString(R.string.ambient_light_reset_defaults), null).create()
@@ -3638,14 +3639,14 @@ class DiPlayActivity : ComponentActivity() {
         control.setOnClickListener {
             val fields = column().apply { setPadding(dp(24), dp(8), dp(24), dp(8)) }
             fields.addView(label(getString(R.string.ambient_light_threshold_value), 16, MUTED))
-            val input = EditText(this).apply {
+            val input = EditText(appDialogContext()).apply {
                 setSingleLine()
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER
                 setText(AirPlayPersistence.loadAmbientLightThreshold(this@DiPlayActivity).lux.toString())
             }
             fields.addView(input)
             fields.addView(label(getString(R.string.ambient_light_threshold_hint), 14, MUTED))
-            val dialog = AlertDialog.Builder(this)
+            val dialog = appDialogBuilder()
                 .setTitle(title)
                 .setView(fields)
                 .setPositiveButton(getString(R.string.save), null)
@@ -3793,7 +3794,7 @@ class DiPlayActivity : ComponentActivity() {
         control.setOnClickListener {
             val current = AirPlayPersistence.loadCarPlayNightSchedule(this)
             val selected = if (start) current.startMinute else current.endMinute
-            TimePickerDialog(this, { _, hour, minute ->
+            TimePickerDialog(this, appDialogTheme(), { _, hour, minute ->
                 val updatedMinute = hour * 60 + minute
                 val other = if (start) current.endMinute else current.startMinute
                 if (updatedMinute == other) {
@@ -3850,19 +3851,19 @@ class DiPlayActivity : ComponentActivity() {
         }
         val adapter = getSystemService(BluetoothManager::class.java)?.adapter
         if (adapter == null || !adapter.isEnabled) {
-            AlertDialog.Builder(this).setTitle(getString(R.string.turn_on_bluetooth))
+            appDialogBuilder().setTitle(getString(R.string.turn_on_bluetooth))
                 .setMessage(getString(R.string.enable_the_car_s_bluetooth_and_pair_your_iphone_first))
                 .setPositiveButton(getString(R.string.open_bluetooth)) { _, _ -> openSystem(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
                 .setNegativeButton(getString(R.string.later), null).show(); return
         }
         val devices = runCatching { adapter.bondedDevices.sortedBy { it.name ?: "" } }.getOrDefault(emptyList())
         if (devices.isEmpty()) {
-            AlertDialog.Builder(this).setTitle(getString(R.string.pair_your_iphone))
+            appDialogBuilder().setTitle(getString(R.string.pair_your_iphone))
                 .setMessage(getString(R.string.on_your_iphone_open_settings_bluetooth_and_pair_with_the_c))
                 .setPositiveButton(getString(R.string.open_bluetooth)) { _, _ -> openSystem(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
                 .setNegativeButton(getString(R.string.got_it), null).show(); return
         }
-        AlertDialog.Builder(this).setTitle(getString(R.string.choose_your_iphone))
+        appDialogBuilder().setTitle(getString(R.string.choose_your_iphone))
             .setItems(devices.map { device ->
                 val name = device.name ?: getString(R.string.paired_device)
                 if (devices.count { it.name == device.name } > 1) "$name · ${device.address.takeLast(5)}" else name
@@ -3877,7 +3878,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun wirelessHelp() {
-        AlertDialog.Builder(this).setTitle(getString(R.string.wireless_connection_help))
+        appDialogBuilder().setTitle(getString(R.string.wireless_connection_help))
             .setMessage(getString(R.string.pair_your_iphone_with_the_car_s_bluetooth_keep_wi_fi_on_an))
             .setPositiveButton(getString(R.string.got_it), null)
             .setNeutralButton(getString(R.string.reset_carplay_wi_fi)) { _, _ ->
@@ -3892,7 +3893,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun confirmWirelessReset() {
-        AlertDialog.Builder(this).setTitle(getString(R.string.reset_carplay_wi_fi_2))
+        appDialogBuilder().setTitle(getString(R.string.reset_carplay_wi_fi_2))
             .setMessage(getString(R.string.this_ends_the_existing_wi_fi_direct_connection_including_o))
             .setPositiveButton(getString(R.string.reset_and_connect)) { _, _ ->
                 CarPlayBackgroundSession.stop { runOnUiThread { resetWirelessGroup() } }
@@ -4066,7 +4067,7 @@ class DiPlayActivity : ComponentActivity() {
                 exportButton?.apply { isEnabled = true; text = getString(R.string.save_diagnostic_report) }
                 if (result.isSuccess) {
                     val (savedReport, report) = result.getOrThrow()
-                    AlertDialog.Builder(this).setTitle(getString(R.string.diagnostic_report_saved))
+                    appDialogBuilder().setTitle(getString(R.string.diagnostic_report_saved))
                         .setMessage(when {
                             savedReport.savedInApp -> getString(R.string.diagnostic_report_saved_in_app)
                             savedReport.savedPath != null -> getString(R.string.diagnostic_report_saved_to_path, savedReport.savedPath)
@@ -4085,7 +4086,7 @@ class DiPlayActivity : ComponentActivity() {
                             }.onFailure { showDiagnosticReport(report) }
                         }.show()
                 } else {
-                    AlertDialog.Builder(this).setTitle(getString(R.string.could_not_save_the_report))
+                    appDialogBuilder().setTitle(getString(R.string.could_not_save_the_report))
                         .setMessage(getString(R.string.check_that_storage_is_available_or_choose_another_save_loc))
                         .setPositiveButton(getString(R.string.choose_location)) { _, _ -> chooseReportDestination() }
                         .setNegativeButton(getString(R.string.close), null).show()
@@ -4101,12 +4102,12 @@ class DiPlayActivity : ComponentActivity() {
             typeface = Typeface.MONOSPACE
             setTextIsSelectable(true)
         })
-        AlertDialog.Builder(this).setTitle(getString(R.string.view_diagnostic_report))
-            .setView(ScrollView(this).apply { addView(body) })
+        appDialogBuilder().setTitle(getString(R.string.view_diagnostic_report))
+            .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setPositiveButton(getString(R.string.close), null).show()
     }
     private fun permissionHelp(title: String, body: String) {
-        AlertDialog.Builder(this).setTitle(title).setMessage(body).setPositiveButton(getString(R.string.app_settings)) { _, _ ->
+        appDialogBuilder().setTitle(title).setMessage(body).setPositiveButton(getString(R.string.app_settings)) { _, _ ->
             openSystem(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
         }.setNegativeButton(getString(R.string.later), null).show()
     }
@@ -4257,7 +4258,7 @@ class DiPlayActivity : ComponentActivity() {
             if (!CarPlayBackgroundSession.hasSession()) {
                 save(selected)
             } else {
-                AlertDialog.Builder(this).setTitle(title).setMessage(description)
+                appDialogBuilder().setTitle(title).setMessage(description)
                     .setPositiveButton(R.string.apply_and_reconnect) { _, _ ->
                         save(selected)
                         reconnectIfRunning()
@@ -4291,7 +4292,7 @@ class DiPlayActivity : ComponentActivity() {
         val button = button("$title · ${options[selection]}", false) {}.apply { isEnabled = enabled }
         button.setOnClickListener {
             var pendingSelection = selection
-            AlertDialog.Builder(this).setTitle(title)
+            appDialogBuilder().setTitle(title)
                 .setSingleChoiceItems(options.toTypedArray(), selection) { _, index -> pendingSelection = index }
                 .setPositiveButton(getString(if (announcesReconnect && CarPlayBackgroundSession.hasSession()) R.string.apply_and_reconnect else R.string.save)) { _, _ ->
                     if (pendingSelection != selection) {
@@ -4496,16 +4497,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun refreshAppearance(): Boolean {
-        val now = Calendar.getInstance()
-        val resolved = resolveAppNight(
-            appearance = AirPlayPersistence.loadAppAppearance(this),
-            carPlayMode = AirPlayPersistence.loadCarPlayNightMode(this),
-            schedule = AirPlayPersistence.loadCarPlayNightSchedule(this),
-            systemNight = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
-                Configuration.UI_MODE_NIGHT_YES,
-            minuteOfDay = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE),
-            hostNight = AppAppearanceRuntime.hostNight(),
-        )
+        val resolved = resolveAppNightNow()
         if (resolved == appNight && palette === DiPlayPalette.of(resolved)) return false
         appNight = resolved
         palette = DiPlayPalette.of(resolved)

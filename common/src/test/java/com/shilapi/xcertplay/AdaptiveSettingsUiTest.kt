@@ -9,6 +9,7 @@ import android.os.Looper
 import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -37,6 +38,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
@@ -129,6 +131,32 @@ class AdaptiveSettingsUiTest {
 
         assertEquals(SettingsCategory.DISPLAY, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
         assertEquals(previousY, ReflectionHelpers.getField<ScrollView>(screen, "rootScroll").scrollY)
+    }
+
+    @Test fun openDialogKeepsItsAppearanceAndEditsWhileTheScreenRepaints() {
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.LIGHT)
+        val screen = openSettings()
+        texts(screen).single { it.text == screen.getString(R.string.settings_search) }.performClick()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+        val input = descendants(dialog.window!!.decorView).filterIsInstance<EditText>().single()
+        input.setText("display")
+        val dialogAccent = dialog.context.theme.obtainStyledAttributes(
+            intArrayOf(android.R.attr.colorAccent),
+        ).let { attributes ->
+            try {
+                attributes.getColor(0, 0)
+            } finally {
+                attributes.recycle()
+            }
+        }
+
+        AirPlayPersistence.saveAppAppearance(screen, AppAppearance.DARK)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "checkForAppearanceChange")
+
+        assertTrue(dialog.isShowing)
+        assertEquals("display", input.text.toString())
+        assertEquals(DiPlayPalette.LIGHT.accent, dialogAccent)
+        assertSame(DiPlayPalette.DARK, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
     }
 
     @Test fun readinessAsksForAnIphoneBeforeWirelessCanConnect() {
