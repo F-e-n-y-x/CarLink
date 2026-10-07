@@ -30,6 +30,9 @@ internal fun resolveAppNight(
     }
 }
 
+internal fun shouldDeferAppearanceRender(windowKeyLearning: Boolean, serviceKeyLearning: Boolean): Boolean =
+    windowKeyLearning || serviceKeyLearning
+
 /**
  * The resumed CarPlay host owns the live controller result. Identity ownership prevents a stale
  * activity from clearing a newer host after recreation or multi-window task replacement.

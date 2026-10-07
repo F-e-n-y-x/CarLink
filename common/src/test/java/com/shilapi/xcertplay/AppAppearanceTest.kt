@@ -65,4 +65,11 @@ class AppAppearanceTest {
         AppAppearanceRuntime.publishHost(firstOwner, true)
         assertEquals(listOf(null, true, false, null), observed)
     }
+
+    @Test fun appearanceRepaintWaitsForEitherWheelKeyLearningPath() {
+        assertFalse(shouldDeferAppearanceRender(windowKeyLearning = false, serviceKeyLearning = false))
+        assertTrue(shouldDeferAppearanceRender(windowKeyLearning = true, serviceKeyLearning = false))
+        assertTrue(shouldDeferAppearanceRender(windowKeyLearning = false, serviceKeyLearning = true))
+        assertTrue(shouldDeferAppearanceRender(windowKeyLearning = true, serviceKeyLearning = true))
+    }
 }

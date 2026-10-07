@@ -6,6 +6,8 @@
     <string name="settings_app_appearance_light">Світлий</string>
     <string name="settings_app_appearance_auto">Авто</string>
     <string name="settings_app_appearance_description">Авто наслідує денний/нічний режим CarPlay. Світлий і темний вигляд залишаються фіксованими та не потребують перепідключення.</string>
+    <string name="settings_switch_to_light_appearance">Перемкнути на світлий вигляд</string>
+    <string name="settings_switch_to_dark_appearance">Перемкнути на темний вигляд</string>
     <string name="carplay_night_system">Як у системі Android</string>
     <string name="carplay_night_ambient">Автоматично (за освітленістю)</string>
     <string name="carplay_night_day">Завжди денний</string>

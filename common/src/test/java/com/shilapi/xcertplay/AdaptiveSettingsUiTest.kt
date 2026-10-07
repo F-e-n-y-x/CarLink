@@ -47,6 +47,7 @@ class AdaptiveSettingsUiTest {
 
     @After fun tearDown() {
         activity?.finish()
+        AppAppearanceRuntime.resetForTest()
         context.getSharedPreferences("diplay", 0).edit().clear().commit()
         context.getSharedPreferences("xcertplay_airplay", 0).edit().clear().commit()
     }
@@ -67,6 +68,67 @@ class AdaptiveSettingsUiTest {
         assertSame(DiPlayPalette.LIGHT, palette)
         assertEquals(DiPlayPalette.LIGHT.background, (scroll.background as ColorDrawable).color)
         assertEquals(DiPlayPalette.LIGHT.systemBar, screen.window.navigationBarColor)
+    }
+
+    @Test fun headerShortcutTogglesAppearanceAndReturnsFocusToItself() {
+        val screen = openSettings()
+        val switchToLight = screen.getString(R.string.settings_switch_to_light_appearance)
+        val button = descendants(screen.window.decorView).single {
+            it.contentDescription == switchToLight
+        }
+        assertEquals(Math.round(48 * screen.resources.displayMetrics.density), button.layoutParams.width)
+        assertTrue(button.requestFocus())
+
+        button.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        layoutRoot(screen)
+
+        assertEquals(AppAppearance.LIGHT, AirPlayPersistence.loadAppAppearance(screen))
+        assertSame(DiPlayPalette.LIGHT, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
+        val replacement = descendants(screen.window.decorView).single {
+            it.contentDescription == screen.getString(R.string.settings_switch_to_dark_appearance)
+        }
+        assertTrue(replacement.isFocused)
+    }
+
+    @Test fun autoAppearanceRepaintsWhenTheCarPlayPolicyChanges() {
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.AUTO)
+        AirPlayPersistence.saveCarPlayNightMode(context, CarPlayNightMode.DAY)
+        val screen = openSettings()
+        assertSame(DiPlayPalette.LIGHT, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
+
+        AirPlayPersistence.saveCarPlayNightMode(screen, CarPlayNightMode.NIGHT)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "checkForAppearanceChange")
+
+        assertSame(DiPlayPalette.DARK, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
+        val scroll = ReflectionHelpers.getField<ScrollView>(screen, "rootScroll")
+        assertEquals(DiPlayPalette.DARK.background, (scroll.background as ColorDrawable).color)
+    }
+
+    @Test
+    @Config(sdk = [29], qualifiers = "en-w500dp-h400dp")
+    fun appearanceRepaintKeepsTheCurrentSettingsPageAndScrollPosition() {
+        val screen = openSettings()
+        descendants(screen.window.decorView).single {
+            it.contentDescription == screen.getString(
+                R.string.settings_open_category,
+                screen.getString(R.string.settings_display),
+            )
+        }.performClick()
+        layoutRoot(screen)
+        val oldScroll = ReflectionHelpers.getField<ScrollView>(screen, "rootScroll")
+        oldScroll.scrollTo(0, oldScroll.getChildAt(0).height)
+        val previousY = oldScroll.scrollY
+        assertTrue(previousY > 0)
+
+        descendants(screen.window.decorView).single {
+            it.contentDescription == screen.getString(R.string.settings_switch_to_light_appearance)
+        }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        layoutRoot(screen)
+
+        assertEquals(SettingsCategory.DISPLAY, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
+        assertEquals(previousY, ReflectionHelpers.getField<ScrollView>(screen, "rootScroll").scrollY)
     }
 
     @Test fun readinessAsksForAnIphoneBeforeWirelessCanConnect() {
@@ -530,6 +592,17 @@ class AdaptiveSettingsUiTest {
             .performClick()
         texts(screen).single { it.text == screen.getString(R.string.open_connection_setup) }.performClick()
         assertEquals("connection", ReflectionHelpers.getField<String>(screen, "page"))
+    }
+
+    private fun layoutRoot(screen: DiPlayActivity) {
+        val root = screen.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+        val metrics = screen.resources.displayMetrics
+        root.measure(
+            View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.EXACTLY),
+        )
+        root.layout(0, 0, metrics.widthPixels, metrics.heightPixels)
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     private fun isInside(view: View, ancestor: View): Boolean =

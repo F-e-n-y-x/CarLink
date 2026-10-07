@@ -121,6 +121,10 @@ class DiPlayActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var appNight = true
     private var palette = DiPlayPalette.DARK
+    private var appearanceObserverRemoval: (() -> Unit)? = null
+    private var appearanceUpdatesResumed = false
+    private var appearanceRenderPending = false
+    private var appearanceButtonFocusPending = false
     private var windowLearning: WindowKeyLearning? = null
     private val windowLearningPresses = WheelKeyPresses()
     private val endWindowLearning = Runnable { cancelKeyLearning() }
@@ -217,6 +221,12 @@ class DiPlayActivity : ComponentActivity() {
     private val tick = object : Runnable {
         override fun run() { refreshStatus(); handler.postDelayed(this, 1000) }
     }
+    private val appearancePoll = object : Runnable {
+        override fun run() {
+            checkForAppearanceChange()
+            if (appearanceUpdatesResumed) handler.postDelayed(this, APPEARANCE_POLL_MILLIS)
+        }
+    }
     private val bluetoothPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) choosePhone() else permissionHelp(getString(R.string.nearby_devices), getString(R.string.allow_nearby_devices_so_diplay_can_connect_to_your_paired))
     }
@@ -272,7 +282,7 @@ class DiPlayActivity : ComponentActivity() {
             openProjection(); finish(); return
         }
         enforceInterfaceSize()
-        refreshAppearance(renderOnChange = false)
+        refreshAppearance()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
@@ -325,7 +335,7 @@ class DiPlayActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (updateInterfaceSize(newConfig)) return
-        refreshAppearance(renderOnChange = false)
+        refreshAppearance()
         render()
     }
 
@@ -378,6 +388,7 @@ class DiPlayActivity : ComponentActivity() {
             return
         }
         handler.removeCallbacks(tick); handler.post(tick)
+        startAppearanceUpdates()
         // Back from the car settings: refresh the car hotspot reminder on the home page.
         if (!initialLaunch && !adbSwitchChangePending && !pausedForAdbSwitchChange &&
             (page == "home" || page == "settings" || page == "connection")) render()
@@ -392,6 +403,10 @@ class DiPlayActivity : ComponentActivity() {
         }
     }
     override fun onPause() {
+        appearanceUpdatesResumed = false
+        appearanceObserverRemoval?.invoke()
+        appearanceObserverRemoval = null
+        handler.removeCallbacks(appearancePoll)
         cancelKeyLearning()
         pausedForAdbSwitchChange = adbSwitchChangePending
         handler.removeCallbacks(tick)
@@ -399,6 +414,9 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        appearanceObserverRemoval?.invoke()
+        appearanceObserverRemoval = null
+        handler.removeCallbacks(appearancePoll)
         hotspotJoinControls?.close()
         cancelUsbPermissionSetup()
         cancelKeyLearning()
@@ -438,12 +456,36 @@ class DiPlayActivity : ComponentActivity() {
             SettingsLayoutPolicy.isExpanded(it.screenWidthDp, it.screenHeightDp, it.fontScale)
         }
 
-    private fun render() {
+    private data class FocusSnapshot(
+        val tag: Any?,
+        val contentDescription: String?,
+        val label: String?,
+    )
+
+    private fun focusLabel(view: View): String? = when (view) {
+        is TextView -> view.text?.toString()
+        is ViewGroup -> descendants(view).filterIsInstance<TextView>()
+            .firstOrNull { it.text.isNotEmpty() }?.text?.toString()
+        else -> null
+    }
+
+    private fun render() = render(appearanceOnly = false)
+
+    private fun render(appearanceOnly: Boolean, preferredFocusTag: Any? = null) {
         enforceInterfaceSize()
-        refreshAppearance(renderOnChange = false)
+        refreshAppearance()
         applyWindowAppearance()
         // A pending assignment belongs to the widgets being replaced, never to another page.
-        cancelKeyLearning()
+        if (!appearanceOnly) cancelKeyLearning()
+        val focusSnapshot = if (appearanceOnly) {
+            currentFocus?.let { focused ->
+                FocusSnapshot(
+                    tag = preferredFocusTag ?: focused.tag,
+                    contentDescription = focused.contentDescription?.toString(),
+                    label = focusLabel(focused),
+                )
+            } ?: preferredFocusTag?.let { FocusSnapshot(it, null, null) }
+        } else null
         // A restore still waiting for layout keeps its target: the old page was never laid out.
         val sameDestination = renderedPage == page &&
             (page != "settings" || renderedSettingsCategory == settingsCategory)
@@ -492,6 +534,19 @@ class DiPlayActivity : ComponentActivity() {
         renderedPage = page
         renderedSettingsCategory = settingsCategory.takeIf { page == "settings" }
         refreshStatus()
+        focusSnapshot?.let { snapshot ->
+            root.doOnLayout {
+                descendants(root).firstOrNull { candidate ->
+                    candidate.isFocusable && when {
+                        snapshot.tag != null -> candidate.tag == snapshot.tag
+                        snapshot.contentDescription != null ->
+                            candidate.contentDescription?.toString() == snapshot.contentDescription
+                        snapshot.label != null -> focusLabel(candidate) == snapshot.label
+                        else -> false
+                    }
+                }?.requestFocus()
+            }
+        }
         pendingScrollY = previousScrollY
         // A stopped window still dispatches pre-draw but skips layout, so wait for a real layout;
         // the listener stays on this view and goes away with it.
@@ -530,6 +585,9 @@ class DiPlayActivity : ComponentActivity() {
         addView(label(getString(R.string.diplay), if (compact) 18 else 26, TEXT, true).apply {
             setPadding(if (compact) dp(8) else dp(12), 0, 0, 0)
         }, LinearLayout.LayoutParams(0, if (compact) dp(36) else dp(56), 1f))
+        addView(appearanceButton(), LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(if (compact) 8 else 12)
+        })
         if (page != "home" || !compact) {
             addView(button(if (page == "home") getString(R.string.car_home) else getString(R.string.back), false) {
                 if (page == "home") startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
@@ -566,13 +624,28 @@ class DiPlayActivity : ComponentActivity() {
     private fun settingsHeader(compact: Boolean): LinearLayout = row().apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(button(getString(R.string.back), false, ::navigateBack),
-            LinearLayout.LayoutParams(if (compact) dp(78) else dp(112), if (compact) dp(44) else dp(52)))
+            LinearLayout.LayoutParams(if (compact) dp(78) else dp(112), if (compact) dp(48) else dp(52)))
         addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true).apply {
             setPadding(dp(12), 0, dp(12), 0)
-        }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
+        }, LinearLayout.LayoutParams(0, if (compact) dp(48) else dp(52), 1f))
+        addView(appearanceButton(), LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+            marginEnd = dp(if (compact) 8 else 12)
+        })
         addView(button(getString(R.string.settings_search), false) { showSettingsSearch() },
-            LinearLayout.LayoutParams(if (compact) dp(92) else dp(140), if (compact) dp(44) else dp(52)))
+            LinearLayout.LayoutParams(if (compact) dp(92) else dp(140), if (compact) dp(48) else dp(52)))
     }
+
+    private fun appearanceButton(): ImageButton = iconButton(
+        icon = if (appNight) R.drawable.ic_dp_night else R.drawable.ic_dp_day,
+        description = getString(if (appNight) R.string.settings_switch_to_light_appearance
+            else R.string.settings_switch_to_dark_appearance),
+    ) {
+        AirPlayPersistence.saveAppAppearance(
+            this,
+            if (appNight) AppAppearance.LIGHT else AppAppearance.DARK,
+        )
+        requestAppearanceRender(focusAppearanceButton = true)
+    }.apply { tag = APPEARANCE_BUTTON_TAG }
 
     private fun home(content: LinearLayout) {
         val compact = isCompactLayout
@@ -1291,7 +1364,7 @@ class DiPlayActivity : ComponentActivity() {
                 reconnects = false,
             ) { index ->
                 AirPlayPersistence.saveAppAppearance(this, appearances[index])
-                handler.post { render() }
+                handler.post { requestAppearanceRender() }
             }
             card.addView(label(getString(R.string.settings_app_appearance_description), 14, MUTED))
             val nightModes = CarPlayNightMode.entries
@@ -1312,6 +1385,7 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveCarPlayNightMode(this, nightModes[index])
                 ambientControls.visibility = if (nightModes[index] == CarPlayNightMode.AMBIENT) View.VISIBLE else View.GONE
                 scheduleControls.visibility = if (nightModes[index] == CarPlayNightMode.SCHEDULE) View.VISIBLE else View.GONE
+                handler.post(::checkForAppearanceChange)
             }
             card.addView(label(getString(R.string.carplay_night_hint), 14, MUTED))
             card.addView(label(getString(R.string.carplay_night_time_note), 14, MUTED).apply {
@@ -2482,16 +2556,26 @@ class DiPlayActivity : ComponentActivity() {
             getString(R.string.wheel_key_assign, name, key?.toString() ?: getString(R.string.wheel_key_none))
         lateinit var assign: android.widget.Button
         assign = button(current(), false) {
-            val cancelled = { runOnUiThread { assign.text = current() } }
+            val cancelled = { runOnUiThread {
+                assign.text = current()
+                applyPendingAppearanceRender()
+            } }
             val refused = { taken: WheelZoomSettings.Role ->
                 runOnUiThread {
                     assign.text = current()
                     toast(getString(R.string.wheel_key_in_use, getString(wheelKeyRoleName(taken))))
+                    applyPendingAppearanceRender()
                 }
             }
-            val started = WheelKeyService.learn(role, cancelled, refused) { _, key -> runOnUiThread { assign.text = current(key) } } ||
+            val started = WheelKeyService.learn(role, cancelled, refused) { _, key -> runOnUiThread {
+                assign.text = current(key)
+                applyPendingAppearanceRender()
+            } } ||
                 // Without the service the Siri key is learnt from this window, so only keys that reach apps.
-                (role == WheelZoomSettings.Role.SIRI && learnInWindow(role, cancelled, refused) { assign.text = current(it) })
+                (role == WheelZoomSettings.Role.SIRI && learnInWindow(role, cancelled, refused) {
+                    assign.text = current(it)
+                    applyPendingAppearanceRender()
+                })
             if (started) assign.text = getString(R.string.wheel_key_press, name)
             else toast(getString(R.string.wheel_keys_service_off))
         }
@@ -2527,8 +2611,10 @@ class DiPlayActivity : ComponentActivity() {
     private fun cancelKeyLearning() {
         WheelKeyService.cancelLearning()
         handler.removeCallbacks(endWindowLearning)
-        windowLearning?.cancelled?.invoke()
+        val cancelled = windowLearning?.cancelled
         windowLearning = null
+        cancelled?.invoke()
+        applyPendingAppearanceRender()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -3717,6 +3803,7 @@ class DiPlayActivity : ComponentActivity() {
                         else current.copy(endMinute = updatedMinute)
                     AirPlayPersistence.saveCarPlayNightSchedule(this, updated)
                     control.text = labelFor(updatedMinute)
+                    handler.post(::checkForAppearanceChange)
                 }
             }, selected / 60, selected % 60, true).show()
         }
@@ -4239,6 +4326,24 @@ class DiPlayActivity : ComponentActivity() {
         setOnClickListener { click() }
     }
 
+    private fun iconButton(icon: Int, description: String, click: () -> Unit) = ImageButton(this).apply {
+        setImageResource(icon)
+        imageTintList = ColorStateList.valueOf(ACCENT)
+        contentDescription = description
+        scaleType = ImageView.ScaleType.CENTER
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        minimumWidth = dp(48)
+        minimumHeight = dp(48)
+        stateListAnimator = null
+        background = android.graphics.drawable.RippleDrawable(
+            ColorStateList.valueOf(RIPPLE),
+            rounded(BUTTON, BORDER),
+            null,
+        )
+        foreground = focusRing(radiusDp = 20)
+        setOnClickListener { click() }
+    }
+
     // For an action whose label happens to contain the separator, such as "Turn on … · ADB".
     private fun actionButton(title: String, primary: Boolean, click: () -> Unit) =
         button(title, primary, click).apply { action = true; text = title }
@@ -4346,7 +4451,51 @@ class DiPlayActivity : ComponentActivity() {
     // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
 
-    private fun refreshAppearance(renderOnChange: Boolean): Boolean {
+    private fun startAppearanceUpdates() {
+        appearanceUpdatesResumed = true
+        appearanceObserverRemoval?.invoke()
+        appearanceObserverRemoval = AppAppearanceRuntime.observeHost { checkForAppearanceChange() }
+        handler.removeCallbacks(appearancePoll)
+        handler.post(appearancePoll)
+        applyPendingAppearanceRender()
+    }
+
+    private fun checkForAppearanceChange() {
+        if (refreshAppearance()) requestAppearanceRender()
+    }
+
+    private fun requestAppearanceRender(focusAppearanceButton: Boolean = false) {
+        appearanceRenderPending = true
+        appearanceButtonFocusPending = appearanceButtonFocusPending || focusAppearanceButton
+        if (!appearanceUpdatesResumed || shouldDeferAppearanceRender(
+                windowKeyLearning = windowLearning != null,
+                serviceKeyLearning = WheelKeyService.isLearning(),
+            )
+        ) return
+        appearanceRenderPending = false
+        val restoreAppearanceButton = appearanceButtonFocusPending
+        appearanceButtonFocusPending = false
+        render(
+            appearanceOnly = true,
+            preferredFocusTag = APPEARANCE_BUTTON_TAG.takeIf { restoreAppearanceButton },
+        )
+    }
+
+    private fun applyPendingAppearanceRender() {
+        if (!appearanceRenderPending) return
+        handler.post {
+            if (appearanceRenderPending && appearanceUpdatesResumed &&
+                !shouldDeferAppearanceRender(
+                    windowKeyLearning = windowLearning != null,
+                    serviceKeyLearning = WheelKeyService.isLearning(),
+                )
+            ) {
+                requestAppearanceRender()
+            }
+        }
+    }
+
+    private fun refreshAppearance(): Boolean {
         val now = Calendar.getInstance()
         val resolved = resolveAppNight(
             appearance = AirPlayPersistence.loadAppAppearance(this),
@@ -4360,7 +4509,6 @@ class DiPlayActivity : ComponentActivity() {
         if (resolved == appNight && palette === DiPlayPalette.of(resolved)) return false
         appNight = resolved
         palette = DiPlayPalette.of(resolved)
-        if (renderOnChange) render()
         return true
     }
 
@@ -4397,6 +4545,8 @@ class DiPlayActivity : ComponentActivity() {
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L
+        private const val APPEARANCE_POLL_MILLIS = 2_000L
+        private const val APPEARANCE_BUTTON_TAG = "app_appearance_button"
         private const val VALUE_SEPARATOR = " · "
         private const val SEARCH_HIGHLIGHT_MILLIS = 900L
         private const val SPACER = "spacer"

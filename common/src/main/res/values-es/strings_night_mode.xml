@@ -6,6 +6,8 @@
     <string name="settings_app_appearance_light">Clara</string>
     <string name="settings_app_appearance_auto">Automática</string>
     <string name="settings_app_appearance_description">Automática sigue el modo día/noche de CarPlay. Clara y Oscura permanecen fijas y no requieren reconectar.</string>
+    <string name="settings_switch_to_light_appearance">Cambiar a apariencia clara</string>
+    <string name="settings_switch_to_dark_appearance">Cambiar a apariencia oscura</string>
     <string name="carplay_night_system">Seguir el sistema Android</string>
     <string name="carplay_night_ambient">Automático (luz ambiental)</string>
     <string name="carplay_night_day">Siempre de día</string>
