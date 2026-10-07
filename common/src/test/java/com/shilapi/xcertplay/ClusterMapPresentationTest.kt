@@ -151,6 +151,15 @@ class ClusterMapPresentationTest {
         }
     }
 
+    @Test fun dilink3SmallerProjectionDisplayIsSelected() {
+        val id = display(DiLink4ClusterDisplay.NAME, "w1280dp-h480dp-mdpi")
+        try {
+            assertEquals(id, ClusterMapPresentation.findDisplay(context)?.displayId)
+        } finally {
+            ShadowDisplayManager.removeDisplay(id)
+        }
+    }
+
     @Test fun dilink4WrongGeometryIsRejected() {
         val id = display(DiLink4ClusterDisplay.NAME, "w1280dp-h720dp-mdpi")
         try {

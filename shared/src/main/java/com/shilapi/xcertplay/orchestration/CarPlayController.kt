@@ -263,6 +263,8 @@ class CarPlayController(
     private val wirelessHandoffRequested = AtomicBoolean(false)
     private val wirelessTunnelReady = AtomicBoolean(false)
     private val wirelessActiveReported = AtomicBoolean(false)
+    /** Set when the handoff fell back and kept Bluetooth as the only iAP2 channel. */
+    private val wirelessHandoffFellBack = AtomicBoolean(false)
     private val wirelessGeneration = AtomicInteger(0)
     private val wirelessConnectionProof = WirelessConnectionProof<AirPlaySession>()
 
@@ -289,6 +291,7 @@ class CarPlayController(
             val replacement = activeSession !== session
             if (replacement) {
                 BydNavigationOutputs.start(appContext)
+                BydNavigationOutputs.carPlaySessionStarted()
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(true)
                 // The gear may have changed since /info.
                 if (videoListener != null) {
@@ -1092,6 +1095,7 @@ class CarPlayController(
             wirelessHandoffRequested.set(false)
             wirelessTunnelReady.set(false)
             wirelessActiveReported.set(false)
+            wirelessHandoffFellBack.set(false)
             val next = wirelessGeneration.incrementAndGet()
             onStatus(CarPlayStatus.StartingHotspot, next)
             next
@@ -1382,6 +1386,7 @@ class CarPlayController(
                 identification = bootstrapIdentification,
                 endpoint = endpoint,
                 timeoutMillis = controlLoopTimeoutMillis(),
+                keepAliveAfterDeadline = { keepBluetoothControlAlive(generation) },
                 beforeStartSession = { startedHotspot?.validateReady() },
                 onStartSessionSent = { watchdog.startSessionSent(it.sentAtNanos) },
                 onIncoming = ::onRouteFrame,
@@ -1573,44 +1578,48 @@ class CarPlayController(
         }
 
     private fun onWirelessTunnelReady(generation: Int) {
-        if (
-            closed ||
-            phase != Phase.WIRELESS ||
-            generation != wirelessGeneration.get()
-        ) {
-            return
+        synchronized(wirelessResourceLock) {
+            if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() ||
+                wirelessFailureReported.get()) return
+            wirelessTunnelReady.set(true)
         }
-        wirelessTunnelReady.set(true)
         wirelessConnectionProof.authenticated(generation)
-        debugLog(
-            "wireless iAP2 tunnel ready; " +
-                "handoffRequested=${wirelessHandoffRequested.get()}",
-        )
+        debugLog("wireless iAP2 tunnel ready; handoffRequested=${wirelessHandoffRequested.get()}")
         maybeCompleteWirelessHandoff()
     }
 
+    /** One owner releases Bluetooth, including when a rendered-video fallback gains a tunnel later. */
     private fun maybeCompleteWirelessHandoff() {
-        if (!wirelessHandoffRequested.get() || !wirelessTunnelReady.get()) return
-        if (!wirelessActiveReported.compareAndSet(false, true)) return
-        val generation = wirelessGeneration.get()
+        val generation = synchronized(wirelessResourceLock) {
+            if (closed || phase != Phase.WIRELESS || wirelessFailureReported.get() ||
+                !wirelessHandoffRequested.get() || !wirelessTunnelReady.get()) return
+            val firstHandoff = wirelessActiveReported.compareAndSet(false, true)
+            val promotesFallback = wirelessHandoffFellBack.compareAndSet(true, false)
+            if (!firstHandoff && !promotesFallback) return
+            wirelessGeneration.get()
+        }
         Thread(
             {
-                if (
-                    closed ||
-                    phase != Phase.WIRELESS ||
-                    generation != wirelessGeneration.get()
-                ) {
-                    return@Thread
+                synchronized(wirelessResourceLock) {
+                    // A queued completion must not close a replacement generation's bootstrap.
+                    if (closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() ||
+                        wirelessFailureReported.get() || !wirelessTunnelReady.get()) return@Thread
+                    debugLog("wireless handoff ready; closing Bluetooth bootstrap transport")
+                    closeBluetoothBootstrapTransport()
+                    onStatus(CarPlayStatus.WirelessActive, generation)
                 }
-                debugLog("wireless handoff ready; closing Bluetooth bootstrap transport")
-                closeBluetoothBootstrapTransport()
-                onStatus(CarPlayStatus.WirelessActive)
             },
             "xcertplay-wireless-handoff",
         ).apply {
             isDaemon = true
             start()
         }
+    }
+
+    private fun keepBluetoothControlAlive(generation: Int): Boolean = synchronized(wirelessResourceLock) {
+        !closed && phase == Phase.WIRELESS && generation == wirelessGeneration.get() &&
+            !wirelessFailureReported.get() && activeSession != null &&
+            wirelessConnectionProof.hasRenderedFrame(generation)
     }
 
     private fun armWirelessHandoffWatchdog(generation: Int) {
@@ -1647,9 +1656,12 @@ class CarPlayController(
         // frame proves that projection is usable when the optional tunneled control is absent.
         if (activeSession != null && wirelessConnectionProof.hasRenderedFrame(generation)) {
             if (!wirelessActiveReported.compareAndSet(false, true)) return@synchronized
+            wirelessHandoffFellBack.set(true)
+            // The Bluetooth link is the only iAP2 channel here. Closing it would stop NowPlaying,
+            // route guidance and call updates for the rest of the session, so keep it until the
+            // tunnel really takes over (see maybeCompleteWirelessHandoff).
             debugLog("wireless handoff fallback after rendered video; tunnel iAP2 unavailable; " +
-                "preserving AirPlay and closing Bluetooth bootstrap")
-            closeBluetoothBootstrapTransport()
+                "preserving AirPlay and keeping the Bluetooth bootstrap for iAP2 control")
             onStatus(CarPlayStatus.WirelessActiveFallback, generation)
         } else {
             closeWirelessStack(generation = generation)
@@ -2294,6 +2306,7 @@ class CarPlayController(
             wirelessHandoffRequested.set(false)
             wirelessTunnelReady.set(false)
             wirelessActiveReported.set(false)
+            wirelessHandoffFellBack.set(false)
 
             if (service != null && owner != null) closeBestEffort("AirPlay service") { service.detachWireless(owner) }
         }
@@ -2390,6 +2403,8 @@ class CarPlayController(
     private fun controlLoopTimeoutMillis(): Long = when {
         config.transport == CarPlayTransport.WIRED -> Iap2WiredControlClient.NO_TIMEOUT_MILLIS
         config.locationReportingEnabled -> LOCATION_CONTROL_LOOP_TIMEOUT_MILLIS
+        // Identification/authentication remain bounded. The bootstrap loop can extend this
+        // deadline only once this generation has actually rendered a CarPlay frame.
         else -> CONTROL_LOOP_TIMEOUT_MILLIS
     }
 
@@ -2601,7 +2616,7 @@ class CarPlayController(
         CarPlayStatus.WirelessActive ->
             "STEP handoff/complete: tunnel iAP2 ready; Bluetooth bootstrap released"
         CarPlayStatus.WirelessActiveFallback ->
-            "STEP handoff/fallback: rendered video preserved; tunnel iAP2 unavailable; Bluetooth bootstrap released"
+            "STEP handoff/fallback: rendered video preserved; tunnel iAP2 unavailable; Bluetooth bootstrap preserved"
         CarPlayStatus.DiscoveringIphone ->
             "STEP usb/discover: searching for an iPhone USB device"
         CarPlayStatus.WaitingForIphone ->

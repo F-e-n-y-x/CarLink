@@ -29,6 +29,7 @@ class BydCarPlayCallLifecycleTest {
     }
 
     @Before fun setup() {
+        BydCarPlayCall.watcherReadyMillis = 500L
         drain()
         ReflectionHelpers.getField<CarPlayCallState>(BydCarPlayCall, "state").clear()
         ReflectionHelpers.setField(BydCarPlayCall, "shown", null)
@@ -36,6 +37,7 @@ class BydCarPlayCallLifecycleTest {
         ReflectionHelpers.setField(BydCarPlayCall, "watcherRunning", false)
         ReflectionHelpers.setField(BydCarPlayCall, "cleanupPending", false)
         ReflectionHelpers.setField(BydCarPlayCall, "prepared", false)
+        ReflectionHelpers.setField(BydCarPlayCall, "sessionActive", false)
         BydCarPlayCall.attach(app)
         BydOutputSettings.setCarPlayCalls(app, false)
         Shell.commands.clear()
@@ -190,7 +192,7 @@ class BydCarPlayCallLifecycleTest {
         BydOutputSettings.setCarPlayCalls(app, true)
         BydCarPlayCall.onFrame(ringing("ordered")); drain()
         val prepare = Shell.commands.indexOfFirst { it.contains(" prepare - ") }
-        val launch = Shell.commands.indexOfFirst { it.startsWith("nohup") }
+        val launch = Shell.commands.indexOfFirst { it.startsWith("setsid nohup ") }
         val probe = Shell.commands.indexOfFirst { it.contains(" probe - ") }
         val show = Shell.commands.indexOfFirst { it.contains(" ringing ") }
         assertTrue(prepare >= 0 && prepare < launch && launch < probe && probe < show)
@@ -253,6 +255,62 @@ class BydCarPlayCallLifecycleTest {
         assertNull(ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken"))
     }
 
+    @Test fun sessionStartArmsTheWatcherSoTheFirstCallSkipsItsLaunch() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.sessionStarted(); drain()
+        val armed = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        assertTrue(Shell.commands.any { it.contains(" watch $armed ${app.packageName} ") })
+        assertTrue(Shell.commands.none { it.contains(" ringing ") || it.contains(" end - ") || it.contains(" cancel - ") })
+        BydCarPlayCall.onFrame(ringing("armed")); drain()
+        assertEquals(armed, tokenFrom(Shell.commands.single { it.contains(" ringing ") }))
+        assertEquals(1, Shell.commands.count { it.startsWith("setsid nohup ") })
+    }
+
+    @Test fun endingASessionWithAnArmedWatcherOnlyCancelsIt() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.sessionStarted(); drain()
+        val armed = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        BydCarPlayCall.end(); drain()
+        assertTrue(Shell.commands.any { it.endsWith(" cancel - $armed") })
+        assertTrue(Shell.commands.none { it.contains(" end - ") })
+        assertNull(ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken"))
+    }
+
+    @Test fun turningTheOptionOffCancelsAnArmedWatcherAndOnArmsAgain() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.sessionStarted(); drain()
+        val armed = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        BydOutputSettings.setCarPlayCalls(app, false)
+        BydCarPlayCall.settingChanged(false); drain()
+        assertTrue(Shell.commands.any { it.endsWith(" cancel - $armed") })
+        assertNull(ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken"))
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.settingChanged(true); drain()
+        assertNotEquals(armed, ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken"))
+        assertTrue(Shell.commands.none { it.contains(" end - ") })
+    }
+
+    @Test fun anEndedCallRearmsWithAFreshToken() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.sessionStarted(); drain()
+        BydCarPlayCall.onFrame(ringing("first")); drain()
+        val first = tokenFrom(Shell.commands.single { it.contains(" ringing ") })
+        BydCarPlayCall.onFrame(Iap2Messages.buildRaw(CarPlayCallState.CALL_STATE_UPDATE) {
+            u8(2, 0); string(4, "first")
+        }); drain()
+        assertTrue(Shell.commands.any { it.endsWith(" end - $first") })
+        val next = ReflectionHelpers.getField<String?>(BydCarPlayCall, "watcherToken")!!
+        assertNotEquals(first, next)
+        assertTrue(ReflectionHelpers.getField<Boolean>(BydCarPlayCall, "prepared"))
+        assertTrue(Shell.commands.any { it.contains(" watch $next ${app.packageName} ") })
+    }
+
+    @Test fun noSessionMeansNoArmedWatcher() {
+        BydOutputSettings.setCarPlayCalls(app, true)
+        BydCarPlayCall.settingChanged(true); drain()
+        assertTrue(Shell.commands.isEmpty())
+    }
+
     private fun awaitRetry() {
         val future = ReflectionHelpers.getField<java.util.concurrent.ScheduledFuture<*>?>(BydCarPlayCall, "retry")
             ?: error("Expected a bounded retry")
@@ -268,8 +326,8 @@ class BydCarPlayCallLifecycleTest {
     class Shell {
         @Implementation fun run(context: Context, command: String): String? {
             commands.add(command)
-            if (command.startsWith("nohup") && rejectWatcher) return "nohup: watcher launch refused"
-            if (command.startsWith("nohup") && emptyWatcherReply) return ""
+            if (command.startsWith("setsid nohup ") && rejectWatcher) return "nohup: watcher launch refused"
+            if (command.startsWith("setsid nohup ") && emptyWatcherReply) return ""
             if (command.contains(" cancel - ") && omitCancelCompletion) return ""
             if (command.contains(" probe ")) return if (rejectWatcher || omitReadiness) "watch=ERR" else "watch=0"
             if (rejectPhase?.let { command.contains(" $it ") } == true) return "write=ERR call write refused"

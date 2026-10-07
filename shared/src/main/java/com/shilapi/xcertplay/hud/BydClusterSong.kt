@@ -268,17 +268,35 @@ internal object BydClusterSong {
 
     private fun clear(app: Context) {
         if (shown == null || synchronized(state) { wanted } != null) return
-        if (run(app, "- $STATE_STOPPED -")) shown = null
+        if (run(app, "- $STATE_STOPPED -", clearing = true)) shown = null
     }
 
-    private fun run(app: Context, args: String): Boolean {
+    private fun run(app: Context, args: String, clearing: Boolean = false): Boolean {
         val apk = app.applicationInfo.sourceDir
         val output = shell.run(app, "CLASSPATH=$apk app_process /system/bin ${BydClusterSongTool::class.java.name} $args")
             ?: return false
-        val failed = output.lineSequence().map { it.trim() }.filter { it.contains('=') }
-            .any { line -> line.substringAfter('=').trim().toIntOrNull() != 0 }
-        if (failed) Log.w(TAG, "dashboard write failed: ${output.trim().take(160)}")
-        return !failed
+        val succeeded = ClusterSongWriteResult.accepted(output, clearing)
+        if (!succeeded) Log.w(TAG, "dashboard write failed: incomplete or rejected vendor response")
+        return succeeded
+    }
+}
+
+/** Validate the complete app_process write response, rather than treating an empty response as success. */
+internal object ClusterSongWriteResult {
+    // The PR reporter observed this result on a DiLink 4 Seal while the music card updated.
+    // Accept it only for the instrument writes below; it is not a general shell success code.
+    private const val OBSERVED_VENDOR_RESULT = -2147482648
+
+    fun accepted(output: String, clearing: Boolean = false): Boolean {
+        val expected = if (clearing) setOf("state") else setOf("source", "state", "text")
+        val received = mutableSetOf<String>()
+        for (line in output.lineSequence().map { it.trim() }.filter { '=' in it }) {
+            val name = line.substringBefore('=').trim()
+            val result = line.substringAfter('=').trim().toIntOrNull() ?: return false
+            if (name !in expected || !received.add(name) ||
+                (result != 0 && result != OBSERVED_VENDOR_RESULT)) return false
+        }
+        return received == expected
     }
 }
 

@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -23,6 +26,7 @@ import com.shilapi.xcertplay.media.CarPlayNowPlaying
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import java.util.concurrent.Executors
 import java.util.concurrent.Executor
+import kotlin.math.roundToInt
 
 /**
  * Steering-wheel and other hardware media buttons for CarPlay.
@@ -333,15 +337,30 @@ internal object CarPlayMediaKeys {
             bytes.size,
             BitmapFactory.Options().apply { inSampleSize = sample },
         ) ?: return null
-        val largest = maxOf(decoded.width, decoded.height)
-        if (largest <= MAX_ARTWORK_DIMENSION) return decoded
-        val scale = MAX_ARTWORK_DIMENSION.toFloat() / largest
-        return Bitmap.createScaledBitmap(
-            decoded,
-            (decoded.width * scale).toInt().coerceAtLeast(1),
-            (decoded.height * scale).toInt().coerceAtLeast(1),
-            true,
-        ).also { scaled -> if (scaled !== decoded) decoded.recycle() }
+        return squareArtwork(decoded).also { square -> if (square !== decoded) decoded.recycle() }
+    }
+
+    /**
+     * Fits [source] inside a transparent square of at most [MAX_ARTWORK_DIMENSION]. Car clusters draw
+     * art in a square box and stretch it, so 16:9 video thumbnails looked squashed.
+     */
+    internal fun squareArtwork(source: Bitmap): Bitmap {
+        val largest = maxOf(source.width, source.height)
+        if (source.width == source.height && largest <= MAX_ARTWORK_DIMENSION) return source
+        val side = minOf(largest, MAX_ARTWORK_DIMENSION)
+        val scale = side.toFloat() / largest
+        val width = (source.width * scale).roundToInt().coerceAtLeast(1)
+        val height = (source.height * scale).roundToInt().coerceAtLeast(1)
+        val left = (side - width) / 2
+        val top = (side - height) / 2
+        return Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888).also { square ->
+            Canvas(square).drawBitmap(
+                source,
+                null,
+                Rect(left, top, left + width, top + height),
+                Paint(Paint.FILTER_BITMAP_FLAG),
+            )
+        }
     }
 
     private const val MAX_ARTWORK_DIMENSION = 384

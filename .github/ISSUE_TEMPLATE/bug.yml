@@ -7,7 +7,7 @@ body:
       value: 'Test while parked. Reports are public: review diagnostic files and remove personal information before attaching them. Never post credentials.'
   - type: input
     id: version
-    attributes: {label: DiPlay version, placeholder: '0.2.12'}
+    attributes: {label: DiPlay version, placeholder: '0.2.14'}
     validations: {required: true}
   - type: input
     id: car
@@ -33,4 +33,4 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostic report or recording
-      description: 'Update and reproduce on 0.2.12, then Settings → Diagnostics → Save diagnostic report. Android 10+ normally saves to Downloads/DiPlay; Android 9 uses a document picker. If storage is unavailable, use View report or Share in the confirmation. Review the text before attaching it and never include your hotspot password. Include the approximate failure time.'
+      description: 'Update and reproduce on 0.2.14, then Settings → Diagnostics → Save diagnostic report. Android 10+ normally saves to Downloads/DiPlay; Android 9 uses a document picker. If storage is unavailable, use View report or Share in the confirmation. Review the text before attaching it and never include your hotspot password. Include the approximate failure time.'
