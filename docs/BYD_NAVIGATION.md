@@ -135,7 +135,7 @@ Outside a CarPlay call every call key keeps BYD's action. The exported hang-up r
 the sender's `android.permission.DUMP`; BYD's system-server window manager can send it, while an
 ordinary third-party app cannot. Actual sender/key behavior still requires vehicle acceptance.
 
-**Settings → BYD navigation → CarPlay calls on the dashboard** (optional, needs ADB over network) also writes what BYD's CarPlay app writes, through the adb shell (`BydCarPlayCallTool`, feature ids resolved on the car): the instrument's call state and caller (device 1007, `INSTRUMENT_CALL_STATE_SET`, `INSTRUMENT_CALL_INFO_SET` as UTF-16LE up to 60 bytes), the call time every second (`INSTRUMENT_CALL_TIME_HOUR/MINUTE/SECOND_SET`), the car's call state (device 1023, `SET_CALL_STATE_SET`, `SET_CMD_BTCALL_STATE_SET`: 2 ringing, 1 dialing, 3 active, 5 ended) and the audio system's CarPlay call status (device 1002, `AUDIO_CARPLAY_CALL_STATUS`: 0 in a call, 1 idle). The call time comes from a small watcher under the adb shell that also ends the call on the car if DiPlay's process goes away mid-call. Not yet checked in a car.
+**Settings → BYD navigation → CarPlay calls on the dashboard** (optional, needs ADB over network) also writes what BYD's CarPlay app writes, through the adb shell (`BydCarPlayCallTool`, feature ids resolved on the car): the instrument's call state and caller (device 1007, `INSTRUMENT_CALL_STATE_SET`, `INSTRUMENT_CALL_INFO_SET` as UTF-16LE up to 60 bytes), the call time every second (`INSTRUMENT_CALL_TIME_HOUR/MINUTE/SECOND_SET`), the car's call state (device 1023, `SET_CALL_STATE_SET`, `SET_CMD_BTCALL_STATE_SET`: 2 ringing, 1 dialing, 3 active, 5 ended). It deliberately does not set the audio system's CarPlay call status (device 1002, `AUDIO_CARPLAY_CALL_STATUS`) during a call: on a GCC DiLink 3 Han that switches the amplifier to BYD CarPlay's call channel and the caller goes silent, because BYD's audio service plays a third-party app's voice stream as media. The call end still writes 1 (idle) so a stale status is cleared. The call time comes from a small watcher under the adb shell that also ends the call on the car if DiPlay's process goes away mid-call.
 
 Before its first vehicle write, a call reserves a token and waits for confirmation that its shell
 watcher initialized. A failed launch or missing readiness acknowledgment prevents new call-state
@@ -156,6 +156,13 @@ confirmed read-back. This bounds lifecycle interference; it does not establish
 that every vehicle feature id/value or partial-write outcome is correct on a particular firmware.
 
 The microphone already follows the iPhone's stream type: a call records with `VOICE_COMMUNICATION` and the platform's echo canceller and noise suppressor in communication mode, Siri with `VOICE_RECOGNITION`.
+
+BYD plays a third-party call as media, so the car's own echo canceller never sees it and the amplifier's bass applies to the voice. Two call settings, on by default and applied at the next connection, compensate inside DiPlay:
+
+- **Call echo cancelling** runs SpeexDSP's echo canceller (250 ms tail, BSD licensed, `shared/src/main/jni/speexdsp`) on the call microphone, using what DiPlay itself just played as the reference. It needs mono capture at the downlink sample rate; otherwise the call continues with the platform effects only (`microphone echo canceller enabled=false` in the log).
+- **Call voice filter** removes the lows below 200 Hz from the caller's voice (4th-order high-pass) before playback.
+
+With **CarPlay calls on the dashboard** on, DiPlay arms the call watcher when a CarPlay session starts, so the first call's caller name reaches the cluster and HUD without waiting for the watcher to launch. An armed watcher makes no vehicle writes; it is cancelled when the session ends or the setting is turned off.
 
 Both experimental settings default off. The opt-in feature is included for release testing;
 physical acceptance still needs confirmation on each target firmware: answering/ending a real call

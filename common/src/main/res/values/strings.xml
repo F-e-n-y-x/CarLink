@@ -712,6 +712,10 @@
     <string name="side_panel_full_screen">⤢ Full screen</string>
     <string name="main_buffered_audio">Buffered music (experimental)</string>
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="call_echo_cancellation">Call echo cancellation (experimental)</string>
+    <string name="call_echo_cancellation_description">Tries to reduce speaker echo sent to the other person during CarPlay calls. Results depend on the head unit. Applies at the next CarPlay connection.</string>
+    <string name="call_voice_filter">Clearer call voices (experimental)</string>
+    <string name="call_voice_filter_description">Cuts bass from CarPlay call audio. This may change how voices sound. Applies at the next CarPlay connection.</string>
     <string name="smooth_video">Smooth video (experimental)</string>
     <string name="smooth_video_description">Shows each main-screen CarPlay frame at the time the iPhone stamped on it plus a short delay, instead of as soon as it is decoded. The delay adjusts itself so that most frames are decoded in time; frames still not ready by their time are shown at once. Scrolling can look more even, but touches respond later. Picture adjustments do not apply. Reconnects CarPlay.</string>
     <string name="car_button_in_carplay">Car button in CarPlay</string>

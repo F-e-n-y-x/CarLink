@@ -615,6 +615,10 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="call_echo_cancellation">Cancelación de eco en llamadas (experimental)</string>
+    <string name="call_echo_cancellation_description">Intenta reducir el eco de los altavoces que recibe la otra persona en llamadas de CarPlay. El resultado depende del equipo del coche. Se aplica en la próxima conexión de CarPlay.</string>
+    <string name="call_voice_filter">Voces más claras en llamadas (experimental)</string>
+    <string name="call_voice_filter_description">Reduce los graves del audio de llamadas de CarPlay. Puede cambiar cómo suenan las voces. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="smooth_video">Vídeo fluido (experimental)</string>
     <string name="smooth_video_description">Muestra cada fotograma de la pantalla principal de CarPlay en el momento que marcó el iPhone más un pequeño retardo, en lugar de en cuanto se decodifica. El retardo se ajusta solo para que la mayoría de los fotogramas se decodifiquen a tiempo; los que aun así no están listos a tiempo se muestran al instante. El desplazamiento puede verse más uniforme, pero el toque responde más tarde. Los ajustes de imagen no se aplican. Reconecta CarPlay.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>

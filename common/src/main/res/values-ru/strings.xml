@@ -615,6 +615,10 @@
     <string name="side_panel_full_screen">⤢ На весь экран</string>
     <string name="main_buffered_audio">Буферизованная музыка (экспериментально)</string>
     <string name="main_buffered_audio_description">Приложения, которые это поддерживают (например, Apple Music), присылают музыку примерно на две минуты вперёд, поэтому короткие провалы Wi-Fi не слышны. Остальные приложения работают как раньше. Переподключает CarPlay.</string>
+    <string name="call_echo_cancellation">Подавление эха в звонках (экспериментально)</string>
+    <string name="call_echo_cancellation_description">Пытается уменьшить эхо динамиков, которое слышит собеседник при звонках CarPlay. Результат зависит от головного устройства. Применяется при следующем подключении CarPlay.</string>
+    <string name="call_voice_filter">Более чёткие голоса в звонках (экспериментально)</string>
+    <string name="call_voice_filter_description">Снижает басы в звонках CarPlay. Может изменить звучание голосов. Применяется при следующем подключении CarPlay.</string>
     <string name="smooth_video">Плавное видео (экспериментально)</string>
     <string name="smooth_video_description">Показывает каждый кадр главного экрана CarPlay по времени, которое отметил на нём iPhone, плюс небольшой запас, а не сразу после декодирования. Запас подстраивается сам, чтобы большинство кадров успевало декодироваться; кадры, всё равно не готовые к своему времени, показываются сразу. Прокрутка может стать ровнее, но отклик на касание запаздывает. Настройки картинки не применяются. Переподключает CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>

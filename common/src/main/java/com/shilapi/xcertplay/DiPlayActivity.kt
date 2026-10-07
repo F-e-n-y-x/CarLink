@@ -1322,6 +1322,16 @@ class DiPlayActivity : ComponentActivity() {
                 AirPlayPersistence.saveSmoothVideo(this, it)
                 reconnectIfRunning()
             }
+            toggle(card, getString(R.string.call_echo_cancellation), getString(R.string.call_echo_cancellation_description),
+                AirPlayPersistence.loadCallEchoCancellation(this)) {
+                AirPlayPersistence.saveCallEchoCancellation(this, it)
+                markReconnectNeeded()
+            }
+            toggle(card, getString(R.string.call_voice_filter), getString(R.string.call_voice_filter_description),
+                AirPlayPersistence.loadCallVoiceFilter(this)) {
+                AirPlayPersistence.saveCallVoiceFilter(this, it)
+                markReconnectNeeded()
+            }
             audioFocusControls(card)
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
                 toggle(card, getString(R.string.advanced_audio_channel_mapping),
@@ -2492,6 +2502,14 @@ class DiPlayActivity : ComponentActivity() {
             getString(R.string.carplay_call_controls_experimental_description),
             BydOutputSettings.carPlayCallControls(this)) {
             BydOutputSettings.setCarPlayCallControls(this, it)
+            if (it && !WheelKeyService.connected()) {
+                Thread({
+                    val access = WheelKeyService.enableOverAdb(this)
+                    if (access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                        runOnUiThread { toast(getString(R.string.wheel_keys_adb_failed, access.name)) }
+                    }
+                }, "diplay-call-keys-enable").start()
+            }
         }
         toggle(card, getString(R.string.carplay_calls_on_dashboard),
             getString(R.string.carplay_calls_on_dashboard_description),
