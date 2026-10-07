@@ -24,6 +24,17 @@ class SettingsStateTest {
         assertFalse(SettingsReadiness.READY_USB.needsAction)
     }
 
+    @Test fun missingHotspotSetupNeedsActionWithoutHidingAnActiveSession() {
+        fun of(active: Boolean = false, running: Boolean = false, wireless: Boolean = true) =
+            SettingsReadiness.of(false, active, running, wireless, phoneChosen = true, hotspotSetupNeeded = true)
+
+        assertEquals(SettingsReadiness.HOTSPOT_SETUP, of())
+        assertTrue(SettingsReadiness.HOTSPOT_SETUP.needsAction)
+        assertEquals(SettingsReadiness.CONNECTED, of(active = true))
+        assertEquals(SettingsReadiness.CONNECTING, of(running = true))
+        assertEquals(SettingsReadiness.READY_USB, of(wireless = false))
+    }
+
     @Test fun pendingReconnectBelongsToTheSessionThatSavedIt() {
         val first = Any()
         val second = Any()

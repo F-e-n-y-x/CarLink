@@ -148,6 +148,7 @@ class DiPlayActivity : ComponentActivity() {
     private var toneStop: Runnable? = null
     private var exportButton: Button? = null
     private var rootScroll: ScrollView? = null
+    private var settingsRailScroll: ScrollView? = null
     private var reconnectBar: View? = null
     private var readinessCard: LinearLayout? = null
     private var searchIndexSink: MutableList<String>? = null
@@ -155,6 +156,8 @@ class DiPlayActivity : ComponentActivity() {
     private var renderedPage: String? = null
     private var renderedSettingsCategory: SettingsCategory? = null
     private var pendingScrollY: Int? = null
+    private var pendingRailScrollY: Int? = null
+    private var pendingRailFocus = false
     private var bydVehicleAdvancedExpanded = false
     private var adbAccessState: BydAdbAccess.State? = null
     private var adbCheckInProgress = false
@@ -381,6 +384,13 @@ class DiPlayActivity : ComponentActivity() {
         val sameDestination = renderedPage == page &&
             (page != "settings" || renderedSettingsCategory == settingsCategory)
         val previousScrollY = (pendingScrollY ?: rootScroll?.scrollY)?.takeIf { sameDestination }
+        // The rail is one destination even when its selected category changes.
+        val keepRailPosition = renderedPage == "settings" && page == "settings"
+        val previousRailScrollY = (pendingRailScrollY ?: settingsRailScroll?.scrollY)
+            ?.takeIf { keepRailPosition }
+        val restoreRailFocus = keepRailPosition &&
+            (pendingRailFocus || settingsRailScroll?.hasFocus() == true)
+        settingsRailScroll = null
         status = null; connectButton = null; disconnectButton = null; lastRunning = null; carButtonCard = null
         reconnectBar = null
         readinessCard = null
@@ -428,6 +438,22 @@ class DiPlayActivity : ComponentActivity() {
                     pendingScrollY = null
                 }
             }
+        }
+        val rail = settingsRailScroll
+        pendingRailScrollY = previousRailScrollY.takeIf { rail != null }
+        pendingRailFocus = restoreRailFocus && rail != null
+        rail?.doOnLayout {
+            if (settingsRailScroll !== rail) return@doOnLayout
+            previousRailScrollY?.let { rail.scrollTo(0, it) }
+            val destinations = rail.getChildAt(0) as ViewGroup
+            val selected = (0 until destinations.childCount)
+                .map(destinations::getChildAt).firstOrNull { it.isSelected }
+            if (selected != null) {
+                if (restoreRailFocus) selected.requestFocus()
+                selected.requestRectangleOnScreen(android.graphics.Rect(0, 0, selected.width, selected.height), true)
+            }
+            pendingRailScrollY = null
+            pendingRailFocus = false
         }
     }
 
@@ -609,7 +635,10 @@ class DiPlayActivity : ComponentActivity() {
         addView(reconnectBar(), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(SETTINGS_BLOCK_GAP_DP) })
         val split = row().apply { gravity = Gravity.TOP }
         // The rail scrolls on its own only when the window is too short for every destination.
-        split.addView(ScrollView(this@DiPlayActivity).apply { addView(settingsRail()) },
+        split.addView(ScrollView(this@DiPlayActivity).apply {
+            addView(settingsRail())
+            settingsRailScroll = this
+        },
             LinearLayout.LayoutParams(dp(SettingsLayoutPolicy.railWidthDp(resources.configuration.fontScale)), -2))
         split.addView(space(24), LinearLayout.LayoutParams(dp(24), 1))
         split.addView(categoryScroll, LinearLayout.LayoutParams(0, -1, 1f))
@@ -759,6 +788,8 @@ class DiPlayActivity : ComponentActivity() {
         running = CarPlayBackgroundSession.hasSession(),
         wireless = AirPlayPersistence.loadWirelessEnabled(this),
         phoneChosen = DiPlayPreferences.phoneAddress(this) != null,
+        hotspotSetupNeeded = AirPlayPersistence.loadWirelessHotspotMode(this) == WirelessHotspotMode.MANUAL &&
+            (pendingCarHotspotSetup || hotspotError(storedSsid(), storedPassword()) != null),
     )
 
     private fun refreshReadiness() {
@@ -768,7 +799,7 @@ class DiPlayActivity : ComponentActivity() {
         renderedReadiness = state
         card.removeAllViews()
         val title = getString(when (state) {
-            SettingsReadiness.SETUP_ERROR -> R.string.setup_needs_attention
+            SettingsReadiness.SETUP_ERROR, SettingsReadiness.HOTSPOT_SETUP -> R.string.setup_needs_attention
             SettingsReadiness.CONNECTED -> R.string.carplay_connected
             SettingsReadiness.CONNECTING -> R.string.connecting_to_your_iphone
             SettingsReadiness.CHOOSE_IPHONE -> R.string.settings_choose_iphone_title
@@ -776,6 +807,7 @@ class DiPlayActivity : ComponentActivity() {
         })
         val detail = when (state) {
             SettingsReadiness.SETUP_ERROR -> setupError.orEmpty()
+            SettingsReadiness.HOTSPOT_SETUP -> getString(R.string.save_the_name_and_password_from_the_car_s_hotspot_settings)
             SettingsReadiness.CONNECTED -> getString(R.string.settings_ready_connected)
             SettingsReadiness.CONNECTING -> getString(R.string.settings_connecting_description)
             SettingsReadiness.CHOOSE_IPHONE -> getString(R.string.settings_choose_iphone_description)
@@ -793,7 +825,7 @@ class DiPlayActivity : ComponentActivity() {
             SettingsReadiness.CHOOSE_IPHONE -> card.addView(button(getString(R.string.settings_choose_iphone_action), true) {
                 choosePhone()
             }, matchButton(12, 56))
-            SettingsReadiness.SETUP_ERROR -> card.addView(button(getString(R.string.open_connection_setup), true) {
+            SettingsReadiness.SETUP_ERROR, SettingsReadiness.HOTSPOT_SETUP -> card.addView(button(getString(R.string.open_connection_setup), true) {
                 openConnectionSetupFromSettings()
             }, matchButton(12, 56))
             else -> Unit
@@ -867,7 +899,7 @@ class DiPlayActivity : ComponentActivity() {
             AirPlayPersistence.saveHideBottomBar(this@DiPlayActivity, enabled)
         }
         toggle(this, getString(R.string.report_location_to_iphone),
-            getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th),
+            "${getString(R.string.location_reporting_reconnects)} ${getString(R.string.sends_precise_android_location_as_carplay_gps_data_when_th)}",
             AirPlayPersistence.loadLocationReportingEnabled(this@DiPlayActivity), save = ::onLocationReportingChanged)
         Unit
     }
@@ -903,12 +935,20 @@ class DiPlayActivity : ComponentActivity() {
         renderSections(content, SettingsInformationArchitecture.sectionsByCategory.getValue(SettingsCategory.DISPLAY))
     }
 
+    private fun nightModeLabels() = CarPlayNightMode.entries.map { mode ->
+        getString(when (mode) {
+            CarPlayNightMode.SYSTEM -> R.string.carplay_night_system
+            CarPlayNightMode.AMBIENT -> R.string.carplay_night_ambient
+            CarPlayNightMode.DAY -> R.string.carplay_night_day
+            CarPlayNightMode.NIGHT -> R.string.carplay_night_night
+            CarPlayNightMode.SCHEDULE -> R.string.carplay_night_schedule
+        })
+    }
+
     private fun appearanceControl(parent: LinearLayout) {
         val modes = CarPlayNightMode.entries
-        choice(parent, getString(R.string.carplay_night_mode), listOf(
-            getString(R.string.carplay_night_system), getString(R.string.carplay_night_ambient),
-            getString(R.string.carplay_night_day), getString(R.string.carplay_night_night),
-        ), modes.indexOf(AirPlayPersistence.loadCarPlayNightMode(this)), reconnects = false) { index ->
+        choice(parent, getString(R.string.carplay_night_mode), nightModeLabels(),
+            modes.indexOf(AirPlayPersistence.loadCarPlayNightMode(this)), reconnects = false) { index ->
             AirPlayPersistence.saveCarPlayNightMode(this, modes[index])
         }
     }
@@ -1177,13 +1217,7 @@ class DiPlayActivity : ComponentActivity() {
             choice(
                 card,
                 getString(R.string.carplay_night_mode),
-                listOf(
-                    getString(R.string.carplay_night_system),
-                    getString(R.string.carplay_night_ambient),
-                    getString(R.string.carplay_night_day),
-                    getString(R.string.carplay_night_night),
-                    getString(R.string.carplay_night_schedule),
-                ),
+                nightModeLabels(),
                 nightModes.indexOf(nightMode),
                 reconnects = false,
             ) { index ->
@@ -1309,12 +1343,11 @@ class DiPlayActivity : ComponentActivity() {
         // Cluster video does not require a BYD navigation broadcast receiver.
         filteredSection(content, SettingsSection.CLUSTER_MAP,
             getString(R.string.carplay_map_on_instrument_cluster_experimental), R.drawable.ic_dp_dashboard) { card ->
-            toggle(card, getString(R.string.adb_cluster_activity_mode),
+            reconnectingToggle(card, getString(R.string.adb_cluster_activity_mode),
                 getString(R.string.adb_cluster_activity_description), AirPlayPersistence.loadAdbClusterEnabled(this)) {
                 AirPlayPersistence.saveAdbClusterEnabled(this, it)
                 ClusterActivityOutput.stopForSettings()
                 render()
-                markReconnectNeeded()
             }
             val adbCluster = AdbClusterRouter.enabled(this)
             if (adbCluster) {
@@ -1336,13 +1369,12 @@ class DiPlayActivity : ComponentActivity() {
             val diLink4 = adbCluster || (clusterDisplay != null && clusterSize != null &&
                 DiLink4ClusterDisplay.matches(clusterDisplay.name, clusterSize.x, clusterSize.y))
             val clusterMapEnabled = AirPlayPersistence.loadClusterMapEnabled(this)
-            toggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
+            reconnectingToggle(card, getString(R.string.carplay_map_on_instrument_cluster_experimental),
                 if (clusterDisplay != null || adbCluster) getString(R.string.shows_the_iphone_s_cluster_map_on_the_instrument_cluster_c)
                 else getString(R.string.shows_the_iphone_s_cluster_map_virtual_stream_description),
                 clusterMapEnabled) {
                 AirPlayPersistence.saveClusterMapEnabled(this, it)
                 render()
-                markReconnectNeeded()
             }
             if (clusterMapEnabled) {
                 toggle(card, getString(R.string.center_map_card),
@@ -1556,6 +1588,15 @@ class DiPlayActivity : ComponentActivity() {
         if (AirPlayPersistence.loadWirelessHotspotMode(this) != WirelessHotspotMode.MANUAL) return
         if (!CarHotspotSetup.isBydHeadUnit(this)) {
             Log.i("DiPlay-Hotspot", "settings hidden: BYD head unit not detected")
+            return
+        }
+        if (searchIndexSink != null) {
+            // Index discoverable names without starting the asynchronous permission probe.
+            searchIndexSink?.addAll(listOf(
+                getString(R.string.byd_adb_features),
+                getString(R.string.auto_car_hotspot_title),
+                getString(R.string.btn_auto_apply_permissions),
+            ))
             return
         }
         val controls = column().apply { visibility = View.GONE }
@@ -2229,11 +2270,13 @@ class DiPlayActivity : ComponentActivity() {
     private fun wheelKeysSettings(card: LinearLayout) {
         // The joystick and map zoom use BYD's media and custom keys.
         val byd = CarHotspotSetup.isBydHeadUnit(this)
-        val bydKeysOn = byd && (WheelZoomSettings.joystick(this) ||
-            (wheelMapZoomAvailable() && WheelZoomSettings.enabled(this)))
-        if (WheelZoomSettings.siriKey(this) || bydKeysOn) wheelKeyServiceControls(card)
+        val zoomAvailable = wheelMapZoomAvailable()
+        val vehicleKeysOn = WheelZoomSettings.joystick(this) ||
+            (zoomAvailable && WheelZoomSettings.enabled(this))
+        if (WheelZoomSettings.siriKey(this) || vehicleKeysOn) wheelKeyServiceControls(card)
         siriKeyControls(card)
-        if (byd) wheelKeyControls(card)
+        // Keep previously configured controls reachable even if package detection misses the car.
+        if (byd || zoomAvailable || WheelZoomSettings.joystick(this)) wheelKeyControls(card)
     }
 
     // Map zoom only works where the dashboard map card used to show these controls.
@@ -3522,6 +3565,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun carButtonSaved() {
+        markReconnectNeeded()
         if (CarPlayBackgroundSession.hasSession()) toast(getString(R.string.car_button_saved_next_connection))
     }
 
@@ -4007,6 +4051,26 @@ class DiPlayActivity : ComponentActivity() {
         if (settingsSectionFilter?.contains(key) == false) return
         section(parent, title, icon, build)
     }
+    // Routing changes affect the live cluster surface as soon as the host resumes.
+    // Ask before saving them instead of promising to defer only part of the change.
+    private fun reconnectingToggle(parent: LinearLayout, title: String, description: String,
+        value: Boolean, save: (Boolean) -> Unit) {
+        toggle(parent, title, description, value) { selected ->
+            if (!CarPlayBackgroundSession.hasSession()) {
+                save(selected)
+            } else {
+                AlertDialog.Builder(this).setTitle(title).setMessage(description)
+                    .setPositiveButton(R.string.apply_and_reconnect) { _, _ ->
+                        save(selected)
+                        reconnectIfRunning()
+                    }
+                    .setNegativeButton(R.string.cancel) { _, _ -> render() }
+                    .setOnCancelListener { render() }
+                    .show()
+            }
+        }
+    }
+
     private fun toggle(parent: LinearLayout, title: String, description: String, value: Boolean, enabled: Boolean = true, save: (Boolean) -> Unit): Switch {
         searchIndexSink?.add(title)
         val result = SettingsWidgets.createSwitchRow(

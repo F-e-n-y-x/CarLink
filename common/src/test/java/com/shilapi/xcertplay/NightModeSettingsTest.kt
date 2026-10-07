@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.shilapi.xcertplay.host.R
 import org.junit.Assert.*
@@ -22,6 +23,7 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.shadows.ShadowToast
+import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28, 33], qualifiers = "en", manifest = Config.NONE)
@@ -126,6 +128,81 @@ class NightModeSettingsTest {
         assertEquals(CarPlayNightSchedule(), AirPlayPersistence.loadCarPlayNightSchedule(activity))
         assertEquals(before, button(R.string.carplay_night_start).text.toString())
         assertEquals(activity.getString(R.string.carplay_night_schedule_same_time), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test fun overviewRendersEverySavedAppearanceWithItsMatchingChoice() {
+        for (mode in CarPlayNightMode.entries) {
+            AirPlayPersistence.saveCarPlayNightMode(activity, mode)
+            renderOverview()
+
+            assertEquals(appearanceSummary(mode), button(R.string.carplay_night_mode).text.toString())
+            button(R.string.carplay_night_mode).performClick()
+            val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            assertEquals(CarPlayNightMode.entries.size, dialog.listView.adapter.count)
+            assertEquals(CarPlayNightMode.entries.indexOf(mode), dialog.listView.checkedItemPosition)
+            assertEquals(activity.getString(modeLabel(mode)),
+                dialog.listView.adapter.getItem(dialog.listView.checkedItemPosition))
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+            assertEquals(mode, AirPlayPersistence.loadCarPlayNightMode(activity))
+        }
+    }
+
+    @Test fun choosingScheduledAppearanceFromOverviewKeepsTheDisplaySchedule() {
+        val schedule = CarPlayNightSchedule(20 * 60 + 15, 5 * 60 + 45)
+        AirPlayPersistence.saveCarPlayNightSchedule(activity, schedule)
+        AirPlayPersistence.saveCarPlayNightMode(activity, CarPlayNightMode.SYSTEM)
+        renderOverview()
+
+        val dialog = selectMode(CarPlayNightMode.SCHEDULE)
+        assertEquals(activity.getString(R.string.carplay_night_schedule),
+            dialog.listView.adapter.getItem(CarPlayNightMode.entries.indexOf(CarPlayNightMode.SCHEDULE)))
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(CarPlayNightMode.SCHEDULE, AirPlayPersistence.loadCarPlayNightMode(activity))
+        assertEquals(schedule, AirPlayPersistence.loadCarPlayNightSchedule(activity))
+        assertEquals(appearanceSummary(CarPlayNightMode.SCHEDULE), button(R.string.carplay_night_mode).text.toString())
+        renderSettings()
+        assertEquals(appearanceSummary(CarPlayNightMode.SCHEDULE), button(R.string.carplay_night_mode).text.toString())
+        assertScheduleVisible(true)
+        assertTrue(button(R.string.carplay_night_start).text.toString().endsWith("20:15"))
+        assertTrue(button(R.string.carplay_night_end).text.toString().endsWith("05:45"))
+    }
+
+    @Test fun searchingSettingsWithScheduledAppearanceKeepsTheSavedMode() {
+        AirPlayPersistence.saveCarPlayNightMode(activity, CarPlayNightMode.SCHEDULE)
+        renderOverview()
+
+        val index = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(
+            activity, "buildSettingsSearchIndex")
+
+        assertTrue(index.any {
+            it.title == activity.getString(R.string.carplay_night_mode) && it.category == SettingsCategory.DISPLAY
+        })
+        assertEquals(CarPlayNightMode.SCHEDULE, AirPlayPersistence.loadCarPlayNightMode(activity))
+        val current = ReflectionHelpers.getField<ScrollView>(activity, "rootScroll")
+        val appearance = views(current).filterIsInstance<Button>().single {
+            it.text.startsWith(activity.getString(R.string.carplay_night_mode) + " · ")
+        }
+        assertEquals(appearanceSummary(CarPlayNightMode.SCHEDULE), appearance.text.toString())
+    }
+
+    private fun modeLabel(mode: CarPlayNightMode): Int = when (mode) {
+        CarPlayNightMode.SYSTEM -> R.string.carplay_night_system
+        CarPlayNightMode.AMBIENT -> R.string.carplay_night_ambient
+        CarPlayNightMode.DAY -> R.string.carplay_night_day
+        CarPlayNightMode.NIGHT -> R.string.carplay_night_night
+        CarPlayNightMode.SCHEDULE -> R.string.carplay_night_schedule
+    }
+
+    private fun appearanceSummary(mode: CarPlayNightMode) =
+        activity.getString(R.string.carplay_night_mode) + " · " + activity.getString(modeLabel(mode))
+
+    private fun renderOverview() {
+        ReflectionHelpers.setField(activity, "page", "settings")
+        ReflectionHelpers.setField(activity, "settingsCategory", SettingsCategory.OVERVIEW)
+        ReflectionHelpers.callInstanceMethod<Unit>(activity, "render")
+        page = ReflectionHelpers.getField<ScrollView>(activity, "rootScroll").getChildAt(0) as LinearLayout
     }
 
     private fun renderSettings() {

@@ -1,6 +1,10 @@
 package com.shilapi.xcertplay
 
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -8,7 +12,12 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
+import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,7 +28,10 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
 import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
@@ -53,6 +65,22 @@ class AdaptiveSettingsUiTest {
         assertFalse(texts(screen).any { it.text == screen.getString(R.string.ready) })
     }
 
+    @Test fun chosenPhoneWithMissingManualHotspotOffersConnectionSetup() {
+        AirPlayPersistence.saveWirelessEnabled(context, true)
+        AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.MANUAL)
+        DiPlayPreferences.savePhone(context, "AA:BB:CC:DD:EE:FF", "My iPhone")
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "setupError", null)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.setup_needs_attention) })
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.ready) })
+        texts(screen).single { it.text == screen.getString(R.string.open_connection_setup) }.performClick()
+        assertEquals("connection", ReflectionHelpers.getField<String>(screen, "page"))
+        screen.onBackPressedDispatcher.onBackPressed()
+        assertEquals("settings", ReflectionHelpers.getField<String>(screen, "page"))
+    }
+
     @Test fun searchOpensTheCategoryThatOwnsTheSetting() {
         val screen = openSettings()
         val index = ReflectionHelpers.callInstanceMethod<List<Any>>(screen, "buildSettingsSearchIndex")
@@ -68,6 +96,56 @@ class AdaptiveSettingsUiTest {
 
         assertEquals(SettingsCategory.DISPLAY, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
         assertTrue(texts(screen).any { it.text.startsWith(screen.getString(R.string.frame_rate) + " · ") })
+    }
+
+    @Test
+    @Config(shadows = [HotspotSearchProbe::class])
+    fun hotspotSearchIndexesItsAsyncCardWithoutStartingAnAdbProbe() {
+        installBydSettingsPackage()
+        AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.MANUAL)
+        HotspotSearchProbe.workers.clear()
+        HotspotSearchProbe.entered = CountDownLatch(1)
+        val screen = openSettings()
+        val index = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(
+            screen, "buildSettingsSearchIndex")
+        val result = index.single { it.title == screen.getString(R.string.auto_car_hotspot_title) }
+
+        assertEquals(SettingsCategory.CONNECTION, result.category)
+        assertTrue("Building search metadata must not contact ADB", HotspotSearchProbe.workers.isEmpty())
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.auto_car_hotspot_title) })
+
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "openSearchResult",
+            ReflectionHelpers.ClassParameter(result.javaClass, result))
+        assertTrue(HotspotSearchProbe.entered.await(3, TimeUnit.SECONDS))
+        val worker = HotspotSearchProbe.workers.single()
+        worker.join(3_000)
+        assertFalse(worker.isAlive)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(SettingsCategory.CONNECTION,
+            ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
+        assertEquals(1, descendants(screen.window.decorView).filterIsInstance<Switch>().count {
+            it.contentDescription == screen.getString(R.string.auto_car_hotspot_title)
+        })
+    }
+
+    @Test
+    @Config(shadows = [HotspotSearchProbe::class])
+    fun hotspotSearchKeepsTheBydAndCarHotspotAudienceGates() {
+        installBydSettingsPackage()
+        AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.EXISTING_WIFI)
+        HotspotSearchProbe.workers.clear()
+        HotspotSearchProbe.entered = CountDownLatch(1)
+        val screen = openSettings()
+        fun index() = ReflectionHelpers.callInstanceMethod<List<DiPlayActivity.SettingsSearchResult>>(
+            screen, "buildSettingsSearchIndex")
+        val title = screen.getString(R.string.auto_car_hotspot_title)
+
+        assertFalse(index().any { it.title == title })
+        AirPlayPersistence.saveWirelessHotspotMode(context, WirelessHotspotMode.MANUAL)
+        shadowOf(context.packageManager).removePackage("com.byd.carsettings")
+        assertFalse(index().any { it.title == title })
+        assertTrue(HotspotSearchProbe.workers.isEmpty())
     }
 
     @Test fun cardControlsShareOneHeightAndGap() {
@@ -300,6 +378,51 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    @Test
+    @Config(sdk = [29], qualifiers = "en-w1000dp-h400dp")
+    fun selectingTheBottomRailDestinationKeepsItVisibleAndFocusedOnAShortScreen() {
+        val screen = openSettings()
+        val density = screen.resources.displayMetrics.density
+        fun layout() {
+            val root = screen.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
+            val width = Math.round(1000 * density)
+            val height = Math.round(400 * density)
+            root.measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
+            )
+            root.layout(0, 0, width, height)
+        }
+        fun rail() = ReflectionHelpers.getField<ScrollView>(screen, "settingsRailScroll")
+        fun advanced(scroll: ScrollView) = descendants(scroll).single {
+            it.contentDescription == screen.getString(R.string.settings_open_category,
+                screen.getString(R.string.settings_advanced))
+        }
+        layout()
+        val previousRail = rail()
+        previousRail.scrollTo(0, previousRail.getChildAt(0).height)
+        assertTrue("This window must require rail scrolling", previousRail.scrollY > 0)
+        val destination = advanced(previousRail)
+        assertTrue(destination.requestFocus())
+        assertTrue(previousRail.hasFocus())
+
+        destination.performClick()
+        layout()
+
+        val currentRail = rail()
+        val selected = advanced(currentRail)
+        assertFalse(previousRail === currentRail)
+        assertTrue(selected.isSelected)
+        assertTrue("D-pad focus must follow the selected category", selected.isFocused)
+        assertTrue(currentRail.scrollY > 0)
+        val top = selected.top + currentRail.getChildAt(0).top
+        assertTrue("Selected row starts inside the rail viewport", top >= currentRail.scrollY)
+        assertTrue("Selected row ends inside the rail viewport",
+            top + selected.height <= currentRail.scrollY + currentRail.height)
+        assertEquals("Category scrolling remains independent", 0,
+            ReflectionHelpers.getField<ScrollView>(screen, "rootScroll").scrollY)
+    }
+
     @Test fun overviewUtilitiesAreOneGroupedCardWithSectionSpacing() {
         val screen = openSettings()
         fun utilityRow(category: Int) = descendants(screen.window.decorView).single { candidate ->
@@ -314,6 +437,30 @@ class AdaptiveSettingsUiTest {
         assertSame(diagnostics.parent, advanced.parent)
         val card = diagnostics.parent as View
         assertEquals(Math.round(18 * screen.resources.displayMetrics.density), (card.layoutParams as LinearLayout.LayoutParams).bottomMargin)
+    }
+
+    private fun installBydSettingsPackage() {
+        shadowOf(context.packageManager).installPackage(PackageInfo().apply {
+            packageName = "com.byd.carsettings"
+            applicationInfo = ApplicationInfo().apply {
+                packageName = "com.byd.carsettings"
+                flags = ApplicationInfo.FLAG_SYSTEM
+            }
+        })
+    }
+
+    @Implements(CarHotspotSetup::class, isInAndroidSdk = false)
+    class HotspotSearchProbe {
+        @Implementation fun check(context: Context, adb: LocalAdb): LocalAdb.Access {
+            workers += Thread.currentThread()
+            entered.countDown()
+            return LocalAdb.Access.READY
+        }
+
+        companion object {
+            val workers = CopyOnWriteArrayList<Thread>()
+            var entered = CountDownLatch(1)
+        }
     }
 
     private fun openSettings(): DiPlayActivity = Robolectric.buildActivity(
