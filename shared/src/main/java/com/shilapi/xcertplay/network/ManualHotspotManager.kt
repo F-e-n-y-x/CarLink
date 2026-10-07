@@ -119,10 +119,8 @@ class ManualHotspotManager(
             else -> null
         }
         val security = apConfiguration?.security ?: expectedSecurity
-        // The selected address is often IPv6 link-local (wirelessHostAddress() prefers it), but
-        // mDNS/AirPlay discovery on many iPhones needs an IPv4 address too. Without this, the
-        // iPhone joins the AP and pairs over Bluetooth but never discovers the CarPlay service,
-        // and the session retries forever instead of failing visibly.
+        // Keep the existing IPv4-first endpoint selection and also publish the selected AP's
+        // scoped IPv6 address, using the same dual-stack policy as existing Wi-Fi connections.
         val hostAddresses = network?.let {
             existingWifiHostAddresses(Collections.list(it.inetAddresses), selected.index)
         }?.takeIf { it.isNotEmpty() } ?: listOfNotNull(localInterface.hostAddress)
