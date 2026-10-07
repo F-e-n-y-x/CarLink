@@ -628,4 +628,7 @@
     <string name="car_button_description">CarPlay muestra este icono y este nombre en su lista de apps. Tócalo para volver a la pantalla del coche. Los cambios se aplican la próxima vez que CarPlay se conecte.</string>
     <string name="car_button_saved_next_connection">Guardado. CarPlay mostrará el nuevo icono y nombre la próxima vez que se conecte.</string>
     <string name="this_head_unit_has_no_image_picker">Esta unidad principal no tiene selector de imágenes.</string>
+    <string name="settings_interface_size">Tamaño de la interfaz</string>
+    <string name="settings_interface_size_auto">Automático</string>
+    <string name="settings_interface_size_hint">Tamaño del texto y los controles en las pantallas de DiPlay. Automático los agranda en pantallas grandes de baja densidad. No afecta a CarPlay.</string>
 </resources>

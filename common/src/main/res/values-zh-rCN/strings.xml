@@ -688,4 +688,7 @@
     <string name="car_button_description">CarPlay 会在应用列表中显示此图标和名称。点按即可返回车辆自带的界面。更改将在 CarPlay 下次连接时生效。</string>
     <string name="car_button_saved_next_connection">已保存。CarPlay 将在下次连接时显示新的图标和名称。</string>
     <string name="this_head_unit_has_no_image_picker">此车机没有图片选择器。</string>
+    <string name="settings_interface_size">界面大小</string>
+    <string name="settings_interface_size_auto">自动</string>
+    <string name="settings_interface_size_hint">DiPlay 自身界面中文字和控件的大小。自动模式会在大尺寸低密度屏幕上放大它们。不影响 CarPlay。</string>
 </resources>

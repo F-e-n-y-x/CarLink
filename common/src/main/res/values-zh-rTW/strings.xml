@@ -688,4 +688,7 @@
     <string name="usb_auto_confirm_active_hint">✓ 無障礙服務已啟用（將自動確認 USB 提示）</string>
     <string name="usb_auto_confirm_dialog_msg">自動確認需要無障礙服務。許多車機未提供系統無障礙設定。\n\n此設定也會為主畫面地圖申請使用情況存取權及顯示在其他應用程式上層的權限。現有無障礙服務會保留。\n\n要透過本機 ADB 授予這三項權限嗎？</string>
     <string name="usb_auto_confirm_status_on">USB 提示自動確認：已啟用</string>
+    <string name="settings_interface_size">介面大小</string>
+    <string name="settings_interface_size_auto">自動</string>
+    <string name="settings_interface_size_hint">DiPlay 自身畫面中文字與控制項的大小。自動模式會在大尺寸低密度螢幕上放大它們。不影響 CarPlay。</string>
 </resources>

@@ -179,12 +179,25 @@ class DiPlayActivity : ComponentActivity() {
 
     private var languagePreferenceAtCreate = AppLocale.SYSTEM
 
+    private var interfaceOverride: Configuration? = null
+
+    private fun enforceInterfaceSize(): Boolean {
+        val override = interfaceOverride ?: return false
+        val found = resources.displayMetrics.densityDpi
+        if (!InterfaceSize.enforce(resources, override)) return false
+        android.util.Log.i("DiPlayUi", "interface size re-applied: $found -> ${override.densityDpi} dpi")
+        return true
+    }
+
     override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(AppLocale.wrap(newBase))
+        val base = AppLocale.wrap(newBase)
+        super.attachBaseContext(base)
+        interfaceOverride = InterfaceSize.attach(this, base)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enforceInterfaceSize()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
         WheelKeyService.restoreIfNeeded(this)
@@ -225,7 +238,15 @@ class DiPlayActivity : ComponentActivity() {
         outState.putBoolean("byd_vehicle_advanced", bydVehicleAdvancedExpanded)
         super.onSaveInstanceState(outState)
     }
-    override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); render() }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!InterfaceSize.reportsScaled(interfaceOverride, newConfig)) {
+            val next = InterfaceSize.override(newConfig, InterfaceSize.preference(this))
+            if (InterfaceSize.needsRecreate(interfaceOverride, next)) { recreate(); return }
+            interfaceOverride = next
+        }
+        render()
+    }
     private fun openOverlayPermission() {
         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
         if (runCatching { startActivity(intent) }.isFailure) {
@@ -235,6 +256,8 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Results from the image picker and crop screens arrive before onResume.
+        enforceInterfaceSize()
         CenterMapOverlay.onDiPlayScreenShown()
     }
 
@@ -248,6 +271,8 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Returning from another activity can bring the head unit's own density back.
+        if (enforceInterfaceSize()) render()
         if (Build.VERSION.SDK_INT < 33 && AppLocale.preference(this) != languagePreferenceAtCreate) {
             recreate()
             return
@@ -301,7 +326,14 @@ class DiPlayActivity : ComponentActivity() {
         get() = resources.configuration.screenWidthDp < 550 ||
             resources.configuration.screenHeightDp < 450
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Some head units put their own density back without any other callback.
+        if (hasFocus && enforceInterfaceSize()) render()
+    }
+
     private fun render() {
+        enforceInterfaceSize()
         // A pending assignment belongs to the widgets being replaced, never to another page.
         cancelKeyLearning()
         // A restore still waiting for layout keeps its target: the old page was never laid out.
@@ -658,6 +690,10 @@ class DiPlayActivity : ComponentActivity() {
             toggle(card, getString(R.string.adapt_pip_resolution), getString(R.string.adapt_pip_resolution_description), AirPlayPersistence.loadAdaptPipResolution(this)) {
                 AirPlayPersistence.saveAdaptPipResolution(this, it)
             }
+            card.addView(button("${getString(R.string.settings_interface_size)} · ${InterfaceSize.displayName(this, InterfaceSize.preference(this))}", false) {
+                InterfaceSize.showPicker(this)
+            }, matchButton(12, 60))
+            card.addView(label(getString(R.string.settings_interface_size_hint), 14, MUTED))
         }
         section(content, getString(R.string.car_button_in_carplay), R.drawable.ic_dp_car) { card -> carButtonCard = card; carButtonControls(card) }
         section(content, getString(R.string.audio_routing), R.drawable.ic_dp_audio) { card ->

@@ -640,4 +640,7 @@
     <string name="car_button_description">CarPlay показує цей значок і назву у списку застосунків. Натисніть його, щоб повернутися на екран автомобіля. Зміни застосуються під час наступного підключення CarPlay.</string>
     <string name="car_button_saved_next_connection">Збережено. CarPlay покаже новий значок і назву під час наступного підключення.</string>
     <string name="this_head_unit_has_no_image_picker">На цьому головному пристрої немає вибору зображень.</string>
+    <string name="settings_interface_size">Розмір інтерфейсу</string>
+    <string name="settings_interface_size_auto">Автоматично</string>
+    <string name="settings_interface_size_hint">Розмір тексту й елементів керування на екранах DiPlay. В автоматичному режимі вони збільшуються на великих екранах із низькою щільністю. CarPlay не змінюється.</string>
 </resources>
