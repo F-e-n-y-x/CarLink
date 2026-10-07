@@ -192,9 +192,18 @@ internal class MicrophoneUplink(
                 if (AcousticEchoCanceler.isAvailable()) AcousticEchoCanceler.create(sessionId) else null
             }
         }
-        return listOfNotNull(aec, enabledEffect("NS") {
-            if (NoiseSuppressor.isAvailable()) NoiseSuppressor.create(sessionId) else null
-        })
+        val ns = if (echoCanceller != null) {
+            // Noise suppression before the canceller distorts the echo it has to model; Speex
+            // denoises after cancelling instead. Keep the controller so a fallback can re-enable it.
+            configuredEffect("NS", false) {
+                if (NoiseSuppressor.isAvailable()) NoiseSuppressor.create(sessionId) else null
+            }
+        } else {
+            enabledEffect("NS") {
+                if (NoiseSuppressor.isAvailable()) NoiseSuppressor.create(sessionId) else null
+            }
+        }
+        return listOfNotNull(aec, ns)
     }
 
     // Advertised effects may still fail to initialize on a vendor ROM. Keep recording without them.
@@ -346,6 +355,10 @@ internal class MicrophoneUplink(
         echoCanceller = null
         current.close()
         if (!running.get()) return // close/release already owns all recorder effects.
+        effects.filterIsInstance<NoiseSuppressor>().forEach { ns ->
+            runCatching { ns.setEnabled(true) }
+                .onFailure { Log.w(TAG, "microphone platform NS could not be restored", it) }
+        }
         val aec = effects.filterIsInstance<AcousticEchoCanceler>().firstOrNull()
         if (aec != null) {
             val enabled = runCatching { aec.setEnabled(true) == AudioEffect.SUCCESS && aec.enabled }.getOrDefault(false)
