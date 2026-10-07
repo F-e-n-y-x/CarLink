@@ -1267,6 +1267,11 @@ class DiPlayActivity : ComponentActivity() {
         filteredSection(content, SettingsSection.ADVANCED_MEDIA,
             getString(R.string.settings_advanced_media), R.drawable.ic_dp_advanced) { card ->
             toggle(card, getString(R.string.efficient_video), getString(R.string.use_hevc_leave_off_for_the_widest_head_unit_compatibility), AirPlayPersistence.loadHevcEnabled(this)) { AirPlayPersistence.saveHevcEnabled(this, it); markReconnectNeeded() }
+            toggle(card, getString(R.string.smooth_video), getString(R.string.smooth_video_description),
+                AirPlayPersistence.loadSmoothVideo(this)) {
+                AirPlayPersistence.saveSmoothVideo(this, it)
+                reconnectIfRunning()
+            }
             audioFocusControls(card)
             if (resources.getBoolean(R.bool.config_advanced_audio_channel_mapping)) {
                 toggle(card, getString(R.string.advanced_audio_channel_mapping),
