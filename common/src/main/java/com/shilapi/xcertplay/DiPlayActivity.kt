@@ -4471,7 +4471,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun checkForAppearanceChange() {
         if (refreshAppearance()) {
-            NavigationWidgetUpdater.requestUpdate(applicationContext)
             requestAppearanceRender()
         }
     }

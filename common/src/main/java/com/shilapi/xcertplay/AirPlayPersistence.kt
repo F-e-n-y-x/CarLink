@@ -488,7 +488,6 @@ object AirPlayPersistence {
     fun saveAppAppearance(context: Context, appearance: AppAppearance) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_APP_APPEARANCE, appearance.key).apply()
-        NavigationWidgetUpdater.requestUpdate(context.applicationContext)
     }
 
     fun loadCarPlayNightMode(context: Context): CarPlayNightMode = CarPlayNightMode.fromKey(
@@ -498,7 +497,6 @@ object AirPlayPersistence {
     fun saveCarPlayNightMode(context: Context, mode: CarPlayNightMode) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_CARPLAY_NIGHT_MODE, mode.key).apply()
-        NavigationWidgetUpdater.requestUpdate(context.applicationContext)
     }
 
     fun loadCarPlayNightSchedule(context: Context): CarPlayNightSchedule {
@@ -517,7 +515,6 @@ object AirPlayPersistence {
             .putInt(KEY_CARPLAY_NIGHT_START, schedule.startMinute)
             .putInt(KEY_CARPLAY_NIGHT_END, schedule.endMinute)
             .apply()
-        NavigationWidgetUpdater.requestUpdate(context.applicationContext)
     }
 
     fun loadFps(context: Context): Int = AirPlayDisplaySettings.sanitizeFps(

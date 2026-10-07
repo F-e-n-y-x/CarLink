@@ -28,27 +28,6 @@ class NavigationWidget : AppWidgetProvider() {
     }
 }
 
-internal data class NavigationWidgetAppearance(
-    val backgroundResource: Int,
-    val primaryText: Int,
-    val secondaryText: Int,
-) {
-    companion object {
-        fun resolve(context: Context): NavigationWidgetAppearance {
-            val palette = DiPlayPalette.of(context.resolveAppNightNow())
-            return NavigationWidgetAppearance(
-                backgroundResource = if (palette.systemBarIconsAreDark) {
-                    R.drawable.widget_navigation_background_light
-                } else {
-                    R.drawable.widget_navigation_background
-                },
-                primaryText = palette.primaryText,
-                secondaryText = palette.secondaryText,
-            )
-        }
-    }
-}
-
 /** Follows [CarPlayGlance] and redraws every placed widget, at most once a second. */
 internal object NavigationWidgetUpdater {
     private const val MIN_INTERVAL_MILLIS = 1_000L
@@ -78,11 +57,6 @@ internal object NavigationWidgetUpdater {
         worker.post(::schedule)
     }
 
-    fun requestUpdate(appContext: Context) {
-        attach(appContext)
-        worker.post(::schedule)
-    }
-
     private fun schedule() {
         if (pending) return
         pending = true
@@ -92,15 +66,6 @@ internal object NavigationWidgetUpdater {
 
     fun views(context: Context, glance: CarPlayGlance.Snapshot): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_navigation)
-        val appearance = NavigationWidgetAppearance.resolve(context)
-        views.setInt(R.id.widget_root, "setBackgroundResource", appearance.backgroundResource)
-        for (id in listOf(R.id.widget_distance, R.id.widget_road)) {
-            views.setTextColor(id, appearance.primaryText)
-        }
-        for (id in listOf(R.id.widget_eta, R.id.widget_song)) {
-            views.setTextColor(id, appearance.secondaryText)
-        }
-        views.setInt(R.id.widget_arrow, "setColorFilter", appearance.primaryText)
         val target = if (glance.connected) CarPlayHostActivity::class.java else DiPlayActivity::class.java
         views.setOnClickPendingIntent(
             R.id.widget_root,

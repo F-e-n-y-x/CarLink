@@ -425,7 +425,6 @@ class CarPlayHostActivity : ComponentActivity() {
             onNightChanged = { night ->
                 darkMode = night
                 if (hostAppearanceResumed) AppAppearanceRuntime.publishHost(this, night)
-                NavigationWidgetUpdater.requestUpdate(applicationContext)
                 refreshAppAppearance()
                 paintWaitingScreen()
                 applyClusterTurnOverlay()
