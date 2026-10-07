@@ -646,7 +646,7 @@ class DiPlayActivity : ComponentActivity() {
             if (CarPlayBackgroundSession.hasSession()) openProjection()
             else connect(true)
         }
-        card.addView(connectButton, matchButton())
+        card.addView(connectButton, matchButton(height = if (compact) 60 else 68))
         val connectionHint = when (AirPlayPersistence.loadWirelessHotspotMode(this)) {
             WirelessHotspotMode.EXISTING_WIFI -> getString(R.string.existing_wifi_hint)
             WirelessHotspotMode.MANUAL -> getString(R.string.hotspot_hint_manual)
@@ -666,12 +666,12 @@ class DiPlayActivity : ComponentActivity() {
             card.addView(label(getString(R.string.msg_car_hotspot_off, AirPlayPersistence.loadManualHotspotSsid(this)), 15, WARNING).apply { setPadding(0, dp(14), 0, 0) })
             if (!compact) card.addView(button(getString(R.string.open_car_hotspot_settings), false) { openCarWifiSettings() }, matchButton(10, 56))
         }
-        card.addView(button(getString(R.string.choose_iphone), false) { choosePhone() }, matchButton(16, 56))
+        card.addView(button(getString(R.string.choose_iphone), false) { choosePhone() }, matchButton(16, if (compact) 52 else 56))
         disconnectButton = button(getString(R.string.disconnect), false) {
             disconnectButton?.isEnabled = false
             CarPlayBackgroundSession.stop { runOnUiThread { refreshStatus() } }
         }.apply { visibility = View.GONE }
-        card.addView(disconnectButton, matchButton(10, 56))
+        card.addView(disconnectButton, matchButton(10, if (compact) 52 else 56))
         val right = column().apply { gravity = Gravity.CENTER_HORIZONTAL }
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.ic_carplay)
@@ -682,10 +682,10 @@ class DiPlayActivity : ComponentActivity() {
             gravity = Gravity.CENTER
             addView(logo, LinearLayout.LayoutParams(dp(96), dp(96)))
         }
-        right.addView(button(getString(R.string.connect_with_usb), false) { connect(false) }, matchButton())
+        right.addView(button(getString(R.string.connect_with_usb), false) { connect(false) }, matchButton(height = if (compact) 60 else 68))
         if (!compact) right.addView(label(getString(R.string.plug_your_iphone_into_a_usb_data_port_allow_carplay_when_y), 14, MUTED).apply { gravity = Gravity.CENTER; setPadding(dp(8), dp(10), dp(8), dp(24)) })
         else right.addView(space(16))
-        right.addView(button(getString(R.string.settings), false) { page = "settings"; render() }, matchButton())
+        right.addView(button(getString(R.string.settings), false) { page = "settings"; render() }, matchButton(height = if (compact) 60 else 68))
         if (!compact) right.addView(label(getString(R.string.make_diplay_feel_right_for_your_car), 14, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, dp(10), 0, dp(24)) })
         else right.addView(space(12))
         right.addView(label(getString(R.string.home_public_preview, version()), 12, MUTED).apply { letterSpacing = .08f })
