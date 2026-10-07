@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay
 
 import android.graphics.SurfaceTexture
+import android.media.MediaCrypto
+import android.media.MediaFormat
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
@@ -9,8 +11,11 @@ import com.shilapi.xcertplay.airplay.AirPlayIdentity
 import com.shilapi.xcertplay.media.AndroidMediaSink
 import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.MfiTarget
+import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
 import org.junit.Assert.*
@@ -29,6 +34,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.util.concurrent.PausedExecutorService
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadows.ShadowMediaCodec
 
 /**
  * Host-level lifecycle of Smooth video: which retained session a host may adopt, how a host that rebuilds
@@ -45,6 +51,7 @@ class SmoothVideoHostLifecycleTest {
     private val sizeClass = Class.forName("com.shilapi.xcertplay.CarPlayHostActivity\$DisplaySize")
     private val ownedSinks = mutableListOf<AndroidMediaSink>()
     private val surfaces = mutableListOf<Pair<SurfaceTexture, Surface>>()
+    private val blockedCodecs = mutableListOf<BlockingCodec>()
 
     @Before fun setUp() {
         CarPlayBackgroundSession.clear()
@@ -56,6 +63,7 @@ class SmoothVideoHostLifecycleTest {
         (getField("teardownExecutor") as ExecutorService).shutdownNow()
         setField("teardownExecutor", PausedExecutorService())
         setField("activeDisplaySize", size(1920, 990))
+        activity.sinkReleaseWaitMillis = 25
     }
 
     @After fun tearDown() {
@@ -64,8 +72,11 @@ class SmoothVideoHostLifecycleTest {
         AirPlayPersistence.overlaySettingsListener = null
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(null)
         (getField("controller") as? CarPlayController)?.let { CarPlayMediaKeys.detach(it) }
+        blockedCodecs.forEach { it.release() }
         (getField("sink") as? AndroidMediaSink)?.close()
         ownedSinks.forEach { it.close() }
+        ownedSinks.forEach { it.awaitVideoReleased(5_000) }
+        ShadowMediaCodec.clearCodecs()
         surfaces.forEach { (texture, surface) -> surface.release(); texture.release() }
         (getField("teardownExecutor") as ExecutorService).shutdownNow()
         (getField("airPlayCommandExecutor") as ExecutorService).shutdownNow()
@@ -202,6 +213,81 @@ class SmoothVideoHostLifecycleTest {
 
         finishTeardown()
         assertTrue("Each sink leaves once its decoders have released their codecs", retiringSinks().isEmpty())
+    }
+
+    @Test @Config(sdk = [28, 30])
+    fun aTimedOutRestartKeepsItsSinkUntilTheCodecIsReleased() {
+        assertTimedOutSinkRetained { restartCarPlay("Test slow codec reconnect") }
+    }
+
+    @Test @Config(sdk = [28, 30])
+    fun aTimedOutShutdownKeepsItsSinkUntilTheCodecIsReleased() {
+        assertTimedOutSinkRetained { shutdown("Test slow codec exit") }
+    }
+
+    private fun assertTimedOutSinkRetained(beginTeardown: () -> Unit) {
+        val codec = BlockingCodec().also(blockedCodecs::add)
+        ShadowMediaCodec.addDecoder(MediaFormat.MIMETYPE_VIDEO_AVC,
+            ShadowMediaCodec.CodecConfig(64 * 1024, 64 * 1024, codec))
+        val surface = surface()
+        val closing = spy(AndroidMediaSink()).also(ownedSinks::add)
+        closing.setSurface(110, surface)
+        val sps = byteArrayOf(0x67, 0x42, 0xC0.toByte(), 0x1E)
+        val pps = byteArrayOf(0x68, 0xCE.toByte())
+        val config = byteArrayOf(1, 0x42, 0xC0.toByte(), 0x1E, 0xFF.toByte(), 0xE1.toByte(),
+            0, sps.size.toByte()) + sps + byteArrayOf(1, 0, pps.size.toByte()) + pps
+        closing.onVideoConfig(110, config)
+        closing.onVideoFrame(110, byteArrayOf(0, 0, 0, 1, 0x65, 0x88.toByte(), 0x84.toByte(), 0x21))
+        assertTrue("The decoder is blocked inside queueInputBuffer", codec.entered.await(5, TimeUnit.SECONDS))
+        val controller = mock(CarPlayController::class.java)
+        setField("controller", controller)
+        setField("sink", closing)
+        CarPlayBackgroundSession.store(controller, closing, 1920, 990, activity, display) { it() }
+
+        beginTeardown()
+        finishTeardown()
+        verify(closing).awaitVideoReleased(25)
+        assertTrue("A release timeout must not forget a decoder still using the surface", closing in retiringSinks())
+
+        // Keep the destroy callback bounded too; its false result still has to account for this sink.
+        setSinkField(closing, "detachTimeoutNanos", 25_000_000L)
+        setSinkField(closing, "detachGraceNanos", 25_000_000L)
+        val holder = mock(SurfaceHolder::class.java)
+        `when`(holder.surface).thenReturn(surface)
+        (getField("fallbackSurfaceCallback") as SurfaceHolder.Callback).surfaceDestroyed(holder)
+        verify(closing).beginSurfaceDetach(surface, false)
+        assertTrue("An unconfirmed surface detach must keep the retiring sink visible", closing in retiringSinks())
+
+        val released = CountDownLatch(1)
+        closing.whenVideoReleased { released.countDown() }
+        codec.release()
+        assertTrue("Release observers run once the blocked codec returns", released.await(5, TimeUnit.SECONDS))
+        assertTrue("The codec worker can now release its output surface", closing.awaitVideoReleased(5_000))
+        assertFalse("Actual release cleans the retiring set without another UI or teardown task",
+            closing in retiringSinks())
+    }
+
+    /** A fake native codec call that ignores close's interrupt until the test lets it return. */
+    private class BlockingCodec : ShadowMediaCodec.CodecConfig.Codec {
+        val entered = CountDownLatch(1)
+        private val gate = CountDownLatch(1)
+
+        fun release() { gate.countDown() }
+
+        override fun process(input: ByteBuffer, output: ByteBuffer) {
+            entered.countDown()
+            var interrupted = false
+            while (true) {
+                try { gate.await(); break } catch (_: InterruptedException) { interrupted = true }
+            }
+            if (interrupted) Thread.currentThread().interrupt()
+        }
+
+        override fun onConfigured(format: MediaFormat?, surface: Surface?, crypto: MediaCrypto?, flags: Int) = Unit
+    }
+
+    private fun setSinkField(sink: AndroidMediaSink, name: String, value: Any) {
+        AndroidMediaSink::class.java.getDeclaredField(name).apply { isAccessible = true }.set(sink, value)
     }
 
     private fun sink(pacingDelayMillis: Int) =
