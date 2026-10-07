@@ -74,10 +74,10 @@
     <string name="status_attaching_ncm">جارٍ توصيل شبكة NCM/AirPlay</string>
     <string name="status_failed">فشل: %1$s</string>
     <string name="msg_car_hotspot_off">نقطة اتصال السيارة «%1$s» مُغلقة. شغّلها في إعدادات السيارة قبل الاتصال.</string>
-    <string name="home_public_preview">معاينة عامة  ·\u0020\u0020</string>
+    <string name="home_public_preview">معاينة عامة\u0020·\u0020%1$s</string>
     <string name="choose_iphone_prefix">اختر iPhone ·\u0020</string>
     <string name="audio_saved_value">تم الحفظ: %1$d</string>
-    <string name="about_public_preview_prefix">معاينة عامة ·\u0020</string>
+    <string name="about_public_preview_prefix">معاينة عامة\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">يتصل DiPlay عبر نقطة اتصال السيارة «%1$s». شغّلها في إعدادات السيارة ثم اتصل.</string>
     <string name="edit_saved_hotspot_prefix">تعديل نقطة الاتصال المحفوظة ·\u0020</string>
     <string name="cluster_adb_multi_device">إذا عرض ADB عدة أجهزة، استخدم adb -s &lt;car-device-ID&gt; shell appops set %1$s GET_USAGE_STATS allow. اعثر على المعرّف عبر adb devices.</string>
