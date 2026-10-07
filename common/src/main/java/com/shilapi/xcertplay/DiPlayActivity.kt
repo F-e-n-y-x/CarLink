@@ -2838,6 +2838,7 @@ class DiPlayActivity : ComponentActivity() {
             launchCarButtonImagePicker(
                 openDocument = { iconDocumentPicker.launch(arrayOf("image/*")) },
                 getContent = { iconPicker.launch("image/*") },
+                documentPickerIsSystem = documentPickerIsSystem(),
             ).onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, matchButton(16, 60))
         if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
