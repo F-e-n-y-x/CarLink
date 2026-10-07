@@ -14,6 +14,7 @@ import com.shilapi.xcertplay.transport.Iap2WirelessSecurity
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.util.Collections
 
 /**
  * Attaches to a hotspot that is already running on this device.
@@ -118,10 +119,18 @@ class ManualHotspotManager(
             else -> null
         }
         val security = apConfiguration?.security ?: expectedSecurity
+        // The selected address is often IPv6 link-local (wirelessHostAddress() prefers it), but
+        // mDNS/AirPlay discovery on many iPhones needs an IPv4 address too. Without this, the
+        // iPhone joins the AP and pairs over Bluetooth but never discovers the CarPlay service,
+        // and the session retries forever instead of failing visibly.
+        val hostAddresses = network?.let {
+            existingWifiHostAddresses(Collections.list(it.inetAddresses), selected.index)
+        }?.takeIf { it.isNotEmpty() } ?: listOfNotNull(localInterface.hostAddress)
         onDiagnostic("Manual hotspot configReadable=${apConfiguration != null} " +
             "security=$security channelKnown=${channel > 0} " +
             "hardwareAddressKnown=${localInterface.hardwareAddress != null} iface=${localInterface.name} " +
-            "family=${if (localInterface.hostAddress is Inet6Address) "IPv6" else "IPv4"}")
+            "family=${if (localInterface.hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
+            "mdnsFamilies=${hostAddresses.joinToString("+") { address -> if (address is Inet6Address) "IPv6" else "IPv4" }}")
         if (security != Iap2WirelessSecurity.NONE && passphrase.isEmpty()) {
             throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION, "Manual hotspot is secured but no passphrase was provided")
         }
@@ -144,6 +153,7 @@ class ManualHotspotManager(
             bssid = localInterface.hardwareAddress,
             interfaceName = localInterface.name,
             hostAddress = localInterface.hostAddress,
+            hostAddresses = hostAddresses,
             bandLabel = when (expectedBand) {
                 ManualHotspotBand.GHZ_2_4 -> "2.4 GHz"
                 ManualHotspotBand.GHZ_5 -> "5 GHz"
