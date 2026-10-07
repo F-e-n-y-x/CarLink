@@ -264,6 +264,10 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Back on the home page finishes this activity while the session runs on, so the icon lands here.
+        if (savedInstanceState == null && isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
+            openProjection(); finish(); return
+        }
         enforceInterfaceSize()
         languagePreferenceAtCreate = AppLocale.preference(this)
         com.shilapi.xcertplay.hud.BydNavigationOutputs.onAppOpened(applicationContext)
@@ -299,9 +303,13 @@ class DiPlayActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent); setIntent(intent)
-        page = intent.getStringExtra("page") ?: "home"
         connectionSettingsReturnCategory = null
-        render()
+        // CarPlay runs in its own task, so the launcher icon resumes this one. Settings opened from
+        // CarPlay carry a "page" extra, which isLauncherIntent rejects.
+        if (isLauncherIntent(intent) && CarPlayBackgroundSession.hasSession()) {
+            page = "home"; render(); openProjection(); return
+        }
+        page = intent.getStringExtra("page") ?: "home"; render()
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
@@ -378,7 +386,7 @@ class DiPlayActivity : ComponentActivity() {
             startCarHotspotOnLaunch()
             if (setupError == null && !CarPlayBackgroundSession.hasSession() &&
                 DiPlayPreferences.autoConnect(this) && intent.getStringExtra("page") == null) {
-                handler.post { connect(AirPlayPersistence.loadWirelessEnabled(this)) }
+                handler.post { connect(DiPlayPreferences.autoConnectWireless(this)) }
             }
         }
     }
@@ -943,7 +951,7 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun buildQuickSettings(card: LinearLayout): Unit = card.run {
         toggle(this, getString(R.string.connect_when_diplay_opens),
-            getString(R.string.use_your_last_connection_type_and_selected_iphone),
+            getString(R.string.default_connection_description),
             DiPlayPreferences.autoConnect(this@DiPlayActivity)) { DiPlayPreferences.saveAutoConnect(this@DiPlayActivity, it) }
         appearanceControl(this)
         toggle(this, getString(R.string.full_screen), getString(R.string.settings_full_screen_description),
@@ -1217,7 +1225,15 @@ class DiPlayActivity : ComponentActivity() {
         }
         filteredSection(content, SettingsSection.AUTOMATIC_CONNECTION,
             getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
-            toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.use_your_last_connection_type_and_selected_iphone), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.default_connection_description), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            val connectionModes = DefaultConnectionMode.entries
+            choice(card, getString(R.string.default_connection_mode), listOf(
+                getString(R.string.default_connection_last_used),
+                getString(R.string.default_connection_wireless),
+                getString(R.string.default_connection_usb)
+            ), connectionModes.indexOf(DiPlayPreferences.defaultConnectionMode(this)), reconnects = false) {
+                DiPlayPreferences.saveDefaultConnectionMode(this, connectionModes[it])
+            }
             adbToggle(card, R.string.open_after_the_car_starts,
                 R.string.availability_depends_on_your_head_unit_s_startup_settings,
                 read = { AirPlayPersistence.loadAutoStartOnBoot(this) },
@@ -3603,6 +3619,7 @@ class DiPlayActivity : ComponentActivity() {
             launchCarButtonImagePicker(
                 openDocument = { iconDocumentPicker.launch(arrayOf("image/*")) },
                 getContent = { iconPicker.launch("image/*") },
+                documentPickerIsSystem = documentPickerIsSystem(),
             ).onFailure { toast(getString(R.string.this_head_unit_has_no_image_picker)) }
         }, matchButton(16, 60))
         if (custom != null) parent.addView(button(getString(R.string.default_icon), false) {
@@ -4288,6 +4305,10 @@ class DiPlayActivity : ComponentActivity() {
     // Rounded, not truncated: below 160 dpi dp(1) became 0 and every border vanished.
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     companion object {
+        internal fun isLauncherIntent(intent: Intent): Boolean =
+            intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+                !intent.hasExtra("page")
+
         private const val BYD_VEHICLE_TAG = "DiPlay-BYD13"
         private const val VEHICLE_VALIDATION_RETRY_MILLIS = 500L
         private const val ADB_KEY_SAVE_WAIT_MILLIS = 500L

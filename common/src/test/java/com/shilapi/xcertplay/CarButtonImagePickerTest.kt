@@ -3,6 +3,10 @@ package com.shilapi.xcertplay
 import android.content.ActivityNotFoundException
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -26,6 +30,7 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
@@ -126,6 +131,36 @@ class CarButtonImagePickerTest {
         )
         assertSame(denied, result.exceptionOrNull())
         assertEquals(0, contentLaunches)
+    }
+
+    @Test fun withoutASystemDocumentPickerTheContentPickerGoesFirst() {
+        val events = mutableListOf<String>()
+        launchCarButtonImagePicker(
+            openDocument = { events.add("document") },
+            getContent = { events.add("content"); throw ActivityNotFoundException("No content picker") },
+            documentPickerIsSystem = false,
+        )
+        assertEquals(listOf("content", "document"), events)
+    }
+
+    @Test fun onlyNonSystemDocumentHandlersCountAsNoSystemPicker() {
+        val context = RuntimeEnvironment.getApplication()
+        assertTrue(context.documentPickerIsSystem())
+        val intent = ActivityResultContracts.OpenDocument().createIntent(context, arrayOf("image/*"))
+        shadowOf(context.packageManager).addResolveInfoForIntent(intent, handler("app.interceptor", 0))
+        assertFalse(context.documentPickerIsSystem())
+        shadowOf(context.packageManager).addResolveInfoForIntent(
+            intent, handler("com.android.documentsui", ApplicationInfo.FLAG_SYSTEM))
+        assertTrue(context.documentPickerIsSystem())
+    }
+
+    private fun handler(packageName: String, flags: Int) = ResolveInfo().apply {
+        activityInfo = ActivityInfo().apply {
+            this.packageName = packageName
+            name = "$packageName.Picker"
+            applicationInfo = ApplicationInfo().apply { this.packageName = packageName; this.flags = flags }
+        }
+        match = IntentFilter.MATCH_CATEGORY_TYPE
     }
 
     @Test fun savingCarButtonNameMarksTheActiveSessionWithoutStoppingIt() = withHome { activity ->
