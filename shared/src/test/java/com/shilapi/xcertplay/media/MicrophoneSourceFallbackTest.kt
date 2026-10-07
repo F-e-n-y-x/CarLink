@@ -133,7 +133,7 @@ class MicrophoneSourceFallbackTest {
             attempts += source
             if (source in rejectSources) throw UnsupportedOperationException("Unsupported test capture source")
             return (if (source in uninitializedSources) RejectedRecorder(source)
-                else Shadow.directlyOn<AudioRecord>(builder, AudioRecord.Builder::class.java, "build")).also {
+                else Shadow.directlyOn<AudioRecord, AudioRecord.Builder>(builder, AudioRecord.Builder::class.java, "build")).also {
                 built += it
             }
         }
