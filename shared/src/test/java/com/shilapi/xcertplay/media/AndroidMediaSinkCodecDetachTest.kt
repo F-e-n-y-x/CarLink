@@ -363,12 +363,19 @@ class AndroidMediaSinkCodecDetachTest {
         val peerFinished = AtomicReference<Boolean>()
         sink.whenVideoReleased { throw IllegalStateException("observer failure must be isolated") }
         sink.whenVideoReleased {
-            val peer = CountDownLatch(1)
-            thread { sink.clearSurface(110, a); peer.countDown() }
-            peerFinished.set(peer.await(5, TimeUnit.SECONDS))
-            calls.incrementAndGet()
-            delivered.countDown()
-            released.countDown()
+            // The fake native call restores close's interrupt. Ignore it only for this deliberate
+            // blocking lock probe; release observers do not promise an un-interrupted calling thread.
+            val interrupted = Thread.interrupted()
+            try {
+                val peer = CountDownLatch(1)
+                thread { sink.clearSurface(110, a); peer.countDown() }
+                peerFinished.set(peer.await(5, TimeUnit.SECONDS))
+                calls.incrementAndGet()
+                delivered.countDown()
+                released.countDown()
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt()
+            }
         }
         assertEquals(1L, released.count)
         val start = CountDownLatch(1)
@@ -397,8 +404,13 @@ class AndroidMediaSinkCodecDetachTest {
         val notifying = CountDownLatch(1)
         val finishNotification = CountDownLatch(1)
         sink.whenVideoReleased {
-            notifying.countDown()
-            finishNotification.await(5, TimeUnit.SECONDS)
+            val interrupted = Thread.interrupted()
+            try {
+                notifying.countDown()
+                finishNotification.await(5, TimeUnit.SECONDS)
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt()
+            }
         }
         try {
             codec.release()
