@@ -955,7 +955,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         SettingsCategory.DISPLAY -> R.drawable.ic_dp_display
         SettingsCategory.AUDIO -> R.drawable.ic_dp_audio
         SettingsCategory.NAVIGATION -> R.drawable.ic_dp_navigation
-        SettingsCategory.VEHICLE -> R.drawable.ic_dp_vehicle
+        SettingsCategory.VEHICLE -> R.drawable.ic_dp_car
         SettingsCategory.DIAGNOSTICS -> R.drawable.ic_dp_diagnostics
         SettingsCategory.ADVANCED -> R.drawable.ic_dp_advanced
         SettingsCategory.LANGUAGE -> R.drawable.ic_dp_language
