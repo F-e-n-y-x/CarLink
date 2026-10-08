@@ -12,6 +12,8 @@
     <string name="wifi_direct_channel_summary">首選頻道：%1$s</string>
     <string name="wifi_direct_channel_choice">頻道 %1$d · %2$s</string>
     <string name="wifi_direct_channel_description">自動模式會為您選擇頻道。手動頻道取決於車機的支援情況。變更將在下次 Wi-Fi Direct 連線時生效。</string>
+    <string name="settings_wifi_direct_auto_band">自動 · %1$s</string>
+    <string name="settings_wifi_direct_band_note">「自動 · 5 GHz」和「自動 · 2.4 GHz」會讓 Wi-Fi Direct 維持在該頻段，並由車機選擇頻道。如果車機無法使用該頻段，連線會停止並顯示提示，而不會切換頻段。</string>
     <string name="built_in_car_hotspot">車載熱點</string>
     <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="hotspot_hint_manual">車載熱點 · 保持車載熱點、藍牙和 iPhone 的 Wi-Fi 開啟。</string>
