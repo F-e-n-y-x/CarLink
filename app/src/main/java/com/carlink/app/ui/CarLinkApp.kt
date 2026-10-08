@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.carlink.app.settings.SettingsCategory
 import com.carlink.app.ui.about.AboutScreen
 import com.carlink.app.ui.diagnostics.DiagnosticsScreen
 import com.carlink.app.ui.home.HomeScreen
@@ -39,8 +40,11 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
     // Back stack of routes; Home is always at the bottom once onboarding is done.
     // No setup wizard: Home asks for permissions inline and connects on its own.
     var stack by rememberSaveable { mutableStateOf(listOf(Route.HOME)) }
+    // The Settings category another screen asked to open (Diagnostics), or null for the default.
+    var settingsStart by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     val route = stack.last()
     val navigate: (Route) -> Unit = { target ->
+        if (target == Route.SETTINGS) settingsStart = null
         stack = when {
             target == Route.HOME -> listOf(Route.HOME)
             // Connecting replaces itself; one attempt screen at a time.
@@ -51,6 +55,7 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
     val back: () -> Unit = { stack = if (stack.size > 1) stack.dropLast(1) else listOf(Route.HOME) }
 
     val goHome = { navigate(Route.HOME) }
+    val openSettings: (SettingsCategory) -> Unit = { category -> navigate(Route.SETTINGS); settingsStart = category }
     BackHandler(enabled = route != Route.HOME) { back() }
     BackHandler(enabled = route == Route.HOME) { onExitToCarHome() }
 
@@ -62,8 +67,8 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
         color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        // Home draws its atmosphere behind the system bars and pads its own content.
-        Box(Modifier.fillMaxSize().then(if (route == Route.HOME) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing))) {
+        // Home and Settings draw their atmosphere behind the system bars and pad their own content.
+        Box(Modifier.fillMaxSize().then(if (route == Route.HOME || route == Route.SETTINGS) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing))) {
             AnimatedContent(
                 targetState = route,
                 transitionSpec = {
@@ -80,9 +85,9 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
             ) { current ->
                 when (current) {
                     Route.HOME -> HomeScreen(vm, navigate = navigate)
-                    Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate)
+                    Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate, startCategory = settingsStart)
                     Route.ONBOARDING -> OnboardingScreen(vm, onDone = { vm.completeOnboarding(); goHome() })
-                    Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back)
+                    Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back, openSettings = openSettings)
                     Route.ABOUT -> AboutScreen(vm, onBack = back)
                 }
             }

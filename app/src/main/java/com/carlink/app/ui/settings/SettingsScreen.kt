@@ -1,291 +1,346 @@
 package com.carlink.app.ui.settings
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkStage
+import com.carlink.app.diagnostics.AppInfo
+import com.carlink.app.settings.AdvancedSetting
+import com.carlink.app.settings.AdvancedSettings
+import com.carlink.app.settings.Control
+import com.carlink.app.settings.EngineAccess
+import com.carlink.app.settings.InterfaceSize
+import com.carlink.app.settings.Overrides
+import com.carlink.app.settings.Picture
+import com.carlink.app.settings.SettingsCategory
+import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.Route
-import com.carlink.app.ui.components.CarTopBar
-import com.carlink.app.ui.components.ChoiceSheet
-import com.carlink.app.ui.components.PageHeader
-import com.carlink.app.ui.components.RailItem
-import com.carlink.app.ui.components.SettingsRail
-import com.carlink.app.ui.components.StatusChip
-import com.carlink.app.ui.components.engineName
+import com.carlink.app.ui.premium.Atmosphere
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
-import com.carlink.app.ui.theme.WidthClass
+import com.carlink.app.ui.theme.ThemeMode
+import com.carlink.app.ui.theme.UiProfileMode
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * CarLink's Settings hub (DESIGN_SPEC §6.3): CarLink's own settings plus links into each
- * engine's settings. Two panes (rail + content) when the window allows, otherwise a category
- * list (level 0) and a category page (level 1).
+ * CarLink's Settings, entirely native: one set of Essentials for both engines, every engine
+ * option under "Show advanced", and a hidden Lab (design/REBUILD_PLAN.md, RESEARCH_PREMIUM_UX §8).
+ * The engines' own settings screens are never opened.
  */
 @Composable
-fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -> Unit) {
-    val display by vm.display.collectAsStateWithLifecycle()
+fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -> Unit, startCategory: SettingsCategory? = null) {
+    val unified by vm.unified.collectAsStateWithLifecycle()
     val connection by vm.connection.collectAsStateWithLifecycle()
-    val home by vm.home.collectAsStateWithLifecycle()
-    val actions = remember(vm) { ViewModelSettingsActions(vm) }
-    SettingsContent(SettingsUiState(display, connection, home), actions, onBack, navigate)
+    val display by vm.display.collectAsStateWithLifecycle()
+    val network by vm.network.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val access = remember { EngineAccess(context.applicationContext) }
+    val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
+
+    // Engine values are only needed once Advanced or Lab rows are visible. Android Auto's come
+    // over IPC from ":aa", so read everything on a background dispatcher. Re-read after a
+    // Picture or Interface size change: the coordinator rewrites those engine values then.
+    val wantsEngineValues = unified.showAdvanced || unified.labUnlocked
+    LaunchedEffect(wantsEngineValues, unified.picture, unified.interfaceSize) {
+        if (!wantsEngineValues) return@LaunchedEffect
+        if (engineValues.value != null) delay(ENGINE_REREAD_DELAY_MS)
+        engineValues.value = withContext(Dispatchers.IO) { readEngineValues(access) }
+    }
+
+    val goTo = navigate
+    val actions = remember(vm) {
+        object : SettingsActions {
+            override fun update(change: (UnifiedSettings) -> UnifiedSettings) = vm.updateSettings(change)
+            override fun setAutoConnectBluetooth(on: Boolean) = vm.setAutoConnectBluetooth(on)
+            override fun setAutoConnectUsb(on: Boolean) = vm.setAutoConnectUsb(on)
+            override fun setStartOnBoot(on: Boolean) = vm.setStartOnBoot(on)
+            override fun resumeAutoConnect() = vm.resumeAutoConnect()
+            override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
+            override fun setUiProfileMode(mode: UiProfileMode) = vm.setUiProfileMode(mode)
+            override fun setInterfaceScale(scale: Float) = vm.setInterfaceScale(scale)
+            override fun openBluetoothSettings() = vm.openBluetoothSettings()
+            override fun openAppSettings() = vm.openAppSettings()
+            override fun navigate(route: Route) = goTo(route)
+
+            override fun setAdvanced(setting: AdvancedSetting, value: String) {
+                // An exact per-engine value replaces the unified preset: mark it Custom first so
+                // the settings applier stops writing the preset over it.
+                when (setting.overrides) {
+                    Overrides.PICTURE -> vm.updateSettings { it.copy(picture = Picture.CUSTOM) }
+                    Overrides.INTERFACE_SIZE -> vm.updateSettings { it.copy(interfaceSize = InterfaceSize.CUSTOM) }
+                    null -> Unit
+                }
+                engineValues.value = engineValues.value.orEmpty() + (setting.id to value)
+                // The ViewModel's scope, so leaving Settings never cancels a pending write.
+                vm.viewModelScope.launch(Dispatchers.IO) { runCatching { writeEngineValue(access, setting, value) } }
+            }
+        }
+    }
+
+    val ui = SettingsUi(
+        unified = unified, connection = connection, display = display,
+        joinedWifi = network?.joinedSsid,
+        isByd = remember { isBydHeadUnit() },
+        versionName = AppInfo.versionName,
+        advancedValues = engineValues.value,
+    )
+    SettingsContent(ui, actions, onBack, startCategory)
 }
 
-/** The stateless screen; [initialCategory] and [initialChoice] exist for previews and tests. */
+private const val ENGINE_REREAD_DELAY_MS = 500L
+
+/** Every Advanced and Lab value as the row encodes it. Blocking (IPC to ":aa"). */
+internal fun readEngineValues(access: EngineAccess): Map<String, String> {
+    runCatching { access.loadAndroidAuto() }
+    return AdvancedSettings.all.mapNotNull { setting ->
+        runCatching {
+            setting.id to when (val control = setting.control) {
+                is Control.Toggle -> control.read(access).toString()
+                is Control.Choice -> control.read(access)
+            }
+        }.getOrNull()
+    }.toMap()
+}
+
+/** Blocking (IPC to ":aa" for Android Auto settings). */
+internal fun writeEngineValue(access: EngineAccess, setting: AdvancedSetting, value: String) {
+    when (val control = setting.control) {
+        is Control.Toggle -> control.write(access, value.toBoolean())
+        is Control.Choice -> control.write(access, value)
+    }
+}
+
+/** BYD head units get the HUD and instrument-cluster directions switch. */
+internal fun isBydHeadUnit(): Boolean = "byd" in "${Build.MANUFACTURER} ${Build.BRAND}".lowercase(Locale.ROOT)
+
+/**
+ * Stateless Settings, used by the screen, previews and the screenshot gallery.
+ *
+ * Wide windows (≥720dp: head unit, tablet, phone landscape) show a rail of category tiles and
+ * the selected category beside it. Narrow windows show a grid of categories, then drill in;
+ * Back returns to the grid first.
+ */
 @Composable
-internal fun SettingsContent(
-    state: SettingsUiState,
+fun SettingsContent(
+    ui: SettingsUi,
     actions: SettingsActions,
     onBack: () -> Unit,
-    navigate: (Route) -> Unit,
-    initialCategory: SettingsCategory = SettingsCategory.OVERVIEW,
-    initialChoice: SettingsChoice? = null,
+    startCategory: SettingsCategory? = null,
+    initialSheet: String? = null,
 ) {
-    val layout = CarLinkTokens.layout
-    val twoPane = layout.isTwoPane
-    var selected by rememberSaveable { mutableStateOf(initialCategory) }
-    var choice by rememberSaveable { mutableStateOf(initialChoice) }
-    // The sheet keeps its last content while it animates out.
-    var shownChoice by remember { mutableStateOf(initialChoice) }
-    LaunchedEffect(choice) { if (choice != null) shownChoice = choice }
-    var returnFocusTo by remember { mutableStateOf<SettingsCategory?>(null) }
-    val linkFocus = remember { SettingsCategory.entries.associateWith { FocusRequester() } }
-
-    val atRoot = twoPane || selected == SettingsCategory.OVERVIEW
-    val goBack: () -> Unit = {
-        if (atRoot) {
-            onBack()
-        } else {
-            returnFocusTo = selected
-            selected = SettingsCategory.OVERVIEW
+    var selected by rememberSaveable(startCategory) { mutableStateOf(startCategory) }
+    var sheet by rememberSaveable { mutableStateOf(initialSheet) }
+    var versionTaps by remember { mutableIntStateOf(0) }
+    val onVersionTap: () -> Unit = {
+        if (!ui.unified.labUnlocked) {
+            versionTaps++
+            if (versionTaps >= LAB_TAPS) {
+                versionTaps = 0
+                actions.update { it.copy(labUnlocked = true) }
+            }
         }
     }
-    // System back: level 1 → level 0 → leave Settings. An open side sheet handles back first.
-    BackHandler(onBack = goBack)
+    val page: @Composable (SettingsCategory, Modifier) -> Unit = { category, modifier ->
+        CategoryPage(category, ui, actions, openSheet = { sheet = it }, versionTaps = versionTaps, onVersionTap = onVersionTap,
+            modifier = modifier)
+    }
+    val setAdvanced: (Boolean) -> Unit = { on -> actions.update { it.copy(showAdvanced = on) } }
 
-    val scope = SettingsPageScope(
-        state = state,
-        actions = actions,
-        navigate = navigate,
-        openChoice = { choice = it },
-        openCategory = { selected = it },
-    )
-    val liveEngine = state.home.link.takeIf { it.stage == LinkStage.CONNECTED }?.engine
-    val compact = layout.width == WidthClass.COMPACT
-
-    // A Surface root so text without an explicit color (top bar, section headers) gets onBackground.
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            CarTopBar(
-                title = stringResource(if (atRoot) R.string.carlink_settings_title else selected.title),
-                onBack = goBack,
-                chips = { if (liveEngine != null && !compact) LiveChip(liveEngine) },
-            )
-            if (twoPane) {
-                TwoPane(scope, selected, onSelect = { selected = it })
+    Atmosphere(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            val wide = maxWidth >= 720.dp
+            BackHandler(enabled = !wide && selected != null) { selected = null }
+            if (wide) {
+                WideSettings(selected ?: SettingsCategory.CONNECTION, ui, onSelect = { selected = it }, onBack = onBack,
+                    onAbout = { actions.navigate(Route.ABOUT) }, setAdvanced = setAdvanced, page = page, maxWidth = maxWidth)
             } else {
-                SinglePane(scope, selected, liveEngine.takeIf { compact }, linkFocus)
+                NarrowSettings(selected, ui, onSelect = { selected = it }, onBack = onBack,
+                    onAbout = { actions.navigate(Route.ABOUT) }, setAdvanced = setAdvanced, page = page)
             }
-        }
-        SettingsChoiceSheet(open = choice, shown = shownChoice, state = state, actions = actions,
-            onDismiss = { choice = null })
-    } }
-
-    // Back from a category returns D-pad/rotary focus to the row that opened it.
-    val inputMode = LocalInputModeManager.current
-    LaunchedEffect(selected, twoPane) {
-        val target = returnFocusTo ?: return@LaunchedEffect
-        returnFocusTo = null
-        if (!twoPane && selected == SettingsCategory.OVERVIEW && inputMode.inputMode == InputMode.Keyboard) {
-            withFrameNanos { }
-            runCatching { linkFocus.getValue(target).requestFocus() }
         }
     }
+    SettingsSheetHost(sheet, ui, actions, onDismiss = { sheet = null })
 }
 
-/** Rail + content pane (DESIGN_SPEC §6.3.1). */
 @Composable
-private fun TwoPane(scope: SettingsPageScope, selected: SettingsCategory, onSelect: (SettingsCategory) -> Unit) {
+private fun WideSettings(
+    selected: SettingsCategory, ui: SettingsUi, onSelect: (SettingsCategory) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
+    setAdvanced: (Boolean) -> Unit, page: @Composable (SettingsCategory, Modifier) -> Unit, maxWidth: Dp,
+) {
     val dimens = CarLinkTokens.dimens
-    val layout = CarLinkTokens.layout
-    val reduceMotion = LocalReduceMotion.current
-    val slide = with(LocalDensity.current) { 16.dp.roundToPx() }
-    Row(Modifier.fillMaxSize()) {
-        // The rail narrows on an expanded window (car ⅔ split) so the content keeps room.
-        SettingsRail(Modifier.width(min(dimens.railWidth, layout.widthDp * 0.36f))) {
-            SettingsCategory.entries.forEach { category ->
-                RailItem(
-                    label = stringResource(category.title),
-                    icon = category.icon,
-                    selectedIcon = category.selectedIcon,
-                    selected = category == selected,
-                    onClick = { onSelect(category) },
-                )
-            }
+    val margin = dimens.screenMargin
+    val railWidth = (if (isCar) 380.dp else 260.dp).coerceAtMost(maxWidth * 0.32f)
+    Column(Modifier.fillMaxSize()) {
+        Header(stringResource(R.string.carlink_settings_title), onBack, margin) {
+            AdvancedPill(ui.unified.showAdvanced, setAdvanced)
         }
-        AnimatedContent(
-            targetState = selected,
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            transitionSpec = {
-                val duration = if (reduceMotion) 0 else CarMotion.MEDIUM
-                (fadeIn(tween(duration, easing = CarMotion.EmphasizedDecelerate)) +
-                    slideInVertically(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { slide }) togetherWith
-                    fadeOut(tween(duration / 2, easing = CarMotion.EmphasizedAccelerate))
-            },
-            label = "settingsPane",
-        ) { category ->
+        Row(Modifier.fillMaxSize().padding(start = margin, end = margin)) {
             Column(
-                Modifier.fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = dimens.cardPadding)
-                    .padding(top = dimens.gutter, bottom = dimens.gutter * 2),
+                Modifier.width(railWidth).fillMaxHeight().verticalScroll(rememberScrollState()).padding(top = 8.dp, bottom = dimens.gutter),
+                verticalArrangement = Arrangement.spacedBy(if (isCar) 12.dp else 8.dp),
             ) {
-                Column(Modifier.widthIn(max = dimens.contentMaxWidth)) {
-                    PageHeader(stringResource(category.title), stringResource(category.description))
-                    Spacer(Modifier.height(dimens.targetGap))
-                    scope.CategoryPage(category, showCategoryLinks = false)
+                categoryOrder.forEach { category ->
+                    RailTile(stringResource(category.title), if (category == selected) category.selectedIcon else category.icon,
+                        category == selected, { onSelect(category) })
+                }
+                Spacer(Modifier.height(if (isCar) 8.dp else 4.dp))
+                RailTile(stringResource(R.string.carlink_settings_about), R.drawable.carlink_ic_info, false, onAbout,
+                    trailingIcon = R.drawable.carlink_ic_chevron_right)
+            }
+            Spacer(Modifier.width(dimens.gutter * 1.5f))
+            CategoryCrossfade(selected, Modifier.weight(1f).fillMaxHeight()) { category ->
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 8.dp, bottom = dimens.gutter * 2)) {
+                    Column(Modifier.widthIn(max = 1040.dp)) {
+                        PageTitle(category)
+                        Spacer(Modifier.height(dimens.gutter))
+                        page(category, Modifier)
+                    }
                 }
             }
         }
     }
 }
 
-/** Level 0 (Overview + category list) and level 1 (one category), shared-axis X between them. */
 @Composable
-private fun SinglePane(
-    scope: SettingsPageScope,
-    selected: SettingsCategory,
-    liveEngine: Engine?,
-    linkFocus: Map<SettingsCategory, FocusRequester>,
+private fun NarrowSettings(
+    selected: SettingsCategory?, ui: SettingsUi, onSelect: (SettingsCategory?) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
+    setAdvanced: (Boolean) -> Unit, page: @Composable (SettingsCategory, Modifier) -> Unit,
 ) {
     val dimens = CarLinkTokens.dimens
-    val layout = CarLinkTokens.layout
+    val margin = dimens.compactMargin
     val reduceMotion = LocalReduceMotion.current
-    val travel = with(LocalDensity.current) { 48.dp.roundToPx() }
-    val margin = if (layout.width == WidthClass.COMPACT) dimens.compactMargin else dimens.screenMargin
-    AnimatedContent(
-        targetState = selected,
-        modifier = Modifier.fillMaxSize(),
-        transitionSpec = {
-            val duration = if (reduceMotion) 0 else CarMotion.LONG
-            val direction = if (targetState != SettingsCategory.OVERVIEW) 1 else -1
-            (slideInHorizontally(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { direction * travel } +
-                fadeIn(tween(duration))) togetherWith
-                (slideOutHorizontally(tween(duration, easing = CarMotion.EmphasizedAccelerate)) { -direction * travel } +
-                    fadeOut(tween(duration / 2)))
-        },
-        label = "settingsLevel",
-    ) { category ->
-        Column(
-            Modifier.fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = margin)
-                .padding(top = 4.dp, bottom = dimens.gutter * 2),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Column(Modifier.widthIn(max = dimens.contentMaxWidth).fillMaxWidth()) {
-                if (liveEngine != null) {
-                    LiveChip(liveEngine)
+    AnimatedContent(selected, transitionSpec = {
+        val duration = if (reduceMotion) 0 else CarMotion.LONG
+        val forward = targetState != null
+        (slideInHorizontally(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { (if (forward) 1 else -1) * it / 6 } +
+            fadeIn(tween(duration))) togetherWith fadeOut(tween(duration / 2))
+    }, label = "settings-drill") { category ->
+        Column(Modifier.fillMaxSize()) {
+            if (category == null) {
+                Header(stringResource(R.string.carlink_settings_title), onBack, margin)
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = margin)
+                    .padding(top = 8.dp, bottom = dimens.gutter * 2), verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+                    GlassGroup {
+                        SwitchRow(stringResource(R.string.carlink_settings_show_advanced), ui.unified.showAdvanced, setAdvanced,
+                            description = stringResource(R.string.carlink_settings_show_advanced_detail), icon = R.drawable.carlink_ic_tune)
+                    }
                     Spacer(Modifier.height(dimens.targetGap))
+                    (categoryOrder.map { it as SettingsCategory? } + null).chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+                            row.forEach { item ->
+                                val tileModifier = Modifier.weight(1f).fillMaxHeight()
+                                if (item != null) {
+                                    GridTile(stringResource(item.title), stringResource(item.summary), item.icon, { onSelect(item) }, tileModifier)
+                                } else {
+                                    GridTile(stringResource(R.string.carlink_settings_about), stringResource(R.string.carlink_settings_about_summary),
+                                        R.drawable.carlink_ic_info, onAbout, tileModifier)
+                                }
+                            }
+                        }
+                    }
                 }
-                if (category != SettingsCategory.OVERVIEW) {
-                    PageHeader(title = null, description = stringResource(category.description))
-                    Spacer(Modifier.height(dimens.targetGap))
+            } else {
+                Header(stringResource(category.title), { onSelect(null) }, margin)
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = margin)
+                    .padding(top = 8.dp, bottom = dimens.gutter * 2)) {
+                    Text(stringResource(category.summary), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp))
+                    Spacer(Modifier.height(dimens.gutter))
+                    page(category, Modifier)
                 }
-                scope.CategoryPage(category, showCategoryLinks = true, linkFocus = linkFocus)
             }
         }
     }
 }
 
-/** "CarPlay connected": changes here may need a reconnect (DESIGN_SPEC §6.3.1). Not tappable. */
 @Composable
-private fun LiveChip(engine: Engine) {
-    StatusChip(
-        text = stringResource(R.string.carlink_settings_live_chip, engineName(engine)),
-        icon = R.drawable.carlink_ic_check_circle_filled,
-        tint = CarLinkTokens.colors.success,
-    )
+private fun CategoryCrossfade(category: SettingsCategory, modifier: Modifier, content: @Composable (SettingsCategory) -> Unit) {
+    val reduceMotion = LocalReduceMotion.current
+    AnimatedContent(category, modifier, transitionSpec = {
+        val duration = if (reduceMotion) 0 else CarMotion.MEDIUM
+        fadeIn(tween(duration, delayMillis = duration / 3)) togetherWith fadeOut(tween(duration / 2))
+    }, label = "settings-category") { content(it) }
 }
 
 @Composable
-private fun SettingsChoiceSheet(
-    open: SettingsChoice?,
-    shown: SettingsChoice?,
-    state: SettingsUiState,
-    actions: SettingsActions,
-    onDismiss: () -> Unit,
-) {
-    val visible = open != null
-    when (shown) {
-        SettingsChoice.THEME -> ChoiceSheet(
-            visible = visible,
-            title = stringResource(R.string.carlink_settings_theme),
-            options = themeOptions(),
-            selected = state.display.themeMode,
-            onSelect = actions::setThemeMode,
-            onDismiss = onDismiss,
-        )
-        SettingsChoice.LAYOUT -> ChoiceSheet(
-            visible = visible,
-            title = stringResource(R.string.carlink_settings_layout),
-            options = layoutOptions(),
-            selected = state.display.uiProfileMode,
-            onSelect = actions::setUiProfileMode,
-            onDismiss = onDismiss,
-            description = stringResource(R.string.carlink_settings_layout_description),
-        )
-        SettingsChoice.INTERFACE_SIZE -> ChoiceSheet(
-            visible = visible,
-            title = stringResource(R.string.carlink_settings_interface_size),
-            options = interfaceSizeOptions(),
-            selected = nearestScale(state.display.interfaceScale),
-            onSelect = actions::setInterfaceScale,
-            onDismiss = onDismiss,
-            description = stringResource(R.string.carlink_settings_interface_size_description),
-        )
-        null -> Unit
+private fun Header(title: String, onBack: () -> Unit, margin: Dp, trailing: (@Composable () -> Unit)? = null) {
+    val dimens = CarLinkTokens.dimens
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = dimens.topBar + if (isCar) 16.dp else 8.dp).padding(horizontal = margin),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RoundGlassButton(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_settings_back), onBack)
+        Spacer(Modifier.width(if (isCar) 24.dp else 16.dp))
+        Text(title, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (trailing != null) {
+            Spacer(Modifier.width(dimens.gutter))
+            trailing()
+        }
+    }
+}
+
+@Composable
+private fun PageTitle(category: SettingsCategory) {
+    Box(Modifier.padding(horizontal = 8.dp)) {
+        Column {
+            Text(stringResource(category.title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.semantics { heading() })
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(category.summary), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

@@ -130,9 +130,9 @@
 
     <!-- Engine logs -->
     <string name="carlink_diag_carplay_logs">CarPlay diagnostics</string>
-    <string name="carlink_diag_carplay_logs_body">Opens the CarPlay engine\'s settings. Create a diagnostic report under Diagnostics.</string>
+    <string name="carlink_diag_carplay_logs_body">Detailed CarPlay logs are a Lab setting in Settings › General. Tap the version there 7 times to show Lab.</string>
     <string name="carlink_diag_aa_logs">Android Auto diagnostics</string>
-    <string name="carlink_diag_aa_logs_body">Opens the Android Auto engine\'s settings. Save or share a connection report under Diagnostics.</string>
+    <string name="carlink_diag_aa_logs_body">The Android Auto frame counter is a Lab setting in Settings › General. Tap the version there 7 times to show Lab.</string>
 
     <!-- ===== About ===== -->
     <string name="carlink_about_title">About</string>

@@ -7,7 +7,6 @@ import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
-import com.andrerinas.openheadunit.main.SettingsActivity
 import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkStage
 import com.carlink.app.core.LinkState
@@ -26,7 +25,6 @@ import com.carlink.app.settings.WirelessPathSelector
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 import com.shilapi.xcertplay.CarPlayHostActivity
-import com.shilapi.xcertplay.DiPlayActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -251,11 +249,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     // ---- Other screens -----------------------------------------------------------------
 
-    /** DiPlay's settings, in its own window; the page extra keeps "connect when opened" off. */
-    fun openCarPlaySettings() = start(Intent(app, DiPlayActivity::class.java).putExtra("page", "settings"))
-
-    /** DiAuto's settings, which run in the Android Auto engine process. */
-    fun openAndroidAutoSettings() = start(Intent(app, SettingsActivity::class.java))
+    // Engine settings are edited natively in CarLink's Settings (ui/settings); the engines' own
+    // settings screens are never opened.
 
     fun openBluetoothSettings() = start(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
 

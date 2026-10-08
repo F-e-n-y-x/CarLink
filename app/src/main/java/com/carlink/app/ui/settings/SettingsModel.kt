@@ -4,187 +4,224 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.carlink.app.R
 import com.carlink.app.core.Engine
-import com.carlink.app.settings.CarLinkPreferences
-import com.carlink.app.ui.CarLinkViewModel
+import com.carlink.app.settings.AdvancedSetting
+import com.carlink.app.settings.AdvancedSettings
+import com.carlink.app.settings.ConnectionMethod
+import com.carlink.app.settings.Control
+import com.carlink.app.settings.DayNight
+import com.carlink.app.settings.InterfaceSize
+import com.carlink.app.settings.Picture
+import com.carlink.app.settings.SettingsCategory
+import com.carlink.app.settings.Tier
+import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.DisplayPrefs
-import com.carlink.app.ui.HomeState
-import com.carlink.app.ui.components.ChoiceOption
-import com.carlink.app.ui.theme.CarLinkTokens
+import com.carlink.app.ui.Route
 import com.carlink.app.ui.theme.ThemeMode
-import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.UiProfileMode
-import java.text.NumberFormat
+import java.util.Locale
 import kotlin.math.abs
 
 /**
- * Settings categories in rail order (DESIGN_SPEC §4.4). General and Advanced are not listed yet:
- * their settings still live in the engines' own screens.
+ * Everything Settings renders (design/RESEARCH_PREMIUM_UX.md §8), so previews and the screenshot
+ * gallery can draw it without a ViewModel or engines.
  */
-enum class SettingsCategory(
-    @param:StringRes val title: Int,
-    @param:StringRes val description: Int,
-    @param:DrawableRes val icon: Int,
-    @param:DrawableRes val selectedIcon: Int,
-) {
-    OVERVIEW(R.string.carlink_settings_category_overview, R.string.carlink_settings_description_overview,
-        R.drawable.carlink_ic_dashboard, R.drawable.carlink_ic_dashboard_filled),
-    CONNECTION(R.string.carlink_settings_category_connection, R.string.carlink_settings_description_connection,
-        R.drawable.carlink_ic_link, R.drawable.carlink_ic_link_filled),
-    DISPLAY(R.string.carlink_settings_category_display, R.string.carlink_settings_description_display,
-        R.drawable.carlink_ic_display_settings, R.drawable.carlink_ic_display_settings_filled),
-    AUDIO(R.string.carlink_settings_category_audio, R.string.carlink_settings_description_audio,
-        R.drawable.carlink_ic_volume_up, R.drawable.carlink_ic_volume_up_filled),
-    NAVIGATION(R.string.carlink_settings_category_navigation, R.string.carlink_settings_description_navigation,
-        R.drawable.carlink_ic_navigation, R.drawable.carlink_ic_navigation_filled),
-    VEHICLE(R.string.carlink_settings_category_vehicle, R.string.carlink_settings_description_vehicle,
-        R.drawable.carlink_ic_directions_car, R.drawable.carlink_ic_directions_car_filled),
-    DIAGNOSTICS(R.string.carlink_settings_category_diagnostics, R.string.carlink_settings_description_diagnostics,
-        R.drawable.carlink_ic_monitor_heart, R.drawable.carlink_ic_monitor_heart_filled),
-    ABOUT(R.string.carlink_settings_category_about, R.string.carlink_settings_description_about,
-        R.drawable.carlink_ic_info, R.drawable.carlink_ic_info_filled),
-}
-
-/** The choices that open a sheet. */
-enum class SettingsChoice { THEME, LAYOUT, INTERFACE_SIZE }
-
-/** Everything the Settings screens render, read from [CarLinkViewModel]. */
 @Immutable
-data class SettingsUiState(
-    val display: DisplayPrefs,
+data class SettingsUi(
+    val unified: UnifiedSettings,
     val connection: ConnectionPrefs,
-    val home: HomeState,
-) {
-    /** The engine of the current or most recent phone goes first (DESIGN_SPEC §6.3.1). */
-    val engineOrder: List<Engine>
-        get() {
-            val first = home.link.engine ?: home.defaultPhone?.kind?.engine ?: Engine.CARPLAY
-            return listOf(first) + Engine.entries.filter { it != first }
-        }
-}
+    val display: DisplayPrefs,
+    /** The car's current Wi-Fi when readable: offered as a one-tap fill for "Same Wi-Fi". */
+    val joinedWifi: String?,
+    /** BYD head units also show directions on the HUD and instrument cluster. */
+    val isByd: Boolean,
+    val versionName: String,
+    /**
+     * The engines' current values of Advanced and Lab settings by [AdvancedSetting.id]: "true" or
+     * "false" for switches, the option value for choices. Null while they load from the engines.
+     */
+    val advancedValues: Map<String, String>?,
+)
 
-/** The intents Settings may raise; implemented by the ViewModel, faked in previews. */
+/** What Settings can change; the ViewModel implements it, previews fake it. */
 interface SettingsActions {
-    fun setThemeMode(mode: ThemeMode) {}
-    fun setUiProfileMode(mode: UiProfileMode) {}
-    fun setInterfaceScale(scale: Float) {}
+    /** Changes the unified settings; both engines receive them. */
+    fun update(change: (UnifiedSettings) -> UnifiedSettings) {}
     fun setAutoConnectBluetooth(on: Boolean) {}
     fun setAutoConnectUsb(on: Boolean) {}
     fun setStartOnBoot(on: Boolean) {}
     fun resumeAutoConnect() {}
+    fun setThemeMode(mode: ThemeMode) {}
+    fun setUiProfileMode(mode: UiProfileMode) {}
+    fun setInterfaceScale(scale: Float) {}
+    /** Writes one engine value ("true"/"false" or an option value) through [AdvancedSetting.control]. */
+    fun setAdvanced(setting: AdvancedSetting, value: String) {}
     fun openBluetoothSettings() {}
     fun openAppSettings() {}
-    fun openEngineSettings(engine: Engine) {}
+    fun navigate(route: Route) {}
 }
 
-internal class ViewModelSettingsActions(private val vm: CarLinkViewModel) : SettingsActions {
-    override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
-    override fun setUiProfileMode(mode: UiProfileMode) = vm.setUiProfileMode(mode)
-    override fun setInterfaceScale(scale: Float) = vm.setInterfaceScale(scale)
-    override fun setAutoConnectBluetooth(on: Boolean) = vm.setAutoConnectBluetooth(on)
-    override fun setAutoConnectUsb(on: Boolean) = vm.setAutoConnectUsb(on)
-    override fun setStartOnBoot(on: Boolean) = vm.setStartOnBoot(on)
-    override fun resumeAutoConnect() = vm.resumeAutoConnect()
-    override fun openBluetoothSettings() = vm.openBluetoothSettings()
-    override fun openAppSettings() = vm.openAppSettings()
-    override fun openEngineSettings(engine: Engine) = when (engine) {
-        Engine.CARPLAY -> vm.openCarPlaySettings()
-        Engine.ANDROID_AUTO -> vm.openAndroidAutoSettings()
+/** Rail and grid order. */
+internal val categoryOrder = listOf(
+    SettingsCategory.CONNECTION, SettingsCategory.DISPLAY, SettingsCategory.SOUND,
+    SettingsCategory.NAVIGATION, SettingsCategory.CAR, SettingsCategory.GENERAL,
+)
+
+@get:StringRes
+internal val SettingsCategory.title: Int
+    get() = when (this) {
+        SettingsCategory.CONNECTION -> R.string.carlink_settings_cat_connection
+        SettingsCategory.DISPLAY -> R.string.carlink_settings_cat_display
+        SettingsCategory.SOUND -> R.string.carlink_settings_cat_sound
+        SettingsCategory.NAVIGATION -> R.string.carlink_settings_cat_navigation
+        SettingsCategory.CAR -> R.string.carlink_settings_cat_car
+        SettingsCategory.GENERAL -> R.string.carlink_settings_cat_general
     }
+
+@get:StringRes
+internal val SettingsCategory.summary: Int
+    get() = when (this) {
+        SettingsCategory.CONNECTION -> R.string.carlink_settings_cat_connection_summary
+        SettingsCategory.DISPLAY -> R.string.carlink_settings_cat_display_summary
+        SettingsCategory.SOUND -> R.string.carlink_settings_cat_sound_summary
+        SettingsCategory.NAVIGATION -> R.string.carlink_settings_cat_navigation_summary
+        SettingsCategory.CAR -> R.string.carlink_settings_cat_car_summary
+        SettingsCategory.GENERAL -> R.string.carlink_settings_cat_general_summary
+    }
+
+@get:DrawableRes
+internal val SettingsCategory.icon: Int
+    get() = when (this) {
+        SettingsCategory.CONNECTION -> R.drawable.carlink_ic_link
+        SettingsCategory.DISPLAY -> R.drawable.carlink_ic_display_settings
+        SettingsCategory.SOUND -> R.drawable.carlink_ic_volume_up
+        SettingsCategory.NAVIGATION -> R.drawable.carlink_ic_navigation
+        SettingsCategory.CAR -> R.drawable.carlink_ic_directions_car
+        SettingsCategory.GENERAL -> R.drawable.carlink_ic_tune
+    }
+
+@get:DrawableRes
+internal val SettingsCategory.selectedIcon: Int
+    get() = when (this) {
+        SettingsCategory.CONNECTION -> R.drawable.carlink_ic_link_filled
+        SettingsCategory.DISPLAY -> R.drawable.carlink_ic_display_settings_filled
+        SettingsCategory.SOUND -> R.drawable.carlink_ic_volume_up_filled
+        SettingsCategory.NAVIGATION -> R.drawable.carlink_ic_navigation_filled
+        SettingsCategory.CAR -> R.drawable.carlink_ic_directions_car_filled
+        SettingsCategory.GENERAL -> R.drawable.carlink_ic_tune_filled
+    }
+
+/** The bottom sheets Settings opens; saved by [key] so a rotation keeps the sheet open. */
+internal enum class EssentialSheet {
+    CONNECTION_METHOD, CAR_HOTSPOT, SAME_WIFI, PICTURE, INTERFACE_SIZE, DAY_NIGHT, NIGHT_START, NIGHT_END,
+    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE,
 }
 
-// ---- Labels and options ------------------------------------------------------------------
+internal object SheetKey {
+    private const val ADVANCED = "advanced:"
+    fun of(sheet: EssentialSheet) = sheet.name
+    fun of(setting: AdvancedSetting) = ADVANCED + setting.id
+    fun essential(key: String?): EssentialSheet? = key?.let { k -> EssentialSheet.entries.firstOrNull { it.name == k } }
+    fun advanced(key: String?): AdvancedSetting? =
+        key?.takeIf { it.startsWith(ADVANCED) }?.removePrefix(ADVANCED)?.let { id -> AdvancedSettings.all.firstOrNull { it.id == id } }
+}
+
+/** Advanced or Lab rows of a category, engine by engine, in a stable order. */
+internal fun engineRows(category: SettingsCategory, tier: Tier): List<Pair<Engine, List<AdvancedSetting>>> =
+    AdvancedSettings.forCategory(category, showAdvanced = tier == Tier.ADVANCED, lab = tier == Tier.LAB)
+        .filter { it.tier == tier }
+        .groupBy { it.engine }
+        .let { groups -> Engine.entries.mapNotNull { engine -> groups[engine]?.let { engine to it } } }
+
+/** The label of an Advanced row's current value, or null when it is not known yet. */
+internal fun advancedValueLabel(setting: AdvancedSetting, value: String?): String? {
+    val control = setting.control as? Control.Choice ?: return null
+    return value?.let { v -> control.options.firstOrNull { it.value == v }?.label ?: v }
+}
+
+// ---- Labels -------------------------------------------------------------------------------
+
+@Composable
+internal fun connectionMethodLabel(method: ConnectionMethod): String = stringResource(
+    when (method) {
+        ConnectionMethod.AUTOMATIC -> R.string.carlink_settings_method_auto
+        ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi
+        ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot
+        ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct
+    },
+)
+
+@Composable
+internal fun pictureLabel(picture: Picture): String = stringResource(
+    when (picture) {
+        Picture.AUTOMATIC -> R.string.carlink_settings_picture_auto
+        Picture.BEST -> R.string.carlink_settings_picture_best
+        Picture.BALANCED -> R.string.carlink_settings_picture_balanced
+        Picture.LIGHT -> R.string.carlink_settings_picture_light
+        Picture.CUSTOM -> R.string.carlink_settings_custom
+    },
+)
+
+@Composable
+internal fun interfaceSizeLabel(size: InterfaceSize): String = stringResource(
+    when (size) {
+        InterfaceSize.SMALL -> R.string.carlink_settings_size_small
+        InterfaceSize.MEDIUM -> R.string.carlink_settings_size_medium
+        InterfaceSize.LARGE -> R.string.carlink_settings_size_large
+        InterfaceSize.CUSTOM -> R.string.carlink_settings_custom
+    },
+)
+
+@Composable
+internal fun dayNightLabel(mode: DayNight): String = stringResource(
+    when (mode) {
+        DayNight.AUTOMATIC -> R.string.carlink_settings_daynight_auto
+        DayNight.DAY -> R.string.carlink_settings_daynight_day
+        DayNight.NIGHT -> R.string.carlink_settings_daynight_night
+        DayNight.SCHEDULE -> R.string.carlink_settings_daynight_schedule
+    },
+)
 
 @Composable
 internal fun themeLabel(mode: ThemeMode): String = stringResource(
     when (mode) {
-        ThemeMode.FOLLOW_SYSTEM -> if (CarLinkTokens.profile == UiProfile.CAR) R.string.carlink_settings_theme_follow_car
-        else R.string.carlink_settings_theme_follow_system
-        ThemeMode.DARK -> R.string.carlink_settings_theme_dark
-        ThemeMode.LIGHT -> R.string.carlink_settings_theme_light
+        ThemeMode.FOLLOW_SYSTEM -> R.string.carlink_settings_appearance_follow
+        ThemeMode.DARK -> R.string.carlink_settings_appearance_dark
+        ThemeMode.LIGHT -> R.string.carlink_settings_appearance_light
     },
 )
 
-@DrawableRes
-internal fun themeIcon(mode: ThemeMode): Int = when (mode) {
-    ThemeMode.FOLLOW_SYSTEM -> R.drawable.carlink_ic_brightness_auto
-    ThemeMode.DARK -> R.drawable.carlink_ic_dark_mode
-    ThemeMode.LIGHT -> R.drawable.carlink_ic_light_mode
-}
-
 @Composable
-internal fun themeOptions(): List<ChoiceOption<ThemeMode>> {
-    val car = CarLinkTokens.profile == UiProfile.CAR
-    return listOf(
-        ChoiceOption(ThemeMode.FOLLOW_SYSTEM, themeLabel(ThemeMode.FOLLOW_SYSTEM),
-            stringResource(if (car) R.string.carlink_settings_theme_follow_car_detail
-            else R.string.carlink_settings_theme_follow_system_detail),
-            themeIcon(ThemeMode.FOLLOW_SYSTEM)),
-        ChoiceOption(ThemeMode.DARK, themeLabel(ThemeMode.DARK),
-            stringResource(R.string.carlink_settings_theme_dark_detail), themeIcon(ThemeMode.DARK)),
-        ChoiceOption(ThemeMode.LIGHT, themeLabel(ThemeMode.LIGHT),
-            stringResource(R.string.carlink_settings_theme_light_detail), themeIcon(ThemeMode.LIGHT)),
-    )
-}
-
-/** The Layout row's value; "Automatic" also says what was detected. */
-@Composable
-internal fun layoutValue(mode: UiProfileMode): String = stringResource(
+internal fun layoutLabel(mode: UiProfileMode): String = stringResource(
     when (mode) {
-        UiProfileMode.AUTO -> if (CarLinkTokens.profile == UiProfile.CAR) R.string.carlink_settings_layout_auto_value_car
-        else R.string.carlink_settings_layout_auto_value_handheld
+        UiProfileMode.AUTO -> R.string.carlink_settings_layout_auto
         UiProfileMode.CAR -> R.string.carlink_settings_layout_car
         UiProfileMode.HANDHELD -> R.string.carlink_settings_layout_handheld
     },
 )
 
-@DrawableRes
-internal fun layoutIcon(mode: UiProfileMode): Int = when (mode) {
-    UiProfileMode.AUTO -> R.drawable.carlink_ic_devices
-    UiProfileMode.CAR -> R.drawable.carlink_ic_directions_car
-    UiProfileMode.HANDHELD -> R.drawable.carlink_ic_smartphone
-}
+/** CarLink's own interface scales (CarLinkPreferences.INTERFACE_SCALES) and their names. */
+internal val carLinkScales = listOf(0.9f, 1f, 1.15f, 1.3f)
+
+internal fun nearestScale(scale: Float): Float = carLinkScales.minBy { abs(it - scale) }
 
 @Composable
-internal fun layoutOptions(): List<ChoiceOption<UiProfileMode>> = listOf(
-    ChoiceOption(UiProfileMode.AUTO, stringResource(R.string.carlink_settings_layout_auto),
-        stringResource(R.string.carlink_settings_layout_auto_detail), layoutIcon(UiProfileMode.AUTO)),
-    ChoiceOption(UiProfileMode.CAR, stringResource(R.string.carlink_settings_layout_car),
-        stringResource(R.string.carlink_settings_layout_car_detail), layoutIcon(UiProfileMode.CAR)),
-    ChoiceOption(UiProfileMode.HANDHELD, stringResource(R.string.carlink_settings_layout_handheld),
-        stringResource(R.string.carlink_settings_layout_handheld_detail), layoutIcon(UiProfileMode.HANDHELD)),
+internal fun carLinkScaleLabel(scale: Float): String = stringResource(
+    when (carLinkScales.indexOf(nearestScale(scale))) {
+        0 -> R.string.carlink_settings_size_small
+        2 -> R.string.carlink_settings_size_large
+        3 -> R.string.carlink_settings_size_extra_large
+        else -> R.string.carlink_settings_size_default
+    },
 )
 
-private val SCALE_NAMES = listOf(
-    R.string.carlink_settings_size_small,
-    R.string.carlink_settings_size_default,
-    R.string.carlink_settings_size_large,
-    R.string.carlink_settings_size_extra_large,
-)
+internal fun percentText(scale: Float): String = "${Math.round(scale * 100)}%"
 
-/** The stored scale snapped to the nearest preset, so a float round-trip never loses the selection. */
-internal fun nearestScale(scale: Float): Float = CarLinkPreferences.INTERFACE_SCALES.minBy { abs(it - scale) }
-
-@Composable
-internal fun percent(scale: Float): String {
-    val locale = LocalConfiguration.current.locales[0]
-    return NumberFormat.getPercentInstance(locale).format(scale.toDouble())
+/** Minutes after midnight as 24-hour "HH:MM" (tabular digits, no locale surprises in the car). */
+internal fun clockText(minute: Int): String {
+    val m = ((minute % (24 * 60)) + 24 * 60) % (24 * 60)
+    return String.format(Locale.ROOT, "%02d:%02d", m / 60, m % 60)
 }
-
-@Composable
-private fun scaleName(scale: Float): String =
-    stringResource(SCALE_NAMES.getOrElse(CarLinkPreferences.INTERFACE_SCALES.indexOf(nearestScale(scale))) {
-        R.string.carlink_settings_size_default
-    })
-
-@Composable
-internal fun interfaceSizeValue(scale: Float): String =
-    stringResource(R.string.carlink_settings_size_value, scaleName(scale), percent(nearestScale(scale)))
-
-@Composable
-internal fun interfaceSizeOptions(): List<ChoiceOption<Float>> =
-    CarLinkPreferences.INTERFACE_SCALES.map { scale -> ChoiceOption(scale, scaleName(scale), percent(scale)) }

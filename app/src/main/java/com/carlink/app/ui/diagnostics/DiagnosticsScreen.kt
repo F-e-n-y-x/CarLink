@@ -58,6 +58,7 @@ import com.carlink.app.diagnostics.CheckStatus
 import com.carlink.app.diagnostics.Checks
 import com.carlink.app.diagnostics.DecoderInfo
 import com.carlink.app.diagnostics.SystemScreens
+import com.carlink.app.settings.SettingsCategory
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.components.CarIcon
 import com.carlink.app.ui.components.CarTopBar
@@ -91,7 +92,7 @@ import java.util.Locale
  * COMPACT, Checks come first because readiness matters most there.
  */
 @Composable
-fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit) {
+fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (SettingsCategory) -> Unit) {
     val context = LocalContext.current
     val home by vm.home.collectAsStateWithLifecycle()
     val connection by vm.connection.collectAsStateWithLifecycle()
@@ -140,8 +141,9 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit) {
         checks = checks,
         onFix = onFix,
         onBack = onBack,
-        onOpenCarPlay = vm::openCarPlaySettings,
-        onOpenAndroidAuto = vm::openAndroidAutoSettings,
+        // Engine logging switches live in CarLink's own Settings (General, Lab).
+        onOpenCarPlay = { openSettings(SettingsCategory.GENERAL) },
+        onOpenAndroidAuto = { openSettings(SettingsCategory.GENERAL) },
     )
 }
 
@@ -352,10 +354,10 @@ private fun EngineLogs(onOpenCarPlay: () -> Unit, onOpenAndroidAuto: () -> Unit)
     SectionHeader(stringResource(R.string.carlink_diag_engine_logs), subtitle = stringResource(R.string.carlink_diag_engine_logs_subtitle))
     SectionCard {
         NavigationRow(stringResource(R.string.carlink_diag_carplay_logs), onOpenCarPlay,
-            supporting = stringResource(R.string.carlink_diag_carplay_logs_body), icon = R.drawable.carlink_ic_terminal, external = true)
+            supporting = stringResource(R.string.carlink_diag_carplay_logs_body), icon = R.drawable.carlink_ic_terminal)
         RowDivider()
         NavigationRow(stringResource(R.string.carlink_diag_aa_logs), onOpenAndroidAuto,
-            supporting = stringResource(R.string.carlink_diag_aa_logs_body), icon = R.drawable.carlink_ic_terminal, external = true)
+            supporting = stringResource(R.string.carlink_diag_aa_logs_body), icon = R.drawable.carlink_ic_terminal)
     }
 }
 
