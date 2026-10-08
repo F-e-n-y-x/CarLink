@@ -86,19 +86,6 @@ fun rememberElapsedMillis(since: Long?): State<Long> {
 fun motionMillis(millis: Int): Int = if (LocalReduceMotion.current) 0 else millis
 
 /**
- * The D-pad / rotary focus ring (§7.2): a primary-colored stroke drawn while the element has
- * focus. Touch input never focuses Compose buttons, so it stays hidden for touch.
- */
-fun Modifier.focusRing(shape: Shape): Modifier = composed {
-    var focused by remember { mutableStateOf(false) }
-    val width = CarLinkTokens.dimens.focusRing
-    val color = MaterialTheme.colorScheme.primary
-    this
-        .onFocusChanged { focused = it.isFocused || it.hasFocus }
-        .then(if (focused) Modifier.border(width, color, shape) else Modifier)
-}
-
-/**
  * Moves focus to [requester] once, but only when the driver is using keys, a joystick or a
  * rotary: Home focuses its primary, Connecting its Cancel, an error its recovery (§7.2).
  */

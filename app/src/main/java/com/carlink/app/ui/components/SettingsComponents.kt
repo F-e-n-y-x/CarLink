@@ -89,18 +89,6 @@ import kotlinx.coroutines.launch
 /** How long a choice sheet stays open after a pick, so the driver sees the selection land. */
 private const val CHOICE_CLOSE_DELAY_MS = 250L
 
-/**
- * The D-pad/rotary focus ring (DESIGN_SPEC §7.2): a `primary` stroke drawn only while the
- * element after this modifier has focus. Touch never focuses clickables, so it stays hidden.
- */
-fun Modifier.focusRing(shape: Shape): Modifier = composed {
-    var focused by remember { mutableStateOf(false) }
-    val color = MaterialTheme.colorScheme.primary
-    val width = CarLinkTokens.dimens.focusRing
-    onFocusChanged { focused = it.hasFocus }
-        .then(if (focused) Modifier.border(width, color, shape) else Modifier)
-}
-
 /** [focusRing] for a setting row (radius 20, as rows and cards are). */
 fun Modifier.focusRingRow(): Modifier = focusRing(RoundedCornerShape(20.dp))
 

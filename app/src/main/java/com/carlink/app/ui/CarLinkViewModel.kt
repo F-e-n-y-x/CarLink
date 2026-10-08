@@ -118,6 +118,15 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         coordinator.connectPhone(phone.address, phone.kind, phone.name, Transport.WIRELESS)
     }
 
+    /**
+     * The driver chose another phone while one is projecting: end that session and start this
+     * one. Unlike [disconnect], this does not pause automatic connection.
+     */
+    fun switchTo(phone: PairedPhone) {
+        coordinator.stopAll()
+        connect(phone)
+    }
+
     /** Wired start for a phone that is already plugged in but was not started automatically. */
     fun connectUsb(kind: PhoneKind) {
         _attemptStartedAt.value = SystemClock.elapsedRealtime()

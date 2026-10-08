@@ -67,11 +67,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val actions = remember(vm, navigate) {
         HomeActions(
             connect = vm::connect,
-            switchTo = { phone ->
-                // End the running session first so the new phone starts cleanly.
-                vm.disconnect()
-                vm.connect(phone)
-            },
+            switchTo = vm::switchTo,
             setPhoneKind = vm::setPhoneKind,
             returnToProjection = vm::returnToProjection,
             disconnect = vm::disconnect,
