@@ -9,7 +9,7 @@
     <string name="settings_switch_to_light_appearance">Cambiar a apariencia clara</string>
     <string name="settings_switch_to_dark_appearance">Cambiar a apariencia oscura</string>
     <string name="carplay_night_system">Seguir el sistema Android</string>
-    <string name="carplay_night_ambient">Automático (luz ambiental)</string>
+    <string name="carplay_night_ambient">Según la luz ambiental</string>
     <string name="carplay_night_day">Siempre de día</string>
     <string name="carplay_night_night">Siempre de noche</string>
     <string name="carplay_night_schedule">Programado</string>

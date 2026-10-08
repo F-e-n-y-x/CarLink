@@ -9,7 +9,7 @@
     <string name="settings_switch_to_light_appearance">التبديل إلى المظهر الفاتح</string>
     <string name="settings_switch_to_dark_appearance">التبديل إلى المظهر الداكن</string>
     <string name="carplay_night_system">اتباع نظام Android</string>
-    <string name="carplay_night_ambient">تلقائي (الإضاءة المحيطة)</string>
+    <string name="carplay_night_ambient">حسب الإضاءة المحيطة</string>
     <string name="carplay_night_day">نهار دائمًا</string>
     <string name="carplay_night_night">ليل دائمًا</string>
     <string name="carplay_night_schedule">حسب الجدول الزمني</string>

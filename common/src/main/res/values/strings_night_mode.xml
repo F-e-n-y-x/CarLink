@@ -9,7 +9,7 @@
     <string name="settings_switch_to_light_appearance">Switch to light appearance</string>
     <string name="settings_switch_to_dark_appearance">Switch to dark appearance</string>
     <string name="carplay_night_system">Follow Android system</string>
-    <string name="carplay_night_ambient">Automatic (ambient light)</string>
+    <string name="carplay_night_ambient">Follow ambient light</string>
     <string name="carplay_night_day">Always day</string>
     <string name="carplay_night_night">Always night</string>
     <string name="carplay_night_schedule">Scheduled</string>

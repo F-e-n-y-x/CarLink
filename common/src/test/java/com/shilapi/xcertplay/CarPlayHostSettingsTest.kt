@@ -67,6 +67,24 @@ class CarPlayHostSettingsTest {
         controllers.close()
     }
 
+    @Test fun menuStaysCenteredAndUsesAvailableWidthAcrossWindowSizes() {
+        invoke("openSettingsMenu")
+        val overlay = menu() as ViewGroup
+        val panel = overlay.getChildAt(0)
+        val density = activity.resources.displayMetrics.density
+        for (widthDp in listOf(320, 600, 1024, 1600)) {
+            val width = (widthDp * density + 0.5f).toInt()
+            val height = (480 * density + 0.5f).toInt()
+            repeat(3) {
+                overlay.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+                overlay.layout(0, 0, width, height)
+            }
+            val expected = (minOf(720, widthDp - 32) * density + 0.5f).toInt()
+            assertEquals(expected, panel.width)
+            assertTrue(kotlin.math.abs(panel.left - (width - panel.right)) <= 1)
+        }
+    }
     @Test fun configuredFingerCountsOpenTheMountedMenuWithoutLeavingCarPlay() {
         assertEquals(3, AirPlayPersistence.loadSettingsGestureFingers(activity))
         for (fingers in 2..4) {

@@ -9,7 +9,7 @@
     <string name="settings_switch_to_light_appearance">切换到浅色外观</string>
     <string name="settings_switch_to_dark_appearance">切换到深色外观</string>
     <string name="carplay_night_system">跟随 Android 系统</string>
-    <string name="carplay_night_ambient">自动（环境光）</string>
+    <string name="carplay_night_ambient">依照环境光</string>
     <string name="carplay_night_day">固定日间</string>
     <string name="carplay_night_night">固定夜间</string>
     <string name="carplay_night_schedule">定时切换</string>

@@ -1726,8 +1726,18 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    private fun settingsMenuWidth(availableWidth: Int): Int =
+        minOf(dp(MAX_SETTINGS_MENU_WIDTH_DP), (availableWidth - dp(32)).coerceAtLeast(1))
+
     private fun buildSettingsMenu(): View {
-        val overlay = FrameLayout(this).apply {
+        val overlay = object : FrameLayout(this) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                getChildAt(0)?.let { panel ->
+                    panel.layoutParams.width = settingsMenuWidth(MeasureSpec.getSize(widthMeasureSpec))
+                }
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+            }
+        }.apply {
             setBackgroundColor(MENU_BACKGROUND)
             isClickable = true
         }
@@ -1737,10 +1747,10 @@ class CarPlayHostActivity : ComponentActivity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(48), dp(36), dp(48), dp(36))
+            setPadding(dp(16), dp(36), dp(16), dp(36))
         }
         content.addView(
-            menuText(getString(R.string.carplay_settings), 32f, MENU_PRIMARY, bold = true).apply {
+            menuText(getString(R.string.carplay_settings), 24f, MENU_PRIMARY, bold = true).apply {
                 setPadding(dp(56), 0, 0, 0)
             },
             LinearLayout.LayoutParams(
@@ -2219,13 +2229,15 @@ class CarPlayHostActivity : ComponentActivity() {
         overlay.addView(
             panel,
             FrameLayout.LayoutParams(
-                minOf(resources.displayMetrics.widthPixels, MAX_SETTINGS_MENU_WIDTH_PX),
+                settingsMenuWidth(resources.displayMetrics.widthPixels),
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER,
             ),
         )
         overlay.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-            val desiredWidth = minOf(view.width, MAX_SETTINGS_MENU_WIDTH_PX)
+            val desiredWidth = settingsMenuWidth(view.width)
+            val horizontalPadding = dp(if (desiredWidth >= dp(600)) 32 else 16)
+            content.setPadding(horizontalPadding, dp(36), horizontalPadding, dp(36))
             val params = panel.layoutParams
             if (params.width != desiredWidth) {
                 params.width = desiredWidth
@@ -5130,7 +5142,7 @@ class CarPlayHostActivity : ComponentActivity() {
         const val PROTOCOL_TRACE_PREFIX = "TRACE "
         const val SETTINGS_SWIPE_DISTANCE_DP = 72
         const val SETTINGS_SWIPE_DIRECTION_RATIO = 1.15f
-        const val MAX_SETTINGS_MENU_WIDTH_PX = 1200
+        const val MAX_SETTINGS_MENU_WIDTH_DP = 720
         val NO_VIDEO_BACKGROUND = Color.rgb(0x16, 0x16, 0x18)
     }
 

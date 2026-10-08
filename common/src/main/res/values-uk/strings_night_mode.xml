@@ -9,7 +9,7 @@
     <string name="settings_switch_to_light_appearance">Перемкнути на світлий вигляд</string>
     <string name="settings_switch_to_dark_appearance">Перемкнути на темний вигляд</string>
     <string name="carplay_night_system">Як у системі Android</string>
-    <string name="carplay_night_ambient">Автоматично (за освітленістю)</string>
+    <string name="carplay_night_ambient">За навколишнім освітленням</string>
     <string name="carplay_night_day">Завжди денний</string>
     <string name="carplay_night_night">Завжди нічний</string>
     <string name="carplay_night_schedule">За розкладом</string>
