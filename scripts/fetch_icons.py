@@ -36,6 +36,8 @@ ICONS = {
     # Onboarding (DESIGN_SPEC §6.4)
     "local_parking": False, "wifi_find": False, "tablet_android": False, "aspect_ratio": False,
     "android": False, "power_settings_new": False, "p2p": False, "bluetooth_searching": False,
+    # Home and Connecting (DESIGN_SPEC §6.1, §6.2)
+    "expand_more": False, "expand_less": False, "pause_circle": False,
 }
 
 # Directional glyphs mirror in RTL layouts (DESIGN_SPEC §7.3); device and media glyphs do not.
