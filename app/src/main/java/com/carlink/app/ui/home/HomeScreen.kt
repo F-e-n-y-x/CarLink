@@ -391,7 +391,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             HomeMode.FAILED -> FailureActions(link, actions)
         }
     }
-    val offerSameWifi = ui.network?.canOfferSameWifi == true && ui.home.phones.any { it.kind == PhoneKind.IPHONE } &&
+    val offerSameWifi = ui.network?.canOfferSameWifi == true && ui.home.phones.any { it.kind != PhoneKind.UNKNOWN } &&
         (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY ||
             (mode == HomeMode.FAILED && link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING))
     if (offerSameWifi) {

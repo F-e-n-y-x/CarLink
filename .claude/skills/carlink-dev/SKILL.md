@@ -70,7 +70,11 @@ UI work is checked on the emulator (`emulator-5560`, AVD `carlink_headunit`). Co
 live testing on their tablet (`192.168.10.103:5555`, Redmi Pad Pro 5G, Android 16) on 2026-10-09 —
 use `CARLINK_TARGET=tablet dev.sh install|logs|shot`, ask the user to plug in or tap Connect, and
 read the logs (DiAuto writes `files/diagnostics/current.log`, readable with `run-as`). Never change
-the tablet's system settings.
+the tablet's system settings. **Current instruction (2026-10-09 03:10): do not use the tablet; use
+the emulator only until the user says otherwise.**
+
+Work autonomously (the user granted full permission, internet access and use of this PC) and run
+**at most two agents at a time**.
 
 A UI change is not done until you have installed it, screenshotted it at head-unit size and at
 phone size, and looked at the images for clipped text, wrong colors, empty areas and anything

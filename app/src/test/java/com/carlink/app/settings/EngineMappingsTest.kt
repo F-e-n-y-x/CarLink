@@ -17,13 +17,29 @@ class EngineMappingsTest {
         assertEquals(WirelessPath.SAME_WIFI, WirelessPathSelector.select(Engine.CARPLAY, settings, homeJoined))
     }
 
-    @Test fun androidAutoNeverUsesSameWifi() {
+    @Test fun androidAutoUsesSameWifiOnlyWithRouterDetails() {
         val settings = UnifiedSettings(homeWifi = home, carHotspot = hotspot)
+        // Without the router's BSSID and the car's interface, Android Auto cannot be sent there.
         assertEquals(WirelessPath.CAR_HOTSPOT, WirelessPathSelector.select(Engine.ANDROID_AUTO, settings, homeJoined))
-        val forced = settings.copy(connectionMethod = ConnectionMethod.SAME_WIFI)
-        assertEquals(WirelessPath.CAR_HOTSPOT, WirelessPathSelector.select(Engine.ANDROID_AUTO, forced, homeJoined))
-        assertEquals(WirelessPath.WIFI_DIRECT,
-            WirelessPathSelector.select(Engine.ANDROID_AUTO, forced.copy(carHotspot = WifiDetails()), homeJoined))
+        val full = homeJoined.copy(joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0")
+        assertEquals(WirelessPath.SAME_WIFI, WirelessPathSelector.select(Engine.ANDROID_AUTO, settings, full))
+        val forced = settings.copy(connectionMethod = ConnectionMethod.SAME_WIFI, carHotspot = WifiDetails())
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, forced, homeJoined))
+    }
+
+    @Test fun androidAutoSameWifiNamesTheRouter() {
+        val full = homeJoined.copy(joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0")
+        val aa = EngineMappings.androidAuto(UnifiedSettings(homeWifi = home), WirelessPath.SAME_WIFI, 240, full)
+        assertEquals(1, aa["native-ap-transport"])
+        assertEquals("wlan0", aa["hotspot-interface"])
+        assertEquals("HomeNet", aa["hotspot-ssid"])
+        assertEquals("homepassword", aa["hotspot-password"])
+        assertEquals("AA:BB:CC:DD:EE:FF", aa["static-bssid"])
+        assertEquals(false, aa["auto-enable-hotspot"])
+        // Leaving Same Wi-Fi clears the overrides so the hotspot route reads the real hotspot.
+        val hotspotPath = EngineMappings.androidAuto(UnifiedSettings(homeWifi = home), WirelessPath.CAR_HOTSPOT, 240, full)
+        assertEquals("", hotspotPath["hotspot-interface"])
+        assertEquals("0", hotspotPath["static-bssid"])
     }
 
     @Test fun sameWifiNeedsOneReadableMatchingNetwork() {

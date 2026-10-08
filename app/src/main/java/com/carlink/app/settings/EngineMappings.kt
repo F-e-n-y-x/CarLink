@@ -14,21 +14,31 @@ data class WifiEnvironment(
     val joinedSsid: String?,
     /** Whether the car's own hotspot is on; null when the firmware does not say. */
     val carHotspotOn: Boolean?,
+    /** The router's BSSID for [joinedSsid] (needs location permission), or null. */
+    val joinedBssid: String? = null,
+    /** The car's Wi-Fi client interface (usually wlan0), or null. */
+    val joinedInterface: String? = null,
 )
 
 /**
  * Picks the wireless path (design/REBUILD_PLAN.md): Same Wi-Fi when possible, then the car
- * hotspot, then Wi-Fi Direct. Android Auto never uses Same Wi-Fi: stock Android Auto wireless
- * only joins a network the car provides.
+ * hotspot, then Wi-Fi Direct.
+ *
+ * CarPlay hands the iPhone the router's details over iAP2. Android Auto's protocol hands the
+ * phone a network to join too; DiAuto normally fills it with its own hotspot, and CarLink fills
+ * it with the shared router instead, which also needs the router's BSSID and the car's Wi-Fi
+ * interface (both readable with location permission).
  */
 object WirelessPathSelector {
     fun select(engine: Engine, settings: UnifiedSettings, wifi: WifiEnvironment): WirelessPath {
-        val sameWifiUsable = engine == Engine.CARPLAY && settings.homeWifi.isValid() &&
+        val joinedSaved = settings.homeWifi.isValid() &&
             wifi.joinedNetworks == 1 && wifi.joinedSsid != null && wifi.joinedSsid == settings.homeWifi.ssid
+        val sameWifiUsable = joinedSaved && (engine == Engine.CARPLAY ||
+            (wifi.joinedBssid != null && wifi.joinedInterface != null))
         val hotspotUsable = settings.carHotspot.isValid() && wifi.carHotspotOn != false
         return when (settings.connectionMethod) {
             ConnectionMethod.SAME_WIFI -> when {
-                engine == Engine.CARPLAY -> WirelessPath.SAME_WIFI
+                engine == Engine.CARPLAY || sameWifiUsable -> WirelessPath.SAME_WIFI
                 hotspotUsable -> WirelessPath.CAR_HOTSPOT
                 else -> WirelessPath.WIFI_DIRECT
             }
@@ -120,7 +130,8 @@ object EngineMappings {
      * DiAuto "settings" keys and values. [panelDensityDpi] is the head unit's own density, used to
      * scale Android Auto's interface. Only keys owned by a unified setting are returned.
      */
-    fun androidAuto(settings: UnifiedSettings, path: WirelessPath?, panelDensityDpi: Int): Map<String, Any> = buildMap {
+    fun androidAuto(settings: UnifiedSettings, path: WirelessPath?, panelDensityDpi: Int,
+                    wifi: WifiEnvironment? = null): Map<String, Any> = buildMap {
         when (settings.picture) {
             Picture.AUTOMATIC -> { put("resolutionId", 0); put("fps-limit", 60) }
             Picture.BEST -> { put("resolutionId", 3); put("fps-limit", 60) }
@@ -147,15 +158,25 @@ object EngineMappings {
         put("music-via-bluetooth", settings.soundThroughCarBluetooth)
         put("gps-navigation", settings.sendCarLocation)
         put("byd-navigation-enabled", settings.bydDirections)
-        // Native wireless Android Auto: 1 = the car's hotspot, 0 = Wi-Fi Direct.
+        // Native wireless Android Auto: 1 = an access point the phone joins, 0 = Wi-Fi Direct.
+        // Same Wi-Fi uses DiAuto's access-point route with every value named by hand: the car's
+        // Wi-Fi interface, the router's name, password and BSSID. The hotspot route clears them.
         when (path) {
-            WirelessPath.CAR_HOTSPOT -> put("native-ap-transport", 1)
-            WirelessPath.WIFI_DIRECT -> put("native-ap-transport", 0)
-            WirelessPath.SAME_WIFI, null -> Unit
-        }
-        if (settings.carHotspot.isValid()) {
-            put("hotspot-ssid", settings.carHotspot.ssid)
-            put("hotspot-password", settings.carHotspot.password)
+            WirelessPath.SAME_WIFI -> if (wifi?.joinedInterface != null && wifi.joinedBssid != null) {
+                put("native-ap-transport", 1)
+                put("hotspot-interface", wifi.joinedInterface)
+                put("hotspot-ssid", settings.homeWifi.ssid)
+                put("hotspot-password", settings.homeWifi.password)
+                put("static-bssid", wifi.joinedBssid)
+                put("auto-enable-hotspot", false)
+            }
+            WirelessPath.CAR_HOTSPOT, WirelessPath.WIFI_DIRECT, null -> {
+                if (path != null) put("native-ap-transport", if (path == WirelessPath.CAR_HOTSPOT) 1 else 0)
+                put("hotspot-interface", "")
+                put("static-bssid", "0")
+                put("hotspot-ssid", if (settings.carHotspot.isValid()) settings.carHotspot.ssid else "")
+                put("hotspot-password", if (settings.carHotspot.isValid()) settings.carHotspot.password else "")
+            }
         }
     }
 }

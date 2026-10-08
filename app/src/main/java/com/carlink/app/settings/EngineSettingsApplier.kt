@@ -33,11 +33,12 @@ object EngineSettingsApplier {
 
     /** Applies the settings plus the chosen wireless path for a session about to start; returns the path. */
     fun applyForSession(context: Context, engine: Engine, settings: UnifiedSettings): WirelessPath {
-        val path = WirelessPathSelector.select(engine, settings, wifiEnvironment(context))
+        val wifi = wifiEnvironment(context)
+        val path = WirelessPathSelector.select(engine, settings, wifi)
         Log.i(TAG, "session engine=$engine path=$path method=${settings.connectionMethod}")
         when (engine) {
             Engine.CARPLAY -> applyCarPlay(context, EngineMappings.carPlay(settings, path))
-            Engine.ANDROID_AUTO -> applyAndroidAuto(context, settings, path)
+            Engine.ANDROID_AUTO -> applyAndroidAuto(context, settings, path, wifi)
         }
         return path
     }
@@ -66,10 +67,11 @@ object EngineSettingsApplier {
         }
     }
 
-    private fun applyAndroidAuto(context: Context, settings: UnifiedSettings, path: WirelessPath?) {
+    private fun applyAndroidAuto(context: Context, settings: UnifiedSettings, path: WirelessPath?,
+                                 wifi: WifiEnvironment? = null) {
         val density = context.resources.displayMetrics.densityDpi
         val bundle = Bundle()
-        EngineMappings.androidAuto(settings, path, density).forEach { (key, value) ->
+        EngineMappings.androidAuto(settings, path, density, wifi).forEach { (key, value) ->
             when (value) {
                 is Int -> bundle.putInt(key, value)
                 is Boolean -> bundle.putBoolean(key, value)
@@ -88,13 +90,23 @@ object EngineSettingsApplier {
                 it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !it.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
             } == true
         }
-        val ssid = runCatching {
-            context.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo?.ssid
-        }.getOrNull()?.removeSurrounding("\"")?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID && it != "<unknown ssid>" }
+        val info = runCatching { context.applicationContext.getSystemService(WifiManager::class.java)?.connectionInfo }.getOrNull()
+        val ssid = info?.ssid?.removeSurrounding("\"")
+            ?.takeIf { it.isNotBlank() && it != WifiManager.UNKNOWN_SSID && it != "<unknown ssid>" }
+        // 02:00:00:00:00:00 is what Android returns when the BSSID is hidden from the app.
+        val bssid = info?.bssid?.uppercase()?.takeIf { it.matches(Regex("([0-9A-F]{2}:){5}[0-9A-F]{2}")) && it != "02:00:00:00:00:00" }
+        val wifiNetwork = connectivity?.allNetworks.orEmpty().firstOrNull { network ->
+            connectivity!!.getNetworkCapabilities(network)?.let {
+                it.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !it.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+            } == true
+        }
+        val iface = wifiNetwork?.let { runCatching { connectivity!!.getLinkProperties(it)?.interfaceName }.getOrNull() }
         return WifiEnvironment(
             joinedNetworks = wifiNetworks,
             joinedSsid = if (wifiNetworks == 1) ssid else null,
             carHotspotOn = runCatching { CarHotspotStatus.isEnabled(context) }.getOrNull(),
+            joinedBssid = if (wifiNetworks == 1) bssid else null,
+            joinedInterface = if (wifiNetworks == 1) iface else null,
         )
     }
 }
