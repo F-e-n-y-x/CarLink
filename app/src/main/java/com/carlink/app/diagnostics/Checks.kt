@@ -164,10 +164,8 @@ object Checks {
      * copy. So CarPlay can authenticate when this APK bundles the files or an earlier build
      * already installed them; it is not needed when DiPlay uses an external chip or server.
      */
-    fun carPlayAuthentication(context: Context): CheckResult {
+    fun carPlayAuthentication(context: Context, bundled: Boolean = isBundled(context)): CheckResult {
         val target = runCatching { AirPlayPersistence.loadMfiTarget(context) }.getOrDefault(MfiTarget.LOCAL)
-        val bundled = runCatching { context.assets.list(AUTH_DIRECTORY)?.toSet().orEmpty() }
-            .getOrDefault(emptySet()).containsAll(AUTH_FILES)
         val installedDir = File(context.noBackupFilesDir, AUTH_DIRECTORY)
         val installed = AUTH_FILES.all { File(installedDir, it).isFile }
         val source = when {
@@ -183,6 +181,11 @@ object Checks {
         }
         return CheckResult(CheckId.CARPLAY_AUTHENTICATION, status, authSource = source, mfiTarget = target)
     }
+
+    /** Whether this APK's assets carry both authentication files (local car-test builds do). */
+    fun isBundled(context: Context): Boolean =
+        runCatching { context.assets.list(AUTH_DIRECTORY)?.toSet().orEmpty() }
+            .getOrDefault(emptySet()).containsAll(AUTH_FILES)
 
     private fun bluetooth(context: Context, inputs: CheckInputs): CheckResult {
         val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter

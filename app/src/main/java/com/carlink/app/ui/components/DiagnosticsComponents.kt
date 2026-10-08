@@ -84,15 +84,9 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
  * QrPanel) plus a side sheet for parked reading. Sizes come from CarLinkTokens.dimens.
  */
 
-/**
- * Wraps a technical value (version, resolution, codec name, timer) in a left-to-right isolate,
- * so "1920×1080" or "0.2.15" keeps its order inside right-to-left text (DESIGN_SPEC §7.3).
- */
-fun ltr(value: String): String = "⁦$value⁩"
-
 /** Typography for timers and stat values: tabular figures, so digits don't jump as they change. */
 @Composable
-fun TextStyle.tabular(): TextStyle = merge(TextStyle(fontFeatureSettings = "tnum", textDirection = TextDirection.Ltr))
+fun TextStyle.tabularLtr(): TextStyle = merge(TextStyle(fontFeatureSettings = "tnum", textDirection = TextDirection.Ltr))
 
 @DrawableRes
 fun statusIcon(status: CheckStatus): Int = when (status) {
@@ -214,7 +208,7 @@ fun StatTile(label: String, value: String, modifier: Modifier = Modifier, tone: 
                 Spacer(Modifier.width(8.dp))
             }
             val style = MaterialTheme.typography.headlineSmall
-            Text(value, style = if (technical) style.tabular() else style.merge(TextStyle(fontFeatureSettings = "tnum")),
+            Text(value, style = if (technical) style.tabularLtr() else style.merge(TextStyle(fontFeatureSettings = "tnum")),
                 color = tint, maxLines = maxValueLines)
         }
     }

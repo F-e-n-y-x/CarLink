@@ -19,7 +19,7 @@ class ChecksTest {
     private val context: Application get() = RuntimeEnvironment.getApplication()
 
     @Test fun sourceBuildWithoutAuthenticationFilesFailsCarPlayCheck() {
-        val result = Checks.carPlayAuthentication(context)
+        val result = Checks.carPlayAuthentication(context, bundled = false)
         assertEquals(CheckStatus.FAIL, result.status)
         assertEquals(CarPlayAuthSource.MISSING, result.authSource)
         // Nothing in Settings can supply the files, so there is no Fix button.
@@ -29,14 +29,14 @@ class ChecksTest {
     @Test fun filesInstalledByAnEarlierBuildStillAuthenticate() {
         val dir = File(context.noBackupFilesDir, Checks.AUTH_DIRECTORY).apply { mkdirs() }
         Checks.AUTH_FILES.forEach { File(dir, it).writeText("x") }
-        val result = Checks.carPlayAuthentication(context)
+        val result = Checks.carPlayAuthentication(context, bundled = false)
         assertEquals(CheckStatus.PASS, result.status)
         assertEquals(CarPlayAuthSource.INSTALLED, result.authSource)
     }
 
     @Test fun externalAuthenticationDoesNotNeedTheFiles() {
         AirPlayPersistence.saveMfiTarget(context, MfiTarget.USB_CH341)
-        val result = Checks.carPlayAuthentication(context)
+        val result = Checks.carPlayAuthentication(context, bundled = false)
         assertEquals(CheckStatus.INFO, result.status)
         assertEquals(CarPlayAuthSource.EXTERNAL, result.authSource)
     }
