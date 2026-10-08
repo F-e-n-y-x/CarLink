@@ -691,7 +691,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
 
     private fun standardHeader(compact: Boolean): LinearLayout = row().apply {
         gravity = Gravity.CENTER_VERTICAL
-        val logoSize = dp(if (compact) 28 else 36)
+        val logoSize = dp(if (compact) 30 else 36)
         addView(ImageView(this@DiPlayActivity).apply {
             setImageResource(R.drawable.ic_carplay)
             contentDescription = getString(R.string.carplay)
@@ -940,7 +940,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 imageTintList = ColorStateList.valueOf(if (selected) ACCENT else TEXT)
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             }, LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginEnd = dp(12) })
-            addView(label(title, 16, if (selected) ACCENT else TEXT, true),
+            addView(label(title, 16, if (selected) ACCENT else TEXT, true,
+                centreGlyphs = usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)),
                 LinearLayout.LayoutParams(0, -1, 1f))
             setOnClickListener {
                 openSettingsCategory(category)
@@ -4752,7 +4753,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             setImageResource(icon); imageTintList = ColorStateList.valueOf(ACCENT)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(12) })
-        heading.addView(label(title, 22, TEXT, true), LinearLayout.LayoutParams(0, -2, 1f))
+        heading.addView(label(title, 22, TEXT, true,
+            centreGlyphs = icon != null && usesChineseGlyphAlignment(resources.configuration.locales[0].language, title)),
+            LinearLayout.LayoutParams(0, -2, 1f))
         card.addView(heading)
         build(card)
         if (page == "settings") normalizeSpacing(card)
@@ -4853,7 +4856,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             paint.getTextBounds(value, 0, value.length, glyphBounds)
             val checkpoint = canvas.save()
             if (layout?.lineCount == 1 && !glyphBounds.isEmpty && baseline >= 0) {
-                val textCentre = if (resources.configuration.locales[0].language == "zh") {
+                val textCentre = if (usesChineseGlyphAlignment(resources.configuration.locales[0].language, value)) {
                     baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
                 } else {
                     val metrics = paint.fontMetrics
@@ -4969,7 +4972,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         private val glyphBounds = android.graphics.Rect()
 
         fun textAlignmentCentreY(): Float {
-            if (resources.configuration.locales[0].language == "zh") {
+            if (usesChineseGlyphAlignment(resources.configuration.locales[0].language, text)) {
                 val value = text.toString()
                 paint.getTextBounds(value, 0, value.length, glyphBounds)
                 return baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
@@ -5190,6 +5193,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val FOCUS_RING get() = palette.focusRing
 
     companion object {
+        private fun usesChineseGlyphAlignment(language: String, text: CharSequence): Boolean {
+            return language == "zh" && text.isNotBlank() &&
+                text.none { it in 'A'..'Z' || it in 'a'..'z' }
+        }
+
         internal fun isLauncherIntent(intent: Intent): Boolean =
             intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
                 !intent.hasExtra("page")
