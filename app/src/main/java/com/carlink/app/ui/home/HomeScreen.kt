@@ -331,9 +331,12 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 pathName(ui.network?.path, Transport.WIRELESS))
         HomeMode.CONNECTING -> stringResource(R.string.carlink_home_connecting_title, engine) to
             // Android phones only start wireless Android Auto when their Bluetooth connects.
-            if (link.engine == Engine.ANDROID_AUTO && link.transport == Transport.WIRELESS && link.step <= 1)
-                stringResource(R.string.carlink_home_connecting_android_wireless, phoneName)
-            else stringResource(R.string.carlink_home_connecting_body, phoneName)
+            when {
+                !androidWaiting(ui) -> stringResource(R.string.carlink_home_connecting_body, phoneName)
+                // Apps cannot open a phone's Bluetooth link; the driver connects it once.
+                !sessionPhoneConnected(ui) -> stringResource(R.string.carlink_home_connecting_connect_bluetooth, phoneName)
+                else -> stringResource(R.string.carlink_home_connecting_android_wireless, phoneName)
+            }
         HomeMode.CONNECTED -> {
             val elapsed by rememberElapsedMillis(ui.home.connectedSince)
             stringResource(R.string.carlink_home_connected_title, engine) to
@@ -373,8 +376,13 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             HomeMode.READY_PHONE -> phone?.let {
                 IonButton(stringResource(R.string.carlink_home_connect), { actions.connect(it) }, icon = R.drawable.carlink_ic_link)
             }
-            HomeMode.CONNECTING -> GlassButton(stringResource(R.string.carlink_home_cancel), actions::disconnect,
-                icon = R.drawable.carlink_ic_close)
+            HomeMode.CONNECTING -> {
+                if (androidWaiting(ui) && !sessionPhoneConnected(ui)) {
+                    IonButton(stringResource(R.string.carlink_home_bluetooth_settings), actions::openBluetoothSettings,
+                        icon = R.drawable.carlink_ic_bluetooth)
+                }
+                GlassButton(stringResource(R.string.carlink_home_cancel), actions::disconnect, icon = R.drawable.carlink_ic_close)
+            }
             HomeMode.CONNECTED -> {
                 IonButton(stringResource(R.string.carlink_home_return, engine), actions::returnToProjection,
                     icon = R.drawable.carlink_ic_play_arrow_filled)
@@ -587,3 +595,13 @@ private fun SameWifiCard(ssid: String, actions: HomeActions) {
         }
     }
 }
+
+/** Wireless Android Auto waiting for the phone to start it (it only does when its Bluetooth connects). */
+private fun androidWaiting(ui: HomeUi): Boolean {
+    val link = ui.home.link
+    return link.engine == Engine.ANDROID_AUTO && link.transport == Transport.WIRELESS && link.step <= 1
+}
+
+/** Whether the phone of the current attempt has a Bluetooth link to this head unit right now. */
+private fun sessionPhoneConnected(ui: HomeUi): Boolean =
+    ui.home.phones.firstOrNull { it.name == ui.home.link.phoneName }?.connected ?: false

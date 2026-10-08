@@ -97,4 +97,6 @@
     <string name="carlink_home_same_wifi_invalid">Wi-Fi passwords have 8 to 63 characters.</string>
     <string name="carlink_home_same_wifi_show">Show password</string>
     <string name="carlink_home_connecting_android_wireless">Waiting for %1$s to start Android Auto. If nothing happens in a few seconds, turn the phone\u2019s Bluetooth off and on.</string>
+    <string name="carlink_home_connecting_connect_bluetooth">Connect %1$s in Bluetooth. Android Auto starts by itself as soon as it\u2019s connected.</string>
+    <string name="carlink_home_bluetooth_settings">Bluetooth settings</string>
 </resources>
