@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CarLink merged manifest.
+
+  The engines' own manifests come from vendor/diplay (CarPlay, main process) and vendor/diauto
+  (Android Auto, ":aa" process). This file:
+  1. makes CarLink the only launcher, USB-attach, boot and Bluetooth entry point;
+  2. pins every Android Auto component to the ":aa" process;
+  3. ships DiAuto's key/media receivers disabled (EngineCoordinator enables them per session).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:name=".CarLinkApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/carlink_data_extraction_rules"
+        android:fullBackupContent="false"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:localeConfig="@xml/locales_config"
+        android:resizeableActivity="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CarLink"
+        tools:replace="android:name,android:label,android:icon,android:roundIcon,android:theme,android:allowBackup,android:fullBackupContent,android:dataExtractionRules,android:localeConfig">
+
+        <!-- ============================== CarLink ============================== -->
+
+        <activity
+            android:name=".ui.HomeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CarLink.Starting"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.CAR_DOCK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Sole USB_DEVICE_ATTACHED handler; routes iPhones to CarPlay, Android phones to Android Auto. -->
+        <activity
+            android:name=".entry.UsbRouterActivity"
+            android:directBootAware="true"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity="${applicationId}.usb"
+            android:theme="@style/Theme.CarLink.Invisible">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/carlink_usb_device_filter" />
+        </activity>
+
+        <receiver
+            android:name=".entry.SystemEventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.UUID" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Android Auto engine command endpoint; lives in (and starts) the ":aa" process. -->
+        <receiver
+            android:name=".engine.AndroidAutoCommandReceiver"
+            android:exported="false"
+            android:process=":aa" />
+
+        <!-- ============================== CarPlay engine (DiPlay) ============================== -->
+
+        <!-- Settings and connect pre-flight only; CarLink is the launcher. -->
+        <activity android:name="com.shilapi.xcertplay.DiPlayActivity" android:exported="false" tools:node="merge" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <!-- USB iPhones arrive through UsbRouterActivity. -->
+        <activity android:name="com.shilapi.xcertplay.CarPlayHostActivity" android:exported="false" tools:node="merge" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+            <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" tools:node="remove" />
+        </activity>
+        <receiver android:name="com.shilapi.xcertplay.BootReceiver" tools:node="remove" />
+        <service android:name="com.shilapi.xcertplay.shared.MyCarAppService" tools:node="remove" />
+        <meta-data android:name="androidx.car.app.minCarApiLevel" tools:node="remove" />
+
+        <!-- ============================== Android Auto engine (DiAuto), ":aa" process ============================== -->
+
+        <activity android:name="com.andrerinas.openheadunit.aap.AapProjectionActivity" android:process=":aa" tools:node="merge" />
+        <!-- Kept because DiAuto toggles it at runtime; never matched by the system any more. -->
+        <activity android:name="com.andrerinas.openheadunit.app.UsbAttachedActivity" android:exported="false" android:process=":aa" tools:node="merge" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+            <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" tools:node="remove" />
+        </activity>
+        <!-- DiAuto's own home: not a launcher, and not a handler for maps/geo links (it starts AapService). -->
+        <activity android:name="com.andrerinas.openheadunit.main.MainActivity" android:exported="false" android:process=":aa" tools:node="merge" tools:replace="android:exported">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <activity android:name="com.andrerinas.openheadunit.main.SettingsActivity" android:process=":aa" tools:node="merge" />
+        <activity android:name="com.andrerinas.openheadunit.main.OnboardingActivity" android:process=":aa" tools:node="merge" />
+        <activity android:name="com.andrerinas.openheadunit.main.AutomationActivity" android:process=":aa" tools:node="merge" />
+        <service android:name="com.andrerinas.openheadunit.aap.AapService" android:process=":aa" tools:node="merge" />
+        <service android:name="com.andrerinas.openheadunit.location.GpsLocationService" android:process=":aa" tools:node="merge" />
+        <service android:name="com.andrerinas.openheadunit.aap.DummyVpnService" android:process=":aa" tools:node="merge" />
+        <provider android:name="rikka.shizuku.ShizukuProvider" android:process=":aa" tools:node="merge" />
+
+        <receiver android:name="androidx.media.session.MediaButtonReceiver" android:enabled="false" android:process=":aa" tools:node="merge" />
+        <receiver android:name="com.andrerinas.openheadunit.app.RemoteControlReceiver" android:enabled="false" android:process=":aa" tools:node="merge" />
+        <receiver android:name="com.andrerinas.openheadunit.connection.CarKeyReceiver" android:enabled="false" android:process=":aa" tools:node="merge" />
+
+        <!-- Replaced by SystemEventReceiver. -->
+        <receiver android:name="com.andrerinas.openheadunit.app.BootCompleteReceiver" tools:node="remove" />
+        <receiver android:name="com.andrerinas.openheadunit.app.AutoStartReceiver" tools:node="remove" />
+        <receiver android:name="com.andrerinas.openheadunit.app.WifiAutoStartReceiver" tools:node="remove" />
+    </application>
+</manifest>

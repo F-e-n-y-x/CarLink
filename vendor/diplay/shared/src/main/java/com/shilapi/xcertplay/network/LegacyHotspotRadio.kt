@@ -46,6 +46,6 @@ internal object LegacyHotspotRadio {
 }
 
 private object LegacyHotspotNative {
-    init { System.loadLibrary("local_hotspot_radio") }
+    init { System.loadLibrary("diplay_hotspot_radio") }
     external fun query(interfaceName: String): IntArray
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every USB device reaches UsbRouterActivity: Android phones have no common vendor ID.
+  The router ignores anything that is not a phone without showing UI (PhoneClassifier).
+-->
+<resources>
+    <usb-device />
+</resources>

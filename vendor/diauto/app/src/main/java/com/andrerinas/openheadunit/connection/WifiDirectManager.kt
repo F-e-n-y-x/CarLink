@@ -1096,7 +1096,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
 
         postSessionDelayed({
             try {
-                val intent = Intent(context, com.andrerinas.openheadunit.main.MainActivity::class.java).apply {
+                val intent = Intent(context, com.andrerinas.openheadunit.HostIntegration.homeActivity).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 }
                 context.startActivity(intent)

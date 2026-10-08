@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base for CarLink's Compose activities. Engines keep their own activity themes. -->
+    <style name="Theme.CarLink" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/carlink_window_background</item>
+        <item name="android:colorBackground">@color/carlink_window_background</item>
+        <item name="android:colorAccent">@color/carlink_accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- Launch theme: same background as the first frame, so there is no flash. -->
+    <style name="Theme.CarLink.Starting" parent="Theme.CarLink" />
+
+    <!-- UsbRouterActivity decides and finishes without drawing. -->
+    <style name="Theme.CarLink.Invisible" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+</resources>

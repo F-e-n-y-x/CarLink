@@ -1,13 +1,16 @@
-import org.jetbrains.kotlin.config.KotlinCompilerVersion
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
-import java.util.Properties
-import java.io.FileInputStream
+// CarLink: DiAuto's former :app module, built as the Android Auto engine library.
+// The APK, its applicationId, signing and shrinking now live in CarLink's :app module.
+// Kotlin is compiled by AGP's built-in Kotlin support (no kotlin-android/kapt plugins);
+// the Glide and lifecycle annotation processors were unused (no @GlideModule/@OnLifecycleEvent).
 
 plugins {
-    id("com.android.application")
-    kotlin("android")
-    kotlin("kapt")
+    alias(libs.plugins.android.library)
 }
+
+// Shared with CarLink's :app so engine code that needs the host package (Shizuku user
+// service, signature permission names) resolves to the merged APK.
+val carlinkApplicationId = providers.gradleProperty("carlink.applicationId").get()
+val carlinkDebugSuffix = providers.gradleProperty("carlink.debugApplicationIdSuffix").get()
 
 android {
     compileSdk = 36
@@ -26,8 +29,9 @@ android {
         }
     }
 
+    // DiAuto's CHANGELOG/LICENSE live in the subtree root, not the CarLink root.
     val copyRootAssets = tasks.register<Copy>("copyRootAssets") {
-        from("${project.rootDir}/CHANGELOG.md", "${project.rootDir}/LICENSE")
+        from(file("../CHANGELOG.md"), file("../LICENSE"))
         into("${project.layout.buildDirectory.get().asFile}/generated/assets/root")
     }
 
@@ -48,11 +52,9 @@ android {
         dir.name.removePrefix("values-")
     }?.sorted() ?: emptyList()
 
-    println("Detected available locales: $availableLocales")
-
     sourceSets {
         getByName("main") {
-            assets.srcDirs("${project.layout.buildDirectory.get().asFile}/generated/assets/root")
+            assets.directories.add("${project.layout.buildDirectory.get().asFile}/generated/assets/root")
         }
     }
 
@@ -67,25 +69,23 @@ android {
     }
 
     defaultConfig {
-        // Preserve upgrade compatibility and existing DiLink pairing/calibration.
-        applicationId = "com.andrerinas.headunitrevived"
-        minSdk = 16
-        targetSdk = 36
-        versionCode = 111
-        versionName = "0.3.11"
-        setProperty("archivesBaseName", "${applicationId}_${versionName}")
+        minSdk = 25
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        multiDexEnabled = true
         vectorDrawables.useSupportLibrary = true
+        consumerProguardFiles("proguard-project.txt")
+
+        // Library BuildConfig has no application/version fields; the engine reads these.
+        buildConfigField("String", "APPLICATION_ID", "\"$carlinkApplicationId\"")
+        buildConfigField("String", "VERSION_NAME", "\"0.3.11\"")
+        buildConfigField("int", "VERSION_CODE", "111")
 
         // Store available locales in BuildConfig for runtime access
         // This is scanned at build time from values-XX directories
         buildConfigField("String", "AVAILABLE_LOCALES", "\"${availableLocales.joinToString(",")}\"")
 
-        externalNativeBuild {
-            cmake {
-                cppFlags("")
-            }
+        ndk {
+            // Match the CarPlay engine; BYD head units are ARM.
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
     }
 
@@ -93,128 +93,44 @@ android {
     productFlavors {
         create("playstore") {
             dimension = "distribution"
-            minSdk = 21
         }
         create("github") {
             dimension = "distribution"
-            // Default minSdk 16 from defaultConfig is used
-        }
-    }
-
-    signingConfigs {
-        getByName("debug") {
-            // storeFile = file("../keystore.jkc")
-            // storePassword = property("HEADUNIT_KEYSTORE_PASSWORD") as String
-            // keyAlias = property("HEADUNIT_KEYSTORE_ALIAS") as String
-            // keyPassword = property("HEADUNIT_KEYSTORE_PASSWORD") as String
-        }
-        create("release") {
-            val defaultStoreFile = when {
-                rootProject.file("headunit-release-key.jks").exists() -> rootProject.file("headunit-release-key.jks")
-                file("../headunit-release-key.jks").exists() -> file("../headunit-release-key.jks")
-                else -> null
-            }
-            if (defaultStoreFile != null) {
-                storeFile = defaultStoreFile
-            }
-            keyAlias = "headunit-revived"
-
-            val keyfile = rootProject.file("key.properties")
-            val signingPropsFile = rootProject.file("secrets.properties")
-
-            if (keyfile.exists()) {
-                val keyprops = Properties()
-                keyprops.load(FileInputStream(keyfile))
-
-                if (keyprops.containsKey("storeFile")) storeFile = file(keyprops.getProperty("storeFile"))
-                if (keyprops.containsKey("storePassword")) storePassword = keyprops.getProperty("storePassword")
-                if (keyprops.containsKey("keyAlias")) keyAlias = keyprops.getProperty("keyAlias")
-                if (keyprops.containsKey("keyPassword")) keyPassword = keyprops.getProperty("keyPassword")
-            } else if (signingPropsFile.exists()) {
-                val props = Properties()
-                props.load(FileInputStream(signingPropsFile))
-
-                storePassword = props.getProperty("HEADUNIT_KEYSTORE_PASSWORD")
-                keyPassword = props.getProperty("HEADUNIT_KEY_PASSWORD")
-            } else {
-                val envStorePass = System.getenv("HEADUNIT_KEYSTORE_PASSWORD") ?: (project.findProperty("HEADUNIT_KEYSTORE_PASSWORD") as? String)
-                val envKeyPass = System.getenv("HEADUNIT_KEY_PASSWORD") ?: (project.findProperty("HEADUNIT_KEY_PASSWORD") as? String)
-                if (envStorePass != null) storePassword = envStorePass
-                if (envKeyPass != null) keyPassword = envKeyPass
-            }
         }
     }
 
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
-                "proguard-project.txt"
-            )
-
-            val relConfig = signingConfigs.getByName("release")
-            if (relConfig.storeFile != null && relConfig.storeFile!!.exists()) {
-                signingConfig = relConfig
-            }
-        }
-
         getByName("debug") {
-            applicationIdSuffix = ".bydhudtest"
-            versionNameSuffix = "-hud-test"
-        }
-    }
-
-    packaging {
-        resources {
-            excludes += "META-INF/DEPENDENCIES"
-            excludes += "META-INF/LICENSE"
-            excludes += "META-INF/LICENSE.txt"
-            excludes += "META-INF/license.txt"
-            excludes += "META-INF/NOTICE"
-            excludes += "META-INF/NOTICE.txt"
-            excludes += "META-INF/notice.txt"
-            excludes += "META-INF/ASL2.0"
-            excludes += "META-INF/*.kotlin_module"
+            buildConfigField("String", "APPLICATION_ID", "\"$carlinkApplicationId$carlinkDebugSuffix\"")
         }
     }
 
     lint {
         abortOnError = false
         disable += "PackagedPrivateKey"
+        targetSdk = 36
+    }
+
+    testOptions {
+        targetSdk = 36
+        unitTests.isIncludeAndroidResources = true
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        (this as KotlinJvmOptions).let {
-            it.jvmTarget = "1.8"
-        }
-    }
-
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                var outputFileName = "${variant.applicationId}_${variant.versionName}_debug.apk"
-                if(variant.buildType.name == "release") {
-                    outputFileName = "${variant.applicationId}_${variant.versionName}.apk"
-                    output.outputFileName = outputFileName
-                }
-                output.outputFileName = outputFileName
-            }
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }
 
+// CarLink ships the github distribution only (the playstore flavor never compiled:
+// VpnControl.kt lives solely in src/github).
+androidComponents {
+    beforeVariants(selector().withFlavor("distribution" to "playstore")) { it.enable = false }
+}
+
 dependencies {
-    // Conscrypt (Flavor specific: 2.6.1 for Playstore 16KB alignment; 2.5.3 for Github minSdk 16)
-    "playstoreImplementation"("org.conscrypt:conscrypt-android:2.6.1")
-    "githubImplementation"("org.conscrypt:conscrypt-android:2.5.3")
+    // Conscrypt 2.6.1 is 16 KB page aligned; CarLink's minSdk 25 no longer needs 2.5.3.
+    implementation("org.conscrypt:conscrypt-android:2.6.1")
 
     implementation("com.google.protobuf:protobuf-java:3.25.1")
     implementation("androidx.activity:activity-ktx:1.8.2")
@@ -227,18 +143,15 @@ dependencies {
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     // ViewModel and LiveData
     implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
-    kapt("androidx.lifecycle:lifecycle-compiler:2.6.2")
 
     // KTX
     implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
-    implementation(project(":contract"))
+    api(project(":androidauto-contract"))
 
     // Multidex
     implementation("androidx.multidex:multidex:2.0.1")
@@ -252,7 +165,6 @@ dependencies {
 
     // Glide for image/GIF loading (custom loading screen)
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    kapt("com.github.bumptech.glide:compiler:4.16.0")
 
     // ZXing for QR Code generation
     implementation("com.google.zxing:core:3.5.3")

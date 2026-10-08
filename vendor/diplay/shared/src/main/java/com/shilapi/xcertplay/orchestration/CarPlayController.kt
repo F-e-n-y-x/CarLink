@@ -601,6 +601,7 @@ class CarPlayController(
         BydNavigationOutputs.endNow()
         com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
         BydNavigationOutputs.clearClusterStreamControl(::applyClusterUi)
+        CarPlayStatusBus.publish(null) // CarLink
         closeReceivers()
         availabilityPollGeneration.incrementAndGet()
         wirelessGeneration.incrementAndGet()
@@ -2594,6 +2595,7 @@ class CarPlayController(
                 connectionDiagnostic("stage=${status.javaClass.simpleName}")
                 uiListener?.onDebugLog(status.debugLogMessage())
                 uiStatusReporter?.invoke(status)
+                CarPlayStatusBus.publish(status) // CarLink
             }
         }
     }

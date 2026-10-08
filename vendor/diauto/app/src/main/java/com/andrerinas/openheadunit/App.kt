@@ -18,7 +18,7 @@ import com.andrerinas.openheadunit.utils.Settings
 import android.os.SystemClock
 import java.io.File
 
-class App : Application() {
+open class App : Application() {
 
     private val component: AppComponent by lazy {
         AppComponent(this)
@@ -32,6 +32,10 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // CarLink: the Android Auto engine runs in its own process; other processes of the
+        // merged APK must not start its logging, theme, root helper or broadcast receiver.
+        if (!initializesAndroidAutoEngine()) return
 
 
 
@@ -100,6 +104,9 @@ class App : Application() {
         // Register the main broadcast receiver safely for Android 14+ using ContextCompat
         ContextCompat.registerReceiver(this, AapBroadcastReceiver(), AapBroadcastReceiver.filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
+
+    /** CarLink: overridden by the merged APK's Application to scope engine startup. */
+    protected open fun initializesAndroidAutoEngine(): Boolean = true
 
     private fun isUserUnlocked(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

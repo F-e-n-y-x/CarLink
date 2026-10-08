@@ -29,6 +29,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.app.BootCompleteReceiver
 import com.andrerinas.openheadunit.app.WifiAutoStartReceiver
 import com.andrerinas.openheadunit.main.MainActivity
@@ -2717,7 +2718,7 @@ class AapService : Service(), UsbReceiver.Listener {
                 addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             } to 100
         } else {
-            Intent(this, MainActivity::class.java).apply {
+            Intent(this, HostIntegration.homeActivity).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             } to 101
         }
@@ -2797,7 +2798,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
     private fun launchDirectly() {
         try {
-            val launchIntent = Intent(this, MainActivity::class.java).apply {
+            val launchIntent = Intent(this, HostIntegration.homeActivity).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "Boot auto-start")
             }
@@ -2810,7 +2811,7 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     private fun launchViaOverlayTrampoline(): Boolean {
-        val launchIntent = Intent(this, MainActivity::class.java).apply {
+        val launchIntent = Intent(this, HostIntegration.homeActivity).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "Boot auto-start")
         }
@@ -2847,7 +2848,7 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     private fun launchViaFullScreenIntent() {
-        val launchIntent = Intent(this, MainActivity::class.java).apply {
+        val launchIntent = Intent(this, HostIntegration.homeActivity).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "Boot auto-start")
         }
@@ -2937,7 +2938,7 @@ class AapService : Service(), UsbReceiver.Listener {
             else R.string.boot_loop_paused_generic
         )
 
-        val launchIntent = Intent(this, MainActivity::class.java).apply {
+        val launchIntent = Intent(this, HostIntegration.homeActivity).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "Boot-loop guard")
         }
