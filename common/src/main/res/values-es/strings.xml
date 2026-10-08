@@ -617,6 +617,8 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="settings_car_bluetooth_audio">Audio de CarPlay por el Bluetooth del coche (experimental)</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay no ofrece audio de CarPlay al iPhone, así que la música, la navegación y las llamadas deberían ir por la conexión Bluetooth del iPhone con el coche. Mantén el iPhone emparejado con el coche y elige Bluetooth como fuente de audio del coche. Si el sonido sale por el iPhone, desactiva esta opción. Reconecta CarPlay.</string>
     <string name="call_echo_cancellation">Cancelación de eco en llamadas (experimental)</string>
     <string name="call_echo_cancellation_description">Intenta reducir el eco de los altavoces que recibe la otra persona en llamadas de CarPlay. El resultado depende del equipo del coche. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="call_voice_filter">Voces más claras en llamadas (experimental)</string>
