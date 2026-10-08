@@ -13,6 +13,8 @@
     <string name="wifi_direct_channel_summary">Canal preferido: %1$s</string>
     <string name="wifi_direct_channel_choice">Canal %1$d · %2$s</string>
     <string name="wifi_direct_channel_description">Auto elige un canal por ti. Los canales manuales dependen de lo que admita tu coche. Los cambios se aplican en la próxima conexión Wi-Fi Direct.</string>
+    <string name="settings_wifi_direct_auto_band">Auto · %1$s</string>
+    <string name="settings_wifi_direct_band_note">Auto · 5 GHz y Auto · 2.4 GHz mantienen Wi-Fi Direct en esa banda y dejan que el coche elija el canal. Si el coche no puede usar esa banda, la conexión se detiene con un mensaje en lugar de cambiar de banda.</string>
     <string name="built_in_car_hotspot">Punto de acceso integrado del coche</string>
     <string name="hotspot_hint_manual">Punto de acceso integrado · Mantén activos el punto de acceso, el Bluetooth y el Wi‑Fi del iPhone.</string>
     <string name="hotspot_hint_local">Abre la configuración de conexión para guardar los datos del punto de acceso integrado.</string>
@@ -615,6 +617,8 @@
     <string name="side_panel_full_screen">⤢ Pantalla completa</string>
     <string name="main_buffered_audio">Música con búfer (experimental)</string>
     <string name="main_buffered_audio_description">Las apps compatibles, como Apple Music, envían hasta unos dos minutos de música por adelantado, así que los cortes breves del Wi-Fi no se oyen. Las demás apps siguen igual. Reconecta CarPlay.</string>
+    <string name="settings_car_bluetooth_audio">Audio de CarPlay por el Bluetooth del coche (experimental)</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay no ofrece audio de CarPlay al iPhone, así que la música, la navegación y las llamadas deberían ir por la conexión Bluetooth del iPhone con el coche. Mantén el iPhone emparejado con el coche y elige Bluetooth como fuente de audio del coche. Si el sonido sale por el iPhone, desactiva esta opción. Reconecta CarPlay.</string>
     <string name="call_echo_cancellation">Cancelación de eco en llamadas (experimental)</string>
     <string name="call_echo_cancellation_description">Intenta reducir el eco de los altavoces que recibe la otra persona en llamadas de CarPlay. El resultado depende del equipo del coche. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="call_voice_filter">Voces más claras en llamadas (experimental)</string>

@@ -14,6 +14,8 @@
     <string name="wifi_direct_channel_summary">Preferred channel: %1$s</string>
     <string name="wifi_direct_channel_choice">Channel %1$d · %2$s</string>
     <string name="wifi_direct_channel_description">Auto chooses a channel for you. Manual channels depend on what your car supports. Changes apply to the next Wi-Fi Direct connection.</string>
+    <string name="settings_wifi_direct_auto_band">Auto · %1$s</string>
+    <string name="settings_wifi_direct_band_note">Auto · 5 GHz and Auto · 2.4 GHz keep Wi-Fi Direct in that band and let the car choose the channel. If the car cannot use that band, the connection stops with a message instead of switching band.</string>
     <string name="hotspot_hint_manual">Built-in car hotspot · Keep the car hotspot, Bluetooth and your iPhone’s Wi-Fi on.</string>
     <string name="hotspot_hint_local">Open Connection setup to save your built-in car hotspot details.</string>
     <string name="hotspot_hint_p2p">Wi-Fi Direct · Keep the car’s Wi-Fi switch, Bluetooth and your iPhone’s Wi-Fi on.</string>
@@ -712,6 +714,8 @@
     <string name="side_panel_full_screen">⤢ Full screen</string>
     <string name="main_buffered_audio">Buffered music (experimental)</string>
     <string name="main_buffered_audio_description">Apps that support it, such as Apple Music, send up to about two minutes of music ahead, so short Wi-Fi gaps are not heard. Other apps keep the normal stream. Reconnects CarPlay.</string>
+    <string name="settings_car_bluetooth_audio">CarPlay audio over the car\'s Bluetooth (experimental)</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay offers the iPhone no CarPlay audio, so music, navigation and calls should go over the iPhone\'s Bluetooth connection with the car. Keep the iPhone paired with the car and choose Bluetooth as the car\'s audio source. If the sound plays on the iPhone instead, turn this off. Reconnects CarPlay.</string>
     <string name="call_echo_cancellation">Call echo cancellation (experimental)</string>
     <string name="call_echo_cancellation_description">Tries to reduce speaker echo sent to the other person during CarPlay calls. Results depend on the head unit. Applies at the next CarPlay connection.</string>
     <string name="call_voice_filter">Clearer call voices (experimental)</string>
