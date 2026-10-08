@@ -2,7 +2,6 @@ package com.shilapi.xcertplay.media
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioFocusRequest
 import android.media.AudioFormat as AndroidAudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
@@ -21,6 +20,7 @@ import com.shilapi.xcertplay.airplay.MediaSink
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
 import com.shilapi.xcertplay.airplay.VideoCodec
 import com.shilapi.xcertplay.airplay.toHexString
+import com.shilapi.xcertplay.compat.AudioFocusRequestCompat
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
@@ -46,7 +46,7 @@ internal class AudioFocusCoordinator(
 
     private val manager = context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val active = LinkedHashMap<AudioTrack, Entry>()
-    private var request: AudioFocusRequest? = null
+    private var request: AudioFocusRequestCompat? = null
     private var requestedChannel: AudioChannel? = null
     private var mediaVolume = FULL_VOLUME
     private var closed = false
@@ -109,12 +109,12 @@ internal class AudioFocusCoordinator(
             request = null
             requestedChannel = null
             mediaVolume = FULL_VOLUME
-            abandoned?.let { manager?.abandonAudioFocusRequest(it) }
+            manager?.let { abandoned?.abandon(it) }
             return
         }
         if (request != null && requestedChannel == primary.channel) return
         focusGeneration += 1
-        request?.let { manager?.abandonAudioFocusRequest(it) }
+        manager?.let { request?.abandon(it) }
         val gain = when (primary.channel) {
             AudioChannel.MEDIA -> AudioManager.AUDIOFOCUS_GAIN
             AudioChannel.PHONE -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
@@ -122,13 +122,10 @@ internal class AudioFocusCoordinator(
             AudioChannel.NAVIGATION -> return
         }
         currentListener = listenerFor(focusGeneration)
-        val next = AudioFocusRequest.Builder(gain)
-            .setAudioAttributes(primary.attributes)
-            .setOnAudioFocusChangeListener(currentListener, Handler(Looper.getMainLooper()))
-            .build()
+        val next = AudioFocusRequestCompat(gain, primary.attributes, currentListener, Handler(Looper.getMainLooper()))
         request = next
         requestedChannel = primary.channel
-        val result = manager?.requestAudioFocus(next)
+        val result = manager?.let(next::request)
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) setMediaVolume(FULL_VOLUME)
         val line = "Audio: focus requested channel=${primary.channel} gain=$gain granted=$result activeTracks=${active.size}"
         Log.i(TAG, line)
@@ -186,6 +183,10 @@ class AndroidMediaSink(
     private val onAudioDiagnostic: (String) -> Unit = {},
     /** True while any music ("media") audio stream is running; called from media threads. */
     private val onMediaAudioChanged: (Boolean) -> Unit = {},
+    /** Opt-in call echo cancellation, replacing a controllable platform canceller while available. */
+    private val callEchoCancellation: Boolean = false,
+    /** Cut the bass that head units add when they play a call as music. */
+    private val callVoiceFilter: Boolean = false,
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -193,6 +194,8 @@ class AndroidMediaSink(
      */
     private val videoPacingDelayMillis: Int = 0,
 ) : MediaSink {
+    // Each downlink publishes its own reference; a mic must match that stream and sample rate.
+    private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
     private val appContext = context?.applicationContext
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
@@ -475,7 +478,10 @@ class AndroidMediaSink(
     }
 
     override fun onAudioStopped(id: AudioStreamId) {
-        audioRenderers.remove(id)?.close()
+        synchronized(this) {
+            audioRenderers.remove(id)?.close()
+            callEchoReferences.remove(id)
+        }
         updateMediaAudio(id, false)
     }
 
@@ -492,7 +498,10 @@ class AndroidMediaSink(
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
             if (config.audioType == "telephony") enterCommunicationMode(id)
-            val uplink = microphoneUplinks.computeIfAbsent(id) { MicrophoneUplink(config, onAudioDiagnostic) }
+            val uplink = microphoneUplinks.computeIfAbsent(id) {
+                MicrophoneUplink(config, onAudioDiagnostic,
+                    if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
+            }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
                 restoreAudioMode(id)
@@ -561,6 +570,7 @@ class AndroidMediaSink(
         audioFocusCoordinator.close()
         audioRenderers.values.forEach(AudioRenderer::close)
         audioRenderers.clear()
+        callEchoReferences.clear()
         val hadMedia = synchronized(mediaAudioTypes) { mediaAudioTypes.isNotEmpty().also { mediaAudioTypes.clear() } }
         if (hadMedia) onMediaAudioChanged(false)
         try {
@@ -601,6 +611,13 @@ class AndroidMediaSink(
         val existing = audioRenderers[id]
         if (existing?.format == format) return existing
         existing?.close()
+        // A replacement owns a fresh ring: the old worker can still finish a blocking write.
+        val echoReference = if (callEchoCancellation && format.audioType == TELEPHONY_AUDIO_TYPE && format.sampleRate > 0) {
+            EchoReference(format.sampleRate).also { callEchoReferences[id] = it }
+        } else {
+            callEchoReferences.remove(id)
+            null
+        }
         return AudioRenderer(
             format,
             advancedAudioChannelMapping,
@@ -611,7 +628,13 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
+            echoReference,
+            callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also { audioRenderers[id] = it }
+    }
+
+    private companion object {
+        const val TELEPHONY_AUDIO_TYPE = "telephony"
     }
 }
 
@@ -1211,8 +1234,14 @@ private class AudioRenderer(
     private val navigationStreamType: Int,
     private val mediaBufferMillis: Int,
     private val report: (String) -> Unit,
+    /** Receives the played call audio so the call microphone can cancel its echo. */
+    private val echoReference: EchoReference? = null,
+    voiceFilter: Boolean = false,
 ) : Closeable {
     private data class AudioPacket(val rtp: ByteArray, val sample: Int)
+
+    private val pcmChannels = if (format.channels >= 2) 2 else 1
+    private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
 
     private var trackAttributes: AudioAttributes? = null
     private var mappedChannel: AudioChannel? = null
@@ -1563,7 +1592,12 @@ private class AudioRenderer(
     private fun usageFor(channel: AudioChannel): Int = when (channel) {
         AudioChannel.MEDIA -> AudioAttributes.USAGE_MEDIA
         AudioChannel.PHONE -> AudioAttributes.USAGE_VOICE_COMMUNICATION
-        AudioChannel.ASSISTANT -> AudioAttributes.USAGE_ASSISTANT
+        // Android 7.x has no assistant usage and would record the track as an unknown usage.
+        AudioChannel.ASSISTANT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            AudioAttributes.USAGE_ASSISTANT
+        } else {
+            AudioAttributes.USAGE_MEDIA
+        }
         AudioChannel.NAVIGATION -> AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE
     }
 
@@ -1739,6 +1773,7 @@ private class AudioRenderer(
                 "audio first PCM type=${format.payloadType} bytes=$length",
             )
         }
+        voiceFilter?.process(data, offset, length)
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true
@@ -1776,6 +1811,14 @@ private class AudioRenderer(
                     startPlayback(track)
                     Log.i(TAG, "audio playback started type=${format.payloadType}")
                 }
+            }
+            echoReference?.let { reference ->
+                val pending = if (playbackStarted) {
+                    totalWrittenFrames - (track.playbackHeadPosition.toLong() and 0xffffffffL)
+                } else {
+                    null
+                }
+                reference.append(data, offset + written - count, count, pcmChannels, pending, System.nanoTime())
             }
         }
     }

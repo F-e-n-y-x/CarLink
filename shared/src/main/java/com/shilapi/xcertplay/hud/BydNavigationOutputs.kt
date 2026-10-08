@@ -129,6 +129,9 @@ object BydNavigationOutputs {
     /** The CarPlay call setting changed; applies at once. */
     fun carPlayCallsChanged(enabled: Boolean) = BydCarPlayCall.settingChanged(enabled)
 
+    /** A CarPlay session became active; ready the call card so calls show without the watcher's start delay. */
+    fun carPlaySessionStarted() = BydCarPlayCall.sessionStarted()
+
     /** The iPhone's current call, for the steering wheel's call keys. */
     fun carPlayCall(): CarPlayCallCard? = BydCarPlayCall.current()
 

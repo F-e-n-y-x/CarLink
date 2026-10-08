@@ -114,7 +114,6 @@
     <string name="app_permissions">Дозволи застосунку</string>
     <string name="app_settings">Налаштування застосунку</string>
     <string name="apply_and_reconnect">Застосувати й перепідключитися</string>
-    <string name="apply_reconnects_carplay_for_size_resolution_music_buffer">Налаштування, що потребують нового підключення, перепідключають CarPlay під час застосування. Інші зміни діятимуть після наступного підключення.</string>
     <string name="audio">Аудіо</string>
     <string name="audio_routing">Спрямування аудіо</string>
     <string name="auto">Авто</string>
@@ -141,7 +140,7 @@
     <string name="carplay_control_running">Керування CarPlay працює</string>
     <string name="carplay_control_window_ended">Вікно керування CarPlay завершилося</string>
     <string name="carplay_icon">Значок CarPlay</string>
-    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборці · експериментально</string>
+    <string name="carplay_map_on_instrument_cluster_experimental">Карта CarPlay на приборці (експериментально)</string>
     <string name="carplay_service_already_running">Служба CarPlay уже працює</string>
     <string name="carplay_session_already_running">Сеанс CarPlay уже триває</string>
     <string name="carplay_session_ended_reconnecting">Сеанс CarPlay завершився; повторне підключення</string>
@@ -193,7 +192,6 @@
     <string name="disconnect">Відключити</string>
     <string name="discovering_iphone">Пошук iPhone</string>
     <string name="display_and_performance">Екран і продуктивність</string>
-    <string name="display_video">Екран і відео</string>
     <string name="done">Готово</string>
     <string name="drag_to_move_pinch_to_zoom">Перетягніть, щоб перемістити; зведіть або розведіть пальці, щоб змінити масштаб</string>
     <string name="draw_outside_safe_area">Показувати поза безпечною областю</string>
@@ -233,7 +231,6 @@
     <string name="i2c_device">Пристрій I2C</string>
     <string name="i2c_device_path_contains_u_0000">Шлях пристрою I2C містить U+0000</string>
     <string name="i2c_device_path_is_required">Укажіть шлях пристрою I2C</string>
-    <string name="identity_appearance">Ідентичність і вигляд</string>
     <string name="image_is_not_ready">Зображення ще не готове</string>
     <string name="in_carplay_swipe_down_with_three_fingers_to_open_diplay_se">У CarPlay проведіть трьома пальцями вниз, щоб відкрити налаштування DiPlay.</string>
     <string name="instrument_contrast">Контрастність приборки</string>
@@ -363,7 +360,6 @@
     <string name="starting">Запуск</string>
     <string name="starting_airplay_service">Запуск служби AirPlay</string>
     <string name="starting_wireless_hotspot">Запуск бездротової точки доступу</string>
-    <string name="startup">Запуск</string>
     <string name="still_waiting_for_usage_access_check_that_the_command_ran">Доступ до даних використання ще не надано. Перевірте, чи команда успішно виконалася для цього автомобіля, і спробуйте знову.</string>
     <string name="tap_a_number_to_test_14_driver_speaker_on_byd">Торкніться числа для перевірки. 14 = динамік водія в BYD.</string>
     <string name="the_head_unit_couldn_t_start_carplay_wi_fi_check_wi_fi_and">Головний пристрій не зміг запустити Wi-Fi CarPlay. Перевірте Wi-Fi й закрийте інші застосунки проєкції. Повторна спроба…</string>
@@ -396,7 +392,6 @@
     <string name="wi_fi_p2p_5_ghz">Wi-Fi P2P (5 ГГц)</string>
     <string name="wi_fi_session">Сеанс Wi-Fi</string>
     <string name="widest_width">Найбільша ширина</string>
-    <string name="window">Вікно</string>
     <string name="wireless_carplay">БЕЗДРОТОВИЙ CARPLAY</string>
     <string name="wireless_carplay_2">Бездротовий CarPlay</string>
     <string name="wireless_carplay_active">Бездротовий CarPlay активний</string>
@@ -409,7 +404,6 @@
     <string name="wpa2_wpa3_password_must_be_8_63_characters">Пароль WPA2/WPA3 має містити від 8 до 63 символів</string>
     <string name="wpa3">WPA3</string>
     <string name="wpa3_transition">Перехідний режим WPA3</string>
-    <string name="your_drive_your_way">Ваша поїздка, ваші правила.</string>
     <string name="your_iphone_isn_t_available_unlock_it_and_check_bluetooth">iPhone недоступний. Розблокуйте його й перевірте Bluetooth.</string>
     <string name="your_maps_music_and_conversations_carplay_right_here_on_yo">Ваші карти, музика й розмови.\nCarPlay прямо на екрані автомобіля.</string>
     <string name="your_phone_your_drive">ВАШ ТЕЛЕФОН. ВАША ПОЇЗДКА.</string>
@@ -633,6 +627,10 @@
     <string name="side_panel_full_screen">⤢ На весь екран</string>
     <string name="main_buffered_audio">Буферизована музика (експериментально)</string>
     <string name="main_buffered_audio_description">Застосунки, які це підтримують (наприклад, Apple Music), надсилають музику приблизно на дві хвилини наперед, тож короткі провали Wi-Fi не чути. Інші застосунки працюють як раніше. Перепідключає CarPlay.</string>
+    <string name="call_echo_cancellation">Придушення луни у дзвінках (експериментально)</string>
+    <string name="call_echo_cancellation_description">Намагається зменшити луну динаміків, яку чує співрозмовник під час дзвінків CarPlay. Результат залежить від головного пристрою. Застосовується під час наступного підключення CarPlay.</string>
+    <string name="call_voice_filter">Чіткіші голоси у дзвінках (експериментально)</string>
+    <string name="call_voice_filter_description">Зменшує баси у дзвінках CarPlay. Може змінити звучання голосів. Застосовується під час наступного підключення CarPlay.</string>
     <string name="smooth_video">Плавне відео (експериментально)</string>
     <string name="smooth_video_description">Показує кожен кадр головного екрана CarPlay за часом, який позначив на ньому iPhone, плюс невеликий запас, а не одразу після декодування. Запас підлаштовується сам, щоб більшість кадрів встигала декодуватися; кадри, що все одно не готові до свого часу, показуються одразу. Гортання може стати рівнішим, але відгук на дотик запізнюється. Налаштування картинки не застосовуються. Перепідключає CarPlay.</string>
     <string name="car_button_in_carplay">Кнопка автомобіля в CarPlay</string>
@@ -642,4 +640,7 @@
     <string name="car_button_description">CarPlay показує цей значок і назву у списку застосунків. Натисніть його, щоб повернутися на екран автомобіля. Зміни застосуються під час наступного підключення CarPlay.</string>
     <string name="car_button_saved_next_connection">Збережено. CarPlay покаже новий значок і назву під час наступного підключення.</string>
     <string name="this_head_unit_has_no_image_picker">На цьому головному пристрої немає вибору зображень.</string>
+    <string name="settings_interface_size">Розмір інтерфейсу</string>
+    <string name="settings_interface_size_auto">Автоматично</string>
+    <string name="settings_interface_size_hint">Розмір тексту й елементів керування на екранах DiPlay. В автоматичному режимі вони збільшуються на великих екранах із низькою щільністю. CarPlay не змінюється.</string>
 </resources>

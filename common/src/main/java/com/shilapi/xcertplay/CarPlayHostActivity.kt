@@ -53,6 +53,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -1683,22 +1684,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.location)),
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(36) },
-        )
-        content.addView(
-            buildLocationReportingSection(),
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(12) },
-        )
-
-        content.addView(
-            settingsCategoryHeader(getString(R.string.startup)),
+            settingsCategoryHeader(getString(R.string.automatic_connection)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1713,6 +1699,21 @@ class CarPlayHostActivity : ComponentActivity() {
                 autoStartOnBoot = checked
                 appendLog("Boot auto-start ${if (checked) "enabled" else "disabled"}")
             },
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(12) },
+        )
+
+        content.addView(
+            settingsCategoryHeader(getString(R.string.settings_navigation)),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(36) },
+        )
+        content.addView(
+            buildLocationReportingSection(),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1748,7 +1749,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.identity_appearance)),
+            settingsCategoryHeader(getString(R.string.settings_vehicle)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1783,7 +1784,7 @@ class CarPlayHostActivity : ComponentActivity() {
             ).apply { topMargin = dp(26) },
         )
         content.addView(
-            settingsCategoryHeader(getString(R.string.display_video)),
+            settingsCategoryHeader(getString(R.string.settings_display)),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1919,13 +1920,6 @@ class CarPlayHostActivity : ComponentActivity() {
             ).apply { topMargin = dp(30) },
         )
 
-        content.addView(
-            settingsCategoryHeader(getString(R.string.window)),
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(40) },
-        )
         content.addView(
             buildFullscreenSection(),
             LinearLayout.LayoutParams(
@@ -2576,6 +2570,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     launchCarButtonImagePicker(
                         openDocument = { imageDocumentPicker.launch(arrayOf("image/*")) },
                         getContent = { imagePicker.launch("image/*") },
+                        documentPickerIsSystem = documentPickerIsSystem(),
                     ).onFailure {
                         externalActivityInProgress = false
                         appendLog("No image picker: ${it.javaClass.simpleName}")
@@ -3498,11 +3493,29 @@ class CarPlayHostActivity : ComponentActivity() {
         // the plain canvas and one area for it.
         val inSplitScreen = isMultiWindowActive()
         val dock = CarPlayDock.load(this).also { sessionDock = it }
+        // The whole screen and CarPlay's full window in each orientation: the system bars take their
+        // place in both, so a remembered split window is sized against the window of its orientation.
+        val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+        val screenLong = maxOf(screen.widthPixels, screen.heightPixels)
+        val screenShort = minOf(screen.widthPixels, screen.heightPixels)
+        val (landscapeWindow, portraitWindow) = CarPlayRotation.turnedWindows(size.width, size.height,
+            screen.widthPixels, screen.heightPixels)
+        // Before DiPlay has seen a split window, expect one from the screen, its bars and Android's divider.
+        val statusBar = systemDimension("status_bar_height")
+        val navigationBar = systemDimension("navigation_bar_height")
+        val divider = (systemDimension("docked_stack_divider_thickness") -
+            2 * systemDimension("docked_stack_divider_insets")).coerceAtLeast(0)
         val splitWindow: (Boolean) -> Pair<Float, Float>? = { portrait ->
-            if (SplitScreenSettings.enabled(this) && !inSplitScreen) SplitScreenSettings.window(this, portrait) else null
+            if (SplitScreenSettings.enabled(this) && !inSplitScreen) {
+                val window = if (portrait) portraitWindow else landscapeWindow
+                val expected = SplitScreenSettings.expectedWindow(portrait, screenLong, screenShort,
+                    statusBar, navigationBar, divider)
+                SplitScreenSettings.ofWindow(SplitScreenSettings.window(this, portrait, expected),
+                    if (portrait) screenShort else screenLong, if (portrait) screenLong else screenShort,
+                    window.first, window.second)
+            } else null
         }
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
-        val shortPixels = minOf(display.widthPixels, display.heightPixels)
         val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
             CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), hevcEnabled, hevcSoftwareDecoderEnabled)
         } else null
@@ -3520,16 +3533,20 @@ class CarPlayHostActivity : ComponentActivity() {
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
                 sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
         } else {
-            val areaShort = (shortPixels.toLong() * square / longPixels).toInt() and 1.inv()
+            val (landscape, portrait) = CarPlayRotation.turningAreas(square, size.width, size.height,
+                screen.widthPixels, screen.heightPixels)
             CarPlayViewAreas.build(square, square, listOf(
-                CarPlayViewAreas.Screen(square, areaShort, portrait = false),
-                CarPlayViewAreas.Screen(areaShort, square, portrait = true),
+                CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
+                CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
             ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
                 rightHandDrive = rightHandDrive)
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
         if (square != null) appendLog("Turning screen: square canvas ${square}x$square, areas ${viewAreas?.areas}")
+        if (SplitScreenSettings.enabled(this) && !inSplitScreen) {
+            appendLog("Split screen expected from status bar=$statusBar navigation bar=$navigationBar divider=$divider px")
+        }
         val requestSummary = "Display request selected=${CarPlayUiScale.label(requestedPercent)} percent=$requestedPercent " +
             "surface=${size.width}x${size.height} resolution=${requestedResolutionPercent}% " +
             "base=${requestedResolutionDisplay.widthPixels}x${requestedResolutionDisplay.heightPixels} " +
@@ -3750,6 +3767,8 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
             },
             onMediaAudioChanged = CarPlayMediaKeys::onMediaAudioChanged,
+            callEchoCancellation = AirPlayPersistence.loadCallEchoCancellation(this),
+            callVoiceFilter = AirPlayPersistence.loadCallVoiceFilter(this),
             // Only a SurfaceView honours release timestamps; smooth video always selects one.
             videoPacingDelayMillis = if (smoothVideo) smoothVideoDelayMillis(fps) else 0,
         )
@@ -4057,7 +4076,7 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         try {
-            startForegroundService(Intent(this, DiPlaySessionService::class.java))
+            ContextCompat.startForegroundService(this, Intent(this, DiPlaySessionService::class.java))
             next.start()
         } catch (error: RuntimeException) {
             appendLog("Connection could not start: ${error.javaClass.simpleName}")
@@ -4214,11 +4233,15 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         val turned = previous != null && !split && (previous.height > previous.width) != portrait
         if (turned && !areas.turnsWithScreen) return false
-        val longWindow = maxOf(display.windowWidth, display.windowHeight).toFloat()
-        val shortWindow = minOf(display.windowWidth, display.windowHeight).toFloat()
-        if (split && longWindow > 0 && shortWindow > 0) {
-            if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / shortWindow, size.height / longWindow)
-            else SplitScreenSettings.saveWindow(this, false, size.width / longWindow, size.height / shortWindow)
+        if (split) {
+            // Against the whole screen, which the system bars (shown in BYD's split screen) do not change.
+            val screen = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            val screenLong = maxOf(screen.widthPixels, screen.heightPixels).toFloat()
+            val screenShort = minOf(screen.widthPixels, screen.heightPixels).toFloat()
+            if (screenLong > 0 && screenShort > 0) {
+                if (portrait) SplitScreenSettings.saveWindow(this, true, size.width / screenShort, size.height / screenLong)
+                else SplitScreenSettings.saveWindow(this, false, size.width / screenLong, size.height / screenShort)
+            }
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
         if (sidePanelShown) resetSidePanel() // a turn or the split screen ends the side panel
@@ -4645,6 +4668,12 @@ class CarPlayHostActivity : ComponentActivity() {
         } else {
             "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
         })
+    }
+
+    /** A dimension of the platform's own resources in pixels, or 0 when this build has none by [name]. */
+    private fun systemDimension(name: String): Int {
+        val id = resources.getIdentifier(name, "dimen", "android")
+        return if (id != 0) runCatching { resources.getDimensionPixelSize(id) }.getOrDefault(0) else 0
     }
 
     private fun attachSurface(surface: Surface) {
