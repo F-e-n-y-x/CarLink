@@ -190,6 +190,45 @@ class AdaptiveSettingsUiTest {
         assertSame(DiPlayPalette.DARK, ReflectionHelpers.getField<DiPlayPalette>(screen, "palette"))
     }
 
+    @Config(qualifiers = "en-w700dp-h400dp-land")
+    @Test fun fullSettingsOverrideIsIndependentAndCanBeDisabledFromDisplay() {
+        val screen = openSettings()
+        assertFalse(ReflectionHelpers.callInstanceMethod<Boolean>(screen, "isExpandedSettingsLayout"))
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.DISPLAY)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        fun settingsSwitch() = descendants(screen.window.decorView).filterIsInstance<Switch>()
+            .single { it.contentDescription == screen.getString(R.string.settings_force_full_settings) }
+
+        settingsSwitch().isChecked = true
+        assertTrue(SettingsLayoutPreferences.forceFull(context))
+        assertTrue(ReflectionHelpers.callInstanceMethod<Boolean>(screen, "isExpandedSettingsLayout"))
+
+        settingsSwitch().isChecked = false
+        assertFalse(SettingsLayoutPreferences.forceFull(context))
+        assertFalse(ReflectionHelpers.callInstanceMethod<Boolean>(screen, "isExpandedSettingsLayout"))
+    }
+
+    @Config(qualifiers = "en-w400dp-h700dp-port")
+    @Test fun portraitIgnoresFullSettingsOverrideWithoutClearingPreference() {
+        SettingsLayoutPreferences.saveForceFull(context, true)
+        val screen = openSettings()
+        assertFalse(SettingsLayoutPreferences.isActive(screen))
+        assertFalse(ReflectionHelpers.callInstanceMethod<Boolean>(screen, "isExpandedSettingsLayout"))
+        assertTrue(SettingsLayoutPreferences.forceFull(context))
+    }
+
+    @Test
+    @Config(qualifiers = "en-w1000dp-h700dp-land")
+    fun naturallyExpandedSettingsHideTheForceLayoutSwitch() {
+        SettingsLayoutPreferences.saveForceFull(context, true)
+        val screen = openSettings()
+        ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.DISPLAY)
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+        assertFalse(descendants(screen.window.decorView).filterIsInstance<Switch>().any {
+            it.contentDescription == screen.getString(R.string.settings_force_full_settings)
+        })
+    }
+
     @Test fun readinessAsksForAnIphoneBeforeWirelessCanConnect() {
         AirPlayPersistence.saveWirelessEnabled(context, true)
         val screen = openSettings()
@@ -469,7 +508,7 @@ class AdaptiveSettingsUiTest {
         val advanced = visibleIn(R.string.settings_advanced)
 
         assertTrue(audio.any { it.startsWith(text(R.string.music_buffer)) })
-        listOf(R.string.main_buffered_audio, R.string.efficient_video, R.string.smooth_video, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.contrib_audio_home_toggle_audio_focus).forEach {
+        listOf(R.string.main_buffered_audio, R.string.settings_car_bluetooth_audio, R.string.efficient_video, R.string.smooth_video, R.string.call_echo_cancellation, R.string.call_voice_filter, R.string.contrib_audio_home_toggle_audio_focus).forEach {
             assertTrue(text(it), text(it) in advanced)
             assertFalse(text(it), text(it) in audio)
         }
@@ -542,16 +581,75 @@ class AdaptiveSettingsUiTest {
     @Config(sdk = [29], qualifiers = "en-w1000dp-h700dp")
     fun expandedRailUsesAnIconForEveryDestination() {
         val screen = openSettings()
-
-        val destinations = descendants(screen.window.decorView).filter { destination ->
+        val rail = ReflectionHelpers.getField<ScrollView>(screen, "settingsRailScroll")
+        val destinations = descendants(rail).filter { destination ->
             destination.contentDescription?.startsWith("Open ") == true &&
                 destination.contentDescription?.endsWith(" settings") == true &&
                 descendants(destination).filterIsInstance<ImageView>().count() == 1
         }.toList()
-        assertEquals(8, destinations.size)
+        assertEquals(10, destinations.size)
         destinations.forEach { destination ->
             assertEquals(1, descendants(destination).filterIsInstance<ImageView>().count())
         }
+    }
+
+    @Test fun compactOverviewCategoriesHaveIcons() {
+        val screen = openSettings()
+        listOf(SettingsCategory.CONNECTION, SettingsCategory.DISPLAY, SettingsCategory.AUDIO,
+            SettingsCategory.NAVIGATION, SettingsCategory.VEHICLE).forEach { category ->
+            val title = ReflectionHelpers.callInstanceMethod<String>(screen, "settingsCategoryTitle",
+                ReflectionHelpers.ClassParameter(SettingsCategory::class.java, category))
+            val destination = descendants(screen.window.decorView).single {
+                it.contentDescription == screen.getString(R.string.settings_open_category, title)
+            }
+            assertEquals(1, descendants(destination).filterIsInstance<ImageView>().count())
+        }
+    }
+
+    @Test fun compactLanguageAndAboutDestinationsWork() {
+        verifyLanguageAndAboutDestinations()
+    }
+
+    @Test
+    @Config(qualifiers = "en-w1000dp-h700dp")
+    fun expandedLanguageAndAboutDestinationsWork() {
+        verifyLanguageAndAboutDestinations()
+    }
+
+    private fun verifyLanguageAndAboutDestinations() {
+        val screen = openSettings()
+        val categoryScroll = ReflectionHelpers.getField<ScrollView>(screen, "rootScroll")
+        val languageDestination = descendants(categoryScroll).single {
+            it.contentDescription == screen.getString(R.string.settings_open_category,
+                screen.getString(R.string.language_section_title))
+        }
+        assertTrue(isInside(languageDestination, categoryScroll))
+        run {
+            val titles = descendants(categoryScroll).mapNotNull { it.contentDescription?.toString() }.toList()
+            val vehicle = screen.getString(R.string.settings_open_category, screen.getString(R.string.settings_vehicle))
+            val language = screen.getString(R.string.settings_open_category, screen.getString(R.string.language_section_title))
+            val about = screen.getString(R.string.settings_open_category, screen.getString(R.string.about))
+            assertEquals(titles.indexOf(vehicle) + 1, titles.indexOf(language))
+            assertEquals(titles.indexOf(language) + 1, titles.indexOf(about))
+        }
+        fun open(title: Int) {
+            descendants(screen.window.decorView).first {
+                it.contentDescription == screen.getString(R.string.settings_open_category, screen.getString(title))
+            }.performClick()
+        }
+        assertFalse(texts(screen).any { it.text == screen.getString(R.string.language_app_language) })
+        open(R.string.language_section_title)
+        assertEquals(SettingsCategory.LANGUAGE, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.language_hint) })
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.settings_language_summary) })
+        ReflectionHelpers.callInstanceMethod<Unit>(screen, "openSettingsCategory",
+            ReflectionHelpers.ClassParameter(SettingsCategory::class.java, SettingsCategory.OVERVIEW))
+        open(R.string.about)
+        assertEquals("about", ReflectionHelpers.getField<String>(screen, "page"))
+        assertTrue(texts(screen).any { it.text == screen.getString(R.string.carplay_at_home_in_your_car) })
+        screen.onBackPressedDispatcher.onBackPressed()
+        assertEquals("settings", ReflectionHelpers.getField<String>(screen, "page"))
+        assertEquals(SettingsCategory.OVERVIEW, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
     }
 
     @Test
