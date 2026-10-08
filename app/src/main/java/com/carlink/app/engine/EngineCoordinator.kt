@@ -68,9 +68,14 @@ class EngineCoordinator private constructor(context: Context) {
         val engine = kind.engine ?: return
         if (!preferences.autoConnectUsb) return
         val current = _state.value
-        // A phone switching to Android Auto re-enumerates as a new USB device mid-attempt; that
-        // second attach must still reach the engine, so only a connected session is left alone.
-        if (current.stage == LinkStage.CONNECTED && current.engine == engine && current.transport == Transport.USB) return
+        // Both engines re-enumerate the phone on purpose while they connect: CarPlay switches the
+        // iPhone into its CarPlay configuration and Android Auto into accessory mode, and each
+        // switch is a new attach. The engine already running over USB handles those itself;
+        // restarting it here would abort every attempt and never connect.
+        if (current.isActive && current.engine == engine && current.transport == Transport.USB) {
+            Log.i(TAG, "USB re-attach during $engine session; left to the engine")
+            return
+        }
         connect(engine, Transport.USB, address = null, phoneName = phoneName, usbAttach = attachIntent)
     }
 

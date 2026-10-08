@@ -50,7 +50,14 @@ data class ConnectionPrefs(
 )
 
 /** The wireless path the next session would use, for Home's Network chip. */
-data class NetworkPreview(val path: WirelessPath, val ssid: String?)
+data class NetworkPreview(
+    val path: WirelessPath,
+    val ssid: String?,
+    /** The car's current Wi-Fi when exactly one is joined and its name is readable. */
+    val joinedSsid: String? = null,
+    /** True when [joinedSsid] is not the saved "same Wi-Fi" network yet. */
+    val canOfferSameWifi: Boolean = false,
+)
 
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
 data class HomeState(
@@ -191,8 +198,17 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         val engine = home.value.defaultPhone?.kind?.engine ?: Engine.CARPLAY
         val wifi = EngineSettingsApplier.wifiEnvironment(app)
         val path = WirelessPathSelector.select(engine, _unified.value, wifi)
-        _network.value = NetworkPreview(path, if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null)
+        _network.value = NetworkPreview(
+            path = path,
+            ssid = if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null,
+            joinedSsid = wifi.joinedSsid,
+            canOfferSameWifi = wifi.joinedSsid != null && wifi.joinedSsid != _unified.value.homeWifi.ssid,
+        )
     }
+
+    /** Remembers the car's current Wi-Fi so wireless CarPlay can use it (Same Wi-Fi). */
+    fun saveSameWifi(ssid: String, password: String) =
+        updateSettings { it.copy(homeWifi = com.carlink.app.settings.WifiDetails(ssid, password)) }
 
     /** Saves a change to the unified settings and writes it into both engines. */
     fun updateSettings(change: (UnifiedSettings) -> UnifiedSettings) {

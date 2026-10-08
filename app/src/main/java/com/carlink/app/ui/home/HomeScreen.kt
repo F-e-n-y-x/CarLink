@@ -120,6 +120,7 @@ internal interface HomeActions {
     fun disconnect() {}
     fun returnToProjection() {}
     fun resumeAutoConnect() {}
+    fun saveSameWifi(ssid: String, password: String) {}
     fun navigate(route: Route) {}
 }
 
@@ -141,6 +142,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun disconnect() = vm.disconnect()
             override fun returnToProjection() = vm.returnToProjection()
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
+            override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
             override fun navigate(route: Route) = navigate(route)
         }
     }
@@ -373,6 +375,13 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             HomeMode.FAILED -> FailureActions(link, actions)
         }
     }
+    val offerSameWifi = ui.network?.canOfferSameWifi == true && ui.home.phones.any { it.kind == PhoneKind.IPHONE } &&
+        (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY ||
+            (mode == HomeMode.FAILED && link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING))
+    if (offerSameWifi) {
+        Spacer(Modifier.height(dimens.gutter * 1.5f))
+        SameWifiCard(ui.network!!.joinedSsid!!, actions)
+    }
     if (ui.connection.autoConnectPaused && (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY)) {
         Spacer(Modifier.height(dimens.targetGap))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -528,4 +537,45 @@ private fun networkIcon(path: WirelessPath?): Int = when (path) {
     WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
     WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
     null -> R.drawable.carlink_ic_usb
+}
+
+/** One-time offer to use the car's current Wi-Fi for wireless CarPlay (the fastest path). */
+@Composable
+private fun SameWifiCard(ssid: String, actions: HomeActions) {
+    val dimens = CarLinkTokens.dimens
+    val scheme = MaterialTheme.colorScheme
+    var password by rememberSaveable { mutableStateOf("") }
+    var reveal by rememberSaveable { mutableStateOf(false) }
+    val valid = password.isEmpty() || password.length in 8..63
+    GlassCard(Modifier.widthIn(max = 760.dp).fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(painterResource(R.drawable.carlink_ic_wifi), null, Modifier.size(dimens.iconSecondary), tint = CarLinkTokens.colors.success)
+                Spacer(Modifier.width(dimens.targetGap))
+                Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid)), style = MaterialTheme.typography.titleMedium)
+            }
+            Text(stringResource(R.string.carlink_home_same_wifi_body), style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant)
+            androidx.compose.material3.OutlinedTextField(
+                value = password, onValueChange = { password = it }, singleLine = true,
+                label = { Text(stringResource(R.string.carlink_home_same_wifi_password)) },
+                isError = !valid,
+                supportingText = if (!valid) {{ Text(stringResource(R.string.carlink_home_same_wifi_invalid)) }} else null,
+                visualTransformation = if (reveal) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
+                trailingIcon = {
+                    androidx.compose.material3.IconButton(onClick = { reveal = !reveal }) {
+                        Icon(painterResource(R.drawable.carlink_ic_lock), stringResource(R.string.carlink_home_same_wifi_show))
+                    }
+                },
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            IonButton(stringResource(R.string.carlink_home_same_wifi_save), {
+                if (valid) actions.saveSameWifi(ssid, password)
+            }, icon = R.drawable.carlink_ic_check)
+        }
+    }
 }
