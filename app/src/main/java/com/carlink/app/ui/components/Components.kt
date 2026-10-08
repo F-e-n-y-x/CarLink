@@ -55,6 +55,21 @@ import com.carlink.app.ui.theme.UiProfile
 
 /** Shared building blocks (DESIGN_SPEC §6.7). Every size comes from CarLinkTokens.dimens. */
 
+/**
+ * The CarLink brand mark, cropped tight to the glyph. Two tinted layers so it follows the active
+ * day/night palette: the body in [MaterialTheme.colorScheme.onSurface], the node in the Ion accent.
+ * The geometry comes from design/logo/tools/build_logo.py (swap the two drawables to change logo).
+ */
+@Composable
+fun CarLinkMark(modifier: Modifier = Modifier) {
+    Box(modifier) {
+        Icon(painterResource(R.drawable.carlink_logo_mark_primary), null, Modifier.matchParentSize(),
+            tint = MaterialTheme.colorScheme.onSurface)
+        Icon(painterResource(R.drawable.carlink_logo_mark_accent), null, Modifier.matchParentSize(),
+            tint = MaterialTheme.colorScheme.primary)
+    }
+}
+
 @Composable
 fun CarIcon(@DrawableRes icon: Int, contentDescription: String?, modifier: Modifier = Modifier,
             size: Dp = CarLinkTokens.dimens.iconSecondary, tint: Color = MaterialTheme.colorScheme.onSurface) {
@@ -143,8 +158,7 @@ fun CarTopBar(
         if (onBack != null) IconAction(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_back), onBack)
         if (showBrand) {
             Spacer(Modifier.width(8.dp))
-            Icon(painterResource(R.drawable.carlink_icon_foreground), null, Modifier.size(dimens.iconPrimary + 8.dp),
-                tint = Color.Unspecified)
+            CarLinkMark(Modifier.size(dimens.iconSecondary))
         }
         Spacer(Modifier.width(8.dp))
         Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,

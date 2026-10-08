@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -20,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,9 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -47,6 +43,7 @@ import com.carlink.app.R
 import com.carlink.app.diagnostics.AppInfo
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.components.CarIcon
+import com.carlink.app.ui.components.CarLinkMark
 import com.carlink.app.ui.components.CarSheet
 import com.carlink.app.ui.components.CarTopBar
 import com.carlink.app.ui.components.CreditItem
@@ -173,14 +170,7 @@ private fun AboutContent(facts: AboutFacts, onBack: () -> Unit) {
 private fun Identity(centered: Boolean) {
     val dimens = CarLinkTokens.dimens
     val markSize = dimens.avatarHero * 1.25f
-    // The mark is an adaptive-icon foreground: the glyph fills about half of its canvas, so draw
-    // the canvas at twice the mark size and let the empty margin overflow.
-    val mark = @Composable {
-        Box(Modifier.size(markSize), contentAlignment = Alignment.Center) {
-            Icon(painterResource(R.drawable.carlink_icon_foreground), null, Modifier.requiredSize(markSize * 2),
-                tint = Color.Unspecified)
-        }
-    }
+    val mark = @Composable { CarLinkMark(Modifier.size(markSize)) }
     if (centered) {
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
             mark()

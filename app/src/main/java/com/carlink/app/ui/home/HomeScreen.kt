@@ -71,6 +71,7 @@ import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.HomeState
 import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.Route
+import com.carlink.app.ui.components.CarLinkMark
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.formatElapsed
 import com.carlink.app.ui.components.isolate
@@ -223,8 +224,9 @@ private fun TopBar(onSettings: () -> Unit) {
         Modifier.fillMaxWidth().height(dimens.topBar).padding(horizontal = dimens.screenMargin - 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painterResource(R.drawable.carlink_icon_foreground), null, Modifier.size(dimens.iconPrimary + 8.dp), tint = Color.Unspecified)
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(8.dp))
+        CarLinkMark(Modifier.size(dimens.iconSecondary))
+        Spacer(Modifier.width(14.dp))
         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { heading() })
         Spacer(Modifier.weight(1f))

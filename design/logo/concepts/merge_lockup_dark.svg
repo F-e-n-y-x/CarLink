@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 86" width="600" height="172">
+<defs><style>@font-face{font-family:"CarLinkInter";src:url("../../../app/src/main/res/font/carlink_inter_semibold.ttf") format("truetype");font-weight:600;}</style></defs>
+  <g transform="translate(-11,-11)">
+  <path d="M31.20,37.80 H34.80 C46.50,37.80 46.50,54.00 56.40,54.00" fill="none" stroke="#EEF2F6" stroke-width="9.0" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M31.20,70.20 H34.80 C46.50,70.20 46.50,54.00 56.40,54.00" fill="none" stroke="#EEF2F6" stroke-width="9.0" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M56.40,54.00 H62.70" fill="none" stroke="#5BD6F0" stroke-width="9.0" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M70.35,54.00 A5.85,5.85 0 1 1 82.05,54.00 A5.85,5.85 0 1 1 70.35,54.00 Z" fill="#5BD6F0"/>
+  </g>
+  <text x="88" y="56" font-family="CarLinkInter, Inter, sans-serif" font-weight="600" font-size="40" letter-spacing="-0.6" fill="#EEF2F6">CarLink</text>
+</svg>
