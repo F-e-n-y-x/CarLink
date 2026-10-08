@@ -52,7 +52,8 @@ automatic connection until the driver connects again.
 - **Minimal engine changes.** Every edit inside `vendor/` is a small, documented hook:
   [docs/VENDOR_CHANGES.md](docs/VENDOR_CHANGES.md). Engines update with `git subtree pull`.
 
-The UI follows [design/DESIGN_SPEC.md](design/DESIGN_SPEC.md). It has two size profiles, chosen
+CarLink ships in **English only**, including the engines' screens (`androidResources.localeFilters`
+in `app/build.gradle.kts`). The UI follows [design/DESIGN_SPEC.md](design/DESIGN_SPEC.md). It has two size profiles, chosen
 automatically and selectable in Settings › Display › Layout:
 **Car display** (76dp touch targets, 24sp minimum text, sized from the panel's pixels because
 head-unit DPI reports are unreliable) and **Phone or tablet** (Material 3 sizes). Layouts adapt

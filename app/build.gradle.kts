@@ -69,6 +69,12 @@ android {
         buildConfig = true
     }
 
+    // CarLink ships in English only, including the engines' own screens (they carry 20
+    // translations). Remove this filter and extend xml/locales_config.xml to bring them back.
+    androidResources {
+        localeFilters += listOf("en")
+    }
+
     packaging {
         resources {
             excludes += listOf(
