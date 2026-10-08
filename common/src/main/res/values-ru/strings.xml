@@ -263,6 +263,10 @@
     <string name="one_time_setup_on_this_car">Разовая настройка для этого автомобиля</string>
     <string name="open">Открыть</string>
     <string name="open_after_the_car_starts">Открывать после запуска автомобиля</string>
+    <string name="boot_start_repair">Автозапуск · ремонт ADB (экспериментально)</string>
+    <string name="boot_start_repair_desc">Некоторые прошивки блокируют сторонние приёмники загрузки. Эта операция через собственный ADB автомобиля исключает DiPlay из фоновых ограничений, чтобы широковещание загрузки доходило. Один раз; повторите после обновления прошивки.</string>
+    <string name="boot_start_repair_result">Ремонт автозапуска:%1$s</string>
+    <string name="boot_start_repair_running">Применяются исключения автозапуска…</string>
     <string name="open_bluetooth">Открыть Bluetooth</string>
     <string name="open_car_hotspot_settings">Открыть настройки точки доступа</string>
     <string name="open_car_settings">Открыть настройки автомобиля</string>
