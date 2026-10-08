@@ -57,6 +57,7 @@ internal object UpdateClient {
                     }
                 }
             }
+            if (total != null && written != total) throw IOException("Incomplete download from $url")
         } catch (failure: Throwable) {
             destination.delete()
             throw failure

@@ -1747,8 +1747,9 @@ class DiPlayActivity : ComponentActivity() {
         val generation = ++updateGeneration
         render()
         Thread({
+            // Each attempt owns its files, including across activity recreation.
+            val directory = File(cacheDir, "update/${java.util.UUID.randomUUID()}")
             val outcome = runCatching {
-                val directory = File(cacheDir, "update").apply { deleteRecursively() }
                 val checksumsFile = File(directory, UpdateCatalog.CHECKSUMS_FILE)
                 UpdateClient.download(release.checksumsUrl, checksumsFile) { _, _ -> }
                 val apkFile = File(directory, release.apkName)
@@ -1767,9 +1768,12 @@ class DiPlayActivity : ComponentActivity() {
                     throw IOException("Checksum mismatch for ${release.apkName}")
                 }
                 apkFile
-            }
+            }.onFailure { directory.deleteRecursively() }
             runOnUiThread {
-                if (generation != updateGeneration || isFinishing || isDestroyed) return@runOnUiThread
+                if (generation != updateGeneration || isFinishing || isDestroyed) {
+                    directory.deleteRecursively()
+                    return@runOnUiThread
+                }
                 outcome.fold(
                     { file ->
                         updateFile = file
@@ -1789,7 +1793,8 @@ class DiPlayActivity : ComponentActivity() {
 
     private fun installUpdate() {
         val file = updateFile ?: return
-        if (packageManager.canRequestPackageInstalls()) {
+        // Before Oreo, the installer handles the global unknown-sources setting.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || packageManager.canRequestPackageInstalls()) {
             installApk(file)
         } else {
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
