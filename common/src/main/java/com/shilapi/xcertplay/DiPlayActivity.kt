@@ -1612,6 +1612,51 @@ class DiPlayActivity : ComponentActivity() {
                                 render()
                                 markReconnectNeeded()
                             }, matchButton(10, 56))
+                            choice(card, getString(R.string.cluster_small_window_marker), listOf(
+                                getString(R.string.cluster_small_window_off),
+                                getString(R.string.cluster_small_window_on),
+                                getString(R.string.cluster_small_window_auto),
+                            ), AirPlayPersistence.loadClusterSmallWindowMode(this)) {
+                                AirPlayPersistence.saveClusterSmallWindowMode(this, it)
+                                render()
+                                markReconnectNeeded()
+                            }
+                            card.addView(label(getString(R.string.cluster_small_window_marker_description), 14, MUTED).apply {
+                                setPadding(0, dp(8), 0, dp(6))
+                            })
+                            if (AirPlayPersistence.loadClusterSmallWindowMode(this) == 2) {
+                                val adbMode = BydNavigationOutputs.clusterNaviMode()
+                                if (adbMode != null) {
+                                    card.addView(label(getString(R.string.cluster_small_window_adb_ok, adbMode.label), 14, MUTED)
+                                        .apply { setPadding(0, dp(4), 0, dp(4)) })
+                                } else if (!DiLink51ClusterMonitor.hasAccess(this)) {
+                                    card.addView(label(getString(R.string.cluster_small_window_access_missing), 14, WARNING)
+                                        .apply { setPadding(0, dp(4), 0, dp(4)) })
+                                    card.addView(button(getString(R.string.cluster_small_window_grant_access), false) {
+                                        runCatching {
+                                            openSystem(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                                        }
+                                    }, matchButton(6, 56))
+                                } else {
+                                    card.addView(label(getString(R.string.cluster_small_window_access_ok), 14, MUTED)
+                                        .apply { setPadding(0, dp(4), 0, dp(4)) })
+                                }
+                            }
+                            if (AirPlayPersistence.loadClusterSmallWindowMode(this) != 0) {
+                                val acrossSmall = CarPlayClusterDisplay.horizontalSteps.toList()
+                                choice(card, getString(R.string.cluster_small_window_horizontal),
+                                    acrossSmall.map { markerStepLabel(it, getString(R.string.marker_left), getString(R.string.marker_right)) },
+                                    acrossSmall.indexOf(AirPlayPersistence.loadClusterSmallWindowMarkerHorizontalStep(this)).coerceAtLeast(0)) {
+                                    AirPlayPersistence.saveClusterSmallWindowMarkerHorizontalStep(this, acrossSmall[it])
+                                }
+                                val upDownSmall = CarPlayClusterDisplay.verticalSteps.toList()
+                                choice(card, getString(R.string.cluster_small_window_vertical),
+                                    upDownSmall.map { markerStepLabel(it, getString(R.string.marker_up), getString(R.string.marker_down)) },
+                                    upDownSmall.indexOf(AirPlayPersistence.loadClusterSmallWindowMarkerVerticalStep(this)).coerceAtLeast(0)) {
+                                    AirPlayPersistence.saveClusterSmallWindowMarkerVerticalStep(this, upDownSmall[it])
+                                }
+                                card.addView(label(getString(R.string.cluster_small_window_hint), 14, MUTED).apply { setPadding(0, dp(10), 0, 0) })
+                            }
                         }
                         if (!diLink4) {
                             toggle(card, getString(R.string.dashboard_map_only_in_small_and_full_navi),

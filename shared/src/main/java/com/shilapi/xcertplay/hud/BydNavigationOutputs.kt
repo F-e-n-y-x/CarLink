@@ -39,6 +39,14 @@ object BydNavigationOutputs {
     /** The running CarPlay session: told every second whether the cluster currently shows the map. */
     fun setClusterStreamControl(control: (Boolean) -> Unit) { BydClusterMapPause.streamControl = control }
 
+    /** Latest ADB wheel-menu navi mode, or null when it cannot be read. */
+    fun clusterNaviMode(): BydClusterNaviMode? = BydClusterMapPause.lastNaviMode
+
+    /** Called whenever the ADB navi mode changes. Pass null to stop following. */
+    fun setClusterNaviModeListener(listener: ((BydClusterNaviMode?) -> Unit)?) {
+        BydClusterMapPause.onNaviMode = listener
+    }
+
     fun clearClusterStreamControl(control: (Boolean) -> Unit) {
         if (BydClusterMapPause.streamControl == control) BydClusterMapPause.streamControl = null
     }
