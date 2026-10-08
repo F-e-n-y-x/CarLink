@@ -4,6 +4,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbRequest
+import android.os.Build
 import java.lang.reflect.InvocationTargetException
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
@@ -67,7 +68,7 @@ class UsbReadQueueCompatibilityTest {
         val frame = ByteArray(32_740) { (it * 31).toByte() }
         val followingFrame = byteArrayOf(0x33, 0x33, 0, 0, 0, 1, 0x86.toByte(), 0xdd.toByte())
         val block = Ntb16Codec.build(frame, 7)
-        assertEquals(32_769, block.size) // Two 16 KiB reads, then the required short-packet pad.
+        assertEquals(32_769, block.size) // Two 16 KiB reads, then the optional short-packet pad.
         UsbQueueReplay.transfer = block + Ntb16Codec.build(followingFrame, 8)
         UsbQueueReplay.outcomes.addAll(listOf(false, true))
         val diagnostics = mutableListOf<String>()
@@ -223,6 +224,9 @@ class CompatibilityUsbRequestShadow {
     @Implementation(minSdk = 26) fun queue(buffer: ByteBuffer): Boolean {
         UsbQueueReplay.sizes.add(buffer.remaining())
         UsbQueueReplay.buffers.add(buffer)
+        if (Build.VERSION.SDK_INT in 26..27) {
+            require(buffer.remaining() <= 16_384) { "number of remaining bytes is out of range [0, 16384]" }
+        }
         UsbQueueReplay.queueException?.let { throw it }
         UsbQueueReplay.onQueue?.invoke(request)
         val queued = UsbQueueReplay.outcomes.pollFirst() ?: true
