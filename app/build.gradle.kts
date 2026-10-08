@@ -8,6 +8,41 @@ plugins {
 val localAuthenticationAssets = providers.environmentVariable("DIPLAY_AUTH_ASSETS_DIR")
     .orNull?.let { file(it).canonicalFile }
 
+// About shows the CarPlay engine's own version. DiPlay keeps it in its (unbuilt) :mobile module,
+// so read it from there; a subtree pull then updates About without a CarLink change.
+val diPlayVersionName: String = Regex("""versionName\s*=\s*"([^"]+)"""")
+    .find(rootProject.file("vendor/diplay/mobile/build.gradle.kts").readText())
+    ?.groupValues?.get(1) ?: "unknown"
+
+/**
+ * Copies the GPL-3.0 and AGPL-3.0 texts from the vendored engines into the APK's assets, so
+ * About > Open-source licenses can show the full terms CarLink is distributed under.
+ */
+abstract class CarLinkLicenseAssets : DefaultTask() {
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val agplText: RegularFileProperty
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val gplText: RegularFileProperty
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = outputDir.get().asFile.resolve("carlink-licenses")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        agplText.get().asFile.copyTo(dir.resolve("AGPL-3.0.txt"))
+        gplText.get().asFile.copyTo(dir.resolve("GPL-3.0.txt"))
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val licenses = tasks.register<CarLinkLicenseAssets>("${variant.name}CarLinkLicenseAssets") {
+            agplText.set(rootProject.file("vendor/diauto/LICENSE"))
+            gplText.set(rootProject.file("vendor/diplay/LICENSE"))
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(licenses, CarLinkLicenseAssets::outputDir)
+    }
+}
+
 android {
     namespace = "com.carlink.app"
     compileSdk {
@@ -20,6 +55,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "DIPLAY_VERSION_NAME", "\"$diPlayVersionName\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The Android Auto engine library ships two distribution flavors; CarLink uses github.
@@ -132,6 +168,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // QR codes for source and project links in About (same version the Android Auto engine uses).
+    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation(libs.junit)
     testImplementation(platform(libs.androidx.compose.bom))

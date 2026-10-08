@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diagnostics (DESIGN_SPEC §6.5) and About (§6.6). -->
+<resources>
+
+    <!-- ===== Diagnostics ===== -->
+    <string name="carlink_diag_title">Diagnostics</string>
+    <string name="carlink_diag_live_session">Live session</string>
+    <string name="carlink_diag_checks">Checks</string>
+    <string name="carlink_diag_engine_logs">Engine logs</string>
+    <string name="carlink_diag_engine_logs_subtitle">Each engine keeps its own detailed log and report.</string>
+
+    <!-- Live session -->
+    <string name="carlink_diag_idle_title">No phone connected</string>
+    <string name="carlink_diag_idle_body">Details appear here while a phone connects or is connected.</string>
+    <string name="carlink_diag_phone_unnamed">Phone</string>
+    <string name="carlink_diag_stage_idle">Not connected</string>
+    <string name="carlink_diag_stage_waiting">Waiting for the phone</string>
+    <string name="carlink_diag_stage_connecting">Connecting</string>
+    <string name="carlink_diag_stage_connected">Connected</string>
+    <string name="carlink_diag_stage_failed">Couldn\'t connect</string>
+    <string name="carlink_diag_tile_engine">Engine</string>
+    <string name="carlink_diag_tile_transport">Connection</string>
+    <string name="carlink_diag_tile_stage">Stage</string>
+    <string name="carlink_diag_tile_step">Step</string>
+    <string name="carlink_diag_tile_connected_for">Connected for</string>
+    <string name="carlink_diag_tile_attempt">Time so far</string>
+    <string name="carlink_diag_tile_last_error">Last error</string>
+    <string name="carlink_diag_tile_current_step">Current step</string>
+    <!-- Step on the connection timeline, e.g. "2 of 5". -->
+    <string name="carlink_diag_step_value">%1$d of %2$d</string>
+    <string name="carlink_diag_not_known">Not known yet</string>
+
+    <!-- Checks -->
+    <string name="carlink_diag_checks_all_passed">Everything looks ready</string>
+    <plurals name="carlink_diag_checks_problems">
+        <item quantity="one">%d thing needs attention</item>
+        <item quantity="other">%d things need attention</item>
+    </plurals>
+    <string name="carlink_diag_checking">Checking…</string>
+    <string name="carlink_diag_status_pass">Passed</string>
+    <string name="carlink_diag_status_warn">Warning</string>
+    <string name="carlink_diag_status_fail">Problem</string>
+    <string name="carlink_diag_status_info">Note</string>
+    <string name="carlink_diag_fix">Fix</string>
+    <string name="carlink_diag_resume">Resume</string>
+    <!-- Screen-reader label of a check's Fix button, e.g. "Fix: Bluetooth is off". -->
+    <string name="carlink_diag_fix_a11y">Fix: %1$s</string>
+
+    <string name="carlink_diag_auth_ok">CarPlay authentication files present</string>
+    <string name="carlink_diag_auth_bundled">Included in this build.</string>
+    <string name="carlink_diag_auth_installed">Installed by an earlier build. This build doesn\'t include them.</string>
+    <string name="carlink_diag_auth_missing">CarPlay authentication files are missing from this build</string>
+    <string name="carlink_diag_auth_missing_note">CarPlay can\'t connect until the build includes them. Android Auto is not affected.</string>
+    <string name="carlink_diag_auth_external">CarPlay uses external authentication</string>
+    <!-- %1$s is one of the carlink_diag_auth_target_* strings. -->
+    <string name="carlink_diag_auth_external_body">CarPlay settings use %1$s, so the built-in files aren\'t needed.</string>
+    <string name="carlink_diag_auth_target_ch341">a USB authentication chip (CH341)</string>
+    <string name="carlink_diag_auth_target_i2c">an I²C authentication chip</string>
+    <string name="carlink_diag_auth_target_remote">a remote authentication server</string>
+
+    <string name="carlink_diag_bt_on">Bluetooth is on</string>
+    <string name="carlink_diag_bt_off">Bluetooth is off</string>
+    <string name="carlink_diag_bt_off_body">Wireless connections and phone detection need Bluetooth.</string>
+    <string name="carlink_diag_bt_absent">This device has no Bluetooth</string>
+    <string name="carlink_diag_bt_absent_body">Connect phones by USB.</string>
+
+    <string name="carlink_diag_bt_perm_ok">Bluetooth permission allowed</string>
+    <string name="carlink_diag_bt_perm_missing">Bluetooth permission not allowed</string>
+    <string name="carlink_diag_bt_perm_body">CarLink needs it to find your phones and start wireless connections.</string>
+
+    <plurals name="carlink_diag_phones_count">
+        <item quantity="one">%d paired phone</item>
+        <item quantity="other">%d paired phones</item>
+    </plurals>
+    <string name="carlink_diag_phones_body">CarLink picks CarPlay or Android Auto for each one.</string>
+    <plurals name="carlink_diag_phones_unknown">
+        <item quantity="one">The type of %d phone isn\'t known yet. Connect it once to identify it.</item>
+        <item quantity="other">The type of %d phones isn\'t known yet. Connect each once to identify it.</item>
+    </plurals>
+    <string name="carlink_diag_phones_none">No paired phones</string>
+    <string name="carlink_diag_phones_none_body">Pair your phone with this device\'s Bluetooth first.</string>
+
+    <string name="carlink_diag_auto_on">Automatic connection is on</string>
+    <string name="carlink_diag_auto_paused">Automatic connection is paused</string>
+    <string name="carlink_diag_auto_paused_body">It pauses when you disconnect. Resume it to connect phones automatically again.</string>
+    <string name="carlink_diag_auto_off">Automatic connection is off</string>
+    <string name="carlink_diag_auto_off_body">You can turn it on in Settings.</string>
+
+    <string name="carlink_diag_location_ok">Location permission allowed</string>
+    <string name="carlink_diag_location_missing">Location permission not allowed</string>
+    <string name="carlink_diag_location_body">Needed for wireless connections and for sharing the car\'s location with the phone.</string>
+
+    <string name="carlink_diag_nearby_ok">Nearby Wi-Fi devices allowed</string>
+    <string name="carlink_diag_nearby_missing">Nearby Wi-Fi devices not allowed</string>
+    <string name="carlink_diag_nearby_body">Wireless connections over Wi-Fi need it.</string>
+
+    <string name="carlink_diag_mic_ok">Microphone allowed</string>
+    <string name="carlink_diag_mic_missing">Microphone not allowed</string>
+    <string name="carlink_diag_mic_body">Calls and voice assistants need it.</string>
+
+    <string name="carlink_diag_notif_ok">Notifications allowed</string>
+    <string name="carlink_diag_notif_missing">Notifications not allowed</string>
+    <string name="carlink_diag_notif_body">CarLink uses a notification to tell you when a phone is ready.</string>
+
+    <string name="carlink_diag_overlay_ok">Display over other apps allowed</string>
+    <string name="carlink_diag_overlay_missing">Display over other apps not allowed</string>
+    <string name="carlink_diag_overlay_body">Lets CarLink open CarPlay or Android Auto when a phone connects in the background.</string>
+
+    <string name="carlink_diag_battery_ok">Battery optimization is off</string>
+    <string name="carlink_diag_battery_on">Battery optimization is on</string>
+    <string name="carlink_diag_battery_body">Android may stop CarLink in the background and miss a phone connecting.</string>
+
+    <string name="carlink_diag_usb_ok">USB host supported</string>
+    <string name="carlink_diag_usb_ok_body">Phones can connect by cable.</string>
+    <string name="carlink_diag_usb_missing">USB host not supported</string>
+    <string name="carlink_diag_usb_missing_body">This device can\'t connect phones by cable. Use a wireless connection.</string>
+
+    <string name="carlink_diag_p2p_ok">Wi-Fi Direct supported</string>
+    <string name="carlink_diag_p2p_missing">Wi-Fi Direct not supported</string>
+    <string name="carlink_diag_p2p_missing_body">Wireless connections need a hotspot instead.</string>
+
+    <string name="carlink_diag_avc_ok">Hardware H.264 decoder</string>
+    <string name="carlink_diag_avc_missing">No hardware H.264 decoder</string>
+    <string name="carlink_diag_avc_missing_body">Projected video may stutter or not start.</string>
+    <string name="carlink_diag_hevc_ok">Hardware HEVC decoder</string>
+    <string name="carlink_diag_hevc_missing">No hardware HEVC decoder</string>
+    <string name="carlink_diag_hevc_missing_body">Optional. H.264 is used instead.</string>
+    <!-- Decoder name and its largest frame size, e.g. "c2.qti.avc.decoder, up to 4096×2176". -->
+    <string name="carlink_diag_decoder_detail">%1$s, up to %2$s</string>
+
+    <!-- Engine logs -->
+    <string name="carlink_diag_carplay_logs">CarPlay diagnostics</string>
+    <string name="carlink_diag_carplay_logs_body">Opens the CarPlay engine\'s settings. Create a diagnostic report under Diagnostics.</string>
+    <string name="carlink_diag_aa_logs">Android Auto diagnostics</string>
+    <string name="carlink_diag_aa_logs_body">Opens the Android Auto engine\'s settings. Save or share a connection report under Diagnostics.</string>
+
+    <!-- ===== About ===== -->
+    <string name="carlink_about_title">About</string>
+    <string name="carlink_about_tagline">CarPlay and Android Auto in one app.</string>
+    <string name="carlink_about_version">Version</string>
+    <!-- Version name and build number, e.g. "0.1.0 (1)". -->
+    <string name="carlink_about_version_value">%1$s (%2$d)</string>
+    <string name="carlink_about_carplay_engine">CarPlay engine</string>
+    <string name="carlink_about_carplay_engine_value">DiPlay %1$s</string>
+    <string name="carlink_about_aa_engine">Android Auto engine</string>
+    <string name="carlink_about_aa_engine_value">DiAuto %1$s</string>
+    <string name="carlink_about_device">This device</string>
+    <!-- Manufacturer and model on line 1, Android version and screen size in pixels on line 2,
+         e.g. "BYD DiLink5" / "Android 10 · 1920×1080 px". -->
+    <string name="carlink_about_device_detail">%1$s %2$s\nAndroid %3$s · %4$s px</string>
+    <string name="carlink_about_licenses">Open-source licenses</string>
+    <string name="carlink_about_licenses_body">CarLink is free software under the GNU AGPL v3.</string>
+    <string name="carlink_about_credits">Credits</string>
+    <string name="carlink_about_credits_body">DiPlay, DiAuto, Open Headunit, headunit and others</string>
+    <string name="carlink_about_source">Source code</string>
+    <string name="carlink_about_source_body">Scan with your phone to get the source of both engines.</string>
+    <string name="carlink_about_qr_carplay">CarPlay engine (DiPlay)</string>
+    <string name="carlink_about_qr_aa">Android Auto engine (DiAuto)</string>
+    <!-- Screen-reader description of a QR code; %1$s is the web address it opens. -->
+    <string name="carlink_about_qr_a11y">QR code for %1$s</string>
+    <string name="carlink_about_legal">Trademarks</string>
+    <string name="carlink_about_trademarks">CarPlay is a trademark of Apple Inc. Android Auto is a trademark of Google LLC. CarLink is not affiliated with or endorsed by Apple or Google.</string>
+    <string name="carlink_about_not_certified">The CarPlay engine (DiPlay) is not an Apple-certified product.</string>
+    <string name="carlink_about_byd">BYD and DiLink belong to their owner. CarLink is not affiliated with or endorsed by BYD.</string>
+    <string name="carlink_about_close">Close</string>
+
+    <!-- Licenses sheet -->
+    <string name="carlink_about_licenses_intro">CarLink combines the DiPlay CarPlay engine (GNU GPL v3) and the DiAuto Android Auto engine (GNU AGPL v3). The combined work is distributed under the GNU Affero General Public License, version 3. You may copy, change and share it under those terms. It comes with no warranty.</string>
+    <string name="carlink_about_licenses_source">The license entitles you to the complete source code. The QR codes on the About page link to the source of both engines.</string>
+    <string name="carlink_about_components">Components</string>
+    <string name="carlink_about_read_agpl">GNU Affero General Public License v3</string>
+    <string name="carlink_about_read_gpl">GNU General Public License v3</string>
+    <string name="carlink_about_read_bydmate">PolyForm Noncommercial License 1.0.0 (BYD HUD icons)</string>
+    <string name="carlink_about_full_texts">Full license texts</string>
+    <string name="carlink_about_text_unavailable">This build doesn\'t include the license text.</string>
+
+    <string name="carlink_about_lic_diplay_name" translatable="false">DiPlay</string>
+    <string name="carlink_about_lic_diplay">GNU GPL v3. A modified version of xcertplay by shilapi (GNU GPL v3).</string>
+    <string name="carlink_about_lic_diauto_name" translatable="false">DiAuto</string>
+    <string name="carlink_about_lic_diauto">GNU AGPL v3. Keeps the Open Headunit and Michael A. Reid copyright notices.</string>
+    <string name="carlink_about_lic_bydmate_name">BYD HUD maneuver icons</string>
+    <string name="carlink_about_lic_bydmate">Copyright AndyShaman (BYDMate, github.com/AndyShaman/BYDMate). PolyForm Noncommercial License 1.0.0. These images are not covered by CarLink\'s license. Upstream describes them as donor assets; their original source is not independently established.</string>
+    <string name="carlink_about_lic_ffmpeg_name" translatable="false">FFmpeg 7.1.1</string>
+    <string name="carlink_about_lic_ffmpeg">GNU LGPL v2.1 or later. Software HEVC decoding on 64-bit ARM.</string>
+    <string name="carlink_about_lic_libusb_name" translatable="false">libusb</string>
+    <string name="carlink_about_lic_libusb">GNU LGPL v2.1 or later.</string>
+    <string name="carlink_about_lic_speex_name" translatable="false">SpeexDSP 1.2.1</string>
+    <string name="carlink_about_lic_speex">BSD-style 3-clause license. Xiph.Org Foundation and contributors.</string>
+    <string name="carlink_about_lic_bc_name" translatable="false">Bouncy Castle</string>
+    <string name="carlink_about_lic_bc">Bouncy Castle license (MIT-style).</string>
+    <string name="carlink_about_lic_protobuf_name" translatable="false">Protocol Buffers</string>
+    <string name="carlink_about_lic_protobuf">BSD 3-clause license.</string>
+    <string name="carlink_about_lic_glide_name" translatable="false">Glide</string>
+    <string name="carlink_about_lic_glide">BSD, part MIT and Apache License 2.0.</string>
+    <string name="carlink_about_lic_slf4j_name" translatable="false">SLF4J</string>
+    <string name="carlink_about_lic_slf4j">MIT license.</string>
+    <string name="carlink_about_lic_apache_name">Apache License 2.0</string>
+    <string name="carlink_about_lic_apache">Material Symbols, AndroidX, Jetpack Compose, Material Components, Kotlin, Conscrypt, ZXing, JmDNS, DexMaker, Shizuku API and libsu.</string>
+    <string name="carlink_about_lic_others">Each library keeps its original notices. The full list of dependencies is in the build files of the source code.</string>
+
+    <!-- Credits sheet -->
+    <string name="carlink_about_credit_diplay">The CarPlay engine, by shihabal3amri. Based on xcertplay by shilapi, which credits LIVI and Showcase for protocol research.</string>
+    <string name="carlink_about_credit_diauto">The Android Auto engine, by shihabal3amri. An independent fork of Open Headunit and its contributors.</string>
+    <string name="carlink_about_credit_openheadunit_name" translatable="false">Open Headunit</string>
+    <string name="carlink_about_credit_openheadunit">Formerly Headunit Revived. © 2025 André Rinas and contributors.</string>
+    <string name="carlink_about_credit_headunit_name" translatable="false">headunit</string>
+    <string name="carlink_about_credit_headunit">The original software head unit for Android Auto. © 2011–2015 Michael A. Reid. GNU AGPL v3.</string>
+    <string name="carlink_about_credit_bydmate_name" translatable="false">BYDMate</string>
+    <string name="carlink_about_credit_bydmate">BYD HUD maneuver icons. Copyright AndyShaman.</string>
+    <string name="carlink_about_credit_symbols_name" translatable="false">Material Symbols</string>
+    <string name="carlink_about_credit_symbols">Icons by Google, Apache License 2.0.</string>
+</resources>
