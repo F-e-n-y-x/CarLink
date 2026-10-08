@@ -152,17 +152,17 @@ fun GlassChip(eyebrow: String, value: String, @DrawableRes icon: Int, modifier: 
     val dimens = CarLinkTokens.dimens
     GlassCard(modifier.defaultMinSize(minHeight = dimens.rowTwoLine), onClick = onClick,
         contentPadding = PaddingValues(horizontal = dimens.gutter, vertical = 16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Eyebrow(eyebrow)
+        // Header (eyebrow + status dot) and value row on fixed lines, so every chip lines up.
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Eyebrow(eyebrow, Modifier.weight(1f))
+                if (status != null) Box(Modifier.size(10.dp).clip(CircleShape).background(status))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(12.dp))
                 Text(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (status != null) {
-                    Spacer(Modifier.width(12.dp))
-                    Box(Modifier.size(12.dp).clip(CircleShape).background(status))
-                }
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -212,7 +212,7 @@ fun GlassButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
  * graphicsLayer rotation. [screen] draws live status on its display; [glow] tints the screen.
  */
 @Composable
-fun HeroPhone(kind: PhoneKind, modifier: Modifier = Modifier, glow: Color = Color.Transparent, tilt: Float = -14f,
+fun HeroPhone(kind: PhoneKind, modifier: Modifier = Modifier, glow: Color = Color.Transparent, tilt: Float = -9f,
               screen: @Composable BoxScope.() -> Unit = {}) {
     val reduceMotion = LocalReduceMotion.current
     val float = if (reduceMotion) 0f else rememberInfiniteTransition(label = "float").animateFloat(
@@ -224,8 +224,8 @@ fun HeroPhone(kind: PhoneKind, modifier: Modifier = Modifier, glow: Color = Colo
             .aspectRatio(PHONE_ASPECT)
             .graphicsLayer {
                 rotationY = tilt
-                rotationX = 4f
-                cameraDistance = 14f * density
+                rotationX = 2f
+                cameraDistance = 18f * density
                 translationY = float * 6.dp.toPx()
             },
     ) {
@@ -262,7 +262,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPhone(kind: Pho
     val inset = w * 0.045f
     val screenSize = Size(w - inset * 2, h - inset * 2)
     val screenRadius = CornerRadius(radius - inset * 0.8f)
-    drawRoundRect(Brush.verticalGradient(listOf(Color(0xFF0D1218), Color(0xFF05070A))), Offset(inset, inset), screenSize, screenRadius)
+    // A quiet "wallpaper" so the display reads as a lit screen, not a black slab.
+    drawRoundRect(Brush.linearGradient(listOf(Color(0xFF14303C), Color(0xFF0A1219), Color(0xFF06080B)),
+        start = Offset(inset, inset), end = Offset(w - inset, h - inset)), Offset(inset, inset), screenSize, screenRadius)
+    drawRoundRect(Brush.radialGradient(listOf(Color(0xFF1E4F63).copy(alpha = 0.55f), Color.Transparent),
+        center = Offset(w * 0.25f, h * 0.2f), radius = w * 0.9f), Offset(inset, inset), screenSize, screenRadius)
     if (glow.alpha > 0f) {
         drawRoundRect(Brush.radialGradient(listOf(glow.copy(alpha = 0.38f), Color.Transparent),
             center = Offset(w / 2, h * 0.62f), radius = w * 0.75f), Offset(inset, inset), screenSize, screenRadius)

@@ -8,6 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -168,16 +170,20 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
                 val areaHeight = maxHeight
                 val landscape = maxWidth > maxHeight && layout.width >= WidthClass.MEDIUM
                 if (landscape) {
-                    Row(Modifier.fillMaxSize().padding(horizontal = dimens.screenMargin)) {
-                        Column(Modifier.weight(0.58f).fillMaxHeight().padding(bottom = dimens.screenMargin)) {
-                            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
-                                HeroText(mode, ui, actions)
-                            }
-                            Spacer(Modifier.height(dimens.gutter))
+                    // Two columns on one grid: copy and chips on the start side, the phone centred on
+                    // the end side, fully inside its column with room for its shadow.
+                    Row(Modifier.fillMaxSize().padding(start = dimens.screenMargin, end = dimens.screenMargin,
+                        bottom = dimens.screenMargin * 0.75f)) {
+                        // Copy, action and chips read as one group, centred against the phone.
+                        Column(Modifier.weight(0.56f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.Center) {
+                            HeroText(mode, ui, actions)
+                            Spacer(Modifier.height(dimens.gutter * 2.5f))
                             StatusChips(mode, ui, onPhones = { phonesOpen = true })
                         }
-                        Box(Modifier.weight(0.42f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                            Hero(mode, ui, Modifier.fillMaxHeight(0.96f).offset(y = areaHeight * 0.06f))
+                        Spacer(Modifier.width(dimens.gutter * 2))
+                        Box(Modifier.weight(0.44f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                            Hero(mode, ui, Modifier.fillMaxHeight(0.86f))
                         }
                     }
                 } else {
@@ -189,8 +195,8 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
                     ) {
                         val showPhone = areaHeight > 560.dp
                         if (showPhone) {
-                            Box(Modifier.fillMaxWidth().height(areaHeight * 0.42f), contentAlignment = Alignment.Center) {
-                                Hero(mode, ui, Modifier.fillMaxHeight())
+                            Box(Modifier.fillMaxWidth().height(areaHeight * 0.4f), contentAlignment = Alignment.Center) {
+                                Hero(mode, ui, Modifier.fillMaxHeight(0.92f))
                             }
                             // Room for the phone's contact shadow.
                             Spacer(Modifier.height(dimens.gutter * 2.5f))
@@ -447,9 +453,7 @@ private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit, stacke
     }
     val gap = CarLinkTokens.dimens.targetGap
     if (stacked) {
-        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-            connection(Modifier.fillMaxWidth()); network(Modifier.fillMaxWidth()); phone(Modifier.fillMaxWidth())
-        }
+        StatusList(ui, onPhones)
     } else {
         // Equal-height chips, as tall as the tallest value.
         Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -465,3 +469,63 @@ private fun pathName(path: WirelessPath?, transport: Transport?): String = strin
     path == WirelessPath.CAR_HOTSPOT -> R.string.carlink_home_path_hotspot
     else -> R.string.carlink_home_path_direct
 })
+
+/** Narrow windows: the three statuses as one glass card with aligned rows instead of three stacked chips. */
+@Composable
+private fun StatusList(ui: HomeUi, onPhones: () -> Unit) {
+    val colors = CarLinkTokens.colors
+    val dimens = CarLinkTokens.dimens
+    val bt = ui.home.bluetooth
+    @Composable
+    fun row(eyebrow: String, value: String, icon: Int, status: Color?, onClick: (() -> Unit)? = null) {
+        Row(Modifier.fillMaxWidth().heightIn(min = dimens.rowOneLine)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = dimens.gutter), verticalAlignment = Alignment.CenterVertically) {
+            Icon(painterResource(icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.width(dimens.gutter))
+            Eyebrow(eyebrow, Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp))
+            // The dot's space is kept on every row so values stay aligned.
+            Spacer(Modifier.width(12.dp))
+            Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(status ?: Color.Transparent))
+        }
+    }
+    GlassCard(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)) {
+        Column {
+            row(stringResource(R.string.carlink_home_chip_connection), stringResource(when (bt) {
+                BluetoothAvailability.READY -> R.string.carlink_home_bt_on
+                BluetoothAvailability.OFF -> R.string.carlink_home_bt_off
+                BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission
+                BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_unsupported
+            }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled,
+                if (bt == BluetoothAvailability.READY) colors.success else colors.warning)
+            androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
+            row(stringResource(R.string.carlink_home_chip_network), networkLabel(ui), networkIcon(ui.network?.path),
+                if (ui.network?.path == WirelessPath.SAME_WIFI) colors.success else null)
+            androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
+            val phones = ui.home.phones
+            row(stringResource(R.string.carlink_home_chip_phone), ui.home.defaultPhone?.name?.let(::isolate)
+                ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
+                else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
+                com.carlink.app.ui.components.phoneIcon(ui.home.defaultPhone?.kind ?: PhoneKind.UNKNOWN),
+                if (ui.home.defaultPhone?.connected == true) colors.success else null, onPhones)
+        }
+    }
+}
+
+@Composable
+private fun networkLabel(ui: HomeUi): String = when (ui.network?.path) {
+    WirelessPath.SAME_WIFI -> ui.network.ssid?.let { stringResource(R.string.carlink_home_net_same_wifi_named, isolate(it)) }
+        ?: stringResource(R.string.carlink_home_net_same_wifi)
+    WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
+    WirelessPath.WIFI_DIRECT -> stringResource(R.string.carlink_home_net_direct)
+    null -> stringResource(R.string.carlink_home_path_usb)
+}
+
+private fun networkIcon(path: WirelessPath?): Int = when (path) {
+    WirelessPath.SAME_WIFI -> R.drawable.carlink_ic_wifi
+    WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
+    WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
+    null -> R.drawable.carlink_ic_usb
+}
