@@ -23,7 +23,7 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) consumeAutoPhone(intent)
+        if (savedInstanceState == null) { consumeAutoPhone(intent); consumeRecovery(intent) }
         setContent {
             val display by vm.display.collectAsStateWithLifecycle()
             val profile = remember(display.uiProfileMode) { UiProfileDetector.detect(this, display.uiProfileMode) }
@@ -48,9 +48,23 @@ class HomeActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         consumeAutoPhone(intent)
+        consumeRecovery(intent)
     }
 
     /** A phone SystemEventReceiver identified; start its engine now that CarLink is in front. */
+    /**
+     * The CarPlay waiting screen's "Reset CarPlay Wi-Fi" opens Home with DiPlay's
+     * page=wireless-recovery: stop the attempt and remove any Wi-Fi Direct group it left, so the
+     * next Connect starts clean.
+     */
+    private fun consumeRecovery(intent: Intent) {
+        if (intent.getStringExtra("page") != "wireless-recovery") return
+        intent.removeExtra("page")
+        EngineCoordinator.get(this).stopAll()
+        val app = applicationContext
+        Thread({ com.carlink.app.engine.WifiDirectReset.removeGroup(app) }, "carlink-wifi-recovery").start()
+    }
+
     private fun consumeAutoPhone(intent: Intent) {
         val kind = intent.getStringExtra(EXTRA_AUTO_PHONE_KIND)
             ?.let { runCatching { PhoneKind.valueOf(it) }.getOrNull() } ?: return
