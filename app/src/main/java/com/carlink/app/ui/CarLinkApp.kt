@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +57,7 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
     // Connecting itself returns Home when the attempt ends.
     LaunchedEffect(link.stage) {
         if ((link.stage == LinkStage.WAITING || link.stage == LinkStage.CONNECTING) &&
-            (route == Route.HOME || route == Route.ONBOARDING && vm.onboardingDone)) {
+            route == Route.HOME) {
             navigate(Route.CONNECTING)
         }
     }
@@ -72,32 +71,35 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
 
     val reduceMotion = LocalReduceMotion.current
     val travel = with(LocalDensity.current) { 48.dp.roundToPx() }
-    Box(
-        Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing),
+    // A Surface (not a plain background) so every screen's text defaults to onBackground.
+    androidx.compose.material3.Surface(
+        Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        AnimatedContent(
-            targetState = route,
-            transitionSpec = {
-                val duration = if (reduceMotion) 0 else CarMotion.LONG
-                // Shared-axis X: deeper screens enter from the end, going back returns from the start.
-                val forward = targetState.ordinal > initialState.ordinal || initialState == Route.HOME
-                val direction = if (forward) 1 else -1
-                (slideInHorizontally(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { direction * travel } +
-                    fadeIn(tween(duration))) togetherWith
-                    (slideOutHorizontally(tween(duration, easing = CarMotion.EmphasizedAccelerate)) { -direction * travel } +
-                        fadeOut(tween(duration / 2)))
-            },
-            label = "route",
-        ) { current ->
-            when (current) {
-                Route.HOME -> HomeScreen(vm, navigate = navigate)
-                Route.CONNECTING -> ConnectingScreen(vm, onBack = back, navigate = navigate)
-                Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate)
-                Route.ONBOARDING -> OnboardingScreen(vm, onDone = { vm.completeOnboarding(); goHome() })
-                Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back)
-                Route.ABOUT -> AboutScreen(vm, onBack = back)
+        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            AnimatedContent(
+                targetState = route,
+                transitionSpec = {
+                    val duration = if (reduceMotion) 0 else CarMotion.LONG
+                    // Shared-axis X: deeper screens enter from the end, going back returns from the start.
+                    val forward = targetState.ordinal > initialState.ordinal || initialState == Route.HOME
+                    val direction = if (forward) 1 else -1
+                    (slideInHorizontally(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { direction * travel } +
+                        fadeIn(tween(duration))) togetherWith
+                        (slideOutHorizontally(tween(duration, easing = CarMotion.EmphasizedAccelerate)) { -direction * travel } +
+                            fadeOut(tween(duration / 2)))
+                },
+                label = "route",
+            ) { current ->
+                when (current) {
+                    Route.HOME -> HomeScreen(vm, navigate = navigate)
+                    Route.CONNECTING -> ConnectingScreen(vm, onBack = back, navigate = navigate)
+                    Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate)
+                    Route.ONBOARDING -> OnboardingScreen(vm, onDone = { vm.completeOnboarding(); goHome() })
+                    Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back)
+                    Route.ABOUT -> AboutScreen(vm, onBack = back)
+                }
             }
         }
     }
