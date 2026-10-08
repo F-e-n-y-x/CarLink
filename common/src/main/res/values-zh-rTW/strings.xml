@@ -12,6 +12,8 @@
     <string name="wifi_direct_channel_summary">首選頻道：%1$s</string>
     <string name="wifi_direct_channel_choice">頻道 %1$d · %2$s</string>
     <string name="wifi_direct_channel_description">自動模式會為您選擇頻道。手動頻道取決於車機的支援情況。變更將在下次 Wi-Fi Direct 連線時生效。</string>
+    <string name="settings_wifi_direct_auto_band">自動 · %1$s</string>
+    <string name="settings_wifi_direct_band_note">「自動 · 5 GHz」和「自動 · 2.4 GHz」會讓 Wi-Fi Direct 維持在該頻段，並由車機選擇頻道。如果車機無法使用該頻段，連線會停止並顯示提示，而不會切換頻段。</string>
     <string name="built_in_car_hotspot">車載熱點</string>
     <string name="wifi_direct">Wi-Fi Direct</string>
     <string name="hotspot_hint_manual">車載熱點 · 保持車載熱點、藍牙和 iPhone 的 Wi-Fi 開啟。</string>
@@ -669,6 +671,8 @@
     <string name="cluster_size_smallest">較小 · 地圖範圍較廣、細節較多</string>
     <string name="main_buffered_audio">緩衝音樂（實驗性）</string>
     <string name="main_buffered_audio_description">支援此功能的應用程式（例如 Apple Music）可預先傳送約兩分鐘的音樂，因此短暫的 Wi-Fi 中斷不會影響播放。其他應用程式仍使用一般串流。變更後會重新連線至 CarPlay。</string>
+    <string name="settings_car_bluetooth_audio">透過車輛藍牙播放 CarPlay 音訊（實驗性）</string>
+    <string name="settings_car_bluetooth_audio_description">DiPlay 不向 iPhone 提供 CarPlay 音訊，因此音樂、導航和通話應透過 iPhone 與車輛的藍牙連線傳輸。請保持 iPhone 與車輛配對，並將車輛音源設為藍牙。如果聲音改從 iPhone 播放，請關閉此選項。變更後會重新連線至 CarPlay。</string>
     <string name="call_echo_cancellation">通話回音消除（實驗性）</string>
     <string name="call_echo_cancellation_description">嘗試減少 CarPlay 通話中傳送給對方的喇叭回音。效果取決於車用主機。下次連線至 CarPlay 時生效。</string>
     <string name="call_voice_filter">更清晰的通話人聲（實驗性）</string>
