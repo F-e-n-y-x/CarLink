@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="da_brand">DiAuto</string>
+    <string name="da_tagline">ВАШ ТЕЛЕФОН. ВАША ДОРОГА.</string>
+    <string name="da_headline">Всё знакомо — даже в дороге.</string>
+    <string name="da_description">Ваши карты, музыка и разговоры.\nAndroid Auto прямо на экране автомобиля.</string>
+    <string name="da_connect">Подключить телефон</string>
+    <string name="da_open">Открыть Android Auto</string>
+    <string name="da_ready">Готово, когда будете готовы</string>
+    <string name="da_connecting">Подключение к телефону…</string>
+    <string name="da_connected">Android Auto подключён</string>
+    <string name="da_hint">Выполните сопряжение телефона в настройках Bluetooth автомобиля, затем нажмите «Подключить телефон». Оставьте Bluetooth и Wi-Fi включёнными.</string>
+    <string name="da_wireless">БЕСПРОВОДНОЙ ANDROID AUTO</string>
+    <string name="da_usb">Подключить по USB</string>
+    <string name="da_usb_hint">Предпочитаете кабель? Подключите телефон.</string>
+    <string name="da_settings">Настройки</string>
+    <string name="da_settings_hint">Настройте всё под себя.</string>
+    <string name="da_close">Главный экран автомобиля</string>
+    <string name="da_pair">Сопрячь телефон</string>
+    <string name="da_no_paired">Сначала выполните сопряжение телефона Android с автомобилем. Затем вернитесь сюда.</string>
+    <string name="da_bluetooth_off">Включите Bluetooth в настройках автомобиля для подключения телефона.</string>
+    <string name="da_system_settings">Настройки Bluetooth</string>
+    <string name="da_device">Телефон Android</string>
+    <string name="da_preferences">Ваша дорога — ваши правила.</string>
+    <string name="da_preferences_hint">Подключение, изображение и звук — всё в одном месте.</string>
+    <string name="da_automation">Автоматическое подключение</string>
+    <string name="da_automation_hint">Запуск вместе с автомобилем и повторное подключение к телефону.</string>
+    <string name="da_display">Экран и производительность</string>
+    <string name="da_display_hint">Размер изображения, частота кадров и настройки звука.</string>
+    <string name="da_permissions">Разрешения</string>
+    <string name="da_permissions_hint">Проверьте доступ к Bluetooth, микрофону и местоположению.</string>
+    <string name="da_about">О DiAuto</string>
+    <string name="da_about_hint">Версия, лицензии и благодарности авторам открытого ПО.</string>
+    <string name="da_saved_hint">Изменения настроек видео вступят в силу при следующем подключении.</string>
+    <string name="da_settings_subtitle">Настройте экран, звук и подключение.</string>
+    <string name="da_bluetooth_music">Музыка через Bluetooth автомобиля</string>
+    <string name="da_bluetooth_music_hint">Оставьте музыку в Bluetooth-проигрывателе автомобиля. DiAuto не меняет его аудиофокус; звук навигации и ассистента остаётся доступен. После изменения переподключите Android Auto.</string>
+</resources>
