@@ -98,6 +98,13 @@
             android:exported="false"
             android:process=":aa" />
 
+        <!-- Android Auto settings owner: DiAuto's preferences are read and written only in ":aa". -->
+        <provider
+            android:name=".engine.AndroidAutoSettingsProvider"
+            android:authorities="${applicationId}.androidauto.settings"
+            android:exported="false"
+            android:process=":aa" />
+
         <!-- ============================== CarPlay engine (DiPlay) ============================== -->
 
         <!-- Settings and connect pre-flight only; CarLink is the launcher. -->
