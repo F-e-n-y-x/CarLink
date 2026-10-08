@@ -259,6 +259,10 @@
     <string name="one_time_setup_on_this_car">إعداد لمرة واحدة على هذه السيارة</string>
     <string name="open">فتح</string>
     <string name="open_after_the_car_starts">الفتح بعد تشغيل السيارة</string>
+    <string name="boot_start_repair">بدء التشغيل التلقائي · إصلاح ADB (تجريبي)</string>
+    <string name="boot_start_repair_desc">بعض البرامج الثابتة تحجب مستقبلات الإقلاع التابعة لجهات خارجية. يطلب هذا من وحدة الرأس عبر رابط ADB الخاص بها إعفاء DiPlay من حدود الخلفية حتى يصل بث الإقلاع. مرة واحدة؛ أعد التشغيل بعد تحديث البرنامج الثابت.</string>
+    <string name="boot_start_repair_result">إصلاح بدء التشغيل التلقائي:%1$s</string>
+    <string name="boot_start_repair_running">جارٍ تطبيق إعفاءات بدء التشغيل التلقائي…</string>
     <string name="open_bluetooth">فتح البلوتوث</string>
     <string name="open_car_hotspot_settings">فتح إعدادات نقطة اتصال السيارة</string>
     <string name="open_car_settings">فتح إعدادات السيارة</string>

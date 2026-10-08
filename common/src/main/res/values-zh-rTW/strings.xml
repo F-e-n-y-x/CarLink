@@ -266,6 +266,10 @@
     <string name="one_time_setup_on_this_car">在此車機上進行一次性設定</string>
     <string name="open">開啟</string>
     <string name="open_after_the_car_starts">車機啟動後開啟</string>
+    <string name="boot_start_repair">開機自啟 · ADB 修復（實驗）</string>
+    <string name="boot_start_repair_desc">部分韌體會攔截第三方應用的開機廣播。此操作透過車機自身的 ADB 通道，把 DiPlay 加入背景執行白名單，讓開機廣播能送達。執行一次即可；車機韌體升級後如失效可重新執行。</string>
+    <string name="boot_start_repair_result">開機自啟修復結果：%1$s</string>
+    <string name="boot_start_repair_running">正在套用開機自啟白名單…</string>
     <string name="open_bluetooth">開啟藍牙</string>
     <string name="open_car_hotspot_settings">開啟車機熱點設定</string>
     <string name="open_car_settings">開啟車機設定</string>
