@@ -4,6 +4,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkStage
@@ -13,6 +15,9 @@ import com.carlink.app.core.Transport
 import com.carlink.app.detect.KnownPhones
 import com.carlink.app.entry.UsbRouterActivity
 import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.UnifiedSettingsStore
+import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +36,11 @@ class EngineCoordinator private constructor(context: Context) {
     private val app = context.applicationContext
     private val knownPhones = KnownPhones(app)
     private val preferences = CarLinkPreferences(app)
+    private val unifiedSettings = UnifiedSettingsStore(app)
+    private val main = Handler(Looper.getMainLooper())
+    /** Settings are written into the engines (IPC to ":aa") off the main thread, in order. */
+    private val worker = Executors.newSingleThreadExecutor { Thread(it, "carlink-engine") }
+    private var attempt = 0
 
     private val _state = MutableStateFlow(LinkState.Idle)
     val state: StateFlow<LinkState> = _state.asStateFlow()
@@ -104,13 +114,32 @@ class EngineCoordinator private constructor(context: Context) {
         engaged = engine
         sessionAddress = address
         setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
-        when (engine) {
-            Engine.CARPLAY -> carPlay.start(transport, address, phoneName, usbAttach)
-            Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach?.let(UsbRouterActivity::usbDevice))
+        _state.value = LinkState(LinkStage.WAITING, engine, transport, phoneName, 1, 6)
+        val thisAttempt = ++attempt
+        worker.execute {
+            // The engine starts from the driver's unified settings and this session's wireless path.
+            runCatching { EngineSettingsApplier.applyForSession(app, engine, unifiedSettings.load()) }
+                .onFailure { Log.w(TAG, "could not apply settings", it) }
+            main.post {
+                if (thisAttempt != attempt || engaged != engine) return@post
+                when (engine) {
+                    Engine.CARPLAY -> carPlay.start(transport, address, phoneName, usbAttach)
+                    Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach?.let(UsbRouterActivity::usbDevice))
+                }
+            }
+        }
+    }
+
+    /** Writes changed unified settings into both engines (live ones take effect at once). */
+    fun applySettings() {
+        worker.execute {
+            runCatching { EngineSettingsApplier.applyAll(app, unifiedSettings.load()) }
+                .onFailure { Log.w(TAG, "could not apply settings", it) }
         }
     }
 
     private fun disengage() {
+        attempt++
         engaged = null
         sessionAddress = null
         setAndroidAutoReceivers(false)
