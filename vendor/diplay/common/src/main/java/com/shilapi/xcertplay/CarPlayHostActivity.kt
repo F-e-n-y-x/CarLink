@@ -571,7 +571,7 @@ class CarPlayHostActivity : ComponentActivity() {
             AirPlayPersistence.saveWirelessEnabled(this, false)
         }
         if (runCatching { DiPlayBootstrap.ensure(this, AirPlayPersistence.loadMfiTarget(this)) }.isFailure) {
-            startActivity(Intent(this, DiPlayActivity::class.java))
+            startActivity(CarPlayHostIntegration.homeIntent(this)) // CarLink
             finish(); return
         }
         WheelKeyService.restoreIfNeeded(this)
@@ -4628,8 +4628,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun showDiPlayHome(page: String = "home") {
         controller?.sendTouch(emptyList())
-        startActivity(Intent(this, DiPlayActivity::class.java)
-            .putExtra("page", page).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        startActivity(CarPlayHostIntegration.homeIntent(this, page) // CarLink
+            .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
 
     /** Keep a timed-out sink visible to surface teardown until its codecs have actually been released. */
