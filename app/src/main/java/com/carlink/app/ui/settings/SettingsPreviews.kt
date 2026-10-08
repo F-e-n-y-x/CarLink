@@ -22,7 +22,8 @@ private val previewPhones = listOf(
     PairedPhone("66:77:88:99:AA:BB", "Pixel 9", PhoneKind.ANDROID, connected = false),
 )
 
-private fun previewState(
+/** Fake state shared by the previews and the screenshot gallery. */
+internal fun settingsPreviewState(
     live: Boolean = false,
     paused: Boolean = false,
     bluetooth: BluetoothAvailability = BluetoothAvailability.READY,
@@ -43,24 +44,25 @@ private fun previewState(
     ),
 )
 
-private object PreviewActions : SettingsActions
+/** Intents that do nothing, for previews and the screenshot gallery. */
+internal object SettingsPreviewActions : SettingsActions
 
 @Composable
 private fun Preview(
     profile: UiProfile,
-    state: SettingsUiState = previewState(),
+    state: SettingsUiState = settingsPreviewState(),
     category: SettingsCategory = SettingsCategory.OVERVIEW,
     choice: SettingsChoice? = null,
     theme: ThemeMode = ThemeMode.DARK,
 ) {
     CarLinkTheme(profile = profile, themeMode = theme) {
-        SettingsContent(state, PreviewActions, onBack = {}, navigate = {}, initialCategory = category, initialChoice = choice)
+        SettingsContent(state, SettingsPreviewActions, onBack = {}, navigate = {}, initialCategory = category, initialChoice = choice)
     }
 }
 
 @Preview(name = "Car landscape · Overview", device = "spec:width=1440dp,height=810dp,dpi=240")
 @Composable
-private fun CarOverviewPreview() = Preview(UiProfile.CAR, previewState(live = true))
+private fun CarOverviewPreview() = Preview(UiProfile.CAR, settingsPreviewState(live = true))
 
 @Preview(name = "Car landscape · Display + side sheet", device = "spec:width=1440dp,height=810dp,dpi=240")
 @Composable
@@ -69,15 +71,15 @@ private fun CarDisplaySheetPreview() = Preview(UiProfile.CAR, category = Setting
 @Preview(name = "Car landscape · Connection, light", device = "spec:width=1440dp,height=810dp,dpi=240")
 @Composable
 private fun CarConnectionLightPreview() =
-    Preview(UiProfile.CAR, previewState(paused = true), SettingsCategory.CONNECTION, theme = ThemeMode.LIGHT)
+    Preview(UiProfile.CAR, settingsPreviewState(paused = true), SettingsCategory.CONNECTION, theme = ThemeMode.LIGHT)
 
 @Preview(name = "Car ⅓ split · Overview", device = "spec:width=480dp,height=810dp,dpi=240")
 @Composable
-private fun CarSplitPreview() = Preview(UiProfile.CAR, previewState(live = true))
+private fun CarSplitPreview() = Preview(UiProfile.CAR, settingsPreviewState(live = true))
 
 @Preview(name = "Phone portrait · Overview", device = "spec:width=400dp,height=860dp,dpi=420")
 @Composable
-private fun PhoneOverviewPreview() = Preview(UiProfile.HANDHELD, previewState(bluetooth = BluetoothAvailability.OFF))
+private fun PhoneOverviewPreview() = Preview(UiProfile.HANDHELD, settingsPreviewState(bluetooth = BluetoothAvailability.OFF))
 
 @Preview(name = "Phone portrait · Audio", device = "spec:width=400dp,height=860dp,dpi=420")
 @Composable
@@ -89,7 +91,7 @@ private fun PhoneLandscapePreview() = Preview(UiProfile.HANDHELD, category = Set
 
 @Preview(name = "Tablet portrait · Overview", device = "spec:width=800dp,height=1280dp,dpi=240")
 @Composable
-private fun TabletOverviewPreview() = Preview(UiProfile.HANDHELD, previewState(paused = true), theme = ThemeMode.LIGHT)
+private fun TabletOverviewPreview() = Preview(UiProfile.HANDHELD, settingsPreviewState(paused = true), theme = ThemeMode.LIGHT)
 
 @Preview(name = "Tablet landscape · Connection", device = "spec:width=1280dp,height=800dp,dpi=240")
 @Composable

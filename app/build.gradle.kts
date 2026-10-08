@@ -95,6 +95,26 @@ android {
     }
 }
 
+// Screenshot gallery (docs/screenshots): `./gradlew :app:recordScreenshots` renders every
+// registered screen state with Robolectric and rewrites the PNGs. Ordinary test runs skip it.
+val recordingScreenshots = gradle.startParameter.taskNames.any { it.substringAfterLast(':') == "recordScreenshots" } ||
+    providers.gradleProperty("carlink.screenshots").orNull == "true"
+val repoRootPath: String = rootDir.path
+tasks.withType<Test>().configureEach {
+    systemProperty("carlink.repoRoot", repoRootPath)
+    systemProperty("carlink.screenshots", recordingScreenshots.toString())
+    if (recordingScreenshots && name == "testDebugUnitTest") {
+        filter.includeTestsMatching("com.carlink.app.gallery.*")
+        outputs.upToDateWhen { false }
+        maxHeapSize = "3g"
+    }
+}
+tasks.register("recordScreenshots") {
+    group = "verification"
+    description = "Renders the CarLink UI gallery into docs/screenshots."
+    dependsOn("testDebugUnitTest")
+}
+
 dependencies {
     implementation(project(":carplay-common"))
     implementation(project(":carplay-shared"))
@@ -114,5 +134,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("org.robolectric:robolectric:4.17")
 }
