@@ -382,6 +382,9 @@ class AndroidMediaSink(
     val videoPacingEnabled: Boolean get() = videoPacingDelayMillis > 0
 
     /** Requests a keyframe for stream [type], e.g. after its surface came back. */
+    /** Running totals of the main screen's decoder for a live FPS counter; null while it has none. */
+    fun liveVideoCounters(): LiveVideoCounters? = videoDecoders[MAIN_SCREEN_TYPE]?.liveCounters()
+
     fun refreshPicture(type: Int) {
         videoDecoders[type]?.refreshPicture()
     }
@@ -797,6 +800,18 @@ private class VideoDecoder(
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
     private val stats = VideoStats(statsLabel ?: if (streamType == MAIN_SCREEN_TYPE) "" else " stream=$streamType")
+    // Running totals for the live FPS counter, read from the UI thread.
+    private val liveReceived = AtomicLong()
+    private val liveRendered = AtomicLong()
+    private val liveDecodeNanos = AtomicLong()
+    private val liveDecodeSamples = AtomicLong()
+
+    fun liveCounters() = LiveVideoCounters(
+        received = liveReceived.get(),
+        rendered = liveRendered.get(),
+        decodeNanos = liveDecodeNanos.get(),
+        decodeSamples = liveDecodeSamples.get(),
+    )
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true }
     private val outputThread = if (dedicatedOutputThread) {
         Thread(::runOutput, "carplay-video-output").apply { isDaemon = true }
@@ -821,6 +836,7 @@ private class VideoDecoder(
 
     fun submit(nalus: ByteArray, senderNanos: Long = 0L, arrivalNanos: Long = 0L) {
         stats.onReceived(nalus.size)
+        liveReceived.incrementAndGet()
         // Pacing runs on the worker, in queue order: callbacks of a replaced stream may still deliver here.
         queue.offer(VideoJob.Frame(nalus, senderNanos = senderNanos, arrivalNanos = arrivalNanos))
     }
@@ -1273,7 +1289,11 @@ private class VideoDecoder(
                 val slot = queuedSlotOf(info.presentationTimeUs)
                 val queued = if (slot >= 0) queuedAtNanos[slot] else 0L
                 val heldOverGap = queued in 1 until resumedAtNanos
-                if (queued > 0 && !heldOverGap) stats.onDecodeLatency(now - queued)
+                if (queued > 0 && !heldOverGap) {
+                    stats.onDecodeLatency(now - queued)
+                    liveDecodeNanos.addAndGet(now - queued)
+                    liveDecodeSamples.incrementAndGet()
+                }
                 val delay = pacingDelay
                 val paced = shown && delay != null && slot >= 0 && queuedPaced[slot]
                 val localNs = info.presentationTimeUs * 1000
@@ -1289,7 +1309,10 @@ private class VideoDecoder(
                     if (shown && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
                     codec.releaseOutputBuffer(index, render)
                 }
-                if (shown) stats.onRendered()
+                if (shown) {
+                    stats.onRendered()
+                    liveRendered.incrementAndGet()
+                }
                 if (shown && !renderedFrameLogged) {
                     renderedFrameLogged = true
                     report("first frame rendered")

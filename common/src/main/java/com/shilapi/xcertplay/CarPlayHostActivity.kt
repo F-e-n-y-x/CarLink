@@ -279,6 +279,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var smoothVideo = false
     // Direct video output (a setting): SurfaceView output with frames shown as soon as they are decoded.
     private var directVideoOutput = false
+    // Diagnostics setting: a game-style FPS counter over the picture.
+    private var fpsCounter: FpsCounterOverlay? = null
     // Sinks whose sessions are being torn down; their decoders may still render to the current surface
     // until they have released their codecs, so a destroyed surface is detached from them too. A restart
     // and a shutdown can overlap, so this is a set.
@@ -806,6 +808,8 @@ class CarPlayHostActivity : ComponentActivity() {
         CenterMapOverlay.onDiPlayScreenShown()
         homeMonitor?.stop()
         homeScreenVisible = null
+        // Read here so a change made in Settings applies when the projection comes back.
+        if (AirPlayPersistence.loadFpsCounter(this)) fpsCounter?.start() else fpsCounter?.stop()
     }
 
     override fun onResume() {
@@ -1279,6 +1283,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        fpsCounter?.stop()
         closePicturePanel()
         // The controller, USB/iAP2 link, and VPN attachment intentionally outlive the UI.
         isActivityStarted = false
@@ -1564,6 +1569,13 @@ class CarPlayHostActivity : ComponentActivity() {
             insets
         }
         ViewCompat.requestApplyInsets(viewport)
+        // Over the picture and the connection panel, under the settings menu.
+        fpsCounter = FpsCounterOverlay(this, mainHandler) { sink?.liveVideoCounters() }.also { counter ->
+            // CarPlay's picture is never mirrored, so the counter stays top-right in right-to-left locales too.
+            root.addView(counter.view, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.RIGHT).apply {
+                setMargins(0, dp(12), dp(12), 0)
+            })
+        }
         settingsMenu = buildSettingsMenu().apply { visibility = View.GONE }
         root.addView(settingsMenu, FrameLayout.LayoutParams(-1, -1))
         safeAreaEditor = buildSafeAreaEditor().apply { visibility = View.GONE }
