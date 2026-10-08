@@ -42,6 +42,7 @@ import com.shilapi.xcertplay.adb.LocalAdb
 import com.shilapi.xcertplay.airplay.CarPlayClusterDisplay
 import com.shilapi.xcertplay.airplay.CarPlayDisplayScale
 import com.shilapi.xcertplay.airplay.ClusterTurnCardOverlay
+import com.shilapi.xcertplay.compat.closeCompat
 import com.shilapi.xcertplay.hud.BydAdbAccess
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.hud.BydFieldSource
@@ -2164,7 +2165,7 @@ class DiPlayActivity : ComponentActivity() {
         else -> "$positive ${step * CarPlayClusterDisplay.MARKER_STEP_PERCENT} %"
     }
 
-    /** A 2%-step slider row for overlay placement; every step saves, so the card moves live. */
+    /** A 1%-step slider row for overlay placement; every step saves, so the card moves live. */
     private fun overlaySliderRow(title: String, values: List<Int>, current: Int, describe: (Int) -> String): OverlaySliderRow =
         OverlaySliderRow(this, title, values, current, describe)
 
@@ -2188,7 +2189,8 @@ class DiPlayActivity : ComponentActivity() {
             slider = SeekBar(context).apply {
                 max = steps.lastIndex
                 progress = steps.indexOf(current).coerceIn(steps.indices)
-                minHeight = dp(44)
+                // ProgressBar.setMinHeight needs API 29; the view minimum keeps the touch target before that.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) minHeight = dp(44) else minimumHeight = dp(44)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                         val value = steps[progress.coerceIn(steps.indices)]
@@ -3825,16 +3827,16 @@ class DiPlayActivity : ComponentActivity() {
         val channel = manager.initialize(this, mainLooper, null)
         try {
             manager.requestGroupInfo(channel) { group ->
-                if (group == null) { channel.close(); connect(true); return@requestGroupInfo }
+                if (group == null) { channel.closeCompat(); connect(true); return@requestGroupInfo }
                 manager.removeGroup(channel, object : android.net.wifi.p2p.WifiP2pManager.ActionListener {
                     override fun onSuccess() {
                         val deadline = android.os.SystemClock.elapsedRealtime() + 4000
                         fun waitUntilRemoved() {
                             manager.requestGroupInfo(channel) { remaining ->
                                 when {
-                                    remaining == null -> { channel.close(); if (!isFinishing && !isDestroyed) connect(true) }
+                                    remaining == null -> { channel.closeCompat(); if (!isFinishing && !isDestroyed) connect(true) }
                                     android.os.SystemClock.elapsedRealtime() >= deadline -> {
-                                        channel.close(); toast(getString(R.string.wi_fi_direct_is_still_busy_close_the_other_projection_app))
+                                        channel.closeCompat(); toast(getString(R.string.wi_fi_direct_is_still_busy_close_the_other_projection_app))
                                     }
                                     else -> handler.postDelayed({ waitUntilRemoved() }, 200)
                                 }
@@ -3842,11 +3844,11 @@ class DiPlayActivity : ComponentActivity() {
                         }
                         waitUntilRemoved()
                     }
-                    override fun onFailure(reason: Int) { channel.close(); toast(getString(R.string.could_not_reset_wi_fi_direct_close_the_other_projection_ap)) }
+                    override fun onFailure(reason: Int) { channel.closeCompat(); toast(getString(R.string.could_not_reset_wi_fi_direct_close_the_other_projection_ap)) }
                 })
             }
         } catch (_: SecurityException) {
-            channel.close(); permissionHelp(getString(R.string.wireless_permissions), getString(R.string.allow_nearby_devices_and_on_older_android_versions_locatio))
+            channel.closeCompat(); permissionHelp(getString(R.string.wireless_permissions), getString(R.string.allow_nearby_devices_and_on_older_android_versions_locatio))
         }
     }
 

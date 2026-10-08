@@ -4,7 +4,7 @@ This public preview is an independent receiver, not an Apple-certified CarPlay a
 
 | Area | Current scope |
 | --- | --- |
-| Head unit | Official Android 9+ (API 28+) APK; Android 8 and older are unsupported; Wi-Fi Direct has a firmware-dependent legacy Android 9 path with unverified requested frequency, and modern verified frequency on Android 10+ |
+| Head unit | Android 7.1+ (API 25+) APK; Android 7.1–8.1 support is not yet confirmed on a vehicle, and Android 7.x has no local-only hotspot (use the car hotspot, Wi-Fi Direct or Existing Wi-Fi); Android 7.0 and older are unsupported; Wi-Fi Direct has a firmware-dependent legacy Android 7.1–9 path with unverified requested frequency, and modern verified frequency on Android 10+ |
 | Phone | Standard, non-jailbroken iPhone with CarPlay enabled; device/iOS compatibility varies |
 | Physical evidence | Previous private builds: wired and wireless picture, touch and audio confirmed on the development car with iPhone XS / iOS 18.7.10 |
 | Other cars | Mixed community reports across DiLink generations; not a certified model support list |
