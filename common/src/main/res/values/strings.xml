@@ -786,4 +786,6 @@
     <string name="setup_badge_adb">Needs ADB over network</string>
     <string name="setup_done_title">You’re ready</string>
     <string name="setup_done_description">Connect your iPhone now. You can open this guide again from Settings.</string>
+    <string name="settings_gesture_disabled">Off</string>
+    <string name="settings_gesture_disabled_hint">Swipe-down shortcut is disabled.</string>
 </resources>

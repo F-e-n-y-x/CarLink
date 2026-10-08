@@ -701,4 +701,6 @@
     <string name="setup_badge_adb">Потрібен ADB через мережу</string>
     <string name="setup_done_title">Усе готово</string>
     <string name="setup_done_description">Під’єднайте iPhone зараз. Цей майстер можна знову відкрити в налаштуваннях.</string>
+    <string name="settings_gesture_disabled">Вимкнено</string>
+    <string name="settings_gesture_disabled_hint">Жест проведення вниз для відкриття швидкого меню вимкнено.</string>
 </resources>

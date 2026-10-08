@@ -1412,9 +1412,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun allSettingsSections(content: LinearLayout) {
         filteredSection(content, SettingsSection.CARPLAY_CONTROLS,
             getString(R.string.carplay_controls), R.drawable.ic_dp_controls) { card ->
-            val gestureFingers = listOf(2, 3, 4)
+            val gestureFingers = listOf(0, 2, 3, 4)
             choice(card, getString(R.string.settings_gesture_fingers_label),
-                gestureFingers.map { getString(R.string.settings_gesture_fingers_option, it) },
+                gestureFingers.map { if (it == 0) getString(R.string.settings_gesture_disabled) else getString(R.string.settings_gesture_fingers_option, it) },
                 gestureFingers.indexOf(AirPlayPersistence.loadSettingsGestureFingers(this)).coerceAtLeast(0),
                 reconnects = false) {
                 AirPlayPersistence.saveSettingsGestureFingers(this, gestureFingers[it])

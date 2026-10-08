@@ -689,4 +689,6 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="settings_gesture_disabled">إيقاف</string>
+    <string name="settings_gesture_disabled_hint">تم تعطيل اختصار السحب لأسفل.</string>
 </resources>

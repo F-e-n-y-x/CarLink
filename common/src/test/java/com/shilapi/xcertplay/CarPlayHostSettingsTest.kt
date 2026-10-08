@@ -67,6 +67,24 @@ class CarPlayHostSettingsTest {
         controllers.close()
     }
 
+    @Test fun disabledGesturePersistsAndDoesNotOpenTheMenu() {
+        AirPlayPersistence.saveSettingsGestureFingers(activity, 0)
+        invoke("loadPersistedSettings")
+        assertEquals(0, AirPlayPersistence.loadSettingsGestureFingers(activity))
+        for (fingers in 2..4) {
+            gesture(fingers)
+            assertFalse(field("menuOpen") as Boolean)
+            assertFalse(field("gestureSequenceActive") as Boolean)
+        }
+        invoke("openSettingsMenu")
+        val button = views(menu()).filterIsInstance<Button>()
+            .first { it.text.contains(activity.getString(R.string.settings_gesture_disabled)) }
+        button.performClick()
+        assertEquals(2, field("gestureFingerCount"))
+        invoke("cancelSettingsEdits")
+        assertEquals(0, field("gestureFingerCount"))
+    }
+
     @Test fun configuredFingerCountsOpenTheMountedMenuWithoutLeavingCarPlay() {
         assertEquals(3, AirPlayPersistence.loadSettingsGestureFingers(activity))
         for (fingers in 2..4) {

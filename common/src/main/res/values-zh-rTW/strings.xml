@@ -749,4 +749,6 @@
     <string name="setup_badge_adb">需要網路 ADB</string>
     <string name="setup_done_title">準備就緒</string>
     <string name="setup_done_description">現在連線你的 iPhone。之後可在設定中再次開啟本精靈。</string>
+    <string name="settings_gesture_disabled">關閉</string>
+    <string name="settings_gesture_disabled_hint">已關閉向下滑動開啟快捷選單的手勢。</string>
 </resources>

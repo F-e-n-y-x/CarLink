@@ -869,7 +869,7 @@ class CarPlayHostActivity : ComponentActivity() {
             adbNaviMode = null
         }
         if (!menuOpen) gestureFingerCount = AirPlayPersistence.loadSettingsGestureFingers(this)
-        settingsGestureHint?.text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
+        settingsGestureHint?.text = settingsGestureHintText()
         ensureClusterPresentation()
         AirPlayPersistence.overlaySettingsListener = { runOnUiThread { applyClusterTurnOverlay() } }
         com.shilapi.xcertplay.hud.BydNavigationOutputs.setTurnOverlayListener(clusterTurnOverlayListener)
@@ -1487,7 +1487,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         panel.addView(back, LinearLayout.LayoutParams(dp(300), dp(64)))
         val gestureHint = TextView(this).apply {
-            text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
+            text = settingsGestureHintText()
             gravity = Gravity.CENTER
         }
         panel.addView(gestureHint)
@@ -1725,6 +1725,15 @@ class CarPlayHostActivity : ComponentActivity() {
             for (index in 0 until root.childCount) yieldAll(findDescendants(root.getChildAt(index)))
         }
     }
+
+    private fun settingsGestureHintText(): String =
+        if (gestureFingerCount == 0) getString(R.string.settings_gesture_disabled_hint)
+        else getString(R.string.open_diplay_settings_hint, gestureFingerCount)
+
+    private fun settingsGestureButtonText(): String =
+        if (gestureFingerCount == 0) getString(R.string.settings_gesture_fingers_label) + " · " +
+            getString(R.string.settings_gesture_disabled)
+        else getString(R.string.settings_gesture_fingers, gestureFingerCount)
 
     private fun buildSettingsMenu(): View {
         val overlay = FrameLayout(this).apply {
@@ -2154,11 +2163,11 @@ class CarPlayHostActivity : ComponentActivity() {
         val gestureButton = Button(this).apply {
             isAllCaps = false
             setOnClickListener {
-                gestureFingerCount = if (gestureFingerCount >= 4) 2 else gestureFingerCount + 1
-                text = getString(R.string.settings_gesture_fingers, gestureFingerCount)
+                gestureFingerCount = when (gestureFingerCount) { 0 -> 2; 4 -> 0; else -> gestureFingerCount + 1 }
+                text = settingsGestureButtonText()
             }
         }
-        gestureButton.text = getString(R.string.settings_gesture_fingers, gestureFingerCount)
+        gestureButton.text = settingsGestureButtonText()
         content.addView(gestureButton, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
 
         val openDiPlaySettingsButton = Button(this).apply {
@@ -4713,7 +4722,7 @@ class CarPlayHostActivity : ComponentActivity() {
         menuOpen = false
         settingsMenu?.visibility = View.GONE
         gestureOverlay?.visibility = View.VISIBLE
-        settingsGestureHint?.text = getString(R.string.open_diplay_settings_hint, gestureFingerCount)
+        settingsGestureHint?.text = settingsGestureHintText()
         updateDebugOverlays()
         logLines.clear()
         appendLog(
@@ -4864,7 +4873,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 gestureTracking = false
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
-                if (event.pointerCount == gestureFingerCount && !gestureSequenceActive) {
+                if (gestureFingerCount > 0 && event.pointerCount == gestureFingerCount && !gestureSequenceActive) {
                     gestureSequenceActive = true
                     gestureTracking = true
                     gestureStartX = pointerCentroid(event, horizontal = true)
