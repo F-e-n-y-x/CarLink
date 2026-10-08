@@ -170,8 +170,10 @@ object EngineMappings {
                 put("static-bssid", wifi.joinedBssid)
                 put("auto-enable-hotspot", false)
             }
-            WirelessPath.CAR_HOTSPOT, WirelessPath.WIFI_DIRECT, null -> {
-                if (path != null) put("native-ap-transport", if (path == WirelessPath.CAR_HOTSPOT) 1 else 0)
+            // No session path (a settings change): leave the wireless route of a running session alone.
+            null -> Unit
+            WirelessPath.CAR_HOTSPOT, WirelessPath.WIFI_DIRECT -> {
+                put("native-ap-transport", if (path == WirelessPath.CAR_HOTSPOT) 1 else 0)
                 put("hotspot-interface", "")
                 put("static-bssid", "0")
                 put("hotspot-ssid", if (settings.carHotspot.isValid()) settings.carHotspot.ssid else "")

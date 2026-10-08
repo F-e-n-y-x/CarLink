@@ -127,4 +127,12 @@ class EngineMappingsTest {
         assertEquals(1, EngineMappings.androidAuto(UnifiedSettings(), WirelessPath.CAR_HOTSPOT, 240)["native-ap-transport"])
         assertEquals(0, EngineMappings.androidAuto(UnifiedSettings(), WirelessPath.WIFI_DIRECT, 240)["native-ap-transport"])
     }
+
+    @Test fun settingsChangeWithoutSessionLeavesWirelessRouteAlone() {
+        // A day/night or picture change mid-session must not undo a Same Wi-Fi session's route.
+        val aa = EngineMappings.androidAuto(UnifiedSettings(homeWifi = home, carHotspot = hotspot), null, 240)
+        listOf("native-ap-transport", "hotspot-interface", "static-bssid", "hotspot-ssid", "hotspot-password").forEach {
+            assertFalse("$it must not be written without a session path", it in aa)
+        }
+    }
 }
