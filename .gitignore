@@ -41,4 +41,5 @@ release-signing.properties
 *.aab
 
 # Claude Code agent worktrees and local state
-/.claude/
+/.claude/worktrees/
+/.claude/settings.local.json
