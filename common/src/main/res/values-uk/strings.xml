@@ -701,4 +701,7 @@
     <string name="setup_badge_adb">Потрібен ADB через мережу</string>
     <string name="setup_done_title">Усе готово</string>
     <string name="setup_done_description">Під’єднайте iPhone зараз. Цей майстер можна знову відкрити в налаштуваннях.</string>
+    <string name="settings_discard_pending_title">Відкинути зміни?</string>
+    <string name="settings_discard_pending_message">Роздільна здатність, частота кадрів, підключення та інші змінені налаштування ще не збережені. «Зберегти та перепідключитися» застосує їх.</string>
+    <string name="settings_discard_pending_confirm">Відкинути</string>
 </resources>

@@ -749,4 +749,7 @@
     <string name="setup_badge_adb">需要網路 ADB</string>
     <string name="setup_done_title">準備就緒</string>
     <string name="setup_done_description">現在連線你的 iPhone。之後可在設定中再次開啟本精靈。</string>
+    <string name="settings_discard_pending_title">要放棄變更嗎？</string>
+    <string name="settings_discard_pending_message">你剛變更的解析度、幀率、連線以及其餘設定尚未儲存。「儲存並重新連線」會套用它們。</string>
+    <string name="settings_discard_pending_confirm">放棄</string>
 </resources>

@@ -749,4 +749,7 @@
     <string name="setup_badge_adb">需要网络 ADB</string>
     <string name="setup_done_title">准备就绪</string>
     <string name="setup_done_description">现在连接你的 iPhone。之后可在设置中再次打开本向导。</string>
+    <string name="settings_discard_pending_title">要放弃更改吗？</string>
+    <string name="settings_discard_pending_message">你刚更改的分辨率、帧率、连接以及其余设置尚未保存。“保存并重新连接”会应用它们。</string>
+    <string name="settings_discard_pending_confirm">放弃</string>
 </resources>
