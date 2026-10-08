@@ -20,7 +20,7 @@ import com.carlink.app.engine.EngineCoordinator
  * the system may show a chooser or pick another app. While CarLink runs, it therefore scans the
  * connected devices and listens for attach/detach itself; each engine then asks for USB access.
  */
-class UsbWatcher(context: Context) {
+class UsbWatcher private constructor(context: Context) {
     private val app = context.applicationContext
     private val usb = app.getSystemService(UsbManager::class.java)
     private val handled = mutableSetOf<String>()
@@ -36,7 +36,11 @@ class UsbWatcher(context: Context) {
         }
     }
 
-    /** Call from onResume: route phones already plugged in and watch for new ones. */
+    /**
+     * Starts watching (once per process) and routes phones already plugged in. Called when the
+     * main process starts and again whenever Home opens, so a phone plugged in while CarLink was
+     * closed is still picked up.
+     */
     fun start() {
         if (!registered) {
             registered = true
@@ -66,7 +70,13 @@ class UsbWatcher(context: Context) {
         EngineCoordinator.get(app).onUsbPhone(kind, runCatching { device.productName }.getOrNull(), attach)
     }
 
-    private companion object {
-        const val TAG = "CarLink-USB"
+    companion object {
+        private const val TAG = "CarLink-USB"
+
+        @Volatile private var instance: UsbWatcher? = null
+
+        /** Lives as long as CarLink's main process, which also hosts the CarPlay picture. */
+        fun get(context: Context): UsbWatcher =
+            instance ?: synchronized(this) { instance ?: UsbWatcher(context).also { instance = it } }
     }
 }

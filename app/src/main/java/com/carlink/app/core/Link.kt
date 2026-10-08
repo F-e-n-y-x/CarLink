@@ -48,6 +48,19 @@ enum class LinkStage {
 }
 
 /**
+ * Why an attempt could not start or failed, so the UI can offer the matching fix
+ * (DESIGN_SPEC §4.2). [ENGINE] means the engine reported a failure; see [LinkState.detail].
+ */
+enum class LinkProblem {
+    CARPLAY_AUTH_MISSING,
+    NO_IPHONE_SELECTED,
+    CAR_HOTSPOT_DETAILS_MISSING,
+    CAR_HOTSPOT_OFF,
+    SAME_WIFI_DETAILS_MISSING,
+    ENGINE,
+}
+
+/**
  * The single status CarLink shows for both engines.
  *
  * [step] and [stepCount] place [LinkStage.CONNECTING] on the stage timeline; [detail] is the
@@ -61,6 +74,7 @@ data class LinkState(
     val step: Int = 0,
     val stepCount: Int = 0,
     val detail: String? = null,
+    val problem: LinkProblem? = null,
 ) {
     val isActive: Boolean get() = stage != LinkStage.IDLE && stage != LinkStage.FAILED
 

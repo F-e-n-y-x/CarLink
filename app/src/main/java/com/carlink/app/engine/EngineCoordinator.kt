@@ -105,7 +105,7 @@ class EngineCoordinator private constructor(context: Context) {
         sessionAddress = address
         setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
         when (engine) {
-            Engine.CARPLAY -> carPlay.start(transport, phoneName, usbAttach)
+            Engine.CARPLAY -> carPlay.start(transport, address, phoneName, usbAttach)
             Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach?.let(UsbRouterActivity::usbDevice))
         }
     }

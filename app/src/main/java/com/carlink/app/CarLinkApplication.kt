@@ -26,7 +26,13 @@ class CarLinkApplication : App() {
         super.onCreate()
         // Notification taps, boot launches and Wi-Fi Direct returns open CarLink, not DiAuto's home.
         HostIntegration.homeActivity = HomeActivity::class.java
-        if (isAndroidAutoProcess) AndroidAutoStateReporter.start(this)
+        if (isAndroidAutoProcess) {
+            AndroidAutoStateReporter.start(this)
+        } else {
+            // DiPlay's projection returns to CarLink's Home, never to DiPlay's own screens.
+            com.shilapi.xcertplay.CarPlayHostIntegration.homeActivity = HomeActivity::class.java
+            com.carlink.app.entry.UsbWatcher.get(this).start()
+        }
     }
 
     private fun processName(): String {

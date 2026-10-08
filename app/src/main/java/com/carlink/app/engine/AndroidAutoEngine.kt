@@ -98,7 +98,8 @@ internal class AndroidAutoEngine(context: Context, private val onState: (LinkSta
             connection == P.CONNECTION_TRANSPORT_STARTED ->
                 LinkState(LinkStage.CONNECTED, Engine.ANDROID_AUTO, transport, phoneName, STEPS, STEPS)
             connection == P.CONNECTION_ERROR ->
-                LinkState(LinkStage.FAILED, Engine.ANDROID_AUTO, transport, phoneName, detail = message)
+                LinkState(LinkStage.FAILED, Engine.ANDROID_AUTO, transport, phoneName, detail = message,
+                    problem = com.carlink.app.core.LinkProblem.ENGINE)
             step > 0 -> LinkState(LinkStage.CONNECTING, Engine.ANDROID_AUTO, transport, phoneName, step + 1, STEPS)
             lastServiceRunning -> LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, transport, phoneName, 1, STEPS)
             else -> {
