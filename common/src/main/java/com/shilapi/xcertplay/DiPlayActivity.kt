@@ -34,6 +34,7 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.widget.doAfterTextChanged
 import androidx.core.view.doOnLayout
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -153,6 +154,12 @@ class DiPlayActivity : ComponentActivity() {
     private var reconnectBar: View? = null
     private var readinessCard: LinearLayout? = null
     private var searchIndexSink: MutableList<String>? = null
+    private var settingsSearchBox: EditText? = null
+    private var settingsSearchPopup: PopupWindow? = null
+    private var settingsSearchIndex: List<SettingsSearchResult>? = null
+    private var settingsSearchQuery = ""
+    private var settingsSearchIndexing = false
+    private var settingsSearchRestoreFocus = false
     private var renderedReadiness: SettingsReadiness? = null
     private var renderedPage: String? = null
     private var renderedSettingsCategory: SettingsCategory? = null
@@ -399,6 +406,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        settingsSearchPopup?.dismiss()
         hotspotJoinControls?.close()
         cancelUsbPermissionSetup()
         cancelKeyLearning()
@@ -453,6 +461,11 @@ class DiPlayActivity : ComponentActivity() {
         val restoreRailFocus = keepRailPosition &&
             (pendingRailFocus || settingsRailScroll?.hasFocus() == true)
         settingsRailScroll = null
+        // The results hang off the old header; the new header reopens them if the search continues.
+        settingsSearchPopup?.dismiss()
+        settingsSearchPopup = null
+        settingsSearchBox = null
+        if (page != "settings") clearSettingsSearchState()
         status = null; connectButton = null; disconnectButton = null; lastRunning = null; carButtonCard = null
         reconnectBar = null
         readinessCard = null
@@ -537,6 +550,11 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun navigateBack() {
+        // Back closes an open search first, like a system search bar.
+        if (page == "settings" && settingsSearchQuery.isNotEmpty()) {
+            closeSettingsSearch()
+            return
+        }
         val returnCategory = connectionSettingsReturnCategory
         when {
             page == "connection" && returnCategory != null -> {
@@ -567,9 +585,8 @@ class DiPlayActivity : ComponentActivity() {
             LinearLayout.LayoutParams(if (compact) dp(78) else dp(112), if (compact) dp(44) else dp(52)))
         addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true).apply {
             setPadding(dp(12), 0, dp(12), 0)
-        }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
-        addView(button(getString(R.string.settings_search), false) { showSettingsSearch() },
-            LinearLayout.LayoutParams(if (compact) dp(92) else dp(140), if (compact) dp(44) else dp(52)))
+        }, LinearLayout.LayoutParams(-2, if (compact) dp(44) else dp(52)))
+        addView(settingsSearchField(compact), LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
     }
 
     private fun home(content: LinearLayout) {
@@ -1083,6 +1100,8 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun openSearchResult(result: SettingsSearchResult) {
+        hideKeyboard(settingsSearchBox)
+        clearSettingsSearchState()
         settingsCategory = result.category
         render()
         val scroll = rootScroll ?: return
@@ -1106,49 +1125,162 @@ class DiPlayActivity : ComponentActivity() {
         if (view is ViewGroup) for (i in 0 until view.childCount) yieldAll(descendants(view.getChildAt(i)))
     }
 
-    private fun showSettingsSearch() {
-        val index = buildSettingsSearchIndex()
-        val input = EditText(this).apply {
-            setSingleLine()
-            hint = getString(R.string.settings_search_hint)
-            // Landscape head units would otherwise cover the results with a full-screen editor.
-            imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI or
-                android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+    /**
+     * The settings header search box; matches drop down under it as the driver types.
+     * The index is built on the first keystroke. Building re-renders the page, so the
+     * replacement box takes over the query, focus and keyboard.
+     */
+    private fun settingsSearchField(compact: Boolean): EditText = EditText(this).apply {
+        settingsSearchBox = this
+        setSingleLine()
+        hint = getString(R.string.settings_search_hint)
+        contentDescription = getString(R.string.settings_search)
+        textSize = if (compact) 16f else 18f
+        setTextColor(TEXT)
+        setHintTextColor(MUTED)
+        background = rounded(BUTTON, BORDER)
+        foreground = focusRing()
+        setPadding(dp(16), 0, dp(16), 0)
+        compoundDrawablePadding = dp(10)
+        setCompoundDrawablesRelativeWithIntrinsicBounds(
+            getDrawable(R.drawable.ic_dp_search)?.mutate()?.apply { setTint(MUTED) }, null, null, null)
+        inputType = android.text.InputType.TYPE_CLASS_TEXT
+        // Landscape head units would otherwise cover the results with a full-screen editor.
+        imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI or
+            android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+        // Touch focus waits for a tap, so opening settings never focuses the box or raises the keyboard.
+        isFocusableInTouchMode = settingsSearchRestoreFocus
+        setText(settingsSearchQuery)
+        setSelection(text.length)
+        setOnClickListener {
+            if (!isFocusableInTouchMode) {
+                isFocusableInTouchMode = true
+                requestFocus()
+                setSearchKeyboard(this, true)
+            }
+            showSettingsSearchResults()
         }
-        val results = mutableListOf<SettingsSearchResult>()
-        val adapter = android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1)
-        val list = android.widget.ListView(this).apply { this.adapter = adapter }
-        val empty = label(getString(R.string.settings_search_empty), 15, MUTED).apply {
-            setPadding(dp(8), dp(12), dp(8), dp(12)); visibility = View.GONE
+        setOnFocusChangeListener { _, focused -> if (focused) showSettingsSearchResults() }
+        setOnEditorActionListener { _, actionId, event ->
+            val search = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                event?.keyCode == KeyEvent.KEYCODE_ENTER
+            if (!search) return@setOnEditorActionListener false
+            if (event == null || event.action == KeyEvent.ACTION_DOWN) settingsSearchResults().firstOrNull()?.let(::openSearchResult)
+            true
         }
-        fun update() {
-            results.clear(); results += searchSettings(index, input.text.toString())
-            adapter.clear()
-            adapter.addAll(results.map { "${it.title} — ${settingsCategoryTitle(it.category)}" })
-            empty.visibility = if (results.isEmpty() && input.text.isNotBlank()) View.VISIBLE else View.GONE
+        doAfterTextChanged { onSettingsSearchChanged(this) }
+        if (settingsSearchRestoreFocus) {
+            settingsSearchRestoreFocus = false
+            post {
+                if (settingsSearchBox !== this) return@post
+                requestFocus()
+                setSearchKeyboard(this, true)
+                showSettingsSearchResults()
+            }
         }
-        input.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) = update()
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-        })
-        val body = column().apply {
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(input)
-            addView(empty)
-            // Short screens keep the results above the keyboard.
-            addView(list, LinearLayout.LayoutParams(-1, dp(if (resources.configuration.screenHeightDp < 600) 160 else 320)))
+    }
+
+    private fun onSettingsSearchChanged(box: EditText) {
+        if (box !== settingsSearchBox) return
+        settingsSearchQuery = box.text.toString()
+        if (settingsSearchQuery.isEmpty()) {
+            // Rebuilt for the next search, so it follows settings that changed meanwhile.
+            settingsSearchIndex = null
+            settingsSearchPopup?.dismiss()
+            return
         }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.settings_search))
-            .setView(body)
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-        list.setOnItemClickListener { _, _, position, _ ->
-            dialog.dismiss()
-            openSearchResult(results[position])
+        if (settingsSearchIndex != null) {
+            showSettingsSearchResults()
+            return
         }
-        input.requestFocus()
+        if (settingsSearchIndexing) return
+        settingsSearchIndexing = true
+        // Not from inside the text watcher: indexing replaces this box.
+        handler.post {
+            settingsSearchIndexing = false
+            if (page != "settings" || settingsSearchQuery.isEmpty() || settingsSearchIndex != null) return@post
+            settingsSearchRestoreFocus = true
+            settingsSearchIndex = buildSettingsSearchIndex()
+        }
+    }
+
+    private fun settingsSearchResults(): List<SettingsSearchResult> =
+        settingsSearchIndex?.let { searchSettings(it, settingsSearchQuery) }.orEmpty()
+
+    private fun showSettingsSearchResults() {
+        val box = settingsSearchBox ?: return
+        if (settingsSearchIndex == null || settingsSearchQuery.isBlank() || !box.isAttachedToWindow) {
+            settingsSearchPopup?.dismiss()
+            return
+        }
+        val results = settingsSearchResults()
+        val list = column().apply { setPadding(dp(8), dp(8), dp(8), dp(8)) }
+        if (results.isEmpty()) {
+            list.addView(label(getString(R.string.settings_search_empty), 15, MUTED).apply {
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+            })
+        }
+        results.forEach { list.addView(settingsSearchRow(it)) }
+        val width = box.width.coerceAtLeast(dp(320))
+        // Short screens keep the results above the keyboard.
+        val maxHeight = dp(if (resources.configuration.screenHeightDp < 600) 180 else 360)
+        val existing = settingsSearchPopup?.takeIf { it.isShowing }
+        val scroll = (existing?.contentView as? ScrollView) ?: ScrollView(this)
+        scroll.removeAllViews()
+        scroll.addView(list)
+        scroll.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST))
+        val height = scroll.measuredHeight.coerceIn(1, maxHeight)
+        if (existing != null) {
+            existing.update(box, 0, dp(6), width, height)
+            return
+        }
+        settingsSearchPopup = PopupWindow(scroll, width, height, false).apply {
+            setBackgroundDrawable(rounded(SURFACE, BORDER))
+            elevation = dp(8).toFloat()
+            // Tapping elsewhere closes the list and keeps the query; tapping the box reopens it.
+            isOutsideTouchable = true
+            inputMethodMode = PopupWindow.INPUT_METHOD_NEEDED
+            showAsDropDown(box, 0, dp(6), Gravity.END)
+        }
+    }
+
+    private fun settingsSearchRow(result: SettingsSearchResult): View = column().apply {
+        val category = settingsCategoryTitle(result.category)
+        isClickable = true
+        isFocusable = true
+        contentDescription = "${result.title}, $category"
+        foreground = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE), null, null), focusRing(12)))
+        minimumHeight = dp(56)
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(12), dp(8), dp(12), dp(8))
+        addView(label(result.title, 17, TEXT, true))
+        addView(label(category, 13, MUTED))
+        setOnClickListener { openSearchResult(result) }
+    }
+
+    private fun closeSettingsSearch() {
+        val box = settingsSearchBox
+        setSearchKeyboard(box, false)
+        clearSettingsSearchState()
+        box?.setText("")
+        box?.clearFocus()
+        box?.isFocusableInTouchMode = false
+    }
+
+    private fun clearSettingsSearchState() {
+        settingsSearchQuery = ""
+        settingsSearchIndex = null
+        settingsSearchRestoreFocus = false
+        settingsSearchPopup?.dismiss()
+    }
+
+    private fun setSearchKeyboard(view: View?, show: Boolean) {
+        view ?: return
+        val keyboard = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        if (show) keyboard.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        else keyboard.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun advancedSettings(content: LinearLayout) {

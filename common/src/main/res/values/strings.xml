@@ -363,7 +363,7 @@
     <string name="settings_advanced_caution_title">Change with care</string>
     <string name="settings_advanced_caution_description">These features can depend on vehicle firmware, ADB access, or experimental CarPlay behavior. Everyday settings are organized in the categories above.</string>
     <string name="settings_search">Search</string>
-    <string name="settings_search_hint">Setting name, for example frame rate</string>
+    <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No setting matches. Try another word.</string>
     <string name="settings_open_category">Open %1$s settings</string>
     <string name="settings_ready_connected">CarPlay is active. Changes that need a reconnect will say so.</string>
