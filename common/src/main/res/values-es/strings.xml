@@ -550,10 +550,10 @@
     <string name="turn_card_distance_m">%1$d m</string>
     <string name="turn_card_distance_km">%1$.1f km</string>
     <string name="turn_card_exit">Salida %1$d</string>
-    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir los ajustes de DiPlay.</string>
+    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir el menú rápido.</string>
     <string name="carplay_controls">Controles de CarPlay</string>
-    <string name="settings_gesture_fingers">Abrir ajustes · deslizar con %1$d dedos (toca para cambiar)</string>
-    <string name="settings_gesture_fingers_label">Abrir ajustes · dedos del deslizamiento</string>
+    <string name="settings_gesture_fingers">Menú rápido · deslizar con %1$d dedos (toca para cambiar)</string>
+    <string name="settings_gesture_fingers_label">Menú rápido · dedos del deslizamiento</string>
     <string name="settings_gesture_fingers_option">%1$d dedos</string>
     <string name="settings_gesture_fingers_hint">Elige un número de dedos que tu unidad no use ya. BYD reserva el deslizamiento con tres dedos para el panel del aire acondicionado.</string>
     <string name="auto_car_hotspot_title">Activar automáticamente el punto de acceso del coche</string>
@@ -691,4 +691,5 @@
     <string name="setup_done_description">Conecta tu iPhone ahora. Puedes volver a abrir esta guía desde Ajustes.</string>
     <string name="settings_gesture_disabled">Desactivado</string>
     <string name="settings_gesture_disabled_hint">El gesto de deslizar hacia abajo está desactivado.</string>
+    <string name="settings_gesture_disabled_action">Menú rápido · deslizamiento desactivado (toca para cambiar)</string>
 </resources>

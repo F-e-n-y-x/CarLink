@@ -78,7 +78,7 @@ class CarPlayHostSettingsTest {
         }
         invoke("openSettingsMenu")
         val button = views(menu()).filterIsInstance<Button>()
-            .first { it.text.contains(activity.getString(R.string.settings_gesture_disabled)) }
+            .first { it.text == activity.getString(R.string.settings_gesture_disabled_action) }
         button.performClick()
         assertEquals(2, field("gestureFingerCount"))
         invoke("cancelSettingsEdits")

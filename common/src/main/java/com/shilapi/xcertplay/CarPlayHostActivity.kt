@@ -1731,8 +1731,7 @@ class CarPlayHostActivity : ComponentActivity() {
         else getString(R.string.open_diplay_settings_hint, gestureFingerCount)
 
     private fun settingsGestureButtonText(): String =
-        if (gestureFingerCount == 0) getString(R.string.settings_gesture_fingers_label) + " · " +
-            getString(R.string.settings_gesture_disabled)
+        if (gestureFingerCount == 0) getString(R.string.settings_gesture_disabled_action)
         else getString(R.string.settings_gesture_fingers, gestureFingerCount)
 
     private fun buildSettingsMenu(): View {

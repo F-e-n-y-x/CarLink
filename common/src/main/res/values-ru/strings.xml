@@ -550,10 +550,10 @@
     <string name="turn_card_distance_m">%1$d м</string>
     <string name="turn_card_distance_km">%1$.1f км</string>
     <string name="turn_card_exit">Съезд %1$d</string>
-    <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть настройки DiPlay.</string>
+    <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть быстрое меню.</string>
     <string name="carplay_controls">Управление CarPlay</string>
-    <string name="settings_gesture_fingers">Открыть настройки · свайп %1$d пальцами (нажмите для смены)</string>
-    <string name="settings_gesture_fingers_label">Открыть настройки · количество пальцев</string>
+    <string name="settings_gesture_fingers">Быстрое меню · свайп %1$d пальцами (нажмите для смены)</string>
+    <string name="settings_gesture_fingers_label">Быстрое меню · количество пальцев</string>
     <string name="settings_gesture_fingers_option">%1$d пальцев</string>
     <string name="settings_gesture_fingers_hint">Выберите число пальцев, не занятое головным устройством. BYD использует свайп тремя пальцами вниз для панели кондиционера.</string>
     <string name="auto_car_hotspot_title">Автоматически включать точку доступа автомобиля</string>
@@ -691,4 +691,5 @@
     <string name="setup_done_description">Подключите iPhone сейчас. Этот мастер можно снова открыть в настройках.</string>
     <string name="settings_gesture_disabled">Выключено</string>
     <string name="settings_gesture_disabled_hint">Жест смахивания вниз для открытия быстрого меню отключён.</string>
+    <string name="settings_gesture_disabled_action">Быстрое меню · свайп отключён (нажмите для смены)</string>
 </resources>
