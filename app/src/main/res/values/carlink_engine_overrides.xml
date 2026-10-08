@@ -14,12 +14,20 @@
     <string name="allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per">Allow Nearby devices for CarLink in the head unit’s app permissions.</string>
     <string name="allow_precise_location_for_diplay_in_the_head_unit_s_app_p">Allow precise Location for CarLink in the head unit’s app permissions.</string>
     <string name="existing_wifi_instructions">Connect the car and iPhone to the same external Wi-Fi in system settings. Enter its exact name and WPA2 password below; leave the password empty only for an open network. Use WPA2 or WPA2/WPA3 mixed mode and disable client isolation on the router. CarLink keeps this Wi-Fi connection and creates no hotspot.</string>
-    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open CarLink settings.</string>
+    <string name="open_diplay_settings_hint">During CarPlay, swipe down with %1$d fingers to open the CarPlay menu.</string>
+    <string name="carplay_settings">CarPlay menu</string>
+    <string name="side_panel_full_screen">Full screen</string>
     <string name="setup_error_auth">CarPlay authentication files are missing from this build. Settings › Diagnostics explains what is needed.</string>
     <!-- DiPlay: dashboard map and the accessibility service shown in system settings -->
     <string name="cluster_waiting_for_map">CarLink · waiting for the CarPlay map</string>
     <string name="wheel_key_service_label">CarLink wheel keys</string>
     <string name="wheel_key_service_description">Lets CarLink use the chosen steering-wheel keys to zoom the CarPlay map on the dashboard and to move around CarPlay\'s screen. It only receives key presses and does not read the screen.</string>
+
+    <!-- DiAuto: AapProjectionActivity's exit menu (two-finger swipe from the edge) and its one-time hint -->
+    <string name="exit_dialog_title">Android Auto</string>
+    <string name="exit_dialog_stop">Disconnect</string>
+    <string name="exit_dialog_background">Move to background</string>
+    <string name="gesture_hint">Tip: swipe in from the left edge with two fingers to open the Android Auto menu.</string>
 
     <!-- DiAuto: AapService notifications -->
     <string name="notification_service_running">Android Auto is ready</string>

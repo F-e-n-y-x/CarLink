@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overrides DiAuto's blue window background (AppTheme, also the Android Auto projection's first
+     frame) with CarLink's graphite canvas and its soft top-start light. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#0C1016" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:centerX="0.08"
+                android:centerY="0"
+                android:gradientRadius="90%p"
+                android:startColor="#16324A"
+                android:endColor="#0016324A" />
+        </shape>
+    </item>
+</layer-list>

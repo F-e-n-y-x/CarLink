@@ -1504,6 +1504,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 setColor(buttonPalette.accent)
                 cornerRadius = dp(20).toFloat()
             }
+            CarPlayHostIntegration.styleChrome(viewport, CarPlayHostIntegration.Chrome.WAITING, darkMode) // CarLink
         }
         paintWaitingScreen()
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
@@ -1609,6 +1610,7 @@ class CarPlayHostActivity : ComponentActivity() {
             backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
             setOnClickListener { showSidePanel(false) }
         })
+        CarPlayHostIntegration.styleChrome(panel, CarPlayHostIntegration.Chrome.SIDE_PANEL, appNight) // CarLink
         return panel
     }
 
@@ -1714,6 +1716,14 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         (picturePanel as? CarPlayPicturePanel)?.applyPalette(overlayPalette)
+        CarPlayHostIntegration.styleChrome(safeAreaEditor, CarPlayHostIntegration.Chrome.SAFE_AREA_EDITOR, appNight) // CarLink
+        CarPlayHostIntegration.styleChrome(sidePanel, CarPlayHostIntegration.Chrome.SIDE_PANEL, appNight) // CarLink
+        CarPlayHostIntegration.styleChrome(picturePanel, CarPlayHostIntegration.Chrome.PICTURE_PANEL, appNight) // CarLink
+    }
+
+    // CarLink: leaves out the menu sections the host owns (CarPlayHostIntegration.menuItems).
+    private fun <V : View> V.menuItem(vararg items: CarPlayHostIntegration.MenuItem): V = apply {
+        if (items.none { it in CarPlayHostIntegration.menuItems }) visibility = View.GONE
     }
 
     private inline fun <reified T : View> findDescendant(root: View): T? =
@@ -1756,10 +1766,11 @@ class CarPlayHostActivity : ComponentActivity() {
                     cancelSettingsEdits()
                     showSidePanel(!sidePanelShown)
                 }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }.menuItem(CarPlayHostIntegration.MenuItem.SIDE_PANEL), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         content.addView(
-            settingsCategoryHeader(getString(R.string.connection)),
+            settingsCategoryHeader(getString(R.string.connection)).menuItem(
+                CarPlayHostIntegration.MenuItem.MFI_TARGET, CarPlayHostIntegration.MenuItem.WIRELESS, CarPlayHostIntegration.MenuItem.WIFI_METHOD, CarPlayHostIntegration.MenuItem.HOTSPOT_STATUS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1767,7 +1778,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            buildMfiTargetSection(),
+            buildMfiTargetSection().menuItem(CarPlayHostIntegration.MenuItem.MFI_TARGET),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1790,7 +1801,7 @@ class CarPlayHostActivity : ComponentActivity() {
             requestStartupPrerequisites()
         }
         content.addView(
-            wirelessRowResult.rowView,
+            wirelessRowResult.rowView.menuItem(CarPlayHostIntegration.MenuItem.WIRELESS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1798,7 +1809,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            buildHotspotModeSection(),
+            buildHotspotModeSection().menuItem(CarPlayHostIntegration.MenuItem.WIFI_METHOD),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1806,13 +1817,13 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            menuText(getString(R.string.hotspot_status), 20f, MENU_SECONDARY),
+            menuText(getString(R.string.hotspot_status), 20f, MENU_SECONDARY).menuItem(CarPlayHostIntegration.MenuItem.HOTSPOT_STATUS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(18) },
         )
-        val hotspotStatusView = menuText("", 16f, MENU_ACCENT)
+        val hotspotStatusView = menuText("", 16f, MENU_ACCENT).menuItem(CarPlayHostIntegration.MenuItem.HOTSPOT_STATUS)
         content.addView(
             hotspotStatusView,
             LinearLayout.LayoutParams(
@@ -1822,7 +1833,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.automatic_connection)),
+            settingsCategoryHeader(getString(R.string.automatic_connection)).menuItem(CarPlayHostIntegration.MenuItem.AUTO_START),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1836,7 +1847,7 @@ class CarPlayHostActivity : ComponentActivity() {
             ) { checked ->
                 autoStartOnBoot = checked
                 appendLog("Boot auto-start ${if (checked) "enabled" else "disabled"}")
-            },
+            }.menuItem(CarPlayHostIntegration.MenuItem.AUTO_START),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1844,14 +1855,14 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.settings_navigation)),
+            settingsCategoryHeader(getString(R.string.settings_navigation)).menuItem(CarPlayHostIntegration.MenuItem.LOCATION),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(36) },
         )
         content.addView(
-            buildLocationReportingSection(),
+            buildLocationReportingSection().menuItem(CarPlayHostIntegration.MenuItem.LOCATION),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1860,7 +1871,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
         if (advancedAudioChannelMappingSupported) {
             content.addView(
-                settingsCategoryHeader(getString(R.string.audio)),
+                settingsCategoryHeader(getString(R.string.audio)).menuItem(CarPlayHostIntegration.MenuItem.AUDIO_MAPPING),
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1878,7 +1889,7 @@ class CarPlayHostActivity : ComponentActivity() {
                             "applies when settings close",
                     )
                     updateResolutionMenu()
-                },
+                }.menuItem(CarPlayHostIntegration.MenuItem.AUDIO_MAPPING),
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1887,42 +1898,44 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.settings_vehicle)),
+            settingsCategoryHeader(getString(R.string.settings_vehicle)).menuItem(
+                CarPlayHostIntegration.MenuItem.VEHICLE_IDENTITY, CarPlayHostIntegration.MenuItem.CAR_BUTTON_ICON, CarPlayHostIntegration.MenuItem.DRIVING_SIDE, CarPlayHostIntegration.MenuItem.DOCK),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(36) },
         )
         content.addView(
-            buildIdentitySettingsSection(),
+            buildIdentitySettingsSection().menuItem(CarPlayHostIntegration.MenuItem.VEHICLE_IDENTITY),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(12) },
         )
         content.addView(
-            buildAirPlayIconSection(),
+            buildAirPlayIconSection().menuItem(CarPlayHostIntegration.MenuItem.CAR_BUTTON_ICON),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(26) },
         )
         content.addView(
-            buildDrivingSideSection(),
+            buildDrivingSideSection().menuItem(CarPlayHostIntegration.MenuItem.DRIVING_SIDE),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(26) },
         )
         content.addView(
-            buildDockSection(),
+            buildDockSection().menuItem(CarPlayHostIntegration.MenuItem.DOCK),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(26) },
         )
         content.addView(
-            settingsCategoryHeader(getString(R.string.settings_display)),
+            settingsCategoryHeader(getString(R.string.settings_display)).menuItem(CarPlayHostIntegration.MenuItem.RESOLUTION, CarPlayHostIntegration.MenuItem.FRAME_RATE,
+                CarPlayHostIntegration.MenuItem.PHYSICAL_SIZE_BASIS, CarPlayHostIntegration.MenuItem.PHYSICAL_LENGTH, CarPlayHostIntegration.MenuItem.HEVC, CarPlayHostIntegration.MenuItem.SAFE_AREA, CarPlayHostIntegration.MenuItem.SYSTEM_BARS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1940,7 +1953,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         val resolutionValue = resolutionControl.valueTextView
         content.addView(
-            resolutionControl.container,
+            resolutionControl.container.menuItem(CarPlayHostIntegration.MenuItem.RESOLUTION),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1960,7 +1973,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     fps = value
                     updateResolutionMenu()
                 },
-            ),
+            ).menuItem(CarPlayHostIntegration.MenuItem.FRAME_RATE),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1978,7 +1991,7 @@ class CarPlayHostActivity : ComponentActivity() {
             ) { value ->
                 physicalSizeBasis = value
                 updateResolutionMenu()
-            },
+            }.menuItem(CarPlayHostIntegration.MenuItem.PHYSICAL_SIZE_BASIS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1999,7 +2012,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     widthPhysicalMm = value
                     updateResolutionMenu()
                 },
-            ),
+            ).menuItem(CarPlayHostIntegration.MenuItem.PHYSICAL_LENGTH),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2020,7 +2033,7 @@ class CarPlayHostActivity : ComponentActivity() {
             updateResolutionMenu()
         }
         content.addView(
-            hevcRow.rowView,
+            hevcRow.rowView.menuItem(CarPlayHostIntegration.MenuItem.HEVC),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2042,7 +2055,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             content.addView(
-                softwareHevcRow.rowView,
+                softwareHevcRow.rowView.menuItem(CarPlayHostIntegration.MenuItem.HEVC),
                 LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2051,7 +2064,7 @@ class CarPlayHostActivity : ComponentActivity() {
         }
 
         content.addView(
-            buildSafeAreaSection(),
+            buildSafeAreaSection().menuItem(CarPlayHostIntegration.MenuItem.SAFE_AREA),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2059,7 +2072,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            buildFullscreenSection(),
+            buildFullscreenSection().menuItem(CarPlayHostIntegration.MenuItem.SYSTEM_BARS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2067,14 +2080,14 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         content.addView(
-            settingsCategoryHeader(getString(R.string.diagnostics)),
+            settingsCategoryHeader(getString(R.string.diagnostics)).menuItem(CarPlayHostIntegration.MenuItem.DEBUG_LOGS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ).apply { topMargin = dp(40) },
         )
         content.addView(
-            buildDebugLogsSection(),
+            buildDebugLogsSection().menuItem(CarPlayHostIntegration.MenuItem.DEBUG_LOGS),
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -2136,7 +2149,7 @@ class CarPlayHostActivity : ComponentActivity() {
             backgroundTintList = ColorStateList.valueOf(MENU_DANGER)
             minHeight = dp(52)
             setOnClickListener { exitApplication() }
-        }
+        }.menuItem(CarPlayHostIntegration.MenuItem.EXIT_APPLICATION)
         content.addView(
             exitApplicationButton,
             LinearLayout.LayoutParams(
@@ -2149,7 +2162,7 @@ class CarPlayHostActivity : ComponentActivity() {
             text = getString(R.string.language_app_language)
             isAllCaps = false
             setOnClickListener { AppLocale.showPicker(this@CarPlayHostActivity) }
-        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+        }.menuItem(CarPlayHostIntegration.MenuItem.LANGUAGE), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
 
         val gestureButton = Button(this).apply {
             isAllCaps = false
@@ -2159,10 +2172,14 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         gestureButton.text = getString(R.string.settings_gesture_fingers, gestureFingerCount)
+        gestureButton.menuItem(CarPlayHostIntegration.MenuItem.GESTURE_FINGERS)
         content.addView(gestureButton, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
 
         val openDiPlaySettingsButton = Button(this).apply {
-            text = "${getString(R.string.app_name)} ${getString(R.string.settings)}"
+            // CarLink: a host's home has no DiPlay settings page; the button says where it goes.
+            text = if (CarPlayHostIntegration.homeActivity == DiPlayActivity::class.java) {
+                "${getString(R.string.app_name)} ${getString(R.string.settings)}"
+            } else getString(R.string.back_to_diplay)
             isAllCaps = false
             textSize = 17f
             setTextColor(MENU_PRIMARY)
@@ -2172,7 +2189,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 cancelSettingsEdits()
                 showDiPlayHome("settings")
             }
-        }
+        }.menuItem(CarPlayHostIntegration.MenuItem.HOME)
         content.addView(
             openDiPlaySettingsButton,
             LinearLayout.LayoutParams(
@@ -2238,6 +2255,7 @@ class CarPlayHostActivity : ComponentActivity() {
         this.hotspotStatusView = hotspotStatusView
         updateHotspotStatusBlock()
         updateResolutionMenu()
+        CarPlayHostIntegration.styleChrome(overlay, CarPlayHostIntegration.Chrome.MENU, appNight) // CarLink
         return overlay
     }
 
@@ -3010,6 +3028,7 @@ class CarPlayHostActivity : ComponentActivity() {
             ),
         )
         safeAreaEditorView = editor
+        CarPlayHostIntegration.styleChrome(overlay, CarPlayHostIntegration.Chrome.SAFE_AREA_EDITOR, appNight) // CarLink
         return overlay
     }
 
@@ -4683,6 +4702,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 topMargin = dp(12); marginEnd = dp(12)
             })
             picturePanel = panel
+            CarPlayHostIntegration.styleChrome(panel, CarPlayHostIntegration.Chrome.PICTURE_PANEL, appNight) // CarLink
         }
     }
 
@@ -4696,7 +4716,9 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun saveSettingsAndReconnect() {
         if (!menuOpen) return
         if (!validateMfiSettings()) return
-        if (!validateManualHotspotSettings()) return
+        // CarLink: a hidden Wi-Fi method belongs to the host; its saved values are not re-validated here.
+        if (CarPlayHostIntegration.MenuItem.WIFI_METHOD in CarPlayHostIntegration.menuItems &&
+            !validateManualHotspotSettings()) return
         persistMenuSettings()
         settingsBaseline = null
         finishSettingsMenu("Settings saved", reconnect = true)

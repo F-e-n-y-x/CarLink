@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.andrerinas.openheadunit.App
+import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.protocol.messages.TouchEvent
 import com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent
@@ -668,6 +669,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                 Gravity.BOTTOM
             )
             container.addView(bar)
+            HostIntegration.styleChrome(bar, HostIntegration.Chrome.RENDERER_BANNER) // CarLink
             rendererBanner = bar
             bar.bringToFront()
             // One-shot: offering the escape once is enough. Clearing the flag here (not only on
@@ -902,6 +904,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
         // Set up custom loading screen if configured
         setupCustomLoadingScreen()
+        HostIntegration.styleChrome(loadingOverlay, HostIntegration.Chrome.LOADING) // CarLink
 
         findViewById<Button>(R.id.disconnect_button)?.setOnClickListener {
             commManager.disconnect()
@@ -1040,6 +1043,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         detail?.text = getString(R.string.connection_interrupted_detail)
         detail?.visibility = View.VISIBLE
         button?.visibility = View.VISIBLE
+        HostIntegration.styleChrome(overlay, HostIntegration.Chrome.LOADING) // CarLink
     }
 
     private fun hideReconnectingOverlay() {
@@ -1278,6 +1282,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         findViewById<View>(R.id.loading_custom_text_overlay)?.visibility = View.GONE
         findViewById<View>(R.id.loading_default_content)?.visibility = View.VISIBLE
         findViewById<View>(R.id.loading_overlay)?.setBackgroundColor(Color.parseColor("#CC000000"))
+        HostIntegration.styleChrome(findViewById(R.id.loading_overlay), HostIntegration.Chrome.LOADING) // CarLink
     }
 
     private fun stopCustomLoadingMedia() {
@@ -1326,7 +1331,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         }
     }
 
-    private data class ExitOption(val titleResId: Int, val iconResId: Int, val iconColor: Int)
+    private data class ExitOption(val titleResId: Int, val iconResId: Int, val iconColor: Int,
+                                  val title: CharSequence? = null) // CarLink: title
 
     private fun showExitDialog() {
         val options = mutableListOf<ExitOption>()
@@ -1337,7 +1343,13 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         }
 
         options.add(ExitOption(R.string.exit_dialog_background, R.drawable.ic_home, Color.LTGRAY))
-        options.add(ExitOption(R.string.exit_dialog_settings, R.drawable.ic_settings_quick, Color.LTGRAY))
+        // CarLink: a host with its own settings screen offers its home instead of Quick Settings.
+        val hostHomeLabel = HostIntegration.exitMenuHomeLabel
+        if (hostHomeLabel == null) {
+            options.add(ExitOption(R.string.exit_dialog_settings, R.drawable.ic_settings_quick, Color.LTGRAY))
+        } else {
+            options.add(ExitOption(0, R.drawable.ic_launch_white, Color.LTGRAY, hostHomeLabel))
+        }
 
         val adapter = object : android.widget.BaseAdapter() {
             override fun getCount(): Int = options.size
@@ -1349,7 +1361,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                 val iconView = view.findViewById<android.widget.ImageView>(R.id.icon)
                 val textView = view.findViewById<android.widget.TextView>(R.id.text)
 
-                textView.setText(option.titleResId)
+                if (option.title != null) textView.text = option.title else textView.setText(option.titleResId) // CarLink
                 iconView.setImageResource(option.iconResId)
                 iconView.setColorFilter(option.iconColor)
 
@@ -1375,11 +1387,14 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                     R.string.exit_dialog_settings -> {
                         showQuickSettings()
                     }
+                    0 -> startActivity(Intent(this, HostIntegration.homeActivity) // CarLink
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
                 }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
 
+        HostIntegration.styleChrome(dialog.window?.decorView, HostIntegration.Chrome.EXIT_MENU) // CarLink
         if (settings.hudMirroring) {
             val root = dialog.window?.findViewById<View>(android.R.id.content) ?: dialog.window?.decorView
             root?.scaleX = -1.0f

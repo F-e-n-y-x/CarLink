@@ -10,6 +10,7 @@ import com.andrerinas.openheadunit.utils.Settings
 import com.carlink.app.engine.AndroidAutoProtocol
 import com.carlink.app.engine.AndroidAutoStateReporter
 import com.carlink.app.ui.HomeActivity
+import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostIntegration
 
 /**
@@ -33,6 +34,7 @@ class CarLinkApplication : App() {
             nameCarForPhone()
             AndroidAutoStateReporter.start(this)
         } else {
+            nameCarForIphone()
             com.carlink.app.entry.UsbWatcher.get(this).start()
         }
     }
@@ -61,6 +63,8 @@ class CarLinkApplication : App() {
             Log.i(TOAST_TAG, "CarPlay engine toast: $text")
             true
         }
+        // The projections' own chrome (waiting screens, session menus, panels) in CarLink's look.
+        com.carlink.app.engine.EngineChrome.install(this)
     }
 
     /**
@@ -71,6 +75,20 @@ class CarLinkApplication : App() {
         val prefs = getSharedPreferences(Settings.PREFS_NAME, MODE_PRIVATE)
         if (!prefs.contains(KEY_VEHICLE_DISPLAY_NAME)) {
             prefs.edit().putString(KEY_VEHICLE_DISPLAY_NAME, getString(R.string.app_name)).apply()
+        }
+    }
+
+    /**
+     * The car's manufacturer and model as CarPlay reports them to the iPhone (DiPlay's default is
+     * "DiPlay"). Kept when the driver chose other values in the CarPlay menu.
+     */
+    private fun nameCarForIphone() {
+        val name = getString(R.string.app_name)
+        if (AirPlayPersistence.loadManufacturer(this) == AirPlayPersistence.DEFAULT_MANUFACTURER) {
+            AirPlayPersistence.saveManufacturer(this, name)
+        }
+        if (AirPlayPersistence.loadModel(this) == AirPlayPersistence.DEFAULT_MODEL) {
+            AirPlayPersistence.saveModel(this, name)
         }
     }
 

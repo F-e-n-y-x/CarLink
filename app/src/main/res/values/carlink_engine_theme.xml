@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Graphite and Ion (design/RESEARCH_PREMIUM_UX.md §6.1) for the engine UI the driver sees around the
+  projected picture. App resources override library resources of the same name; each overridden
+  name is listed in scripts/resource_collisions_allowlist.txt. The View-built chrome (CarPlay's
+  waiting screen and menu, Android Auto's loading screen and exit menu) is restyled in code by
+  engine/EngineChrome.kt through the engines' host hooks.
+-->
+<resources>
+    <!-- DiAuto: its dialog theme (DarkAlertDialog, used by the projection's exit menu) and own screens. -->
+    <color name="da_background">#0C1016</color>
+    <color name="da_surface">#1B1E24</color>
+    <color name="da_border">#2A2F37</color>
+    <color name="da_accent">#5BD6F0</color>
+    <color name="da_text">#EEF2F6</color>
+    <color name="da_muted">#A9B3C0</color>
+
+    <!-- CarLink's entry in Android Auto's exit menu, in place of DiAuto's Quick Settings. -->
+    <string name="carlink_engine_open_carlink">Open CarLink</string>
+</resources>

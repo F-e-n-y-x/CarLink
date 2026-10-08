@@ -28,6 +28,7 @@ pull is easy to resolve. Keep this list current. After a pull, run
 | `shared/.../orchestration/CarPlayStatusBus.kt` (new) and two lines in `CarPlayController.kt` | Publish each status and the close | CarLink's Home and dispatcher show CarPlay progress outside `CarPlayHostActivity`. |
 | `common/.../DiPlayActivity.kt` | `EXTRA_CARLINK_CONNECT` + `consumeCarLinkConnectIntent()` | CarLink starts CarPlay through DiPlay's own `connect()` pre-flight (setup errors, hotspot setup, iPhone choice, notification permission). |
 | `common/.../CarPlayHostIntegration.kt` (new); `CarPlayHostActivity.kt` (home button, auth failure, resolution-fallback toast), `NavigationWidget.kt`, `DiPlaySessionService.kt` (notification title), `CarPlayMediaKeys.kt` (MediaSession tag) | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler`/`showToast` hooks, defaulting to DiPlay's own values | The projection returns to CarLink's Home; the driver sees "CarLink", not "DiPlay"; CarLink logs and drops the projection's informational toast and shows status itself. |
+| `common/.../CarPlayHostIntegration.kt`; `DiPlayPalette.kt` (public, `of()` consults the hook); `CarPlayHostActivity.kt` (`styleChrome` calls after the waiting screen, menu, side panel, safe-area editor and picture panel are built or repainted; `menuItem(...)` tags on the in-session menu's sections; the menu's DiPlay-settings button says "Back to CarLink" when a host replaced `homeActivity`; a hidden Wi-Fi method is not re-validated on save) | `palette`, `chromeStyler` (with `Chrome`), `menuItems` (with `MenuItem`) hooks, defaulting to DiPlay's own palette, no styling and every section | The projection's chrome looks like CarLink (Graphite and Ion, Inter, glass, pills, CarLink's mark), styled by `app/.../engine/EngineChrome.kt`. The in-session menu hides what CarLink Settings owns or rewrites before every session (wireless, Wi-Fi method, location, driving side, resolution, frame rate, size, dock, HEVC, system bars, debug logs, gesture) and what only standalone DiPlay needs (boot auto-start, language, "Exit application", which kills CarLink's whole process); hidden sections are still built and keep their saved values. |
 
 Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 
@@ -42,6 +43,7 @@ Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 | `app/src/main/java/.../hud/BydStandaloneHudOutput.kt`, `hud/BydStarterBridge.kt` | Same allowlist additions as DiPlay | Same. |
 | `HostIntegration.kt`; `App.kt` (service channel name), `aap/AapService.kt` (service notification title, MediaSession tag), `utils/ToastUtils.kt`, `connection/LocalHotspotCredentialsProvider.kt` (its one raw toast now goes through `ToastUtils`, forced as before) | `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler` hooks, defaulting to DiAuto's own values | Notifications and the media session say CarLink. Every engine toast reaches CarLink first: CarLink logs it (`CarLink-EngineToast`) and drops it unless the engine forces it past its own "toasts off" setting. |
 | `aap/BluetoothWakePolicy.kt` (`gatewayLinkBlocksPoke`), `utils/BluetoothHelper.kt` (`handsFreeLinkState(context, pokedAddress)` + `headsetPeers`), `connection/NativeAaHandshakeManager.kt` (passes the poked phone; poke failure log) | A hands-free link in the *gateway* role (`BluetoothProfile.HEADSET`) stands a wake poke down only when its peer is the poked phone; unreadable peers keep upstream's "skip". Poke failures are logged at INFO with the exception type. Tests in `BluetoothWakePolicyTest`. | A tablet or phone used as the car display is the audio gateway of its own earbuds. Upstream counted that link as "the head unit already holds a hands-free link" and skipped every poke, so wireless Android Auto only started once the phone's Bluetooth connected by itself. The client role (`HEADSET_CLIENT`, the head unit as the phone's hands-free) stays profile-wide because its per-device state is system-only. |
+| `HostIntegration.kt`; `aap/AapProjectionActivity.kt` (`styleChrome` calls for the loading/reconnecting overlay, the renderer banner and the exit menu; `ExitOption.title`; the exit menu's Quick Settings entry becomes `exitMenuHomeLabel`, which opens `homeActivity`) | `chromeStyler` (with `Chrome`), `exitMenuHomeLabel` hooks, defaulting to no styling and Quick Settings | The Android Auto chrome looks like CarLink; the exit menu no longer opens DiAuto's own settings screen inside the projection, but CarLink ("Open CarLink"). |
 
 ## Engine wording changed only through CarLink's resources
 
@@ -50,9 +52,14 @@ App resources override library resources of the same name, so these need no engi
 see during a session (CarPlay picture messages, dashboard-map placeholder, wheel-key accessibility
 service, Android Auto service and boot-loop notifications), and copies of `ic_stat_carlink`
 replace DiAuto's `ic_stat_aa` (`drawable-anydpi-v24`) and DiPlay's `ic_diplay_notification`.
-Each name is in `scripts/resource_collisions_allowlist.txt`. Strings only DiPlay's or DiAuto's own
+`carlink_engine_theme.xml` recolors DiAuto's `da_*` colors (its dialog theme, used by the
+projection's exit menu) to Graphite and Ion, `drawable/bg.xml` replaces DiAuto's blue window
+background, and `layout/dialog_exit_item.xml` gives the exit menu Inter and car-sized rows (same ids;
+re-check after a DiAuto pull). The CarPlay menu title, the side-panel button and the Android Auto
+exit-menu labels are reworded there too. Each name is in `scripts/resource_collisions_allowlist.txt`. Strings only DiPlay's or DiAuto's own
 screens use are left alone. CarLink also sets DiAuto's `vehicle-display-name` (the car name the
-phone shows) to "CarLink" when the driver never chose one.
+phone shows) to "CarLink" when the driver never chose one. Likewise it sets DiPlay's CarPlay manufacturer and model (what
+the iPhone shows for the car) to "CarLink" while they are still DiPlay's default "DiPlay".
 
 ## Behaviour changed only through CarLink's manifest (`app/src/main/AndroidManifest.xml`)
 

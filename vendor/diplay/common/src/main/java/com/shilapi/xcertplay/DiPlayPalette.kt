@@ -3,7 +3,7 @@ package com.shilapi.xcertplay
 import android.graphics.Color
 
 /** Semantic colors for DiPlay-owned chrome. Media canvases and cluster-specific palettes stay separate. */
-internal data class DiPlayPalette(
+data class DiPlayPalette( // CarLink: public so a host can supply one (CarPlayHostIntegration.palette)
     val background: Int,
     val surface: Int,
     val button: Int,
@@ -33,7 +33,8 @@ internal data class DiPlayPalette(
     val overlayDanger: Int,
 ) {
     companion object {
-        fun of(night: Boolean): DiPlayPalette = if (night) DARK else LIGHT
+        fun of(night: Boolean): DiPlayPalette =
+            CarPlayHostIntegration.palette?.invoke(night) ?: if (night) DARK else LIGHT // CarLink
 
         val DARK = DiPlayPalette(
             background = Color.rgb(12, 17, 27),

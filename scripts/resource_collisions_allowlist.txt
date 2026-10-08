@@ -43,3 +43,23 @@ string open_diplay_settings_hint
 string setup_error_auth
 string wheel_key_service_description
 string wheel_key_service_label
+
+# CarLink's look for the engine UI around the projection (app/src/main/res/values/carlink_engine_theme.xml,
+# app/src/main/res/drawable/bg.xml, carlink_engine_overrides.xml). Reviewed 2026-10-09: the da_* colors only
+# feed DiAuto's dialog theme and its own (unused) screens; bg is DiAuto AppTheme's window background; the
+# strings are titles and labels of the CarPlay menu and the Android Auto exit menu, without placeholders.
+color da_accent
+color da_background
+color da_border
+color da_muted
+color da_surface
+color da_text
+drawable bg
+# DiAuto's exit-menu row (ids icon/text kept; Inter, 72dp rows). Layout, so re-check after a DiAuto pull.
+layout dialog_exit_item
+string carplay_settings
+string exit_dialog_background
+string exit_dialog_stop
+string exit_dialog_title
+string gesture_hint
+string side_panel_full_screen
