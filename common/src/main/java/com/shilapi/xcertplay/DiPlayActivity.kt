@@ -1100,7 +1100,7 @@ class DiPlayActivity : ComponentActivity() {
     }
 
     private fun openSearchResult(result: SettingsSearchResult) {
-        hideKeyboard(settingsSearchBox)
+        setSearchKeyboard(settingsSearchBox, false)
         clearSettingsSearchState()
         settingsCategory = result.category
         render()
