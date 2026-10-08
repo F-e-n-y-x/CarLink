@@ -8,19 +8,20 @@
 #   dev.sh size <WxH> [dpi] resize the emulator screen (e.g. 1080x2400 420 for a phone; "reset")
 #   dev.sh logs             CarLink/engine log lines since the last install
 #
-# The user's own phone/tablet (192.168.10.103:5555) is their test device. This script refuses
-# every serial except the emulator, so a wrong `adb` target can never touch it.
+# The emulator is the default target. The user's tablet (192.168.10.103:5555) may be used for live
+# connection testing (permission given 2026-10-09): pass CARLINK_TARGET=tablet explicitly.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SERIAL="${CARLINK_EMULATOR:-emulator-5560}"
+[ "${CARLINK_TARGET:-}" = tablet ] && SERIAL="192.168.10.103:5555"
 ADB="$HOME/android-sdk/platform-tools/adb"
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 PKG="com.carlink.app.hudtest"
 SHOTS="/tmp/carlink-shots"
 export ANDROID_HOME="$HOME/android-sdk"
 
-case "$SERIAL" in emulator-*) ;; *) echo "refusing non-emulator target $SERIAL" >&2; exit 2 ;; esac
+case "$SERIAL" in emulator-*|192.168.10.103:5555) ;; *) echo "refusing unknown target $SERIAL" >&2; exit 2 ;; esac
 adb_e() { "$ADB" -s "$SERIAL" "$@"; }
 
 ensure_emulator() {

@@ -26,7 +26,16 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
         Log.i(TAG, "command=$command")
         when (command) {
             P.COMMAND_START_USB -> startUsb(context, usbDevice(intent))
-            P.COMMAND_START_WIRELESS -> startWireless(context, intent.getStringExtra(P.EXTRA_ADDRESS))
+            P.COMMAND_START_WIRELESS -> {
+                val pending = goAsync()
+                Thread({
+                    try {
+                        startWireless(context, intent.getStringExtra(P.EXTRA_ADDRESS))
+                    } finally {
+                        pending.finish()
+                    }
+                }, "carlink-aa-wireless").start()
+            }
             P.COMMAND_DISCONNECT -> if (isServiceRunning(context)) startService(context, AapService.ACTION_DISCONNECT)
             // Sending STOP_SERVICE to a stopped AapService would first run its onCreate, which
             // enables car mode and opens the wireless stack.
@@ -71,7 +80,21 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
         intent.getParcelableExtra(P.EXTRA_USB_DEVICE)
     }
 
+    /**
+     * A wireless start the driver asked for. If an earlier attempt is stuck (not connected), it
+     * is stopped and any Wi-Fi Direct group left behind is removed first: DiAuto only reuses a
+     * group whose name it recorded, and a group from an earlier CarLink attempt with a newer name
+     * makes it stand down for good ("Another app owns Wi-Fi Direct"). CarLink runs one engine at a
+     * time, so every group on this head unit's P2P interface was created by CarLink.
+     */
     private fun startWireless(context: Context, address: String?) {
+        if (App.provide(context).commManager.isConnected) return
+        if (isServiceRunning(context)) {
+            startService(context, AapService.ACTION_STOP_SERVICE)
+            waitUntil(STOP_WAIT_MILLIS) { !isServiceRunning(context) }
+        }
+        WifiDirectReset.removeGroup(context)
+        context.getSharedPreferences("p2p_ownership", Context.MODE_PRIVATE).edit().clear().commit()
         val nativeWireless = App.provide(context).settings.wifiConnectionMode == NATIVE_WIRELESS_MODE
         if (address != null && nativeWireless) {
             // What DiAuto's phone list does: arm Native AA and wake this phone over Bluetooth.
@@ -88,9 +111,15 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
             .onFailure { Log.w(TAG, "AapService $action refused: ${it.javaClass.simpleName}: ${it.message}") }
     }
 
+    private fun waitUntil(timeoutMillis: Long, condition: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMillis
+        while (!condition() && System.currentTimeMillis() < end) Thread.sleep(100)
+    }
+
     companion object {
         private const val TAG = "CarLink-AA"
         private const val NATIVE_WIRELESS_MODE = 3
+        private const val STOP_WAIT_MILLIS = 3_000L
 
         @Suppress("DEPRECATION") // Still returns the caller's own services.
         fun isServiceRunning(context: Context): Boolean {

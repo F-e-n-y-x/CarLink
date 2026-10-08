@@ -330,7 +330,10 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             stringResource(R.string.carlink_home_ready_phone_body, phone?.kind?.engine?.let { engineName(it) } ?: "",
                 pathName(ui.network?.path, Transport.WIRELESS))
         HomeMode.CONNECTING -> stringResource(R.string.carlink_home_connecting_title, engine) to
-            stringResource(R.string.carlink_home_connecting_body, phoneName)
+            // Android phones only start wireless Android Auto when their Bluetooth connects.
+            if (link.engine == Engine.ANDROID_AUTO && link.transport == Transport.WIRELESS && link.step <= 1)
+                stringResource(R.string.carlink_home_connecting_android_wireless, phoneName)
+            else stringResource(R.string.carlink_home_connecting_body, phoneName)
         HomeMode.CONNECTED -> {
             val elapsed by rememberElapsedMillis(ui.home.connectedSince)
             stringResource(R.string.carlink_home_connected_title, engine) to

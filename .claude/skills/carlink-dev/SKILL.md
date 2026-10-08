@@ -65,9 +65,12 @@ the SDK is the writable overlay `~/android-sdk`; CarPlay authentication files li
 
 ## Device rule
 
-Test only on the emulator (`emulator-5560`, AVD `carlink_headunit`). The physical device on the
-network (`192.168.10.103:5555`) is the user's own test device: never install to it, launch on it
-or change it. Reading its logs is allowed only when the user reports a failure there.
+UI work is checked on the emulator (`emulator-5560`, AVD `carlink_headunit`). Connection work
+(USB, Bluetooth, Wi-Fi Direct, real CarPlay/Android Auto) cannot be tested there: the user allowed
+live testing on their tablet (`192.168.10.103:5555`, Redmi Pad Pro 5G, Android 16) on 2026-10-09 —
+use `CARLINK_TARGET=tablet dev.sh install|logs|shot`, ask the user to plug in or tap Connect, and
+read the logs (DiAuto writes `files/diagnostics/current.log`, readable with `run-as`). Never change
+the tablet's system settings.
 
 A UI change is not done until you have installed it, screenshotted it at head-unit size and at
 phone size, and looked at the images for clipped text, wrong colors, empty areas and anything
