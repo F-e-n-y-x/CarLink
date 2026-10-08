@@ -1035,7 +1035,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             quick.addView(settingsSectionHeading(R.string.settings_quick_settings))
             quick.addView(quickSettingsCard())
             columns.addView(quick, LinearLayout.LayoutParams(0, -2, 1f))
-            content.addView(columns, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) })
+            content.addView(columns, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(SETTINGS_BLOCK_GAP_DP) })
         } else {
             content.addView(settingsSectionHeading(R.string.settings_your_setup))
             destinations.forEach { item ->

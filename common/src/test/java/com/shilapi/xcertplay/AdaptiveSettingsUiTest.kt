@@ -617,6 +617,22 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    @Test fun headerActionsShareOneHeight() = assertHeaderActionsShareOneHeight()
+
+    @Test
+    @Config(sdk = [29], qualifiers = "en-w400dp-h700dp-port")
+    fun compactHeaderActionsShareOneHeight() = assertHeaderActionsShareOneHeight()
+
+    private fun assertHeaderActionsShareOneHeight() {
+        val screen = openSettings()
+        val appearance = descendants(screen.window.decorView).single { it.tag == "app_appearance_button" }
+        val actions = (appearance.parent as ViewGroup).let { header ->
+            (0 until header.childCount).map(header::getChildAt).filter { it is android.widget.Button || it === appearance }
+        }
+        assertTrue(actions.size >= 3)
+        assertEquals(1, actions.map { it.layoutParams.height }.toSet().size)
+    }
+
     @Test fun compactLanguageAndAboutDestinationsWork() {
         verifyLanguageAndAboutDestinations()
     }
