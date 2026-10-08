@@ -1,6 +1,25 @@
 package com.carlink.app.gallery
 
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.carlink.app.core.Engine
+import com.carlink.app.core.LinkProblem
+import com.carlink.app.core.LinkStage
+import com.carlink.app.core.LinkState
+import com.carlink.app.core.Transport
+import com.carlink.app.detect.BluetoothAvailability
+import com.carlink.app.ui.about.AboutContent
+import com.carlink.app.ui.about.AboutSheet
+import com.carlink.app.ui.about.previewFacts
+import com.carlink.app.ui.diagnostics.DiagnosticsActions
+import com.carlink.app.ui.diagnostics.DiagnosticsContent
+import com.carlink.app.ui.diagnostics.DiagnosticsUi
+import com.carlink.app.ui.diagnostics.previewChecks
+import com.carlink.app.ui.diagnostics.previewLink
+import com.carlink.app.ui.diagnostics.previewLog
+import com.carlink.app.ui.home.HomeContent
+import com.carlink.app.ui.home.PhonesSheet
 import com.carlink.app.settings.AdvancedSettings
 import com.carlink.app.settings.SettingsCategory
 import com.carlink.app.ui.settings.EssentialSheet
@@ -29,7 +48,73 @@ class GalleryEntry(
  * Every registered screen state. To add a screen, append entries that call its stateless
  * content composable (the one its @Preview functions use) with preview fakes.
  */
-val galleryEntries: List<GalleryEntry> = listOf(
+val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + diagnosticsEntries() + aboutEntries()).also { entries ->
+        check(entries.map { it.area to it.name }.toSet().size == entries.size) {
+            "Gallery entry names must be unique per area"
+        }
+    }
+
+private object GalleryDiagnosticsActions : DiagnosticsActions
+
+private fun home(name: String, opensWindow: Boolean = false, content: @Composable () -> Unit) =
+    GalleryEntry("home", name, opensWindow, content)
+
+private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
+    home("permission") { HomeContent(ui(permissionsNeeded = true, phones = emptyList()), actions) },
+    home("bluetooth-off") {
+        HomeContent(ui(bluetooth = BluetoothAvailability.OFF, phones = emptyList()), actions)
+    },
+    home("ready-no-phone") { HomeContent(ui(phones = emptyList(), network = null), actions) },
+    // A known iPhone, plus the one-time offer to use the car's current Wi-Fi.
+    home("ready-iphone-same-wifi-offer") {
+        HomeContent(ui(phones = listOf(iphone, pixel), network = sameWifiOffer), actions)
+    },
+    home("connecting-carplay-usb") {
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.USB, iphone.name, 2, 6,
+            "Authenticating"), phones = listOf(iphoneConnected)), actions)
+    },
+    // Android Auto waits for the phone's Bluetooth; the phone is not connected, so Home offers Bluetooth settings.
+    home("connecting-android-auto-wireless-waiting") {
+        HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, Transport.WIRELESS, pixel.name, 1, 5,
+            "Waiting for the phone"), phones = listOf(pixel, iphone)), actions)
+    },
+    home("connected-carplay") {
+        val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTED, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 6, 6),
+            phones = listOf(iphoneConnected, pixel), network = sameWifi, connectedSince = since), actions)
+    },
+    home("failed-carplay-auth-missing") {
+        HomeContent(ui(link = failed(LinkProblem.CARPLAY_AUTH_MISSING, transport = Transport.USB)), actions)
+    },
+    home("failed-car-hotspot-off") { HomeContent(ui(link = failed(LinkProblem.CAR_HOTSPOT_OFF)), actions) },
+    home("failed-engine") {
+        HomeContent(ui(link = failed(LinkProblem.ENGINE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel, iphone)), actions)
+    },
+    home("sheet-phones", opensWindow = true) {
+        val ui = ui(phones = listOf(iphone, pixel, unknown))
+        HomeContent(ui, actions)
+        PhonesSheet(ui, actions, onDismiss = {})
+    },
+) }
+
+private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
+    GalleryEntry("diagnostics", "idle") {
+        DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
+    },
+    GalleryEntry("diagnostics", "connecting") {
+        val started = remember { SystemClock.elapsedRealtime() - 12_000 }
+        DiagnosticsContent(DiagnosticsUi(previewLink, null, started, previewChecks, previewLog()), GalleryDiagnosticsActions)
+    },
+)
+
+private fun aboutEntries(): List<GalleryEntry> = listOf(
+    GalleryEntry("about", "main") { AboutContent(previewFacts, onBack = {}) },
+    GalleryEntry("about", "sheet-licenses", opensWindow = true) {
+        AboutContent(previewFacts, onBack = {}, initialSheet = AboutSheet.LICENSES)
+    },
+)
+
+private fun settingsEntries(): List<GalleryEntry> = listOf(
     // Root: the rail with Connection on wide screens, the category grid on narrow ones.
     GalleryEntry("settings", "root") {
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {})
@@ -82,8 +167,5 @@ val galleryEntries: List<GalleryEntry> = listOf(
             startCategory = SettingsCategory.DISPLAY,
             initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "aa_resolution" }))
     },
-).also { entries ->
-    check(entries.map { it.area to it.name }.toSet().size == entries.size) {
-        "Gallery entry names must be unique per area"
-    }
-}
+)
+

@@ -13,6 +13,39 @@ CarLink combines two open-source projects, imported with their full history:
 > are not verified. CarLink is not affiliated with or endorsed by Apple or Google. CarPlay is a
 > trademark of Apple Inc.; Android Auto is a trademark of Google LLC.
 
+## What you get
+
+- **Plug-and-play Home.** One status and one action: permission or Bluetooth setup when needed,
+  then "Connect <phone>?", a step-by-step Connecting view, the running session with its timer, or
+  a plain-language problem with its fix. A Phones sheet lists paired phones and asks what kind an
+  unidentified device is. Connection is automatic over USB and Bluetooth.
+- **Native Settings.** Everything is CarLink's own screen, never an engine's settings app.
+  **Essentials** (connection, display, sound and voice, navigation, car, general) are one setting
+  written into both engines. **Show advanced** adds every engine-only option, grouped by engine
+  and tagged when it applies at the next connection. **Lab** (seven taps on the version) holds
+  experimental and debug options.
+- **Same Wi-Fi for both engines.** When the car and phone are on the same Wi-Fi, CarLink offers to
+  use it instead of the car hotspot or Wi-Fi Direct; it needs that Wi-Fi's password once (Home
+  asks, or Settings › Connection). CarPlay uses it directly. For Android Auto, CarLink names the
+  router in the network the engine hands the phone (an access-point override); this path is
+  **not yet verified on a real phone**.
+- **Bluetooth starts wireless Android Auto.** An Android phone starts wireless Android Auto when
+  its Bluetooth connects to the display. CarLink wakes the phone over Bluetooth when you tap
+  Connect, but on a tablet or phone used as the car display you may need to connect the phone in
+  Bluetooth settings once; Home says so and offers the button while it waits.
+- **Diagnostics and connection log.** Device checks with one-tap fixes, the live session, and a
+  connection log merging CarPlay, Android Auto and CarLink's own decisions (addresses hidden),
+  filterable and shareable. Opened from Home when something fails, or Settings › General.
+- **One identity.** The Cast logo (a car display with a docked phone) on the launcher, status bar
+  and in the app; engine notifications, media sessions and visible strings say CarLink.
+
+Screenshots of every screen and state: [docs/screenshots](docs/screenshots/README.md).
+
+What is verified: the UI (emulator and the screenshot gallery), detection logic and settings
+mapping (unit tests). USB, Bluetooth, Wi-Fi Direct and real CarPlay/Android Auto sessions depend on
+real hardware; the engines themselves are DiPlay's and DiAuto's and are mainly tested by their
+authors on BYD DiLink.
+
 ## How detection works
 
 | The phone… | CarLink decides | Engine |
@@ -61,7 +94,7 @@ own decisions are logged under `CarLink-*` tags at INFO.
 
 CarLink ships in **English only**, including the engines' screens (`androidResources.localeFilters`
 in `app/build.gradle.kts`). The UI follows [design/DESIGN_SPEC.md](design/DESIGN_SPEC.md). It has two size profiles, chosen
-automatically and selectable in Settings › Display › Layout:
+automatically and selectable in Settings › General › Layout:
 **Car display** (76dp touch targets, 24sp minimum text, sized from the panel's pixels because
 head-unit DPI reports are unreliable) and **Phone or tablet** (Material 3 sizes). Layouts adapt
 to the window: phone portrait, landscape, tablet, head unit and BYD split screen.
@@ -93,7 +126,19 @@ DIPLAY_AUTH_ASSETS_DIR=/path/to/dir-containing-offline-mfi ./gradlew :app:assemb
 ```
 
 Read DiPlay's README about what this identity is and its limits before distributing such a
-build. Android Auto does not need these files. Settings › Diagnostics shows whether they are present.
+build. Android Auto does not need these files. Diagnostics (Settings › General) shows whether they are present.
+
+## Development and tests
+
+Work in this repository follows the project skill
+[.claude/skills/carlink-dev](.claude/skills/carlink-dev/SKILL.md); its `scripts/dev.sh` wraps the
+build, the four unit-test suites, installing on the emulator (`carlink_headunit`), screenshots at
+head-unit and phone size, and logs. UI changes are checked on the emulator; connection work needs
+a real head unit or tablet and phones. The screenshot gallery renders without any device:
+
+```sh
+./gradlew --no-daemon :app:recordScreenshots   # rewrites docs/screenshots
+```
 
 ## Licence
 

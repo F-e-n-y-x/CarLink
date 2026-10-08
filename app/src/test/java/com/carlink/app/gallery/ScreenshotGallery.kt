@@ -3,6 +3,7 @@ package com.carlink.app.gallery
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Looper
+import android.provider.Settings
 import android.content.res.Configuration
 import android.view.View
 import androidx.activity.ComponentActivity
@@ -99,6 +100,11 @@ class ScreenshotGallery {
     }
 
     private fun render(config: GalleryConfig, theme: ThemeMode, entry: GalleryEntry): Bitmap {
+        // "Remove animations": CarLinkTheme then sets LocalReduceMotion, which stops the hero phone's
+        // infinite float and pulse. Under Robolectric's paused looper those never let the frame
+        // queue drain, so the render hangs; still images want the resting pose anyway.
+        Settings.Global.putFloat(RuntimeEnvironment.getApplication().contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE, 0f)
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
