@@ -52,6 +52,7 @@ Each locale MUST use its existing form: `(تجريبي)`, `(experimental)`, `(э
    A plain `section(...)` call there MUST NOT be used: it renders on every category page.
 4. A setting MUST NOT appear in two categories.
    Overview quick settings are the only duplicates. They MUST use the same persistence as the full control. Overview SHOULD NOT have more than four quick settings.
+   A header shortcut MAY duplicate a Display setting when it uses the same persistence.
 5. If the change reconnects CarPlay or applies at the next connection, the description MUST say so.
    A setting that only takes effect at the next connection MUST call `markReconnectNeeded()` after it saves.
    This shows the "Reconnect now" bar. It MUST NOT drop a running session without the driver's consent.
