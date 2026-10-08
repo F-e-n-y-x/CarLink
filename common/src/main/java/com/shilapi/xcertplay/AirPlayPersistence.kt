@@ -67,6 +67,7 @@ object AirPlayPersistence {
     private const val KEY_FPS = "display_fps"
     private const val KEY_MEDIA_BUFFER_MS = "media_buffer_ms"
     private const val KEY_MAIN_BUFFERED_AUDIO = "main_buffered_audio"
+    private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
     private const val KEY_SMOOTH_VIDEO = "smooth_video"
@@ -79,6 +80,9 @@ object AirPlayPersistence {
     private const val KEY_CLUSTER_CONTENT = "cluster_content"
     private const val KEY_CLUSTER_MARKER_X = "cluster_marker_horizontal_step"
     private const val KEY_CLUSTER_MARKER_Y = "cluster_marker_vertical_step"
+    private const val KEY_CLUSTER_SMALL_WINDOW_MODE = "cluster_small_window_mode"
+    private const val KEY_CLUSTER_SMALL_WINDOW_MARKER_X = "cluster_small_window_marker_x"
+    private const val KEY_CLUSTER_SMALL_WINDOW_MARKER_Y = "cluster_small_window_marker_y"
     private const val KEY_CLUSTER_TURN_CARD_OVERLAY_POSITION = "cluster_turn_card_overlay_position"
     private const val KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE = "cluster_turn_card_overlay_size"
     private const val KEY_CLUSTER_TURN_CARD_OVERLAY_X = "cluster_turn_card_overlay_x_percent"
@@ -525,6 +529,14 @@ object AirPlayPersistence {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_MAIN_BUFFERED_AUDIO, enabled).apply()
     }
 
+    /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */
+    fun loadCarBluetoothAudio(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CAR_BLUETOOTH_AUDIO, false)
+
+    fun saveCarBluetoothAudio(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CAR_BLUETOOTH_AUDIO, enabled).apply()
+    }
+
     fun loadSmoothVideo(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SMOOTH_VIDEO, false)
 
@@ -796,6 +808,36 @@ object AirPlayPersistence {
     fun saveClusterMarkerVerticalStep(context: Context, step: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_CLUSTER_MARKER_Y, step.coerceIn(CarPlayClusterDisplay.verticalSteps)).apply()
+    }
+
+    /** 0 off, 1 always small-window positions, 2 auto from the cluster. Default off. */
+    fun loadClusterSmallWindowMode(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_CLUSTER_SMALL_WINDOW_MODE, 0).coerceIn(0, 2)
+
+    fun saveClusterSmallWindowMode(context: Context, mode: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_SMALL_WINDOW_MODE, mode.coerceIn(0, 2)).apply()
+    }
+
+    fun loadClusterSmallWindowMarkerHorizontalStep(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_CLUSTER_SMALL_WINDOW_MARKER_X, 3)
+            .coerceIn(CarPlayClusterDisplay.horizontalSteps)
+
+    fun saveClusterSmallWindowMarkerHorizontalStep(context: Context, step: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_SMALL_WINDOW_MARKER_X, step.coerceIn(CarPlayClusterDisplay.horizontalSteps)).apply()
+    }
+
+    fun loadClusterSmallWindowMarkerVerticalStep(context: Context): Int =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_CLUSTER_SMALL_WINDOW_MARKER_Y, 0)
+            .coerceIn(CarPlayClusterDisplay.verticalSteps)
+
+    fun saveClusterSmallWindowMarkerVerticalStep(context: Context, step: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_CLUSTER_SMALL_WINDOW_MARKER_Y, step.coerceIn(CarPlayClusterDisplay.verticalSteps)).apply()
     }
 
     // Cluster mapping has its own key; never reuse the main display mapping at the same resolution.
