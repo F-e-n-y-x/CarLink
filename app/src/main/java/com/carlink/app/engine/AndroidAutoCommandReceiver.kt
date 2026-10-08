@@ -13,6 +13,7 @@ import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.aap.AapService
 import com.andrerinas.openheadunit.connection.UsbAccessoryMode
 import com.andrerinas.openheadunit.connection.UsbDeviceCompat
+import com.andrerinas.openheadunit.utils.Settings
 import com.carlink.app.engine.AndroidAutoProtocol as P
 
 /**
@@ -88,14 +89,21 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
      * time, so every group on this head unit's P2P interface was created by CarLink.
      */
     private fun startWireless(context: Context, address: String?) {
-        if (App.provide(context).commManager.isConnected) return
+        if (App.provide(context).commManager.isConnected) {
+            Log.i(TAG, "wireless start skipped: an Android Auto session is already connected")
+            return
+        }
         if (isServiceRunning(context)) {
+            Log.i(TAG, "stopping the previous AapService before a fresh wireless start")
             startService(context, AapService.ACTION_STOP_SERVICE)
             waitUntil(STOP_WAIT_MILLIS) { !isServiceRunning(context) }
         }
         WifiDirectReset.removeGroup(context)
         context.getSharedPreferences("p2p_ownership", Context.MODE_PRIVATE).edit().clear().commit()
-        val nativeWireless = App.provide(context).settings.wifiConnectionMode == NATIVE_WIRELESS_MODE
+        val settings = App.provide(context).settings
+        val nativeWireless = settings.wifiConnectionMode == NATIVE_WIRELESS_MODE
+        if (address != null) addPokeTarget(context, address)
+        Log.i(TAG, "wireless start native=$nativeWireless phone=${address != null}")
         if (address != null && nativeWireless) {
             // What DiAuto's phone list does: arm Native AA and wake this phone over Bluetooth.
             startService(context, AapService.ACTION_NATIVE_AA_POKE) { putExtra(AapService.EXTRA_MAC, address) }
@@ -103,6 +111,24 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
             // What DiAuto's Bluetooth auto-start does: (re-)arm the configured wireless mode.
             startService(context, AapService.ACTION_BT_AUTO_START)
         }
+    }
+
+    /**
+     * DiAuto's wake-poke retry loop pokes its Bluetooth auto-start phones, or every paired device
+     * when that list is empty. On a display that is also paired with earbuds, a watch or other
+     * cars, each absent device costs a page timeout (about 5 s per profile) before the loop
+     * reaches the phone, every 15 s cycle. The phone the driver chose is added to the list (kept
+     * in DiAuto's device-protected copy too, which CarLink's KnownPhones reads).
+     */
+    private fun addPokeTarget(context: Context, address: String) {
+        val settings = App.provide(context).settings
+        val normalized = address.uppercase()
+        val current = settings.autoStartBluetoothDeviceMacs
+        if (current.any { it.equals(normalized, ignoreCase = true) }) return
+        val updated = current + normalized
+        settings.autoStartBluetoothDeviceMacs = updated
+        Settings.syncAutoStartBtMacsToDeviceStorage(context, updated)
+        Log.i(TAG, "phone added to the wake-poke targets (${updated.size} in total)")
     }
 
     private fun startService(context: Context, action: String, extras: Intent.() -> Unit = {}) {

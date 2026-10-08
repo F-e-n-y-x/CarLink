@@ -115,7 +115,7 @@ object BluetoothHelper {
      * per-device equivalents are system-only. On a head unit paired with one phone that distinction
      * does not arise; where it does, this errs toward reporting a link.
      */
-    fun handsFreeLinkState(context: Context): Boolean? {
+    fun handsFreeLinkState(context: Context, pokedAddress: String? = null): Boolean? { // CarLink: pokedAddress
         val resolved = try {
             getBluetoothAdapter(context)
         } catch (e: Exception) {
@@ -136,9 +136,41 @@ object BluetoothHelper {
                 continue
             }
             readAnyState = true
-            if (state == BluetoothProfile.STATE_CONNECTED) return true
+            if (state != BluetoothProfile.STATE_CONNECTED) continue
+            // CarLink: a gateway-role link counts only when it is to the poked phone.
+            if (profile == BluetoothProfile.HEADSET && !com.andrerinas.openheadunit.aap.BluetoothWakePolicy
+                    .gatewayLinkBlocksPoke(pokedAddress, headsetPeers(context, adapter))) continue
+            return true
         }
         return if (readAnyState) false else null
+    }
+
+    /**
+     * CarLink: addresses connected to this unit's `HEADSET` (gateway) profile, or null when they
+     * cannot be read. Public API, but the proxy arrives on the main thread, so this blocks briefly
+     * and must not run there.
+     */
+    private fun headsetPeers(context: Context, adapter: BluetoothAdapter): Set<String>? {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return null
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var proxy: BluetoothProfile? = null
+        val listener = object : BluetoothProfile.ServiceListener {
+            override fun onServiceConnected(profile: Int, connected: BluetoothProfile) {
+                proxy = connected
+                latch.countDown()
+            }
+            override fun onServiceDisconnected(profile: Int) {}
+        }
+        return try {
+            if (!adapter.getProfileProxy(context.applicationContext, listener, BluetoothProfile.HEADSET)) return null
+            if (!latch.await(1, java.util.concurrent.TimeUnit.SECONDS)) return null
+            proxy?.connectedDevices?.map { it.address.uppercase() }?.toSet()
+        } catch (e: Exception) {
+            AppLog.i("BluetoothHelper: could not read the headset peers: ${e.javaClass.simpleName}: ${e.message}")
+            null
+        } finally {
+            proxy?.let { runCatching { adapter.closeProfileProxy(BluetoothProfile.HEADSET, it) } }
+        }
     }
 
     /**

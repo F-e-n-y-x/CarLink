@@ -14,6 +14,25 @@ object CarPlayHostIntegration {
     @JvmStatic
     var homeActivity: Class<out Activity> = DiPlayActivity::class.java
 
+    /** Title of the connection notification. */
+    @Volatile
+    @JvmStatic
+    var appName: String = "DiPlay"
+
+    @Volatile
+    @JvmStatic
+    var mediaSessionTag: String = "DiPlay CarPlay"
+
+    /** Sees the projection's informational toasts first; returns true when the host handled them. */
+    @Volatile
+    @JvmStatic
+    var toastHandler: ((context: Context, text: CharSequence) -> Boolean)? = null
+
+    fun showToast(context: Context, text: CharSequence, duration: Int) {
+        if (toastHandler?.invoke(context, text) == true) return
+        android.widget.Toast.makeText(context, text, duration).show()
+    }
+
     /** [page] is DiPlay's page name ("home", "settings", …); other hosts may ignore it. */
     fun homeIntent(context: Context, page: String? = null): Intent =
         Intent(context, homeActivity).apply { page?.let { putExtra("page", it) } }

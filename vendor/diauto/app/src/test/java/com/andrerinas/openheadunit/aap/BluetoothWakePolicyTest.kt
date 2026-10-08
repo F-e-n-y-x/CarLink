@@ -79,6 +79,30 @@ class BluetoothWakePolicyTest {
         assertEquals(listOf(BluetoothWakePolicy.HandsFreeLink.CONNECTED), suppressed)
     }
 
+    // --- CarLink: a gateway-role link counts only when it is to the poked phone ---
+
+    private val PHONE = "AA:BB:CC:DD:EE:01"
+    private val EARBUDS = "AA:BB:CC:DD:EE:02"
+
+    /** A tablet used as the car display, with its own earbuds connected: the phone is not involved. */
+    @Test
+    fun `the display's own earbuds do not stand a poke down`() {
+        assertFalse(BluetoothWakePolicy.gatewayLinkBlocksPoke(PHONE, listOf(EARBUDS)))
+        assertFalse(BluetoothWakePolicy.gatewayLinkBlocksPoke(PHONE, emptyList()))
+    }
+
+    @Test
+    fun `a gateway link to the poked phone stands the poke down, whatever the case`() {
+        assertTrue(BluetoothWakePolicy.gatewayLinkBlocksPoke(PHONE, listOf(EARBUDS, PHONE.lowercase())))
+    }
+
+    /** Unknown peers or an unknown target keep upstream's cautious answer. */
+    @Test
+    fun `unreadable peers or an unknown target still count as a link`() {
+        assertTrue(BluetoothWakePolicy.gatewayLinkBlocksPoke(PHONE, null))
+        assertTrue(BluetoothWakePolicy.gatewayLinkBlocksPoke(null, listOf(EARBUDS)))
+    }
+
     // --- pairing: strict about poking, lenient about forgetting ---
 
     private val BONDED = BluetoothWakePolicy.BondReading.BONDED

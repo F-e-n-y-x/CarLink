@@ -41,6 +41,23 @@ object BluetoothWakePolicy {
         else -> uuid.toString()
     }
 
+    /**
+     * CarLink: whether a hands-free link in the *gateway* role (`BluetoothProfile.HEADSET`, this
+     * unit acting as a phone) stands a poke to [pokedAddress] down.
+     *
+     * A poke connects to the phone's audio-gateway record, so it can only displace a link to that
+     * phone. A tablet or phone used as the car display is a gateway to its own earbuds: counting
+     * that link skipped every poke, and wireless Android Auto never started until the phone's
+     * Bluetooth connected by itself. So the gateway role counts only when its peer is the poked
+     * phone (the OEM stacks the upstream check was written for report the phone there). When the
+     * peers cannot be read ([gatewayPeers] null) or the target is unknown, it counts, as upstream.
+     * The client role (`HEADSET_CLIENT`) stays profile-wide: its per-device state is system-only.
+     */
+    fun gatewayLinkBlocksPoke(pokedAddress: String?, gatewayPeers: Collection<String>?): Boolean {
+        if (pokedAddress == null || gatewayPeers == null) return true
+        return gatewayPeers.any { it.equals(pokedAddress, ignoreCase = true) }
+    }
+
     /** What this head unit's own Bluetooth stack says about its hands-free link. */
     enum class HandsFreeLink {
         /** A link is up. Poking would take the phone's slot away from it. */

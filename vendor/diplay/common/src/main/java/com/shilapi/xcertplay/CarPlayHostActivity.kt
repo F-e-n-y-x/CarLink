@@ -3601,10 +3601,10 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         if (smallerUiFallback || resolutionFallback) {
             runOnUiThread {
-                android.widget.Toast.makeText(this,
+                CarPlayHostIntegration.showToast(this, // CarLink
                     getString(if (resolutionFallback) R.string.resolution_canvas_unsupported
                         else R.string.this_head_unit_cannot_use_the_smaller_size_at_this_resolut),
-                    android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.LENGTH_LONG)
             }
         }
         appendLog("CarPlay size=${CarPlayUiScale.label(uiScalePercent)} canvas=${scaledDisplay.widthPixels}x${scaledDisplay.heightPixels}")

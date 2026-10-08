@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Engine strings the driver can see during a session (CarPlay picture, notifications, cluster,
+  system settings), reworded for CarLink. App resources override library resources of the same
+  name; each name is listed in scripts/resource_collisions_allowlist.txt. Keep every format
+  placeholder of the engine's original. Strings only on DiPlay's/DiAuto's own screens (never shown
+  in CarLink) are left alone.
+-->
+<resources>
+    <!-- DiPlay: CarPlayHostActivity -->
+    <string name="diplay">CarLink</string>
+    <string name="back_to_diplay">Back to CarLink</string>
+    <string name="could_not_start_carplay_return_to_diplay_and_check_app_per">Could not start CarPlay. Return to CarLink and check app permissions.</string>
+    <string name="allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per">Allow Nearby devices for CarLink in the head unit’s app permissions.</string>
+    <string name="allow_precise_location_for_diplay_in_the_head_unit_s_app_p">Allow precise Location for CarLink in the head unit’s app permissions.</string>
+    <string name="existing_wifi_instructions">Connect the car and iPhone to the same external Wi-Fi in system settings. Enter its exact name and WPA2 password below; leave the password empty only for an open network. Use WPA2 or WPA2/WPA3 mixed mode and disable client isolation on the router. CarLink keeps this Wi-Fi connection and creates no hotspot.</string>
+    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open CarLink settings.</string>
+    <string name="setup_error_auth">CarPlay authentication files are missing from this build. Settings › Diagnostics explains what is needed.</string>
+    <!-- DiPlay: dashboard map and the accessibility service shown in system settings -->
+    <string name="cluster_waiting_for_map">CarLink · waiting for the CarPlay map</string>
+    <string name="wheel_key_service_label">CarLink wheel keys</string>
+    <string name="wheel_key_service_description">Lets CarLink use the chosen steering-wheel keys to zoom the CarPlay map on the dashboard and to move around CarPlay\'s screen. It only receives key presses and does not read the screen.</string>
+
+    <!-- DiAuto: AapService notifications -->
+    <string name="notification_service_running">Android Auto is ready</string>
+    <string name="boot_loop_paused_generic">This device restarted three times in a row shortly after CarLink started wireless Android Auto, so wireless was left off this time. USB still works. Open CarLink to turn it back on.</string>
+    <string name="boot_loop_paused_native_wifi_direct">This device restarted three times in a row shortly after CarLink started wireless Android Auto, so wireless was left off this time. On some head units the Wi-Fi chipset takes the whole system down when a phone joins a Wi-Fi Direct network. Try the car hotspot as the wireless method. USB still works.</string>
+</resources>

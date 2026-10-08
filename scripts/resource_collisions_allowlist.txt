@@ -23,3 +23,23 @@ string settings_search_hint
 string share
 xml locales_config
 xml usb_device_filter
+
+# CarLink overrides of engine wording the driver sees during a session
+# (app/src/main/res/values/carlink_engine_overrides.xml; notification icons copied from ic_stat_carlink).
+# Each keeps the engine string's placeholders.
+drawable ic_diplay_notification
+drawable ic_stat_aa
+string allow_nearby_devices_for_diplay_in_the_head_unit_s_app_per
+string allow_precise_location_for_diplay_in_the_head_unit_s_app_p
+string back_to_diplay
+string boot_loop_paused_generic
+string boot_loop_paused_native_wifi_direct
+string cluster_waiting_for_map
+string could_not_start_carplay_return_to_diplay_and_check_app_per
+string diplay
+string existing_wifi_instructions
+string notification_service_running
+string open_diplay_settings_hint
+string setup_error_auth
+string wheel_key_service_description
+string wheel_key_service_label

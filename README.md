@@ -25,8 +25,15 @@ CarLink combines two open-source projects, imported with their full history:
 
 USB flash drives and other peripherals are ignored. A phone without enough evidence is queried
 over Bluetooth SDP first; nothing starts until CarLink is sure. Plugging in a phone may replace a
-wireless session; a phone's Bluetooth never interrupts a running session. Cancelling pauses
-automatic connection until the driver connects again.
+wireless session; a phone's Bluetooth never interrupts a running session or covers its picture.
+Unplugging the phone ends a wired session. Cancelling pauses automatic connection until the
+driver connects again (the phone re-enumerating on USB right after a Disconnect does not restart it).
+
+When the driver taps Connect for an Android phone, CarLink wakes that phone over Bluetooth at once
+(Android Auto's wireless setup starts on a Bluetooth connection) and keeps retrying until it
+answers. The engines' own toasts are logged (`CarLink-EngineToast`) instead of shown, except the few
+Android Auto forces past its own "toasts off" setting because nothing else would explain them; CarLink's
+own decisions are logged under `CarLink-*` tags at INFO.
 
 ## Architecture
 

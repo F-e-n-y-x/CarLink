@@ -185,7 +185,7 @@ internal object CarPlayMediaKeys {
         focusRequest = request
         focusHeld = granted
         if (granted) forwardGrantedFocusLocked()
-        session = MediaSession(context, "DiPlay CarPlay").apply {
+        session = MediaSession(context, CarPlayHostIntegration.mediaSessionTag).apply { // CarLink
             setCallback(callback, mainHandler)
             setMetadata(androidMetadata(nowPlaying, shownArtworkLocked()))
             isActive = true

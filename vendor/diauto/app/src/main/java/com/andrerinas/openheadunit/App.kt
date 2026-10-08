@@ -83,7 +83,7 @@ open class App : Application() {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(defaultChannel, "Headunit Service", NotificationManager.IMPORTANCE_LOW)
+            val serviceChannel = NotificationChannel(defaultChannel, HostIntegration.serviceChannelName, NotificationManager.IMPORTANCE_LOW) // CarLink
             serviceChannel.description = "Persistent service notification"
             serviceChannel.setShowBadge(false)
             component.notificationManager.createNotificationChannel(serviceChannel)

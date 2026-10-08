@@ -27,6 +27,7 @@ pull is easy to resolve. Keep this list current. After a pull, run
 | `shared/.../hud/BydStandaloneHudOutput.kt`, `shared/.../hud/BydStarterBridge.kt` | Added `com.carlink.app` / `com.carlink.app.hudtest` to the package allowlists | These are the authors' own safety gates; the firmware side is still verified by signature and fingerprint. |
 | `shared/.../orchestration/CarPlayStatusBus.kt` (new) and two lines in `CarPlayController.kt` | Publish each status and the close | CarLink's Home and dispatcher show CarPlay progress outside `CarPlayHostActivity`. |
 | `common/.../DiPlayActivity.kt` | `EXTRA_CARLINK_CONNECT` + `consumeCarLinkConnectIntent()` | CarLink starts CarPlay through DiPlay's own `connect()` pre-flight (setup errors, hotspot setup, iPhone choice, notification permission). |
+| `common/.../CarPlayHostIntegration.kt` (new); `CarPlayHostActivity.kt` (home button, auth failure, resolution-fallback toast), `NavigationWidget.kt`, `DiPlaySessionService.kt` (notification title), `CarPlayMediaKeys.kt` (MediaSession tag) | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler`/`showToast` hooks, defaulting to DiPlay's own values | The projection returns to CarLink's Home; the driver sees "CarLink", not "DiPlay"; CarLink logs and drops the projection's informational toast and shows status itself. |
 
 Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 
@@ -39,6 +40,19 @@ Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 | `app/src/main/java/.../App.kt` | `open class`, `initializesAndroidAutoEngine()` guard | `CarLinkApplication` extends `App` (the engine casts the application context to it) and skips engine startup outside `:aa`. |
 | `app/src/main/java/.../HostIntegration.kt` (new); `aap/AapService.kt` (5 sites), `connection/WifiDirectManager.kt` (1 site) | `Intent(…, MainActivity)` → `HostIntegration.homeActivity` | Notification taps, boot launch and Wi-Fi Direct return open CarLink's Home. |
 | `app/src/main/java/.../hud/BydStandaloneHudOutput.kt`, `hud/BydStarterBridge.kt` | Same allowlist additions as DiPlay | Same. |
+| `HostIntegration.kt`; `App.kt` (service channel name), `aap/AapService.kt` (service notification title, MediaSession tag), `utils/ToastUtils.kt`, `connection/LocalHotspotCredentialsProvider.kt` (its one raw toast now goes through `ToastUtils`, forced as before) | `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler` hooks, defaulting to DiAuto's own values | Notifications and the media session say CarLink. Every engine toast reaches CarLink first: CarLink logs it (`CarLink-EngineToast`) and drops it unless the engine forces it past its own "toasts off" setting. |
+| `aap/BluetoothWakePolicy.kt` (`gatewayLinkBlocksPoke`), `utils/BluetoothHelper.kt` (`handsFreeLinkState(context, pokedAddress)` + `headsetPeers`), `connection/NativeAaHandshakeManager.kt` (passes the poked phone; poke failure log) | A hands-free link in the *gateway* role (`BluetoothProfile.HEADSET`) stands a wake poke down only when its peer is the poked phone; unreadable peers keep upstream's "skip". Poke failures are logged at INFO with the exception type. Tests in `BluetoothWakePolicyTest`. | A tablet or phone used as the car display is the audio gateway of its own earbuds. Upstream counted that link as "the head unit already holds a hands-free link" and skipped every poke, so wireless Android Auto only started once the phone's Bluetooth connected by itself. The client role (`HEADSET_CLIENT`, the head unit as the phone's hands-free) stays profile-wide because its per-device state is system-only. |
+
+## Engine wording changed only through CarLink's resources
+
+App resources override library resources of the same name, so these need no engine edit:
+`app/src/main/res/values/carlink_engine_overrides.xml` rewords the engine strings the driver can
+see during a session (CarPlay picture messages, dashboard-map placeholder, wheel-key accessibility
+service, Android Auto service and boot-loop notifications), and copies of `ic_stat_carlink`
+replace DiAuto's `ic_stat_aa` (`drawable-anydpi-v24`) and DiPlay's `ic_diplay_notification`.
+Each name is in `scripts/resource_collisions_allowlist.txt`. Strings only DiPlay's or DiAuto's own
+screens use are left alone. CarLink also sets DiAuto's `vehicle-display-name` (the car name the
+phone shows) to "CarLink" when the driver never chose one.
 
 ## Behaviour changed only through CarLink's manifest (`app/src/main/AndroidManifest.xml`)
 

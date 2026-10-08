@@ -597,7 +597,7 @@ class NativeAaHandshakeManager(
     private suspend fun pokeDevice(device: BluetoothDevice, holdMs: Long): Boolean {
         // A poke that connects takes the phone's single hands-free slot, and this unit's own client
         // is dropped to make room. See BluetoothWakePolicy for the measurement.
-        val handsFreeLink = BluetoothWakePolicy.HandsFreeLink.of(BluetoothHelper.handsFreeLinkState(context))
+        val handsFreeLink = BluetoothWakePolicy.HandsFreeLink.of(BluetoothHelper.handsFreeLinkState(context, device.address)) // CarLink: per phone
         if (!BluetoothWakePolicy.shouldPoke(handsFreeLink)) {
             noteHandsFreePokeSkip(device)
             return false
@@ -639,7 +639,8 @@ class NativeAaHandshakeManager(
                 } catch (e: Exception) {
                     // Address as well as name: getName() is null for an unbonded device, and a log line
                     // reading "to null" names nothing at all for the reader of a bug report.
-                    AppLog.d("NativeAA: Poke via $profile to ${device.name ?: "unnamed"} (${device.address}) failed: ${e.message}")
+                    // CarLink: info with the exception type, so a field log says why the phone was not woken.
+                    AppLog.i("NativeAA: Poke via $profile to ${device.name ?: "unnamed"} (${device.address}) failed: ${e.javaClass.simpleName}: ${e.message}")
                 } finally {
                     try { socket?.close() } catch (e: Exception) {}
                 }

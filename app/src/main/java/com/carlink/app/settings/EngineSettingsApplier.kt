@@ -35,7 +35,16 @@ object EngineSettingsApplier {
     fun applyForSession(context: Context, engine: Engine, settings: UnifiedSettings): WirelessPath {
         val wifi = wifiEnvironment(context)
         val path = WirelessPathSelector.select(engine, settings, wifi)
-        Log.i(TAG, "session engine=$engine path=$path method=${settings.connectionMethod}")
+        Log.i(TAG, "session engine=$engine path=$path method=${settings.connectionMethod} " +
+            "wifiNetworks=${wifi.joinedNetworks} ssidReadable=${wifi.joinedSsid != null} " +
+            "sameWifiSaved=${settings.homeWifi.isValid()} hotspotOn=${wifi.carHotspotOn}")
+        if (engine == Engine.CARPLAY && settings.homeWifi.isValid() && wifi.joinedNetworks == 1 && wifi.joinedSsid == null) {
+            // Android hides the joined network's name without location access (and with location
+            // switched off), so Same Wi-Fi cannot be confirmed and the next path is used instead.
+            val location = context.checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            Log.i(TAG, "joined Wi-Fi name unreadable (location permission granted=$location); Same Wi-Fi not confirmed")
+        }
         when (engine) {
             Engine.CARPLAY -> applyCarPlay(context, EngineMappings.carPlay(settings, path))
             Engine.ANDROID_AUTO -> applyAndroidAuto(context, settings, path, wifi)

@@ -36,6 +36,10 @@ class UsbRouterActivity : Activity() {
         val kind = PhoneClassifier.classifyUsb(describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
+        if (!UsbWatcher.get(this).claim(device)) {
+            Log.i(TAG, "USB attach already routed by the watcher")
+            return
+        }
         val name = runCatching { device.productName }.getOrNull()
         // The attach intent carries the UsbDevice: DiPlay reads it for a wired iPhone, and the
         // Android Auto engine switches that exact phone to accessory mode.

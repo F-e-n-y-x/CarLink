@@ -31,7 +31,10 @@ class UsbWatcher private constructor(context: Context) {
             val device = UsbRouterActivity.usbDevice(intent) ?: return
             when (intent.action) {
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> route(device)
-                UsbManager.ACTION_USB_DEVICE_DETACHED -> handled -= device.deviceName
+                UsbManager.ACTION_USB_DEVICE_DETACHED -> {
+                    handled -= device.deviceName
+                    EngineCoordinator.get(app).onUsbDetached()
+                }
             }
         }
     }
@@ -61,8 +64,15 @@ class UsbWatcher private constructor(context: Context) {
         runCatching { app.unregisterReceiver(receiver) }
     }
 
+    /**
+     * Marks this attach as routed; false when it already was. The system's attach dispatch
+     * (UsbRouterActivity) and this watcher both see a plug-in while CarLink runs, and a later
+     * scan (Home opening) must not start a second time for a phone that is still plugged in.
+     */
+    fun claim(device: UsbDevice): Boolean = handled.add(device.deviceName)
+
     private fun route(device: UsbDevice) {
-        if (!handled.add(device.deviceName)) return
+        if (!claim(device)) return
         val kind = PhoneClassifier.classifyUsb(UsbRouterActivity.describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return

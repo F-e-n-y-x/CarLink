@@ -7,6 +7,8 @@
     <string name="notification_channel_launch">Open CarLink</string>
     <string name="notification_phone_ready">%1$s is nearby. Tap to connect.</string>
     <string name="notification_open">Tap to open CarLink.</string>
+    <!-- Android Auto engine's persistent notification channel, shown in system notification settings. -->
+    <string name="carlink_notification_channel_android_auto">Android Auto connection</string>
 
     <!-- Shared vocabulary -->
     <string name="carlink_back">Back</string>

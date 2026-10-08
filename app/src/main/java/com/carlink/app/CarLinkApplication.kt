@@ -3,11 +3,14 @@ package com.carlink.app
 import android.app.Application
 import android.os.Build
 import android.os.Process
+import android.util.Log
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
+import com.andrerinas.openheadunit.utils.Settings
 import com.carlink.app.engine.AndroidAutoProtocol
 import com.carlink.app.engine.AndroidAutoStateReporter
 import com.carlink.app.ui.HomeActivity
+import com.shilapi.xcertplay.CarPlayHostIntegration
 
 /**
  * One Application class for every process of the APK. It must be DiAuto's [App] because the
@@ -23,15 +26,51 @@ class CarLinkApplication : App() {
     override fun initializesAndroidAutoEngine(): Boolean = isAndroidAutoProcess
 
     override fun onCreate() {
+        // Before App.onCreate: it creates the engine's notification channels from these names.
+        brandEngines()
         super.onCreate()
-        // Notification taps, boot launches and Wi-Fi Direct returns open CarLink, not DiAuto's home.
-        HostIntegration.homeActivity = HomeActivity::class.java
         if (isAndroidAutoProcess) {
+            nameCarForPhone()
             AndroidAutoStateReporter.start(this)
         } else {
-            // DiPlay's projection returns to CarLink's Home, never to DiPlay's own screens.
-            com.shilapi.xcertplay.CarPlayHostIntegration.homeActivity = HomeActivity::class.java
             com.carlink.app.entry.UsbWatcher.get(this).start()
+        }
+    }
+
+    /**
+     * The driver sees CarLink, never the engines' names: notification titles and channels, media
+     * sessions, and the screens the engines open on their own (notification taps, boot launches,
+     * Wi-Fi Direct returns, the projection's home button). Engine toasts are logged and dropped:
+     * CarLink's Home shows the connection status itself. A toast the engine forces past its own
+     * "toasts off" setting (a dead end with no other explanation) still shows.
+     */
+    private fun brandEngines() {
+        val name = getString(R.string.app_name)
+        HostIntegration.homeActivity = HomeActivity::class.java
+        HostIntegration.appName = name
+        HostIntegration.serviceChannelName = getString(R.string.carlink_notification_channel_android_auto)
+        HostIntegration.mediaSessionTag = "CarLink Android Auto"
+        HostIntegration.toastHandler = { _, text, forced ->
+            Log.i(TOAST_TAG, "Android Auto engine toast forced=$forced: $text")
+            !forced
+        }
+        CarPlayHostIntegration.homeActivity = HomeActivity::class.java
+        CarPlayHostIntegration.appName = name
+        CarPlayHostIntegration.mediaSessionTag = "CarLink CarPlay"
+        CarPlayHostIntegration.toastHandler = { _, text ->
+            Log.i(TOAST_TAG, "CarPlay engine toast: $text")
+            true
+        }
+    }
+
+    /**
+     * The name the phone shows for this car in Android Auto (DiAuto's default is "DiAuto").
+     * Cosmetic per DiAuto's Settings, and kept when the driver chose one.
+     */
+    private fun nameCarForPhone() {
+        val prefs = getSharedPreferences(Settings.PREFS_NAME, MODE_PRIVATE)
+        if (!prefs.contains(KEY_VEHICLE_DISPLAY_NAME)) {
+            prefs.edit().putString(KEY_VEHICLE_DISPLAY_NAME, getString(R.string.app_name)).apply()
         }
     }
 
@@ -41,5 +80,10 @@ class CarLinkApplication : App() {
         return runCatching {
             java.io.File("/proc/$pid/cmdline").readText().trimEnd('\u0000')
         }.getOrDefault(packageName)
+    }
+
+    private companion object {
+        const val TOAST_TAG = "CarLink-EngineToast"
+        const val KEY_VEHICLE_DISPLAY_NAME = "vehicle-display-name"
     }
 }

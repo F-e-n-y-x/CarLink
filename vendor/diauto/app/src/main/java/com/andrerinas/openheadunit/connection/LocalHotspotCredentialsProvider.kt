@@ -166,7 +166,8 @@ class LocalHotspotCredentialsProvider(private val context: Context, private val 
     }
     private fun report(message: String) {
         AppLog.w("LocalHotspot: $message")
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        // CarLink: through ToastUtils so the host sees it; forced keeps the original "always show".
+        com.andrerinas.openheadunit.utils.ToastUtils.showToast(context, message, Toast.LENGTH_LONG, force = true)
     }
     private fun publish() {
         ready?.let { listener?.invoke(it.ssid, it.password, it.ip, it.bssid) }

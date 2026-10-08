@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkProblem
@@ -31,15 +32,44 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     /** A start waiting for the previous CarPlay session to finish closing. */
     private var pendingStart: Runnable? = null
 
-    private val listener: (CarPlayStatus?) -> Unit = { status ->
-        main.post {
-            if (status == null) pendingStart?.let { start -> pendingStart = null; main.removeCallbacks(start); start.run() }
-            onState(map(status))
-        }
+    /**
+     * Until this time (uptime), statuses come from a session CarLink asked to close. They are
+     * shutdown noise: forwarding its ControlEnded or Failed would end or fail the attempt that
+     * replaces it, and an active-looking one would re-adopt a session the driver just stopped.
+     */
+    private var closingUntil = 0L
+
+    /** Fails an attempt whose CarPlay picture never reported anything (see [HOST_START_TIMEOUT_MILLIS]). */
+    private val hostStartTimeout = Runnable {
+        if (CarPlayStatusBus.current != null) return@Runnable
+        Log.i(TAG, "CarPlay picture reported nothing within ${HOST_START_TIMEOUT_MILLIS / 1000} s")
+        onState(LinkState(LinkStage.FAILED, Engine.CARPLAY, transport, phoneName, problem = LinkProblem.ENGINE))
     }
+
+    private val listener: (CarPlayStatus?) -> Unit = { status -> main.post { onStatus(status) } }
 
     init {
         CarPlayStatusBus.addListener(listener)
+    }
+
+    private fun onStatus(status: CarPlayStatus?) {
+        if (status != null) main.removeCallbacks(hostStartTimeout)
+        if (status == null) {
+            closingUntil = 0L
+            val start = pendingStart
+            if (start != null) {
+                // The old session is closed: open the new one, which keeps its own WAITING state.
+                pendingStart = null
+                main.removeCallbacks(start)
+                start.run()
+                return
+            }
+        }
+        if (pendingStart != null || SystemClock.uptimeMillis() < closingUntil) {
+            Log.i(TAG, "ignoring status of the closing session: ${status?.javaClass?.simpleName}")
+            return
+        }
+        onState(map(status))
     }
 
     fun start(transport: Transport, iphoneAddress: String?, phoneName: String?, usbAttach: Intent? = null) {
@@ -55,11 +85,14 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
             CarPlayHostIntegration.selectPhone(app, iphoneAddress, phoneName ?: iphoneAddress)
         }
         AirPlayPersistence.saveWirelessEnabled(app, transport == Transport.WIRELESS)
+        pendingStart?.let { main.removeCallbacks(it) }
+        pendingStart = null
         val open = Runnable { openHost(usbAttach) }
         if (CarPlayStatusBus.current == null) {
             open.run()
         } else {
             // One CarPlay session at a time: close the running one, then open when it reports closed.
+            Log.i(TAG, "closing the running CarPlay session before starting $transport")
             pendingStart = open
             requestStop()
             main.postDelayed({ if (pendingStart === open) { pendingStart = null; open.run() } }, STOP_TIMEOUT_MILLIS)
@@ -70,6 +103,8 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     fun stop() {
         pendingStart?.let { main.removeCallbacks(it) }
         pendingStart = null
+        main.removeCallbacks(hostStartTimeout)
+        if (CarPlayStatusBus.current != null) closingUntil = SystemClock.uptimeMillis() + STOP_TIMEOUT_MILLIS
         requestStop()
         onState(LinkState.Idle)
     }
@@ -84,11 +119,16 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     }
 
     private fun openHost(usbAttach: Intent?) {
+        closingUntil = 0L
+        Log.i(TAG, "opening the CarPlay picture transport=$transport wiredAttach=${usbAttach != null}")
+        main.removeCallbacks(hostStartTimeout)
+        main.postDelayed(hostStartTimeout, HOST_START_TIMEOUT_MILLIS)
         val host = Intent(app, CarPlayHostActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         // The host recognises a wired iPhone from the attach action and device extra.
         usbAttach?.let { host.action = it.action; it.extras?.let(host::putExtras) }
         runCatching { app.startActivity(host) }.onFailure {
+            main.removeCallbacks(hostStartTimeout)
             Log.w(TAG, "could not open CarPlay: ${it.javaClass.simpleName}")
             onState(LinkState(LinkStage.FAILED, Engine.CARPLAY, transport, phoneName,
                 detail = it.message, problem = LinkProblem.ENGINE))
@@ -112,6 +152,13 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     companion object {
         private const val TAG = "CarLink-CarPlay"
         private const val STOP_TIMEOUT_MILLIS = 5_000L
+
+        /**
+         * The picture asks for runtime permissions and VPN consent before its controller reports
+         * a first status, so this is generous; a picture that crashed or closed at once would
+         * otherwise leave the driver on "Waiting" for good. A late status still recovers.
+         */
+        private const val HOST_START_TIMEOUT_MILLIS = 60_000L
 
         /** Prepare, find the iPhone, link (USB/Wi-Fi), pair and authenticate, start CarPlay, projecting. */
         private const val STEPS = 6

@@ -1081,7 +1081,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
     private fun setupMediaSession() {
         val mbr = ComponentName(this, MediaButtonReceiver::class.java)
-        mediaSession = MediaSessionCompat(this, "HeadunitRevived", mbr, null).apply {
+        mediaSession = MediaSessionCompat(this, HostIntegration.mediaSessionTag, mbr, null).apply { // CarLink
             setFlags(
                 MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                 MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
@@ -2732,7 +2732,7 @@ class AapService : Service(), UsbReceiver.Listener {
             .setSmallIcon(R.drawable.ic_stat_aa)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .setContentTitle("Open Headunit")
+            .setContentTitle(HostIntegration.appName) // CarLink
             .setContentText(contentText)
             .setContentIntent(PendingIntent.getActivity(
                 this, requestCode, notificationIntent,
