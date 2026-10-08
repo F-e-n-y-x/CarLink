@@ -12,12 +12,14 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.entry.UsbWatcher
 import com.carlink.app.ui.theme.CarLinkTheme
 import com.carlink.app.ui.theme.UiProfileDetector
 
 /** CarLink's launcher and hub. Hosts every CarLink screen (see ui/CarLinkApp.kt). */
 class HomeActivity : ComponentActivity() {
     private val vm: CarLinkViewModel by viewModels()
+    private val usbWatcher by lazy { UsbWatcher(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -35,6 +37,12 @@ class HomeActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refreshPhones()
+        usbWatcher.start()
+    }
+
+    override fun onPause() {
+        usbWatcher.stop()
+        super.onPause()
     }
 
     /** Back on Home goes to the car's own launcher, as DiAuto's "Car home" did. */
