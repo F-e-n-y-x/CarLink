@@ -269,8 +269,11 @@ private fun Hero(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                     }
                     HomeMode.CONNECTED -> GlyphDisc(R.drawable.carlink_ic_check_circle_filled, colors.success, size)
                     HomeMode.FAILED -> GlyphDisc(R.drawable.carlink_ic_error_filled, scheme.error, size)
-                    HomeMode.READY_PHONE -> GlyphDisc(R.drawable.carlink_ic_link, scheme.primary, size)
-                    else -> GlyphDisc(R.drawable.carlink_ic_link, colors.onSurfaceTertiary, size)
+                    // The phone's screen is always dark, so the mark uses fixed light colors.
+                    HomeMode.READY_PHONE -> com.carlink.app.ui.components.CarLinkMark(Modifier.size(size),
+                        primaryTint = Color(0xFFEEF2F6), accentTint = Color(0xFF5BD6F0))
+                    else -> com.carlink.app.ui.components.CarLinkMark(Modifier.size(size),
+                        primaryTint = Color(0xFFEEF2F6).copy(alpha = 0.55f), accentTint = Color(0xFF5BD6F0).copy(alpha = 0.7f))
                 }
                 val label = link.engine?.let { engineName(it) } ?: ui.home.defaultPhone?.kind?.engine?.let { engineName(it) }
                 if (label != null) {

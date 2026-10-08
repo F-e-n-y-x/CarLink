@@ -61,12 +61,14 @@ import com.carlink.app.ui.theme.UiProfile
  * The geometry comes from design/logo/tools/build_logo.py (swap the two drawables to change logo).
  */
 @Composable
-fun CarLinkMark(modifier: Modifier = Modifier) {
+fun CarLinkMark(
+    modifier: Modifier = Modifier,
+    primaryTint: Color = MaterialTheme.colorScheme.onSurface,
+    accentTint: Color = MaterialTheme.colorScheme.primary,
+) {
     Box(modifier) {
-        Icon(painterResource(R.drawable.carlink_logo_mark_primary), null, Modifier.matchParentSize(),
-            tint = MaterialTheme.colorScheme.onSurface)
-        Icon(painterResource(R.drawable.carlink_logo_mark_accent), null, Modifier.matchParentSize(),
-            tint = MaterialTheme.colorScheme.primary)
+        Icon(painterResource(R.drawable.carlink_logo_mark_primary), null, Modifier.matchParentSize(), tint = primaryTint)
+        Icon(painterResource(R.drawable.carlink_logo_mark_accent), null, Modifier.matchParentSize(), tint = accentTint)
     }
 }
 
