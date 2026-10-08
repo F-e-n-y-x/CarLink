@@ -23,7 +23,13 @@ import com.shilapi.xcertplay.orchestration.CarPlayStatusBus
  * ([CarPlayPreflight]) and opens only the CarPlay picture ([CarPlayHostActivity]), which asks for
  * its own runtime permissions and VPN consent. DiPlay's home and settings screens never appear.
  */
-internal class CarPlayEngine(context: Context, private val onState: (LinkState) -> Unit) {
+internal class CarPlayEngine(
+    context: Context,
+    private val onState: (LinkState) -> Unit,
+    // Production defaults; unit tests feed statuses and skip the pre-flight (it needs DiPlay's files).
+    private val statusBus: CarPlayEngine.CarPlayStatusSource = CarPlayEngine.DiPlayStatusBus,
+    private val preflight: (Context, Transport, String?) -> LinkProblem? = CarPlayPreflight::check,
+) {
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
     private var transport: Transport? = null
@@ -41,7 +47,7 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
 
     /** Fails an attempt whose CarPlay picture never reported anything (see [HOST_START_TIMEOUT_MILLIS]). */
     private val hostStartTimeout = Runnable {
-        if (CarPlayStatusBus.current != null) return@Runnable
+        if (statusBus.current != null) return@Runnable
         Log.i(TAG, "CarPlay picture reported nothing within ${HOST_START_TIMEOUT_MILLIS / 1000} s")
         onState(LinkState(LinkStage.FAILED, Engine.CARPLAY, transport, phoneName, problem = LinkProblem.ENGINE))
     }
@@ -49,7 +55,7 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     private val listener: (CarPlayStatus?) -> Unit = { status -> main.post { onStatus(status) } }
 
     init {
-        CarPlayStatusBus.addListener(listener)
+        statusBus.addListener(listener)
     }
 
     private fun onStatus(status: CarPlayStatus?) {
@@ -75,7 +81,7 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
     fun start(transport: Transport, iphoneAddress: String?, phoneName: String?, usbAttach: Intent? = null) {
         this.transport = transport
         this.phoneName = phoneName
-        CarPlayPreflight.check(app, transport, iphoneAddress)?.let { problem ->
+        preflight(app, transport, iphoneAddress)?.let { problem ->
             Log.i(TAG, "pre-flight: $problem")
             onState(LinkState(LinkStage.FAILED, Engine.CARPLAY, transport, phoneName, problem = problem))
             return
@@ -88,7 +94,7 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
         pendingStart?.let { main.removeCallbacks(it) }
         pendingStart = null
         val open = Runnable { openHost(usbAttach) }
-        if (CarPlayStatusBus.current == null) {
+        if (statusBus.current == null) {
             open.run()
         } else {
             // One CarPlay session at a time: close the running one, then open when it reports closed.
@@ -104,15 +110,15 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
         pendingStart?.let { main.removeCallbacks(it) }
         pendingStart = null
         main.removeCallbacks(hostStartTimeout)
-        if (CarPlayStatusBus.current != null) closingUntil = SystemClock.uptimeMillis() + STOP_TIMEOUT_MILLIS
+        if (statusBus.current != null) closingUntil = SystemClock.uptimeMillis() + STOP_TIMEOUT_MILLIS
         requestStop()
         onState(LinkState.Idle)
     }
 
-    fun current(): LinkState = map(CarPlayStatusBus.current)
+    fun current(): LinkState = map(statusBus.current)
 
     private fun requestStop() {
-        if (CarPlayStatusBus.current == null) return
+        if (statusBus.current == null) return
         runCatching {
             app.startService(Intent(app, DiPlaySessionService::class.java).setAction(DiPlaySessionService.ACTION_STOP))
         }.onFailure { Log.w(TAG, "stop refused: ${it.javaClass.simpleName}") }
@@ -147,6 +153,17 @@ internal class CarPlayEngine(context: Context, private val onState: (LinkState) 
                 LinkState(LinkStage.WAITING, Engine.CARPLAY, transport, phoneName, step, STEPS)
             else -> LinkState(LinkStage.CONNECTING, Engine.CARPLAY, transport, phoneName, step, STEPS)
         }
+    }
+
+    /** DiPlay's session status as [CarPlayEngine] reads it; [DiPlayStatusBus] in production. */
+    internal interface CarPlayStatusSource {
+        val current: CarPlayStatus?
+        fun addListener(listener: (CarPlayStatus?) -> Unit)
+    }
+
+    internal object DiPlayStatusBus : CarPlayStatusSource {
+        override val current: CarPlayStatus? get() = CarPlayStatusBus.current
+        override fun addListener(listener: (CarPlayStatus?) -> Unit) = CarPlayStatusBus.addListener(listener)
     }
 
     companion object {

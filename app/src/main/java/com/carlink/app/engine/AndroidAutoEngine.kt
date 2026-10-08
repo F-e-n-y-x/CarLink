@@ -21,8 +21,14 @@ import com.carlink.app.engine.AndroidAutoProtocol as P
  * Main-process handle on the Android Auto engine in the ":aa" process. Commands go to
  * [AndroidAutoCommandReceiver]; state comes back from [AndroidAutoStateReporter].
  */
-internal class AndroidAutoEngine(context: Context, private val onState: (LinkState) -> Unit) {
+internal class AndroidAutoEngine(
+    context: Context,
+    private val onState: (LinkState) -> Unit,
+    // Unit tests record commands instead of running DiAuto's receiver; production broadcasts them.
+    sendCommand: ((Intent) -> Unit)? = null,
+) {
     private val app = context.applicationContext
+    private val sendCommand: (Intent) -> Unit = sendCommand ?: app::sendBroadcast
     private val handler = Handler(Looper.getMainLooper())
     private var transport: Transport? = null
     private var phoneName: String? = null
@@ -148,7 +154,7 @@ internal class AndroidAutoEngine(context: Context, private val onState: (LinkSta
     }
 
     private fun send(command: String, extras: Intent.() -> Unit = {}) {
-        app.sendBroadcast(Intent(P.ACTION_COMMAND)
+        sendCommand(Intent(P.ACTION_COMMAND)
             .setClass(app, AndroidAutoCommandReceiver::class.java)
             .putExtra(P.EXTRA_COMMAND, command)
             .apply(extras))

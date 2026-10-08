@@ -19,7 +19,9 @@ import com.carlink.app.detect.PhoneClassifier
 import com.carlink.app.entry.UsbRouterActivity
 import com.carlink.app.settings.CarLinkPreferences
 import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.UnifiedSettingsStore
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,14 +38,22 @@ import kotlinx.coroutines.flow.asStateFlow
  * - Automatic starts never interrupt a running session and respect the driver's pause.
  * - A wired session ends when its phone is unplugged.
  */
-class EngineCoordinator private constructor(context: Context) {
+class EngineCoordinator internal constructor(
+    context: Context,
+    // Production defaults; unit tests inject fakes. Everything else goes through [get].
+    engineFactory: EngineFactory = defaultEngineFactory,
+    private val applySessionSettings: (Context, Engine, UnifiedSettings) -> Unit =
+        { c, e, s -> EngineSettingsApplier.applyForSession(c, e, s) },
+    /** Settings are written into the engines (IPC to ":aa") off the main thread, in order. */
+    private val worker: Executor = Executors.newSingleThreadExecutor { Thread(it, "carlink-engine") },
+    usbPhonePresent: ((Engine) -> Boolean)? = null,
+) {
     private val app = context.applicationContext
     private val knownPhones = KnownPhones(app)
     private val preferences = CarLinkPreferences(app)
     private val unifiedSettings = UnifiedSettingsStore(app)
     private val main = Handler(Looper.getMainLooper())
-    /** Settings are written into the engines (IPC to ":aa") off the main thread, in order. */
-    private val worker = Executors.newSingleThreadExecutor { Thread(it, "carlink-engine") }
+    private val isUsbPhonePresent: (Engine) -> Boolean = usbPhonePresent ?: ::usbPhonePresent
     private var attempt = 0
 
     private val _state = MutableStateFlow(LinkState.Idle)
@@ -56,14 +66,14 @@ class EngineCoordinator private constructor(context: Context) {
     /** When the driver last stopped a session (elapsed realtime); see [onUsbPhone]. */
     private var driverStoppedAt = -REENUMERATION_WINDOW_MILLIS
 
-    private val carPlay = CarPlayEngine(app) { onEngineState(Engine.CARPLAY, it) }
-    private val androidAuto = AndroidAutoEngine(app) { onEngineState(Engine.ANDROID_AUTO, it) }
+    private val carPlay = engineFactory(app, Engine.CARPLAY) { onEngineState(Engine.CARPLAY, it) }
+    private val androidAuto = engineFactory(app, Engine.ANDROID_AUTO) { onEngineState(Engine.ANDROID_AUTO, it) }
 
     /** Ends a wired session whose phone stayed unplugged past the engines' own re-enumeration. */
     private val usbGoneCheck = Runnable {
         val engine = engaged ?: return@Runnable
         if (_state.value.transport != Transport.USB) return@Runnable
-        if (usbPhonePresent(engine)) return@Runnable
+        if (isUsbPhonePresent(engine)) return@Runnable
         Log.i(TAG, "USB phone for $engine unplugged; ending the session")
         stopAll()
     }
@@ -165,7 +175,7 @@ class EngineCoordinator private constructor(context: Context) {
         val thisAttempt = ++attempt
         worker.execute {
             // The engine starts from the driver's unified settings and this session's wireless path.
-            runCatching { EngineSettingsApplier.applyForSession(app, engine, unifiedSettings.load()) }
+            runCatching { applySessionSettings(app, engine, unifiedSettings.load()) }
                 .onFailure { Log.w(TAG, "could not apply settings", it) }
             main.post {
                 if (thisAttempt != attempt || engaged != engine) {
@@ -174,7 +184,7 @@ class EngineCoordinator private constructor(context: Context) {
                 }
                 when (engine) {
                     Engine.CARPLAY -> carPlay.start(transport, address, phoneName, usbAttach)
-                    Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach?.let(UsbRouterActivity::usbDevice))
+                    Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach)
                 }
             }
         }
