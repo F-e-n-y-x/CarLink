@@ -65,7 +65,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
         contentColor = MaterialTheme.colorScheme.onSurface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = dimens.screenMargin).navigationBarsPadding()) {
             Text(stringResource(R.string.carlink_home_phones_title), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() })
+                color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.carlink_home_phones_hint), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(dimens.gutter))
@@ -76,8 +76,8 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                             PhoneAvatar(phone.kind, dimens.avatarRow, active = phone.connected)
                             Spacer(Modifier.width(dimens.gutter))
                             Column(Modifier.weight(1f)) {
-                                Text(isolate(phone.name), style = MaterialTheme.typography.titleMedium, maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis)
+                                Text(isolate(phone.name), style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 val type = phone.kind.engine?.let { engineName(it) } ?: stringResource(R.string.carlink_home_kind_title)
                                 val presence = stringResource(if (phone.connected) R.string.carlink_home_phone_connected
                                     else R.string.carlink_home_phone_not_nearby)

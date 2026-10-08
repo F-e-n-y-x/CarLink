@@ -34,6 +34,8 @@
     <string name="carlink_home_step_identified">Identified</string>
     <string name="carlink_home_step_linked">Linked</string>
     <string name="carlink_home_step_picture">Picture</string>
+    <!-- Under the progress line when the step names do not fit: "Step 2 of 4 · Identified". -->
+    <string name="carlink_home_step_of">Step %1$d of %2$d · %3$s</string>
 
     <string name="carlink_home_connected_title">%1$s is running</string>
     <string name="carlink_home_connected_body">%1$s · %2$s · %3$s</string>
@@ -56,13 +58,13 @@
     <string name="carlink_home_error_engine_title">Couldn\'t connect</string>
     <string name="carlink_home_error_engine_body">%1$s stopped the connection. Unlock your phone and try again.</string>
 
-    <string name="carlink_home_chip_connection">Connection</string>
+    <string name="carlink_home_chip_bluetooth">Bluetooth</string>
     <string name="carlink_home_chip_network">Network</string>
     <string name="carlink_home_chip_phone">Phone</string>
-    <string name="carlink_home_bt_on">Bluetooth on</string>
-    <string name="carlink_home_bt_off">Bluetooth off</string>
+    <string name="carlink_home_bt_chip_on">On</string>
+    <string name="carlink_home_bt_chip_off">Off</string>
     <string name="carlink_home_bt_no_permission">Needs permission</string>
-    <string name="carlink_home_bt_unsupported">Cable only</string>
+    <string name="carlink_home_bt_chip_unsupported">Not available</string>
     <string name="carlink_home_net_same_wifi">Same Wi-Fi · fastest</string>
     <string name="carlink_home_net_same_wifi_named">%1$s · fastest</string>
     <string name="carlink_home_net_hotspot">Car hotspot</string>
@@ -90,9 +92,10 @@
     <string name="carlink_home_path_usb">USB</string>
 
     <string name="carlink_home_same_wifi_title">Use %1$s for wireless?</string>
-    <string name="carlink_home_same_wifi_body">Your phone joins this Wi-Fi instead of a hotspot. It’s the fastest wireless connection. CarLink needs the password once.</string>
+    <string name="carlink_home_same_wifi_body">The fastest wireless link. CarLink needs its password once.</string>
     <string name="carlink_home_same_wifi_password">Wi-Fi password</string>
     <string name="carlink_home_same_wifi_save">Use this Wi-Fi</string>
+    <string name="carlink_home_same_wifi_enter">Add password</string>
     <string name="carlink_home_same_wifi_invalid">Wi-Fi passwords have 8 to 63 characters.</string>
     <string name="carlink_home_same_wifi_show">Show password</string>
     <string name="carlink_home_connecting_android_wireless">Waiting for %1$s to start Android Auto. If nothing happens in a few seconds, turn the phone\u2019s Bluetooth off and on.</string>

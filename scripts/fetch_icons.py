@@ -18,7 +18,7 @@ OUT = Path(__file__).resolve().parent.parent / "app/src/main/res/drawable"
 
 # name -> needs a filled variant
 ICONS = {
-    "phone_iphone": False, "phone_android": False, "smartphone": False,
+    "phone_iphone": False, "phone_android": False, "smartphone": False, "device_unknown": False,
     "usb": False, "usb_off": False, "wifi": False, "wifi_off": False, "wifi_tethering": False,
     "bluetooth": False, "bluetooth_disabled": False, "devices": False, "cable": False,
     "link": True, "link_off": False, "check_circle": True, "check": False, "error": True,

@@ -67,11 +67,15 @@ fun TertiaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modif
     }
 }
 
+/**
+ * One glyph per phone type that still reads at 24dp: Material's iPhone and Android handsets differ
+ * only by a dot, so Android phones get the Android glyph and unknown devices a question mark.
+ */
 @DrawableRes
 fun phoneIcon(kind: PhoneKind): Int = when (kind) {
     PhoneKind.IPHONE -> R.drawable.carlink_ic_phone_iphone
-    PhoneKind.ANDROID -> R.drawable.carlink_ic_phone_android
-    PhoneKind.UNKNOWN -> R.drawable.carlink_ic_smartphone
+    PhoneKind.ANDROID -> R.drawable.carlink_ic_android
+    PhoneKind.UNKNOWN -> R.drawable.carlink_ic_device_unknown
 }
 
 @Composable

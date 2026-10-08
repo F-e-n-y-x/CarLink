@@ -2,6 +2,27 @@ package com.carlink.app.ui.home
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -170,44 +191,46 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             TopBar(onSettings = { actions.navigate(Route.SETTINGS) })
             BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-                val areaHeight = maxHeight
                 val landscape = maxWidth > maxHeight && layout.width >= WidthClass.MEDIUM
+                val onPhones = { phonesOpen = true }
                 if (landscape) {
-                    // Two columns on one grid: copy and chips on the start side, the phone centred on
+                    // Two columns on one grid: copy and status on the start side, the phone centred on
                     // the end side, fully inside its column with room for its shadow.
                     Row(Modifier.fillMaxSize().padding(start = dimens.screenMargin, end = dimens.screenMargin,
                         bottom = dimens.screenMargin * 0.75f)) {
-                        // Copy, action and chips read as one group, centred against the phone.
-                        Column(Modifier.weight(0.56f).fillMaxHeight().verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.Center) {
-                            HeroText(mode, ui, actions)
-                            Spacer(Modifier.height(dimens.gutter * 2.5f))
-                            StatusChips(mode, ui, onPhones = { phonesOpen = true })
-                        }
+                        // Copy, action and status read as one group, centred against the phone.
+                        FitColumn(
+                            Modifier.weight(0.6f).fillMaxHeight(),
+                            statusGap = dimens.gutter * 2,
+                            main = { dense -> HeroText(mode, ui, actions, dense) },
+                            status = { StatusChips(mode, ui, onPhones) },
+                            strip = { StatusStrip(mode, ui, onPhones) },
+                        )
                         Spacer(Modifier.width(dimens.gutter * 2))
-                        Box(Modifier.weight(0.44f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Box(Modifier.weight(0.4f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                             Hero(mode, ui, Modifier.fillMaxHeight(0.86f))
                         }
                     }
                 } else {
-                    Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                            .padding(horizontal = if (layout.width == WidthClass.COMPACT) dimens.compactMargin else dimens.screenMargin)
+                    val compact = layout.width == WidthClass.COMPACT
+                    FitColumn(
+                        Modifier.fillMaxSize()
+                            .padding(horizontal = if (compact) dimens.compactMargin else dimens.screenMargin)
                             .padding(bottom = dimens.gutter),
-                        horizontalAlignment = Alignment.Start,
-                    ) {
-                        val showPhone = areaHeight > 560.dp
-                        if (showPhone) {
-                            Box(Modifier.fillMaxWidth().height(areaHeight * 0.4f), contentAlignment = Alignment.Center) {
+                        statusGap = dimens.gutter * 1.5f,
+                        main = { dense -> HeroText(mode, ui, actions, dense) },
+                        status = { if (compact) StatusList(mode, ui, onPhones) else StatusChips(mode, ui, onPhones) },
+                        strip = { StatusStrip(mode, ui, onPhones) },
+                        // The phone takes what the copy and status leave, and steps aside when that is too little.
+                        hero = {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Hero(mode, ui, Modifier.fillMaxHeight(0.92f))
                             }
-                            // Room for the phone's contact shadow.
-                            Spacer(Modifier.height(dimens.gutter * 2.5f))
-                        }
-                        HeroText(mode, ui, actions)
-                        Spacer(Modifier.height(dimens.gutter * 1.5f))
-                        StatusChips(mode, ui, onPhones = { phonesOpen = true }, stacked = layout.width == WidthClass.COMPACT)
-                    }
+                        },
+                        // Room for the phone's contact shadow.
+                        heroGap = dimens.gutter * 2.5f,
+                        heroMin = dimens.avatarHero * 3,
+                    )
                 }
             }
         }
@@ -286,22 +309,24 @@ private fun Hero(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
 
 /** Eyebrow, headline, body and actions for the current mode. */
 @Composable
-private fun HeroText(mode: HomeMode, ui: HomeUi, actions: HomeActions) {
+private fun HeroText(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean) {
     val reduceMotion = LocalReduceMotion.current
     AnimatedContent(mode, transitionSpec = {
         val duration = if (reduceMotion) 0 else CarMotion.MEDIUM
         (fadeIn(tween(duration)) + slideInVertically(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { it / 12 }) togetherWith
             fadeOut(tween(duration / 2))
     }, label = "hero") { state ->
-        Column(Modifier.widthIn(max = 900.dp)) { HeroCopy(state, ui, actions) }
+        Column(Modifier.widthIn(max = 900.dp)) { HeroCopy(state, ui, actions, dense) }
     }
 }
 
 @Composable
-private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeActions) {
+private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
     val dimens = CarLinkTokens.dimens
+    // Dense: the variant Home falls back to when the window is short (tighter rhythm, no card body).
+    val sectionGap = if (dense) dimens.gutter else dimens.gutter * 1.5f
     val link = ui.home.link
     val engine = link.engine?.let { engineName(it) } ?: ""
     val phone = ui.home.defaultPhone
@@ -351,7 +376,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     Text(body, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant)
 
     if (mode == HomeMode.CONNECTING) {
-        Spacer(Modifier.height(dimens.gutter * 1.5f))
+        Spacer(Modifier.height(sectionGap))
         val active = when {
             link.step <= 1 -> 0
             link.step == 2 -> 1
@@ -364,8 +389,10 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         ), active, failed = false, modifier = Modifier.widthIn(max = 720.dp))
     }
 
-    Spacer(Modifier.height(dimens.gutter * 1.5f))
-    Row(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap), verticalAlignment = Alignment.CenterVertically) {
+    Spacer(Modifier.height(sectionGap))
+    // Actions wrap to a second line on narrow windows instead of running off the edge.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap),
+        verticalArrangement = Arrangement.spacedBy(dimens.targetGap), itemVerticalAlignment = Alignment.CenterVertically) {
         when (mode) {
             HomeMode.PERMISSION -> IonButton(stringResource(R.string.carlink_home_permission_action), actions::requestPermissions,
                 icon = R.drawable.carlink_ic_check)
@@ -395,12 +422,12 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY ||
             (mode == HomeMode.FAILED && link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING))
     if (offerSameWifi) {
-        Spacer(Modifier.height(dimens.gutter * 1.5f))
-        SameWifiCard(ui.network!!.joinedSsid!!, actions)
+        Spacer(Modifier.height(sectionGap))
+        SameWifiCard(ui.network!!.joinedSsid!!, actions, dense)
     }
     if (ui.connection.autoConnectPaused && (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY)) {
         Spacer(Modifier.height(dimens.targetGap))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.carlink_home_paused), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceTertiary)
             com.carlink.app.ui.components.TertiaryButton(stringResource(R.string.carlink_home_resume), actions::resumeAutoConnect)
         }
@@ -437,24 +464,33 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
     }
 }
 
-/** Up to three glass chips: Connection, Network, Phone. */
 @Composable
-private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit, stacked: Boolean = false) {
+private fun pathName(path: WirelessPath?, transport: Transport?): String = stringResource(when {
+    transport == Transport.USB -> R.string.carlink_home_path_usb
+    path == WirelessPath.SAME_WIFI -> R.string.carlink_home_path_same_wifi
+    path == WirelessPath.CAR_HOTSPOT -> R.string.carlink_home_path_hotspot
+    else -> R.string.carlink_home_path_direct
+})
+
+/** One line of Home's status: Bluetooth, the wireless path, the phone. */
+private class StatusItem(val eyebrow: String, val value: String, @DrawableRes val icon: Int, val status: Color?)
+
+@Composable
+private fun statusItems(mode: HomeMode, ui: HomeUi): List<StatusItem> {
     val colors = CarLinkTokens.colors
-    val scheme = MaterialTheme.colorScheme
     val bt = ui.home.bluetooth
-    val connection = @Composable { modifier: Modifier ->
-        GlassChip(stringResource(R.string.carlink_home_chip_connection), stringResource(when (bt) {
-            BluetoothAvailability.READY -> R.string.carlink_home_bt_on
-            BluetoothAvailability.OFF -> R.string.carlink_home_bt_off
+    val path = if (mode == HomeMode.CONNECTED && ui.home.link.transport == Transport.USB) null else ui.network?.path
+    val phones = ui.home.phones
+    val phone = ui.home.defaultPhone
+    return listOf(
+        StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {
+            BluetoothAvailability.READY -> R.string.carlink_home_bt_chip_on
+            BluetoothAvailability.OFF -> R.string.carlink_home_bt_chip_off
             BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission
-            BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_unsupported
-        }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled, modifier,
-            status = if (bt == BluetoothAvailability.READY) colors.success else colors.warning)
-    }
-    val network = @Composable { modifier: Modifier ->
-        val path = if (mode == HomeMode.CONNECTED && ui.home.link.transport == Transport.USB) null else ui.network?.path
-        GlassChip(stringResource(R.string.carlink_home_chip_network), when (path) {
+            BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_chip_unsupported
+        }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled,
+            if (bt == BluetoothAvailability.READY) colors.success else colors.warning),
+        StatusItem(stringResource(R.string.carlink_home_chip_network), when (path) {
             WirelessPath.SAME_WIFI -> ui.network?.ssid?.let { stringResource(R.string.carlink_home_net_same_wifi_named, isolate(it)) }
                 ?: stringResource(R.string.carlink_home_net_same_wifi)
             WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
@@ -465,135 +501,305 @@ private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit, stacke
             WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
             WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
             null -> R.drawable.carlink_ic_usb
-        }, modifier, status = if (path == WirelessPath.SAME_WIFI) colors.success else null)
-    }
-    val phone = @Composable { modifier: Modifier ->
-        val phones = ui.home.phones
-        GlassChip(stringResource(R.string.carlink_home_chip_phone),
-            ui.home.defaultPhone?.name?.let(::isolate)
+        }, if (path == WirelessPath.SAME_WIFI) colors.success else null),
+        StatusItem(stringResource(R.string.carlink_home_chip_phone),
+            phone?.name?.let(::isolate)
                 ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
                 else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
-            com.carlink.app.ui.components.phoneIcon(ui.home.defaultPhone?.kind ?: PhoneKind.UNKNOWN), modifier,
-            status = if (ui.home.defaultPhone?.connected == true) colors.success else null, onClick = onPhones)
+            phone?.let { com.carlink.app.ui.components.phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
+            if (phone?.connected == true) colors.success else null),
+    )
+}
+
+/** Three glass chips of one height: Bluetooth, Network, Phone (the Phone chip opens the phone list). */
+@Composable
+private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
+    val items = statusItems(mode, ui)
+    val dimens = CarLinkTokens.dimens
+    val measurer = rememberTextMeasurer()
+    val value = MaterialTheme.typography.titleSmall
+    val eyebrow = MaterialTheme.typography.labelSmall
+    // What each chip needs to keep its value and header on one line.
+    val natural = with(LocalDensity.current) {
+        items.map { item ->
+            val valueLine = measurer.measure(item.value, value, maxLines = 1).size.width + (dimens.iconSecondary + 12.dp).roundToPx()
+            // Eyebrow plus the status dot and its gap.
+            val header = measurer.measure(item.eyebrow.uppercase(java.util.Locale.ROOT), eyebrow, maxLines = 1).size.width +
+                24.dp.roundToPx()
+            maxOf(valueLine, header) + (dimens.gutter * 2).roundToPx()
+        }
     }
-    val gap = CarLinkTokens.dimens.targetGap
-    if (stacked) {
-        StatusList(ui, onPhones)
-    } else {
-        // Equal-height chips, as tall as the tallest value.
-        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
-            connection(Modifier.weight(1f).fillMaxHeight()); network(Modifier.weight(1f).fillMaxHeight()); phone(Modifier.weight(1f).fillMaxHeight())
+    Layout(
+        content = {
+            items.forEachIndexed { index, item ->
+                GlassChip(item.eyebrow, item.value, item.icon, status = item.status,
+                    onClick = if (index == items.lastIndex) onPhones else null)
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val gap = dimens.targetGap.roundToPx()
+        val widths = chipWidths(natural, constraints.maxWidth - gap * (items.size - 1))
+        // One height for all: the tallest chip at its width (a value that cannot fit wraps to two lines).
+        val height = measurables.indices.maxOf { measurables[it].maxIntrinsicHeight(widths[it]) }
+        val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(widths[i], height)) }
+        layout(constraints.maxWidth, height) {
+            var x = 0
+            placeables.forEach { it.place(x, 0); x += it.width + gap }
         }
     }
 }
 
-@Composable
-private fun pathName(path: WirelessPath?, transport: Transport?): String = stringResource(when {
-    transport == Transport.USB -> R.string.carlink_home_path_usb
-    path == WirelessPath.SAME_WIFI -> R.string.carlink_home_path_same_wifi
-    path == WirelessPath.CAR_HOTSPOT -> R.string.carlink_home_path_hotspot
-    else -> R.string.carlink_home_path_direct
-})
+/**
+ * Shares [available] px between chips that each want [natural] px: chips that fit their fair
+ * share get what they need, the rest split what is left; leftover space is spread evenly, so a
+ * short value ("On") never takes room a phone name needs.
+ */
+private fun chipWidths(natural: List<Int>, available: Int): List<Int> {
+    val widths = IntArray(natural.size)
+    var remaining = available
+    var open = natural.indices.sortedBy { natural[it] }
+    while (open.isNotEmpty()) {
+        val share = remaining / open.size
+        val small = open.filter { natural[it] <= share }
+        if (small.isEmpty()) {
+            open.forEach { widths[it] = share }
+            remaining -= share * open.size
+            break
+        }
+        small.forEach { widths[it] = natural[it]; remaining -= natural[it] }
+        open = open - small.toSet()
+    }
+    // Spread what is left (all chips fit) evenly; rounding remainder goes to the last chip.
+    if (remaining > 0) {
+        val extra = remaining / natural.size
+        natural.indices.forEach { widths[it] += extra }
+        widths[natural.lastIndex] += remaining - extra * natural.size
+    }
+    return widths.toList()
+}
 
 /** Narrow windows: the three statuses as one glass card with aligned rows instead of three stacked chips. */
 @Composable
-private fun StatusList(ui: HomeUi, onPhones: () -> Unit) {
+private fun StatusList(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
     val colors = CarLinkTokens.colors
     val dimens = CarLinkTokens.dimens
-    val bt = ui.home.bluetooth
-    @Composable
-    fun row(eyebrow: String, value: String, icon: Int, status: Color?, onClick: (() -> Unit)? = null) {
-        Row(Modifier.fillMaxWidth().heightIn(min = dimens.rowOneLine)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = dimens.gutter), verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.width(dimens.gutter))
-            Eyebrow(eyebrow, Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp))
-            // The dot's space is kept on every row so values stay aligned.
-            Spacer(Modifier.width(12.dp))
-            Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(status ?: Color.Transparent))
-        }
-    }
-    GlassCard(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)) {
+    val items = statusItems(mode, ui)
+    GlassCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp)) {
         Column {
-            row(stringResource(R.string.carlink_home_chip_connection), stringResource(when (bt) {
-                BluetoothAvailability.READY -> R.string.carlink_home_bt_on
-                BluetoothAvailability.OFF -> R.string.carlink_home_bt_off
-                BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission
-                BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_unsupported
-            }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled,
-                if (bt == BluetoothAvailability.READY) colors.success else colors.warning)
-            androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
-            row(stringResource(R.string.carlink_home_chip_network), networkLabel(ui), networkIcon(ui.network?.path),
-                if (ui.network?.path == WirelessPath.SAME_WIFI) colors.success else null)
-            androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
-            val phones = ui.home.phones
-            row(stringResource(R.string.carlink_home_chip_phone), ui.home.defaultPhone?.name?.let(::isolate)
-                ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
-                else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
-                com.carlink.app.ui.components.phoneIcon(ui.home.defaultPhone?.kind ?: PhoneKind.UNKNOWN),
-                if (ui.home.defaultPhone?.connected == true) colors.success else null, onPhones)
+            items.forEachIndexed { index, item ->
+                if (index > 0) HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
+                Row(Modifier.fillMaxWidth().heightIn(min = dimens.rowOneLine)
+                    .then(if (index == items.lastIndex) Modifier.clickable(onClick = onPhones) else Modifier)
+                    .padding(horizontal = dimens.gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(item.icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.width(dimens.gutter))
+                    Eyebrow(item.eyebrow)
+                    Spacer(Modifier.width(dimens.gutter))
+                    Text(item.value, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.End)
+                    // The dot's space is kept on every row so values stay aligned.
+                    Spacer(Modifier.width(12.dp))
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(item.status ?: Color.Transparent))
+                }
+            }
         }
     }
 }
 
+/**
+ * Short windows: the three statuses on one glass pill. Values are shown when they all fit on the
+ * line; otherwise Bluetooth and Network shrink to their icons (named for TalkBack) and only the
+ * phone keeps its name. Tapping it opens the phone list, like the Phone chip.
+ */
 @Composable
-private fun networkLabel(ui: HomeUi): String = when (ui.network?.path) {
-    WirelessPath.SAME_WIFI -> ui.network.ssid?.let { stringResource(R.string.carlink_home_net_same_wifi_named, isolate(it)) }
-        ?: stringResource(R.string.carlink_home_net_same_wifi)
-    WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
-    WirelessPath.WIFI_DIRECT -> stringResource(R.string.carlink_home_net_direct)
-    null -> stringResource(R.string.carlink_home_path_usb)
-}
-
-private fun networkIcon(path: WirelessPath?): Int = when (path) {
-    WirelessPath.SAME_WIFI -> R.drawable.carlink_ic_wifi
-    WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
-    WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
-    null -> R.drawable.carlink_ic_usb
-}
-
-/** One-time offer to use the car's current Wi-Fi for wireless CarPlay (the fastest path). */
-@Composable
-private fun SameWifiCard(ssid: String, actions: HomeActions) {
+private fun StatusStrip(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
     val dimens = CarLinkTokens.dimens
+    val colors = CarLinkTokens.colors
+    val items = statusItems(mode, ui)
+    val style = MaterialTheme.typography.titleSmall
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val icon = dimens.iconTertiary + 4.dp
+    val iconGap = 10.dp
+    val gap = dimens.gutter
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val text = with(density) { items.sumOf { measurer.measure(it.value, style, maxLines = 1).size.width }.toDp() }
+        val fixed = gap * 2 + (icon + iconGap) * items.size + (gap * 2 + 1.dp) * (items.size - 1)
+        val labels = text + fixed <= maxWidth
+        GlassCard(Modifier.heightIn(min = dimens.minTouch), shape = CircleShape, onClick = onPhones,
+            contentPadding = PaddingValues(horizontal = gap, vertical = 8.dp)) {
+            Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(gap)) {
+                items.forEachIndexed { index, item ->
+                    if (index > 0) Box(Modifier.width(1.dp).height(icon).background(colors.glassStrokeTop))
+                    val showValue = labels || index == items.lastIndex
+                    Row(if (showValue && !labels) Modifier.weight(1f, fill = false) else Modifier,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(icon)) {
+                            Icon(painterResource(item.icon), if (showValue) null else "${item.eyebrow}: ${item.value}",
+                                Modifier.fillMaxSize(), tint = MaterialTheme.colorScheme.onSurface)
+                            if (item.status != null) {
+                                Box(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(9.dp)
+                                    .clip(CircleShape).background(item.status))
+                            }
+                        }
+                        if (showValue) {
+                            Spacer(Modifier.width(iconGap))
+                            Text(item.value, style = style, color = MaterialTheme.colorScheme.onSurface, maxLines = 2,
+                                overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Home's column: [main] (copy and actions) always, then the richest status that still fits the
+ * window: [status] (chips or the list), else [strip], else none. When the regular copy leaves no
+ * room for any status, the dense copy (`main(true)`: tighter rhythm, shorter cards) is tried
+ * before the status is dropped. An optional [hero] above takes the height that is left, up to
+ * [heroMaxFraction] of the window, and is left out when that is under [heroMin]. The group is
+ * centred vertically; it only scrolls when even the dense copy is taller than the window (very
+ * large font scale), and then keeps the strip at the end.
+ */
+@Composable
+private fun FitColumn(
+    modifier: Modifier,
+    statusGap: Dp,
+    main: @Composable (dense: Boolean) -> Unit,
+    status: @Composable () -> Unit,
+    strip: @Composable () -> Unit,
+    hero: (@Composable () -> Unit)? = null,
+    heroGap: Dp = 0.dp,
+    heroMin: Dp = 0.dp,
+    heroMaxFraction: Float = 0.5f,
+) {
+    BoxWithConstraints(modifier) {
+        val viewport = constraints.maxHeight
+        Layout(
+            contents = listOf({ Box { main(false) } }, { Box { main(true) } }, { Box { status() } }, { Box { strip() } },
+                { if (hero != null) Box { hero() } }),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+        ) { (regularSlot, denseSlot, statusSlot, stripSlot, heroSlot), constraints ->
+            val width = constraints.maxWidth
+            val loose = Constraints(maxWidth = width)
+            val regular = regularSlot.first().measure(loose)
+            val dense = denseSlot.first().measure(loose)
+            val statusP = statusSlot.first().measure(loose)
+            val stripP = stripSlot.first().measure(loose)
+            val gap = statusGap.roundToPx()
+            fun fits(copy: Placeable, below: Placeable?) = copy.height + (below?.let { gap + it.height } ?: 0) <= viewport
+            // The first arrangement that fits, richest first.
+            val (mainP, chosen) = listOf(regular to statusP, regular to stripP, dense to statusP, dense to stripP,
+                regular to null, dense to null).firstOrNull { (copy, below) -> fits(copy, below) } ?: (dense to stripP)
+            val used = mainP.height + (chosen?.let { gap + it.height } ?: 0)
+            val heroP = heroSlot.firstOrNull()?.let { slot ->
+                val height = minOf(viewport - used - heroGap.roundToPx(), (viewport * heroMaxFraction).toInt())
+                if (height >= heroMin.roundToPx()) slot.measure(Constraints.fixed(width, height)) else null
+            }
+            val total = used + (heroP?.let { it.height + heroGap.roundToPx() } ?: 0)
+            layout(width, maxOf(total, viewport)) {
+                var y = maxOf(0, (viewport - total) / 2)
+                heroP?.let { it.place(0, y); y += it.height + heroGap.roundToPx() }
+                mainP.place(0, y)
+                y += mainP.height
+                chosen?.place(0, y + gap)
+            }
+        }
+    }
+}
+
+/**
+ * One-time offer to use the car's current Wi-Fi for wireless CarPlay (the fastest path), as a
+ * compact banner; the password is entered in a dialog, so the keyboard never reflows Home.
+ * [dense] drops the explanation line.
+ */
+@Composable
+private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {
+    val dimens = CarLinkTokens.dimens
+    val scheme = MaterialTheme.colorScheme
+    var asking by rememberSaveable { mutableStateOf(false) }
+    val button = @Composable {
+        GlassButton(stringResource(R.string.carlink_home_same_wifi_enter), { asking = true }, icon = R.drawable.carlink_ic_lock)
+    }
+    GlassCard(Modifier.widthIn(max = 760.dp).fillMaxWidth(), shape = RoundedCornerShape(28.dp),
+        contentPadding = PaddingValues(horizontal = dimens.gutter, vertical = dimens.targetGap)) {
+        BoxWithConstraints {
+            // The button sits beside the text only when the text keeps a comfortable measure.
+            val inline = maxWidth >= dimens.contentMaxWidth * 0.45f
+            @Composable
+            fun copy(modifier: Modifier) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+                Icon(painterResource(R.drawable.carlink_ic_wifi), null, Modifier.size(dimens.iconSecondary),
+                    tint = CarLinkTokens.colors.success)
+                Spacer(Modifier.width(dimens.targetGap))
+                Column {
+                    Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid)),
+                        style = MaterialTheme.typography.titleSmall, color = scheme.onSurface)
+                    if (!dense) {
+                        Text(stringResource(R.string.carlink_home_same_wifi_body), style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (inline) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    copy(Modifier.weight(1f))
+                    Spacer(Modifier.width(dimens.targetGap))
+                    button()
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+                    copy(Modifier)
+                    button()
+                }
+            }
+        }
+    }
+    if (asking) SameWifiDialog(ssid, actions, onDismiss = { asking = false })
+}
+
+@Composable
+private fun SameWifiDialog(ssid: String, actions: HomeActions, onDismiss: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     var password by rememberSaveable { mutableStateOf("") }
     var reveal by rememberSaveable { mutableStateOf(false) }
-    val valid = password.isEmpty() || password.length in 8..63
-    GlassCard(Modifier.widthIn(max = 760.dp).fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(painterResource(R.drawable.carlink_ic_wifi), null, Modifier.size(dimens.iconSecondary), tint = CarLinkTokens.colors.success)
-                Spacer(Modifier.width(dimens.targetGap))
-                Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid)), style = MaterialTheme.typography.titleMedium)
+    val valid = password.length in 8..63
+    val showError = password.isNotEmpty() && !valid
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid))) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap)) {
+                Text(stringResource(R.string.carlink_home_same_wifi_body), color = scheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = password, onValueChange = { password = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.carlink_home_same_wifi_password)) },
+                    isError = showError,
+                    supportingText = if (showError) {{ Text(stringResource(R.string.carlink_home_same_wifi_invalid)) }} else null,
+                    visualTransformation = if (reveal) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    trailingIcon = {
+                        IconButton(onClick = { reveal = !reveal }) {
+                            Icon(painterResource(R.drawable.carlink_ic_lock), stringResource(R.string.carlink_home_same_wifi_show))
+                        }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-            Text(stringResource(R.string.carlink_home_same_wifi_body), style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant)
-            androidx.compose.material3.OutlinedTextField(
-                value = password, onValueChange = { password = it }, singleLine = true,
-                label = { Text(stringResource(R.string.carlink_home_same_wifi_password)) },
-                isError = !valid,
-                supportingText = if (!valid) {{ Text(stringResource(R.string.carlink_home_same_wifi_invalid)) }} else null,
-                visualTransformation = if (reveal) androidx.compose.ui.text.input.VisualTransformation.None
-                    else androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password),
-                trailingIcon = {
-                    androidx.compose.material3.IconButton(onClick = { reveal = !reveal }) {
-                        Icon(painterResource(R.drawable.carlink_ic_lock), stringResource(R.string.carlink_home_same_wifi_show))
-                    }
-                },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth(),
-            )
+        },
+        confirmButton = {
             IonButton(stringResource(R.string.carlink_home_same_wifi_save), {
-                if (valid) actions.saveSameWifi(ssid, password)
+                if (valid) { actions.saveSameWifi(ssid, password); onDismiss() }
             }, icon = R.drawable.carlink_ic_check)
-        }
-    }
+        },
+        dismissButton = { GlassButton(stringResource(R.string.carlink_home_cancel), onDismiss) },
+        containerColor = scheme.surfaceContainerHigh,
+    )
 }
 
 /** Wireless Android Auto waiting for the phone to start it (it only does when its Bluetooth connects). */

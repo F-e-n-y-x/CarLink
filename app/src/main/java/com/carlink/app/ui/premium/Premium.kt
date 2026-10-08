@@ -17,6 +17,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,9 +34,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -55,11 +58,15 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.carlink.app.R
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.LocalReduceMotion
@@ -135,8 +142,10 @@ fun GlassCard(
             .then(if (onClick != null) Modifier.clickable(interaction, indication = androidx.compose.material3.ripple(),
                 role = Role.Button, onClick = onClick) else Modifier)
             .padding(contentPadding),
-        content = content,
-    )
+    ) {
+        // Glass is not a Material Surface: give its text the theme's color instead of the black default.
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) { content() }
+    }
 }
 
 /** Tracked-caps label for glass chip headers only ("CONNECTION", "NETWORK"); never a sentence. */
@@ -161,8 +170,10 @@ fun GlassChip(eyebrow: String, value: String, @DrawableRes icon: Int, modifier: 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.width(12.dp))
+                // Values wrap rather than truncate (a long phone name takes a second line); the row
+                // that holds the chips gives them equal heights.
                 Text(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -287,24 +298,44 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPhone(kind: Pho
 fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
+    val style = MaterialTheme.typography.labelMedium
+    val measurer = rememberTextMeasurer()
     val pulse = if (LocalReduceMotion.current || failed) 1f else rememberInfiniteTransition(label = "pulse").animateFloat(
         0.45f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), label = "pulse").value
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        steps.forEachIndexed { index, label ->
-            val done = index < active
-            val current = index == active
-            val color = when {
-                failed && current -> scheme.error
-                done -> colors.success
-                current -> scheme.primary
-                else -> scheme.outlineVariant
+    val gap = 12.dp
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        // Step names go under their segments when every name fits its segment; otherwise one
+        // caption names the current step, so no name is ever cut short.
+        val segment = constraints.maxWidth.let { (it - (steps.size - 1) * with(LocalDensity.current) { gap.roundToPx() }) / steps.size }
+        val labelsFit = steps.all { measurer.measure(it, style, maxLines = 1).size.width <= segment }
+        Column {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                steps.forEachIndexed { index, label ->
+                    val done = index < active
+                    val current = index == active
+                    val color = when {
+                        failed && current -> scheme.error
+                        done -> colors.success
+                        current -> scheme.primary
+                        // outlineVariant is a hairline color and vanishes on the light canvas; the track needs more.
+                        else -> scheme.outline.copy(alpha = 0.45f)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
+                            .background(color.copy(alpha = if (current && !failed) pulse else 1f)))
+                        if (labelsFit) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(label, style = style, maxLines = 1,
+                                color = if (done || current) scheme.onSurface else colors.onSurfaceTertiary)
+                        }
+                    }
+                }
             }
-            Column(Modifier.weight(1f)) {
-                Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
-                    .background(color.copy(alpha = if (current && !failed) pulse else 1f)))
+            if (!labelsFit) {
+                val current = active.coerceIn(0, steps.lastIndex)
                 Spacer(Modifier.height(10.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = if (done || current) scheme.onSurface else colors.onSurfaceTertiary)
+                Text(stringResource(R.string.carlink_home_step_of, current + 1, steps.size, steps[current]), style = style,
+                    color = scheme.onSurface)
             }
         }
     }
