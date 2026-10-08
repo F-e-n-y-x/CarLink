@@ -162,6 +162,8 @@
     <string name="connect">Conectar</string>
     <string name="connect_phone">Conectar teléfono</string>
     <string name="connect_when_diplay_opens">Conectar al abrir DiPlay</string>
+    <string name="connect_when_iphone_bluetooth_connects">Conectar al volver a enlazar el iPhone seleccionado</string>
+    <string name="connect_when_iphone_bluetooth_connects_description">Al despertar el coche, abrir DiPlay e iniciar CarPlay inalámbrico cuando el iPhone seleccionado se conecte por Bluetooth. Algunas unidades restringen el inicio en segundo plano.</string>
     <string name="connect_with_usb">Conectar por USB</string>
     <string name="connect_your_iphone_with_a_usb_cable">Conecta tu iPhone con un cable USB</string>
     <string name="connecting_bluetooth">Conectando Bluetooth</string>
