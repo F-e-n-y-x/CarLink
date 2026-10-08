@@ -1496,8 +1496,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 scheduleControls.visibility = if (nightModes[index] == CarPlayNightMode.SCHEDULE) View.VISIBLE else View.GONE
                 handler.post(::checkForAppearanceChange)
             }
-            card.addView(label(getString(R.string.carplay_night_hint), 14, MUTED))
-            card.addView(label(getString(R.string.carplay_night_time_note), 14, MUTED).apply {
+            val sentenceSeparator = if (resources.configuration.locales[0].language == "zh") "" else " "
+            card.addView(label(getString(R.string.carplay_night_hint) + sentenceSeparator +
+                getString(R.string.carplay_night_time_note), 14, MUTED).apply {
                 setPadding(0, 0, 0, dp(18))
             })
             ambientControls.addView(label(getString(R.string.carplay_night_ambient_hint), 14, MUTED).apply {
