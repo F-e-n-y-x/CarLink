@@ -646,7 +646,7 @@
     <string name="settings_direct_video_output">إخراج الفيديو المباشر (تجريبي)</string>
     <string name="settings_direct_video_output_description">يرسل صورة CarPlay مباشرة إلى مُركِّب شاشة الوحدة الرئيسية بدلًا من رسمها داخل نافذة DiPlay. قد يقلل التأخير بمقدار تحديث شاشة واحد تقريبًا. لا تنطبق تعديلات الصورة. يعيد الاتصال بـ CarPlay.</string>
     <string name="settings_low_latency_decoder">فك ترميز منخفض التأخير (تجريبي)</string>
-    <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
+    <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
     <string name="car_button_icon">الأيقونة</string>
     <string name="car_button_icon_custom">أيقونة مخصصة</string>

@@ -646,7 +646,7 @@
     <string name="settings_direct_video_output">Salida de vídeo directa (experimental)</string>
     <string name="settings_direct_video_output_description">Envía la imagen de CarPlay directamente al compositor de la unidad principal en lugar de dibujarla dentro de la ventana de DiPlay. Puede reducir el retardo en aproximadamente un refresco de pantalla. Los ajustes de imagen no se aplican. Vuelve a conectar CarPlay.</string>
     <string name="settings_low_latency_decoder">Decodificación de baja latencia (experimental)</string>
-    <string name="settings_low_latency_decoder_description">Pide a los decodificadores de vídeo de Qualcomm que entreguen cada fotograma en cuanto se decodifica, en lugar de retener los siguientes. Puede reducir el retardo en decenas de milisegundos. Desactívalo si la imagen muestra artefactos o se congela. Se aplica en la próxima conexión.</string>
+    <string name="settings_low_latency_decoder_description">Pide a los decodificadores de vídeo de Qualcomm que entreguen cada fotograma en cuanto se decodifica, en lugar de retener los siguientes, y muestra cada fotograma decodificado desde un hilo dedicado sin esperar a que llegue el siguiente. Puede reducir el retardo en decenas de milisegundos. Desactívalo si la imagen muestra artefactos o se congela. Se aplica en la próxima conexión.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
     <string name="car_button_icon">Icono</string>
     <string name="car_button_icon_custom">Icono personalizado</string>
