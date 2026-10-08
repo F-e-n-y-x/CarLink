@@ -52,7 +52,7 @@
     <string name="carlink_settings_method_hotspot">Car hotspot</string>
     <string name="carlink_settings_method_direct">Wi-Fi Direct</string>
     <string name="carlink_settings_method_auto_detail">Picks the best path before each connection: same Wi-Fi, then the car hotspot, then Wi-Fi Direct.</string>
-    <string name="carlink_settings_method_same_wifi_detail">Phone and car on one router, the fastest path. iPhone only: Android Auto never uses it.</string>
+    <string name="carlink_settings_method_same_wifi_detail">Phone and car on one router, the fastest path. Needs the Wi-Fi password once.</string>
     <string name="carlink_settings_method_hotspot_detail">The phone joins the Wi-Fi hotspot the car creates. Works with every phone.</string>
     <string name="carlink_settings_method_direct_detail">A direct link between phone and car. No network needed.</string>
     <string name="carlink_settings_method_sheet_body">Bluetooth always starts the connection; the picture and sound then travel over Wi-Fi.</string>
