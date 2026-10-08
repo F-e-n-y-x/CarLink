@@ -161,6 +161,8 @@
     <string name="connect">連線</string>
     <string name="connect_phone">連線手機</string>
     <string name="connect_when_diplay_opens">開啟 DiPlay 時連線</string>
+    <string name="connect_when_iphone_bluetooth_connects">所選 iPhone 重新連上藍牙時自動連線</string>
+    <string name="connect_when_iphone_bluetooth_connects_description">車機喚醒後，所選 iPhone 連上藍牙時開啟 DiPlay 並啟動無線 CarPlay。部分車機會限制背景啟動。</string>
     <string name="connect_with_usb">透過 USB 連線</string>
     <string name="connect_your_iphone_with_a_usb_cable">請使用 USB 傳輸線連線 iPhone</string>
     <string name="connecting_bluetooth">正在連線藍牙</string>

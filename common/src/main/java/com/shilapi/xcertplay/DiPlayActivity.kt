@@ -235,6 +235,15 @@ class DiPlayActivity : ComponentActivity() {
     private val bluetoothPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) choosePhone() else permissionHelp(getString(R.string.nearby_devices), getString(R.string.allow_nearby_devices_so_diplay_can_connect_to_your_paired))
     }
+    private val bluetoothAutoConnectPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            if (DiPlayPreferences.phoneAddress(this) == null) choosePhone()
+        } else {
+            DiPlayPreferences.saveConnectOnPhoneBluetooth(this, false)
+            render()
+            permissionHelp(getString(R.string.nearby_devices), getString(R.string.allow_nearby_devices_so_diplay_can_connect_to_your_paired))
+        }
+    }
     private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (hasPreciseLocation()) {
             applyLocationReporting(true)
@@ -315,6 +324,13 @@ class DiPlayActivity : ComponentActivity() {
         render()
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
+        if (consumeBluetoothAutoConnectIntent(intent)) {
+            if (initialLaunch) {
+                initialLaunch = false
+                startCarHotspotOnLaunch()
+            }
+            handler.post { connect(true) }
+        }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (page != "home") navigateBack()
@@ -335,6 +351,20 @@ class DiPlayActivity : ComponentActivity() {
         automaticVehicleValidationStarted = false
         scheduleAutomaticVehicleValidation()
         handleWirelessRecovery()
+        if (consumeBluetoothAutoConnectIntent(intent)) {
+            if (initialLaunch) {
+                initialLaunch = false
+                startCarHotspotOnLaunch()
+            }
+            handler.post { connect(true) }
+        }
+    }
+    private fun consumeBluetoothAutoConnectIntent(intent: Intent): Boolean {
+        val requested = intent.getBooleanExtra(PhoneBluetoothReceiver.EXTRA_AUTO_CONNECT, false)
+        intent.removeExtra(PhoneBluetoothReceiver.EXTRA_AUTO_CONNECT)
+        return requested && DiPlayPreferences.connectOnPhoneBluetooth(this) &&
+            DiPlayPreferences.phoneAddress(this) != null && setupError == null &&
+            !CarPlayBackgroundSession.hasSession()
     }
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("page", page)
@@ -1261,6 +1291,15 @@ class DiPlayActivity : ComponentActivity() {
         filteredSection(content, SettingsSection.AUTOMATIC_CONNECTION,
             getString(R.string.automatic_connection), R.drawable.ic_dp_automation) { card ->
             toggle(card, getString(R.string.connect_when_diplay_opens), getString(R.string.default_connection_description), DiPlayPreferences.autoConnect(this)) { DiPlayPreferences.saveAutoConnect(this, it) }
+            toggle(card, getString(R.string.connect_when_iphone_bluetooth_connects),
+                getString(R.string.connect_when_iphone_bluetooth_connects_description),
+                DiPlayPreferences.connectOnPhoneBluetooth(this)) { enabled ->
+                DiPlayPreferences.saveConnectOnPhoneBluetooth(this, enabled)
+                if (enabled && Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    bluetoothAutoConnectPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                } else if (enabled && DiPlayPreferences.phoneAddress(this) == null) choosePhone()
+            }
             val connectionModes = DefaultConnectionMode.entries
             choice(card, getString(R.string.default_connection_mode), listOf(
                 getString(R.string.default_connection_last_used),
@@ -4280,6 +4319,7 @@ class DiPlayActivity : ComponentActivity() {
                     appendLine("CarPlay size: ${com.shilapi.xcertplay.airplay.CarPlaySize.fromWidthMillimeters(AirPlayPersistence.loadWidthPhysicalMm(appContext)).label}")
                     appendLine("Saved resolution preference (may differ from active session): ${AirPlayPersistence.loadDisplayScalePercent(appContext)}%")
                     appendLine("Session: ${if (CarPlayBackgroundSession.active) "active" else if (CarPlayBackgroundSession.hasSession()) "connecting" else "stopped"}")
+                    appendLine(PhoneWakeDiagnostics.report(appContext))
                     appendLine("Head-unit board: ${Build.BOARD}; hardware: ${Build.HARDWARE}; build: ${Build.DISPLAY}")
                     appendLine()
                     appendLine("--- Current cluster display diagnostics (even when disabled) ---")
