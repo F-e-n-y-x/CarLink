@@ -39,17 +39,50 @@ class UsbReadQueuePolicyTest {
         assertEquals(listOf(65_536, 16_384, 16_384), sizes)
     }
 
-    @Test fun twoExplicitRejectionsAreBoundedAndDoNotPersistTheLimit() {
+    @Test fun fullSizeRejectionWalksTheCompatibilityLadderDownToTheFloorAndDoesNotPersist() {
         val policy = UsbReadQueuePolicy()
         val buffer = ByteBuffer.allocateDirect(32_768)
         val sizes = mutableListOf<Int>()
         val result = policy.queue(buffer, {}) { sizes.add(it.remaining()); false }
         assertFalse(result.queued)
-        assertEquals(16_384, result.fallbackBytes)
-        assertEquals(listOf(32_768, 16_384), sizes)
+        // Steps 32K → 16K → 8K → 4K → 2K (floor), reporting how far down it reached.
+        assertEquals(32_768, result.firstBytes)
+        assertEquals(2_048, result.fallbackBytes)
+        assertEquals(listOf(32_768, 16_384, 8_192, 4_096, 2_048), sizes)
         assertEquals(32_768, buffer.limit())
+        // A total failure caches nothing, so the next read starts again at full size.
         policy.queue(buffer, {}) { sizes.add(it.remaining()); true }
-        assertEquals(listOf(32_768, 16_384, 32_768), sizes)
+        assertEquals(listOf(32_768, 16_384, 8_192, 4_096, 2_048, 32_768), sizes)
+    }
+
+    @Test fun fullSizeRejectionStepsDownTheLadderUntilAcceptedAndRemembersThatSize() {
+        val policy = UsbReadQueuePolicy()
+        val buffer = ByteBuffer.allocateDirect(32_768)
+        val sizes = mutableListOf<Int>()
+        // A MUSB-style controller that rejects 32K/16K/8K but accepts 4K.
+        val result = policy.queue(buffer, {}) { sizes.add(it.remaining()); it.remaining() <= 4_096 }
+        assertTrue(result.queued)
+        assertEquals(32_768, result.firstBytes)
+        assertEquals(4_096, result.fallbackBytes)
+        assertEquals(listOf(32_768, 16_384, 8_192, 4_096), sizes)
+        assertEquals(4_096, buffer.limit())
+        // The accepted size is cached, so the next read starts there without re-walking the ladder.
+        policy.queue(ByteBuffer.allocateDirect(32_768), {}) { sizes.add(it.remaining()); true }
+        assertEquals(listOf(32_768, 16_384, 8_192, 4_096, 4_096), sizes)
+    }
+
+    @Test fun ceilingCapsTheQueuedSizeSoPreApiPNeverExceedsTheUsbfsLimit() {
+        // On API < 28 UsbRequest.queue THROWS above 16 KiB, so the cap must keep every attempt
+        // within the usbfs ceiling rather than ever queueing the buffer's full remaining.
+        val policy = UsbReadQueuePolicy(USBFS_BULK_URB_CEILING_BYTES)
+        val buffer = ByteBuffer.allocateDirect(65_536)
+        val sizes = mutableListOf<Int>()
+        val result = policy.queue(buffer, {}) { sizes.add(it.remaining()); true }
+        assertTrue(result.queued)
+        assertEquals(16_384, result.firstBytes)
+        assertEquals(null, result.fallbackBytes)
+        assertEquals(listOf(16_384), sizes)
+        assertEquals(16_384, buffer.limit())
     }
 
     @Test fun queueExceptionNeverPermitsAnotherAttempt() {
