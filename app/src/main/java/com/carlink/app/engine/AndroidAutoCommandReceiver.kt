@@ -4,10 +4,15 @@ import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.aap.AapService
+import com.andrerinas.openheadunit.connection.UsbAccessoryMode
+import com.andrerinas.openheadunit.connection.UsbDeviceCompat
 import com.carlink.app.engine.AndroidAutoProtocol as P
 
 /**
@@ -20,7 +25,7 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
         val command = intent.getStringExtra(P.EXTRA_COMMAND) ?: return
         Log.i(TAG, "command=$command")
         when (command) {
-            P.COMMAND_START_USB -> startService(context, AapService.ACTION_CHECK_USB)
+            P.COMMAND_START_USB -> startUsb(context, usbDevice(intent))
             P.COMMAND_START_WIRELESS -> startWireless(context, intent.getStringExtra(P.EXTRA_ADDRESS))
             P.COMMAND_DISCONNECT -> if (isServiceRunning(context)) startService(context, AapService.ACTION_DISCONNECT)
             // Sending STOP_SERVICE to a stopped AapService would first run its onCreate, which
@@ -28,6 +33,42 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
             P.COMMAND_STOP -> if (isServiceRunning(context)) startService(context, AapService.ACTION_STOP_SERVICE)
             P.COMMAND_REPORT -> AndroidAutoStateReporter.report(context)
         }
+    }
+
+    /**
+     * CarLink already identified this device as an Android phone and the driver allows starting on
+     * plug-in, so it counts as an allowed device for DiAuto (whose default only switches Google
+     * devices and phones on its allowlist). DiAuto's last-session check then requests permission
+     * and switches it to accessory mode; when the driver turned that check off, switch it here.
+     */
+    private fun startUsb(context: Context, device: UsbDevice?) {
+        if (device != null && !UsbDeviceCompat.isInAccessoryMode(device)) {
+            val settings = App.provide(context).settings
+            val name = UsbDeviceCompat(device).uniqueName
+            if (!settings.isConnectingDevice(UsbDeviceCompat(device))) settings.allowedDevices = settings.allowedDevices + name
+            val usb = context.getSystemService(UsbManager::class.java)
+            if (!settings.autoConnectLastSession && usb != null && usb.hasPermission(device)) {
+                val pending = goAsync()
+                Thread({
+                    try {
+                        // AapService's own USB receiver picks up the phone when it re-enumerates.
+                        startService(context, AapService.ACTION_CHECK_USB)
+                        Log.i(TAG, "AOA switch result=${UsbAccessoryMode(usb).connectAndSwitch(device, settings.useLibusb)}")
+                    } finally {
+                        pending.finish()
+                    }
+                }, "carlink-aoa-switch").start()
+                return
+            }
+        }
+        startService(context, AapService.ACTION_CHECK_USB)
+    }
+
+    private fun usbDevice(intent: Intent): UsbDevice? = if (Build.VERSION.SDK_INT >= 33) {
+        intent.getParcelableExtra(P.EXTRA_USB_DEVICE, UsbDevice::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        intent.getParcelableExtra(P.EXTRA_USB_DEVICE)
     }
 
     private fun startWireless(context: Context, address: String?) {

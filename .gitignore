@@ -39,3 +39,6 @@ release-signing.properties
 *.key
 *.apk
 *.aab
+
+# Claude Code agent worktrees and local state
+/.claude/

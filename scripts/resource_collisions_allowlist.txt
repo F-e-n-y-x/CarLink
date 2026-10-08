@@ -1,0 +1,25 @@
+# Reviewed cross-engine resource collisions (scripts/resource_collisions.py).
+# app_name, launcher icons, locales_config and usb_device_filter: CarLink's :app overrides them.
+# The strings have the same meaning in both engines (about/settings_search_hint differ only in wording).
+# Add a line only after checking both definitions; never for layouts, styles or format strings.
+mipmap ic_launcher
+mipmap ic_launcher_foreground
+mipmap ic_launcher_round
+string about
+string app_name
+string auto
+string back
+string cancel
+string close
+string diagnostic_report_saved
+string reset
+string resolution
+string right_hand_drive
+string running
+string save
+string save_diagnostic_report
+string settings
+string settings_search_hint
+string share
+xml locales_config
+xml usb_device_filter

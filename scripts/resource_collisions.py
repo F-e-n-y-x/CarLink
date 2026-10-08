@@ -6,6 +6,7 @@ engines is silently resolved to one definition. Run from the repository root:
 
     python3 scripts/resource_collisions.py            # summary + every collision
     python3 scripts/resource_collisions.py --names    # "type name" lines only
+    python3 scripts/resource_collisions.py --check    # fail on collisions not in the allowlist
 """
 import sys
 import xml.etree.ElementTree as ET
@@ -77,6 +78,16 @@ def main():
         key: modules for key, modules in owners.items()
         if len({ENGINE[m] for m in modules}) > 1
     }
+    if "--check" in sys.argv:
+        allowlist = Path(__file__).with_name("resource_collisions_allowlist.txt")
+        reviewed = {tuple(line.split()) for line in allowlist.read_text().splitlines()
+                    if line.strip() and not line.startswith("#")}
+        new = sorted(set(collisions) - reviewed)
+        for kind, name in new:
+            where = "; ".join(sorted(collisions[(kind, name)]))
+            print(f"unreviewed collision: {kind} {name} ({where})", file=sys.stderr)
+        print(f"{len(collisions)} collisions, {len(new)} unreviewed")
+        sys.exit(1 if new else 0)
     if "--names" in sys.argv:
         for kind, name in sorted(collisions):
             print(kind, name)

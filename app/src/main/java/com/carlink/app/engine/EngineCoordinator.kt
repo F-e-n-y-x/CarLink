@@ -11,6 +11,7 @@ import com.carlink.app.core.LinkState
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.core.Transport
 import com.carlink.app.detect.KnownPhones
+import com.carlink.app.entry.UsbRouterActivity
 import com.carlink.app.settings.CarLinkPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,7 +58,9 @@ class EngineCoordinator private constructor(context: Context) {
         val engine = kind.engine ?: return
         if (!preferences.autoConnectUsb) return
         val current = _state.value
-        if (current.isActive && current.engine == engine && current.transport == Transport.USB) return
+        // A phone switching to Android Auto re-enumerates as a new USB device mid-attempt; that
+        // second attach must still reach the engine, so only a connected session is left alone.
+        if (current.stage == LinkStage.CONNECTED && current.engine == engine && current.transport == Transport.USB) return
         connect(engine, Transport.USB, address = null, phoneName = phoneName, usbAttach = attachIntent)
     }
 
@@ -103,7 +106,7 @@ class EngineCoordinator private constructor(context: Context) {
         setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
         when (engine) {
             Engine.CARPLAY -> carPlay.start(transport, phoneName, usbAttach)
-            Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName)
+            Engine.ANDROID_AUTO -> androidAuto.start(transport, address, phoneName, usbAttach?.let(UsbRouterActivity::usbDevice))
         }
     }
 

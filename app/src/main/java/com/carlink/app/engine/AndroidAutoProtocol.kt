@@ -9,6 +9,8 @@ internal object AndroidAutoProtocol {
     const val ACTION_COMMAND = "com.carlink.app.action.ANDROID_AUTO_COMMAND"
     const val EXTRA_COMMAND = "command"
     const val EXTRA_ADDRESS = "address"
+    /** The UsbDevice from the attach event (Android phones), for COMMAND_START_USB. */
+    const val EXTRA_USB_DEVICE = "usb_device"
 
     const val COMMAND_START_USB = "start_usb"
     const val COMMAND_START_WIRELESS = "start_wireless"

@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.hardware.usb.UsbDevice
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -48,13 +49,13 @@ internal class AndroidAutoEngine(context: Context, private val onState: (LinkSta
             ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
-    fun start(transport: Transport, address: String?, phoneName: String?) {
+    fun start(transport: Transport, address: String?, phoneName: String?, usbDevice: UsbDevice? = null) {
         this.transport = transport
         this.phoneName = phoneName
         engage()
         onState(LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, transport, phoneName, 1, STEPS))
         when (transport) {
-            Transport.USB -> send(P.COMMAND_START_USB)
+            Transport.USB -> send(P.COMMAND_START_USB) { usbDevice?.let { putExtra(P.EXTRA_USB_DEVICE, it) } }
             Transport.WIRELESS -> send(P.COMMAND_START_WIRELESS) { putExtra(P.EXTRA_ADDRESS, address) }
         }
     }
