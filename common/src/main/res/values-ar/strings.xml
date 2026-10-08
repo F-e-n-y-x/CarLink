@@ -160,6 +160,8 @@
     <string name="connect">اتصال</string>
     <string name="connect_phone">اتصال بالهاتف</string>
     <string name="connect_when_diplay_opens">الاتصال عند فتح DiPlay</string>
+    <string name="connect_when_iphone_bluetooth_connects">الاتصال عند عودة اتصال iPhone المحدد</string>
+    <string name="connect_when_iphone_bluetooth_connects_description">بعد تنشيط السيارة، افتح DiPlay وشغّل CarPlay اللاسلكي عند اتصال iPhone المحدد عبر Bluetooth. قد تمنع بعض الأجهزة التشغيل في الخلفية.</string>
     <string name="connect_with_usb">الاتصال عبر USB</string>
     <string name="connect_your_iphone_with_a_usb_cable">وصّل iPhone بكابل USB</string>
     <string name="connecting_bluetooth">جارٍ الاتصال بالبلوتوث</string>

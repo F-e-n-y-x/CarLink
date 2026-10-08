@@ -160,6 +160,8 @@
     <string name="connect">Подключить</string>
     <string name="connect_phone">Подключить телефон</string>
     <string name="connect_when_diplay_opens">Подключать при открытии DiPlay</string>
+    <string name="connect_when_iphone_bluetooth_connects">Подключать при повторном соединении выбранного iPhone</string>
+    <string name="connect_when_iphone_bluetooth_connects_description">После пробуждения автомобиля открывать DiPlay и запускать беспроводной CarPlay при соединении выбранного iPhone по Bluetooth. Некоторые устройства ограничивают фоновый запуск.</string>
     <string name="connect_with_usb">Подключить по USB</string>
     <string name="connect_your_iphone_with_a_usb_cable">Подключите iPhone кабелем USB</string>
     <string name="connecting_bluetooth">Подключение Bluetooth</string>

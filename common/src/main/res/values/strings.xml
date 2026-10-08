@@ -166,6 +166,8 @@
     <string name="connect">Connect</string>
     <string name="connect_phone">Connect phone</string>
     <string name="connect_when_diplay_opens">Connect when DiPlay opens</string>
+    <string name="connect_when_iphone_bluetooth_connects">Connect when the selected iPhone reconnects</string>
+    <string name="connect_when_iphone_bluetooth_connects_description">After the car wakes, open DiPlay and start wireless CarPlay when the selected iPhone connects over Bluetooth. Some head units restrict background launches.</string>
     <string name="connect_with_usb">Connect with USB</string>
     <string name="connect_your_iphone_with_a_usb_cable">Connect your iPhone with a USB cable</string>
     <string name="connecting_bluetooth">Connecting Bluetooth</string>
