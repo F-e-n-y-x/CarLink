@@ -563,6 +563,39 @@ class AdaptiveSettingsUiTest {
     }
 
     @Test
+    @Config(sdk = [28, 33])
+    fun theAudioFocusAutoYieldSwitchMarksTheActiveSessionForReconnect() {
+        // The sink reads this flag once, when it is built, so the change lands on the next session.
+        AirPlayPersistence.saveAudioFocusEnabled(context, true)
+        assertTrue(AirPlayPersistence.loadAudioFocusAutoYield(context))
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            PendingReconnect.clear()
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.audio_focus_auto_yield) }
+            assertTrue(setting.isChecked)
+            setting.performClick()
+
+            assertFalse(AirPlayPersistence.loadAudioFocusAutoYield(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+            assertEquals(null, shadowOf(screen).nextStartedActivity)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
     @Config(sdk = [29], qualifiers = "en-w1000dp-h700dp")
     fun expandedRailStaysOutsideTheScrollingCategory() {
         val screen = openSettings()
