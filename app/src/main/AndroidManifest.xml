@@ -22,7 +22,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- Onboarding asks to keep CarLink ready when the car wakes (DESIGN_SPEC §6.4). -->
+    <!-- Diagnostics asks to keep CarLink ready when the car wakes (DESIGN_SPEC §6.4). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
@@ -104,6 +104,17 @@
             android:authorities="${applicationId}.androidauto.settings"
             android:exported="false"
             android:process=":aa" />
+
+        <!-- Shares Diagnostics' connection log (cache/shared only); independent of the engines' providers. -->
+        <provider
+            android:name=".diagnostics.CarLinkFileProvider"
+            android:authorities="${applicationId}.carlink.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/carlink_file_paths" />
+        </provider>
 
         <!-- ============================== CarPlay engine (DiPlay) ============================== -->
 

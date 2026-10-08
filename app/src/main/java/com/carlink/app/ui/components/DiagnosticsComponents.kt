@@ -1,7 +1,6 @@
 package com.carlink.app.ui.components
 
 import android.graphics.Bitmap
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -43,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -59,8 +57,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -68,7 +64,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.carlink.app.R
-import com.carlink.app.diagnostics.CheckStatus
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
@@ -80,139 +75,9 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 
 /**
- * Components for Diagnostics and About (DESIGN_SPEC §6.5, §6.6, §6.7: StatTile, CheckRow,
- * QrPanel) plus a side sheet for parked reading. Sizes come from CarLinkTokens.dimens.
+ * Components for Diagnostics and About: a tile grid, QR codes, a side sheet for parked reading
+ * and credit entries. Sizes come from CarLinkTokens.dimens.
  */
-
-/** Typography for timers and stat values: tabular figures, so digits don't jump as they change. */
-@Composable
-fun TextStyle.tabularLtr(): TextStyle = merge(TextStyle(fontFeatureSettings = "tnum", textDirection = TextDirection.Ltr))
-
-@DrawableRes
-fun statusIcon(status: CheckStatus): Int = when (status) {
-    CheckStatus.PASS -> R.drawable.carlink_ic_check_circle_filled
-    CheckStatus.WARN -> R.drawable.carlink_ic_warning_filled
-    CheckStatus.FAIL -> R.drawable.carlink_ic_error_filled
-    CheckStatus.INFO -> R.drawable.carlink_ic_info
-}
-
-@Composable
-fun statusTint(status: CheckStatus): Color = when (status) {
-    CheckStatus.PASS -> CarLinkTokens.colors.success
-    CheckStatus.WARN -> CarLinkTokens.colors.warning
-    CheckStatus.FAIL -> MaterialTheme.colorScheme.error
-    CheckStatus.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
-}
-
-@Composable
-fun statusLabel(status: CheckStatus): String = stringResource(when (status) {
-    CheckStatus.PASS -> R.string.carlink_diag_status_pass
-    CheckStatus.WARN -> R.string.carlink_diag_status_warn
-    CheckStatus.FAIL -> R.string.carlink_diag_status_fail
-    CheckStatus.INFO -> R.string.carlink_diag_status_info
-})
-
-/**
- * One readiness check: status icon (never color alone), title, supporting text, an optional
- * note, and at most one Fix button. The text merges into one screen-reader node ("Problem,
- * Bluetooth is off, …"); the Fix button stays a separate, focusable target. On narrow widths
- * the button moves below the text so neither is squeezed.
- */
-@Composable
-fun CheckRow(
-    status: CheckStatus,
-    title: String,
-    modifier: Modifier = Modifier,
-    supporting: String? = null,
-    note: String? = null,
-    fixLabel: String? = null,
-    onFix: (() -> Unit)? = null,
-) {
-    val dimens = CarLinkTokens.dimens
-    val fixDescription = stringResource(R.string.carlink_diag_fix_a11y, title)
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val stackFix = maxWidth < if (CarLinkTokens.profile == UiProfile.CAR) 640.dp else 420.dp
-        val fix: (@Composable (Modifier) -> Unit)? = if (fixLabel != null && onFix != null) {
-            { m -> SecondaryButton(fixLabel, onFix, m.semantics { contentDescription = fixDescription }) }
-        } else null
-        Column(
-            Modifier.fillMaxWidth()
-                .heightIn(min = if (supporting == null && note == null) dimens.rowOneLine else dimens.rowTwoLine)
-                .padding(horizontal = dimens.gutter, vertical = 12.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Top) {
-                    CarIcon(statusIcon(status), statusLabel(status), Modifier.padding(top = 2.dp), tint = statusTint(status))
-                    Spacer(Modifier.width(dimens.gutter))
-                    Column(Modifier.weight(1f)) {
-                        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        if (supporting != null) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(supporting, style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (note != null) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.Top) {
-                                CarIcon(R.drawable.carlink_ic_info, null, Modifier.padding(top = 4.dp),
-                                    size = dimens.iconTertiary, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(Modifier.width(8.dp))
-                                Text(note, style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-                if (fix != null && !stackFix) {
-                    Spacer(Modifier.width(dimens.targetGap))
-                    fix(Modifier)
-                }
-            }
-            if (fix != null && stackFix) {
-                Spacer(Modifier.height(12.dp))
-                fix(Modifier.padding(start = dimens.iconSecondary + dimens.gutter))
-            }
-        }
-    }
-}
-
-/** How a stat tile's value reads; WARN and ERROR add an icon as well as the tint. */
-enum class StatTone { NORMAL, WARN, ERROR }
-
-/**
- * A measured or known value: label (bodyMedium) above value (headlineSmall, tabular figures).
- * Not interactive; merged for screen readers as "label, value".
- */
-@Composable
-fun StatTile(label: String, value: String, modifier: Modifier = Modifier, tone: StatTone = StatTone.NORMAL,
-             technical: Boolean = false, maxValueLines: Int = 2) {
-    val dimens = CarLinkTokens.dimens
-    val tint = when (tone) {
-        StatTone.NORMAL -> MaterialTheme.colorScheme.onSurface
-        StatTone.WARN -> CarLinkTokens.colors.warning
-        StatTone.ERROR -> MaterialTheme.colorScheme.error
-    }
-    Column(
-        modifier.clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(horizontal = dimens.gutter, vertical = 16.dp)
-            .semantics(mergeDescendants = true) {},
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.Top) {
-            if (tone != StatTone.NORMAL) {
-                CarIcon(if (tone == StatTone.WARN) R.drawable.carlink_ic_warning_filled else R.drawable.carlink_ic_error_filled,
-                    null, Modifier.padding(top = 4.dp), size = dimens.iconTertiary + 4.dp, tint = tint)
-                Spacer(Modifier.width(8.dp))
-            }
-            val style = MaterialTheme.typography.headlineSmall
-            Text(value, style = if (technical) style.tabularLtr() else style.merge(TextStyle(fontFeatureSettings = "tnum")),
-                color = tint, maxLines = maxValueLines)
-        }
-    }
-}
 
 /**
  * Lays tiles out in rows of equal width, as many per row as fit at [minTileWidth] (at most
@@ -339,27 +204,25 @@ fun CarSheet(
                             // Swallow taps so they don't reach the scrim.
                             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                         shape = if (fullScreen) RoundedCornerShape(0.dp)
-                        else RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp),
+                        else RoundedCornerShape(topStart = 40.dp, bottomStart = 40.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         // Named explicitly: in the dark scheme surfaceContainerHigh equals surfaceVariant,
                         // so contentColorFor() would pick the dimmer onSurfaceVariant.
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ) {
                         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                            Row(Modifier.fillMaxWidth().heightIn(min = dimens.topBar).padding(horizontal = dimens.gutter - 8.dp),
+                            Row(Modifier.fillMaxWidth().heightIn(min = dimens.topBar + 16.dp).padding(horizontal = dimens.gutter),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 if (showBackArrow) {
-                                    IconAction(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_back), onBack)
-                                    Spacer(Modifier.width(8.dp))
-                                } else {
-                                    Spacer(Modifier.width(8.dp))
+                                    com.carlink.app.ui.settings.RoundGlassButton(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_back), onBack)
+                                    Spacer(Modifier.width(16.dp))
                                 }
-                                Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 2,
+                                Text(title, style = MaterialTheme.typography.headlineMedium, maxLines = 2,
                                     modifier = Modifier.weight(1f).semantics {
                                         heading()
                                         liveRegion = LiveRegionMode.Polite
                                     })
-                                IconAction(R.drawable.carlink_ic_close, stringResource(R.string.carlink_about_close), onDismiss)
+                                com.carlink.app.ui.settings.RoundGlassButton(R.drawable.carlink_ic_close, stringResource(R.string.carlink_about_close), onDismiss)
                             }
                             Column(
                                 Modifier.fillMaxWidth().weight(1f)
@@ -373,13 +236,6 @@ fun CarSheet(
             }
         }
     }
-}
-
-/** A heading inside a sheet or card (titleMedium in onSurfaceVariant; no ALL CAPS, no eyebrows). */
-@Composable
-fun SubHeading(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(top = CarLinkTokens.dimens.gutter, bottom = 8.dp).semantics { heading() })
 }
 
 /** Name and description of a component or credit, merged for screen readers. */

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What CarLinkFileProvider may serve: only reports CarLink writes for sharing. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

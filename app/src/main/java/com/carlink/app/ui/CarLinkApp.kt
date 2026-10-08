@@ -9,10 +9,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,23 +19,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.settings.SettingsCategory
 import com.carlink.app.ui.about.AboutScreen
 import com.carlink.app.ui.diagnostics.DiagnosticsScreen
 import com.carlink.app.ui.home.HomeScreen
-import com.carlink.app.ui.onboarding.OnboardingScreen
 import com.carlink.app.ui.settings.SettingsScreen
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 
 /** CarLink's screens (DESIGN_SPEC §4.1). Home is the hub; everything is one level below it. */
-enum class Route { HOME, SETTINGS, ONBOARDING, DIAGNOSTICS, ABOUT }
+enum class Route { HOME, SETTINGS, DIAGNOSTICS, ABOUT }
 
 @Composable
 fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
-    // Back stack of routes; Home is always at the bottom once onboarding is done.
-    // No setup wizard: Home asks for permissions inline and connects on its own.
+    // Back stack of routes; Home is always at the bottom. There is no setup wizard: Home asks
+    // for permissions inline and connects on its own.
     var stack by rememberSaveable { mutableStateOf(listOf(Route.HOME)) }
     // The Settings category another screen asked to open (Diagnostics), or null for the default.
     var settingsStart by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
@@ -54,7 +49,6 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
     }
     val back: () -> Unit = { stack = if (stack.size > 1) stack.dropLast(1) else listOf(Route.HOME) }
 
-    val goHome = { navigate(Route.HOME) }
     val openSettings: (SettingsCategory) -> Unit = { category -> navigate(Route.SETTINGS); settingsStart = category }
     BackHandler(enabled = route != Route.HOME) { back() }
     BackHandler(enabled = route == Route.HOME) { onExitToCarHome() }
@@ -67,8 +61,8 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
         color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        // Home and Settings draw their atmosphere behind the system bars and pad their own content.
-        Box(Modifier.fillMaxSize().then(if (route == Route.HOME || route == Route.SETTINGS) Modifier else Modifier.windowInsetsPadding(WindowInsets.safeDrawing))) {
+        // Every screen draws its atmosphere behind the system bars and pads its own content.
+        Box(Modifier.fillMaxSize()) {
             AnimatedContent(
                 targetState = route,
                 transitionSpec = {
@@ -86,9 +80,8 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
                 when (current) {
                     Route.HOME -> HomeScreen(vm, navigate = navigate)
                     Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate, startCategory = settingsStart)
-                    Route.ONBOARDING -> OnboardingScreen(vm, onDone = { vm.completeOnboarding(); goHome() })
                     Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back, openSettings = openSettings)
-                    Route.ABOUT -> AboutScreen(vm, onBack = back)
+                    Route.ABOUT -> AboutScreen(onBack = back)
                 }
             }
         }

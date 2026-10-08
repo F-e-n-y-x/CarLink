@@ -82,7 +82,6 @@ class SettingsStoresTest {
         assertEquals(ThemeMode.FOLLOW_SYSTEM, prefs.themeMode)
         assertEquals(UiProfileMode.AUTO, prefs.uiProfileMode)
         assertEquals(1f, prefs.interfaceScale)
-        assertFalse(prefs.onboardingDone)
         assertTrue(prefs.interfaceScale in CarLinkPreferences.INTERFACE_SCALES)
     }
 
@@ -95,7 +94,6 @@ class SettingsStoresTest {
             themeMode = ThemeMode.entries.last()
             uiProfileMode = UiProfileMode.entries.last()
             interfaceScale = 1.3f
-            onboardingDone = true
         }
         CarLinkPreferences(app).apply {
             assertFalse(autoConnectUsb)
@@ -105,7 +103,6 @@ class SettingsStoresTest {
             assertEquals(ThemeMode.entries.last(), themeMode)
             assertEquals(UiProfileMode.entries.last(), uiProfileMode)
             assertEquals(1.3f, interfaceScale)
-            assertTrue(onboardingDone)
         }
     }
 

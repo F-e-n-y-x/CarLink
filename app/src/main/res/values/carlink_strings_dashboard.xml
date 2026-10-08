@@ -42,7 +42,6 @@
 
     <string name="carlink_home_try_again">Try again</string>
     <string name="carlink_home_diagnostics">Diagnostics</string>
-    <string name="carlink_home_use_cable">Use a cable</string>
     <string name="carlink_home_open_settings">Open settings</string>
     <string name="carlink_home_error_auth_title">CarPlay can\'t sign in</string>
     <string name="carlink_home_error_auth_body">This build is missing CarPlay\'s authentication files. Android Auto still works.</string>

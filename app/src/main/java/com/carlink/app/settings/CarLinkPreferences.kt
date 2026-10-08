@@ -46,10 +46,6 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getFloat(KEY_SCALE, 1f)
         set(value) = prefs.edit().putFloat(KEY_SCALE, value).apply()
 
-    var onboardingDone: Boolean
-        get() = prefs.getBoolean(KEY_ONBOARDING_DONE, false)
-        set(value) = prefs.edit().putBoolean(KEY_ONBOARDING_DONE, value).apply()
-
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default
 
@@ -63,6 +59,5 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
         private const val KEY_PAUSED = "auto_connect_paused"
-        private const val KEY_ONBOARDING_DONE = "onboarding_done"
     }
 }

@@ -98,8 +98,6 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private val _connection = MutableStateFlow(readConnection())
     val connection: StateFlow<ConnectionPrefs> = _connection.asStateFlow()
 
-    val onboardingDone: Boolean get() = preferences.onboardingDone
-
     private val unifiedStore = UnifiedSettingsStore(app)
     private val _unified = MutableStateFlow(unifiedStore.load())
     /** The one set of settings both engines use. */
@@ -244,8 +242,6 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setAutoConnectBluetooth(on: Boolean) { preferences.autoConnectBluetooth = on; _connection.value = readConnection() }
     fun setStartOnBoot(on: Boolean) { preferences.startOnBoot = on; _connection.value = readConnection() }
     fun resumeAutoConnect() { preferences.autoConnectPaused = false; _connection.value = readConnection() }
-
-    fun completeOnboarding() { preferences.onboardingDone = true }
 
     // ---- Other screens -----------------------------------------------------------------
 
