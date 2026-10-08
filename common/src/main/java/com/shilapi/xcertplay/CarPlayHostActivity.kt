@@ -1747,11 +1747,13 @@ class CarPlayHostActivity : ComponentActivity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(16), dp(36), dp(16), dp(36))
+            setPadding(dp(16), dp(16), dp(16), dp(36))
         }
         content.addView(
             menuText(getString(R.string.carplay_settings), 24f, MENU_PRIMARY, bold = true).apply {
                 setPadding(dp(56), 0, 0, 0)
+                minHeight = dp(48)
+                gravity = Gravity.CENTER_VERTICAL
             },
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1773,7 +1775,7 @@ class CarPlayHostActivity : ComponentActivity() {
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(32) },
+            ).apply { topMargin = dp(16) },
         )
 
         content.addView(
@@ -2158,11 +2160,13 @@ class CarPlayHostActivity : ComponentActivity() {
         content.addView(Button(this).apply {
             text = getString(R.string.language_app_language)
             isAllCaps = false
+            textSize = 17f
             setOnClickListener { AppLocale.showPicker(this@CarPlayHostActivity) }
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
 
         val gestureButton = Button(this).apply {
             isAllCaps = false
+            textSize = 17f
             setOnClickListener {
                 gestureFingerCount = if (gestureFingerCount >= 4) 2 else gestureFingerCount + 1
                 text = getString(R.string.settings_gesture_fingers, gestureFingerCount)
@@ -2237,7 +2241,7 @@ class CarPlayHostActivity : ComponentActivity() {
         overlay.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
             val desiredWidth = settingsMenuWidth(view.width)
             val horizontalPadding = dp(if (desiredWidth >= dp(600)) 32 else 16)
-            content.setPadding(horizontalPadding, dp(36), horizontalPadding, dp(36))
+            content.setPadding(horizontalPadding, dp(16), horizontalPadding, dp(36))
             val params = panel.layoutParams
             if (params.width != desiredWidth) {
                 params.width = desiredWidth

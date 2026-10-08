@@ -696,7 +696,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             setImageResource(R.drawable.ic_carplay)
             contentDescription = getString(R.string.carplay)
         }, LinearLayout.LayoutParams(logoSize, logoSize))
-        addView(label(getString(R.string.diplay), if (compact) 20 else 26, TEXT, true).apply {
+        addView(label(getString(R.string.diplay), if (compact) 20 else 26, TEXT, true,
+            centreGlyphs = resources.configuration.locales[0].language != "zh").apply {
             setPadding(if (compact) dp(8) else dp(12), 0, 0, 0)
         }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
         addView(appearanceButton(), LinearLayout.LayoutParams(dp(if (compact) 44 else 52), dp(if (compact) 44 else 52)).apply {
@@ -748,7 +749,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         addView(headerButton(getString(R.string.back), R.drawable.ic_dp_back, compact, ::navigateBack),
             LinearLayout.LayoutParams(-2, if (compact) dp(44) else dp(52)))
         addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true,
-            centreGlyphs = resources.configuration.locales[0].language == "zh").apply {
+            centreGlyphs = true).apply {
             setPadding(dp(12), 0, dp(12), 0)
         }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
         addView(appearanceButton(), LinearLayout.LayoutParams(dp(if (compact) 44 else 52), dp(if (compact) 44 else 52)).apply {
@@ -4851,10 +4852,15 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             val value = text.toString()
             paint.getTextBounds(value, 0, value.length, glyphBounds)
             val checkpoint = canvas.save()
-            if (!glyphBounds.isEmpty && baseline >= 0) {
-                val glyphCentre = baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
+            if (layout?.lineCount == 1 && !glyphBounds.isEmpty && baseline >= 0) {
+                val textCentre = if (resources.configuration.locales[0].language == "zh") {
+                    baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
+                } else {
+                    val metrics = paint.fontMetrics
+                    baseline + (metrics.ascent + metrics.descent) / 2f
+                }
                 val contentCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
-                canvas.translate(0f, contentCentre - glyphCentre)
+                canvas.translate(0f, contentCentre - textCentre)
             }
             super.onDraw(canvas)
             canvas.restoreToCount(checkpoint)
@@ -4882,11 +4888,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         setCompoundDrawablesRelative(drawable, null, null, null)
         compoundDrawablePadding = dp(8)
         doOnLayout {
-            // Centre the icon on the visible glyphs, rather than the font's line box.
-            val textBounds = android.graphics.Rect()
-            paint.getTextBounds(title, 0, title.length, textBounds)
-            if (!textBounds.isEmpty && baseline >= 0) {
-                val glyphCentre = baseline + (textBounds.top + textBounds.bottom) / 2f
+            // Use the same text alignment reference as other buttons in this locale.
+            if (baseline >= 0 && text.isNotEmpty()) {
+                val glyphCentre = textAlignmentCentreY()
                 val drawableCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
                 val offset = (glyphCentre - drawableCentre).roundToInt()
                 drawable?.setBounds(0, offset, iconSize, iconSize + offset)
@@ -4964,6 +4968,17 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         var alignVisibleGlyphs = true
         private val glyphBounds = android.graphics.Rect()
 
+        fun textAlignmentCentreY(): Float {
+            if (resources.configuration.locales[0].language == "zh") {
+                val value = text.toString()
+                paint.getTextBounds(value, 0, value.length, glyphBounds)
+                return baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
+            }
+            // Keep the baseline stable when labels contain descenders or accents.
+            val metrics = paint.fontMetrics
+            return baseline + (metrics.ascent + metrics.descent) / 2f
+        }
+
         override fun onDraw(canvas: android.graphics.Canvas) {
             var offset = contentOffsetY
             if (alignVisibleGlyphs) {
@@ -4971,13 +4986,9 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 // Wrapped labels keep Android's multiline layout. Measure single-line labels
                 // on every draw so changing a setting value also updates its visual centre.
                 if (layout?.lineCount == 1 && baseline >= 0) {
-                    val value = text.toString()
-                    paint.getTextBounds(value, 0, value.length, glyphBounds)
-                    if (!glyphBounds.isEmpty) {
-                        val glyphCentre = baseline + (glyphBounds.top + glyphBounds.bottom) / 2f
-                        val contentCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
-                        offset = contentCentre - glyphCentre
-                    }
+                    val textCentre = textAlignmentCentreY()
+                    val contentCentre = paddingTop + (height - paddingTop - paddingBottom) / 2f
+                    offset = contentCentre - textCentre
                 }
                 // The chevron is already centred by TextView; compensate for the text shift.
                 compoundDrawablesRelative.filterNotNull().forEach { drawable ->

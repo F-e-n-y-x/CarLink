@@ -83,6 +83,12 @@ class CarPlayHostSettingsTest {
             val expected = (minOf(720, widthDp - 32) * density + 0.5f).toInt()
             assertEquals(expected, panel.width)
             assertTrue(kotlin.math.abs(panel.left - (width - panel.right)) <= 1)
+            val title = views(panel).filterIsInstance<TextView>()
+                .first { it.text == activity.getString(R.string.carplay_settings) }
+            val close = views(panel).filterIsInstance<Button>().first { it.text == "X" }
+            val titleBounds = android.graphics.Rect(0, 0, title.width, title.height)
+            (panel as ViewGroup).offsetDescendantRectToMyCoords(title, titleBounds)
+            assertTrue(kotlin.math.abs(titleBounds.exactCenterY() - (close.top + close.height / 2f)) <= 1f)
         }
     }
     @Test fun configuredFingerCountsOpenTheMountedMenuWithoutLeavingCarPlay() {
