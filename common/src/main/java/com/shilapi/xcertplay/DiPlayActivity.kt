@@ -1344,6 +1344,8 @@ class DiPlayActivity : ComponentActivity() {
                     setPadding(0, dp(4), 0, dp(8))
                 })
             }
+            card.addView(button(getString(R.string.boot_start_repair), false) { repairBootStart() }, matchButton(6, 56))
+            card.addView(label(getString(R.string.boot_start_repair_desc), 14, MUTED).apply { setPadding(0, dp(8), 0, dp(6)) })
             card.addView(button("${getString(R.string.choose_iphone_prefix)}${DiPlayPreferences.phoneName(this)}", false) { choosePhone() }, matchButton(12, 60))
         }
         if (settingsSectionFilter?.contains(SettingsSection.BYD_ADB) != false) bydAdbSettings(content)
@@ -2066,6 +2068,30 @@ class DiPlayActivity : ComponentActivity() {
     // BYD maps the AOSP tether action to its own hotspot screen; other firmware falls back to Wi-Fi settings.
     // BYD shows that screen as a dialog and closes it unless its own settings or the car home screen is on top,
     // so the home screen goes first.
+    private fun repairBootStart() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.boot_start_repair))
+            .setMessage(getString(R.string.boot_start_repair_running))
+            .setNegativeButton(getString(R.string.common_cancel), null)
+            .show()
+        Thread({
+            val result = runCatching {
+                com.shilapi.xcertplay.hud.BydBootStartRepair.apply(applicationContext, packageName)
+            }.getOrNull()
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                dialog.dismiss()
+                val text = result?.lines?.joinToString("\n")?.let { getString(R.string.boot_start_repair_result, it) }
+                    ?: getString(R.string.adb_check_failed)
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.boot_start_repair))
+                    .setMessage(text)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+            }
+        }, "diplay-boot-repair").start()
+    }
+
     private fun openCarWifiSettings() {
         val hotspot = Intent("com.android.settings.WIFI_TETHER_SETTINGS")
         val target = packageManager.resolveActivity(hotspot, 0)?.activityInfo?.packageName

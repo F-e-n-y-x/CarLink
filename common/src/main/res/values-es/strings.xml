@@ -263,6 +263,10 @@
     <string name="one_time_setup_on_this_car">Configuración única en este coche</string>
     <string name="open">Abrir</string>
     <string name="open_after_the_car_starts">Abrir después de arrancar el coche</string>
+    <string name="boot_start_repair">Arranque automático · reparación ADB (experimental)</string>
+    <string name="boot_start_repair_desc">Algunos firmwares bloquean los receptores de arranque de terceros. Esto pide a la unidad, por su propio enlace ADB, eximir a DiPlay de los límites en segundo plano para que llegue el aviso de arranque. Una vez; repetir tras una actualización de firmware.</string>
+    <string name="boot_start_repair_result">Reparación de arranque automático:%1$s</string>
+    <string name="boot_start_repair_running">Aplicando excepciones de arranque automático…</string>
     <string name="open_bluetooth">Abrir Bluetooth</string>
     <string name="open_car_hotspot_settings">Abrir ajustes del punto de acceso del coche</string>
     <string name="open_car_settings">Abrir ajustes del coche</string>
