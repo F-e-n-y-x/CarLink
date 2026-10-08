@@ -45,6 +45,10 @@ object CarPlayClusterDisplay {
     val horizontalSteps = -4..4 // negative = left
     val verticalSteps = -3..3 // negative = up
 
+    /** Marker placement on a 1 % grid, used by the full-screen and small-window positions. */
+    val markerXPercents = (5..95 step 1).toList()
+    val markerYPercents = (5..95 step 1).toList()
+
     /** Where the car marker lands, in percent of the panel (x from the left, y from the top). */
     fun markerPercent(
         horizontalStep: Int,
@@ -72,13 +76,15 @@ object CarPlayClusterDisplay {
     private const val WIDTH_PHYSICAL_MM = 292 // a 12.3-inch 8:3 cluster panel; Apple Maps ignores it here
     private const val FPS = 30
 
-    fun config(
+   fun config(
         widthPixels: Int,
         heightPixels: Int,
         scalePercent: Int = STREAM_SCALE_PERCENT,
         horizontalStep: Int = 0,
         verticalStep: Int = 0,
         content: Content = Content.MAP,
+        markerXPercent: Int? = null,
+        markerYPercent: Int? = null,
         baseSafeArea: AirPlayInsets = SAFE_AREA_PERCENT,
     ): AirPlayDisplayConfig {
         // Height rounds to a multiple of 8 and width follows it, so the panel's aspect is kept
@@ -95,22 +101,29 @@ object CarPlayClusterDisplay {
             primaryInputDevice = 0,
             features = 0,
             initialUrl = content.url,
-            safeArea = safeArea(width, height, horizontalStep, verticalStep, baseSafeArea),
+            safeArea = safeArea(width, height, horizontalStep, verticalStep, markerXPercent, markerYPercent, baseSafeArea),
             safeAreaDrawOutside = true,
         )
     }
 
     // The safe area keeps its measured size around the marker and shrinks only where the marker
     // comes close to a panel edge, so the marker always sits at its centre.
-    private fun safeArea(
+
+   private fun safeArea(
         width: Int,
         height: Int,
         horizontalStep: Int,
         verticalStep: Int,
+        markerXPercent: Int? = null,
+        markerYPercent: Int? = null,
         baseSafeArea: AirPlayInsets = SAFE_AREA_PERCENT,
     ): AirPlayInsets {
         val area = baseSafeArea
-        val (x, y) = markerPercent(horizontalStep, verticalStep, area)
+        val (x, y) = if (markerXPercent != null && markerYPercent != null) {
+            markerXPercent.coerceIn(5, 95).toDouble() to markerYPercent.coerceIn(5, 95).toDouble()
+        } else {
+            markerPercent(horizontalStep, verticalStep, area)
+        }
         val halfWidth = minOf((100 - area.left - area.right) / 2.0, x, 100 - x)
         val halfHeight = minOf((100 - area.top - area.bottom) / 2.0, y, 100 - y)
         return AirPlayInsets(
