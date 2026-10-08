@@ -267,7 +267,7 @@
     <string name="one_time_setup_on_this_car">在此车机上一次性设置</string>
     <string name="open">开放</string>
     <string name="open_after_the_car_starts">车机启动后打开</string>
-    <string name="boot_start_repair">开机自启 · ADB 修复（实验）</string>
+    <string name="boot_start_repair">开机自启 · ADB 修复（实验性）</string>
     <string name="boot_start_repair_desc">部分固件会拦截第三方应用的开机广播。此操作通过车机自身的 ADB 通道，把 DiPlay 加入后台运行白名单，让开机广播能送达。执行一次即可；车机固件升级后如失效可重新执行。</string>
     <string name="boot_start_repair_result">开机自启修复结果：%1$s</string>
     <string name="boot_start_repair_running">正在应用开机自启白名单…</string>

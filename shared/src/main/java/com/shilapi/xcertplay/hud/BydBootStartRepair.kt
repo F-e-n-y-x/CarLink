@@ -35,9 +35,16 @@ object BydBootStartRepair {
             }
             adb.shell("cmd deviceidle whitelist +$packageName")
             val whitelist = adb.shell("dumpsys deviceidle whitelist")
-            val listed = whitelist?.contains(packageName) == true
+            val listed = isWhitelisted(whitelist, packageName)
             lines += "doze whitelist ${if (listed) "✓" else "not listed"}"
         }
         return Result(lines)
     }
+
+    internal fun isWhitelisted(output: String?, packageName: String): Boolean =
+        output?.lineSequence()?.any { line ->
+            val fields = line.trim().split(',')
+            fields.size >= 3 && fields[0] in setOf("system", "system-excidle", "user") &&
+                fields[1] == packageName
+        } == true
 }
