@@ -455,9 +455,9 @@
     <string name="center_map_follows_dashboard_description">开启：主屏幕卡片镜像仪表盘地图。关闭：主屏幕不显示该卡片，仪表盘地图只出现在仪表盘上。不会改变 CarPlay 主屏自己的画面。</string>
     <string name="cluster_small_window_off">关</string>
     <string name="cluster_small_window_on">开 · 使用小屏位置</string>
-    <string name="cluster_small_window_auto">自动 · 实验</string>
+    <string name="cluster_small_window_auto">自动（实验性）</string>
     <string name="cluster_small_window_marker">小屏导航 · 独立位置</string>
-    <string name="cluster_small_window_marker_description">仪表切到小屏导航时只显示面板的一部分。为小屏窗口单独保存一个车标位置（默认居中偏右 30%），让导航落进窗口里；自定义转向卡也有独立的大小和位置。全屏位置不受影响。更改后点击“立即重连”才会生效。</string>
+    <string name="cluster_small_window_marker_description">为小屏导航窗口保存独立的车标位置（默认居中偏右）。点击“立即重连”后应用更改。在自动模式下，切换小屏与全屏导航会重新连接 CarPlay。</string>
     <string name="cluster_small_window_horizontal">小屏车标 · 左右</string>
     <string name="cluster_small_window_vertical">小屏车标 · 上下</string>
     <string name="cluster_small_window_hint">默认向右 30%。按你车小屏窗口的实际位置微调。</string>

@@ -67,9 +67,8 @@ internal object BydClusterMapPause {
             Log.i(TAG, "cluster mode ${mode?.label ?: "unknown"}")
             onNaviMode?.invoke(mode)
         }
-        if (pauseMap) {
-            // An unknown mode keeps the map streaming, as without ADB.
-            control!!(mode?.showsMap != false)
-        }
+        // Following the layout must not keep a previous pause latched after it is disabled.
+        // An unknown mode keeps the map streaming, as without ADB.
+        control?.invoke(!pauseMap || mode?.showsMap != false)
     }
 }

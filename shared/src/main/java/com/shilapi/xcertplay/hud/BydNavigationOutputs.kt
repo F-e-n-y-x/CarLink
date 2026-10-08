@@ -45,6 +45,7 @@ object BydNavigationOutputs {
     /** Called whenever the ADB navi mode changes. Pass null to stop following. */
     fun setClusterNaviModeListener(listener: ((BydClusterNaviMode?) -> Unit)?) {
         BydClusterMapPause.onNaviMode = listener
+        listener?.invoke(BydClusterMapPause.lastNaviMode)
     }
 
     fun clearClusterStreamControl(control: (Boolean) -> Unit) {

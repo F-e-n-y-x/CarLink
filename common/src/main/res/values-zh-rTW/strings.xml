@@ -454,9 +454,9 @@
     <string name="center_map_follows_dashboard_description">開啟：主螢幕卡片鏡像儀表板地圖。關閉：主螢幕不顯示該卡片，儀表板地圖只出現在儀表板上。不會改變 CarPlay 主螢幕自己的畫面。</string>
     <string name="cluster_small_window_off">關</string>
     <string name="cluster_small_window_on">開 · 使用小螢幕位置</string>
-    <string name="cluster_small_window_auto">自動 · 實驗</string>
+    <string name="cluster_small_window_auto">自動（實驗性）</string>
     <string name="cluster_small_window_marker">小螢幕導航 · 獨立位置</string>
-    <string name="cluster_small_window_marker_description">儀表切到小螢幕導航時只顯示面板的一部分。為小螢幕視窗單獨儲存一個車標位置（預設居中偏右 30%），讓導航落進視窗裡；自訂轉向卡也有獨立的大小和位置。全螢幕位置不受影響。更改後儀表板地圖會重連。</string>
+    <string name="cluster_small_window_marker_description">為小螢幕導航視窗儲存獨立的車標位置（預設居中偏右）。點選「立即重連」後套用變更。在自動模式下，切換小螢幕與全螢幕導航會重新連線 CarPlay。</string>
     <string name="cluster_small_window_horizontal">小螢幕車標 · 左右</string>
     <string name="cluster_small_window_vertical">小螢幕車標 · 上下</string>
     <string name="cluster_small_window_hint">預設向右 30%。按你車小螢幕視窗的實際位置微調。</string>

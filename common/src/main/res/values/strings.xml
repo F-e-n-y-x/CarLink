@@ -493,9 +493,9 @@
     <string name="center_map_follows_dashboard_description">On: the home-screen card mirrors the dashboard map. Off: hide the home-screen card so only the instrument cluster shows that map. This does not change CarPlay’s own main screen.</string>
     <string name="cluster_small_window_off">Off</string>
     <string name="cluster_small_window_on">On · use small-window positions</string>
-    <string name="cluster_small_window_auto">Auto · experimental</string>
+    <string name="cluster_small_window_auto">Auto (experimental)</string>
     <string name="cluster_small_window_marker">Small-window navi · separate positions</string>
-    <string name="cluster_small_window_marker_description">When the cluster switches to its small navi window, only part of the panel is visible. This keeps a second car-marker position for that window (default: right of centre) so the route shows inside it, and the custom turn card gets its own size and position inside the window; full-screen positions are unchanged. Changes reconnect the cluster map.</string>
+    <string name="cluster_small_window_marker_description">Keeps a separate car-marker position for the small navigation window (default: right of centre). Changes apply after Reconnect now. In Auto mode, switching between small and full-screen navigation reconnects CarPlay.</string>
     <string name="cluster_small_window_horizontal">Small-window marker · left/right</string>
     <string name="cluster_small_window_vertical">Small-window marker · up/down</string>
     <string name="cluster_small_window_hint">Default is three steps (30 %) right of centre. Adjust to wherever the small window sits on your cluster.</string>

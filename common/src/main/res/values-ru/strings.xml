@@ -420,9 +420,9 @@
     <string name="reset_turn_card_to_centre">Вернуть карточку поворота в центр</string>
     <string name="cluster_small_window_off">Выкл</string>
     <string name="cluster_small_window_on">Вкл · положения малого окна</string>
-    <string name="cluster_small_window_auto">Авто · экспериментально</string>
+    <string name="cluster_small_window_auto">Авто (экспериментально)</string>
     <string name="cluster_small_window_marker">Навигация в малом окне · отдельные положения</string>
-    <string name="cluster_small_window_marker_description">Когда панель приборов переключается на малое окно навигации, видна только часть экрана. Хранится второе положение метки автомобиля для этого окна (по умолчанию правее центра), чтобы маршрут показывался внутри него, а собственная карточка получает отдельные размер и положение в окне; положения для полного экрана не меняются. Изменения применяются после выбора «Переподключить сейчас».</string>
+    <string name="cluster_small_window_marker_description">Сохраняет отдельное положение метки автомобиля для малого окна навигации (по умолчанию правее центра). Изменения применяются после «Переподключить сейчас». В режиме Авто переключение между малым и полноэкранным окном навигации переподключает CarPlay.</string>
     <string name="cluster_small_window_horizontal">Метка в малом окне · влево / вправо</string>
     <string name="cluster_small_window_vertical">Метка в малом окне · вверх / вниз</string>
     <string name="cluster_small_window_hint">По умолчанию три шага (30 %) правее центра. Настройте под фактическое положение окна на вашей панели.</string>

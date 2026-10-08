@@ -420,9 +420,9 @@
     <string name="reset_turn_card_to_centre">Centrar la tarjeta de giro</string>
     <string name="cluster_small_window_off">Desactivado</string>
     <string name="cluster_small_window_on">Activado · usar posiciones de ventana pequeña</string>
-    <string name="cluster_small_window_auto">Automático · experimental</string>
+    <string name="cluster_small_window_auto">Automático (experimental)</string>
     <string name="cluster_small_window_marker">Navegación en ventana pequeña · posiciones independientes</string>
-    <string name="cluster_small_window_marker_description">Al cambiar el cuadro a su ventana de navegación pequeña solo se ve parte del panel. Se guarda una segunda posición del marcador para esa ventana (predeterminada: a la derecha del centro) para que la ruta aparezca dentro, y la tarjeta personalizada tiene su propio tamaño y posición en la ventana; las posiciones de pantalla completa no cambian. Los cambios se aplican al elegir Reconectar ahora.</string>
+    <string name="cluster_small_window_marker_description">Guarda una posición independiente del marcador para la ventana de navegación pequeña (predeterminada: a la derecha del centro). Los cambios se aplican tras Reconectar ahora. En modo automático, cambiar entre navegación pequeña y a pantalla completa reconecta CarPlay.</string>
     <string name="cluster_small_window_horizontal">Marcador en ventana pequeña · izquierda / derecha</string>
     <string name="cluster_small_window_vertical">Marcador en ventana pequeña · arriba / abajo</string>
     <string name="cluster_small_window_hint">Predeterminado: tres pasos (30 %) a la derecha del centro. Ajusta según dónde esté la ventana en tu cuadro.</string>

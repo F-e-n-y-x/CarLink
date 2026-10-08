@@ -420,9 +420,9 @@
     <string name="reset_turn_card_to_centre">إعادة بطاقة الانعطاف إلى الوسط</string>
     <string name="cluster_small_window_off">إيقاف</string>
     <string name="cluster_small_window_on">تشغيل · استخدم مواضع النافذة الصغيرة</string>
-    <string name="cluster_small_window_auto">تلقائي · تجريبي</string>
+    <string name="cluster_small_window_auto">تلقائي (تجريبي)</string>
     <string name="cluster_small_window_marker">التنقل بالنافذة الصغيرة · مواضع مستقلة</string>
-    <string name="cluster_small_window_marker_description">عند تحويل العداد إلى نافذة التنقل الصغيرة يظهر جزء من اللوحة فقط. يحفظ هذا موضعًا ثانيًا لمؤشر المركبة داخل تلك النافذة (الافتراضي: يمين المنتصف) لتظهر الملاحة فيها، وللبطاقة المخصصة حجم وموضع مستقلان داخل النافذة؛ ولا تتغير مواضع الشاشة الكاملة. تسري التغييرات بعد اختيار إعادة الاتصال الآن.</string>
+    <string name="cluster_small_window_marker_description">يحفظ موضعًا مستقلاً لمؤشر المركبة في نافذة التنقل الصغيرة (الافتراضي: يمين المنتصف). تسري التغييرات بعد اختيار إعادة الاتصال الآن. في الوضع التلقائي، يؤدي التبديل بين نافذة التنقل الصغيرة والشاشة الكاملة إلى إعادة اتصال CarPlay.</string>
     <string name="cluster_small_window_horizontal">مؤشر النافذة الصغيرة · يسار / يمين</string>
     <string name="cluster_small_window_vertical">مؤشر النافذة الصغيرة · أعلى / أسفل</string>
     <string name="cluster_small_window_hint">الافتراضي ثلاث خطوات (30٪) يمين المنتصف. عدّل حسب موضع النافذة الصغيرة في عدادك.</string>
