@@ -532,6 +532,9 @@ class AndroidMediaSink(
             manager.mode = AudioManager.MODE_IN_COMMUNICATION
             communicationModeStream = id
             Log.i("xcertplay-usb", "audio mode $savedAudioMode -> ${manager.mode} for telephony stream=$id")
+            // The report, not just logcat: a head unit left in the voice path plays no media,
+            // and that cannot be diagnosed from a car without adb.
+            onAudioDiagnostic("Audio: mode entered communication from=$savedAudioMode now=${manager.mode} stream=$id")
         }
     }
 
@@ -544,8 +547,11 @@ class AndroidMediaSink(
             try {
                 manager.mode = savedAudioMode
                 Log.i("xcertplay-usb", "audio mode restored to ${manager.mode}")
+                onAudioDiagnostic("Audio: mode restored requested=$savedAudioMode now=${manager.mode} stream=$active")
             } catch (error: RuntimeException) {
                 Log.w("xcertplay-usb", "could not restore audio mode $savedAudioMode", error)
+                onAudioDiagnostic("Audio: mode restore failed requested=$savedAudioMode" +
+                    " now=${manager.mode} error=${error.javaClass.simpleName}")
             }
         }
     }
