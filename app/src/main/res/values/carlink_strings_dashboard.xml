@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home dashboard (design/RESEARCH_PREMIUM_UX.md §7.3). English only. -->
+<resources>
+    <string name="carlink_home_settings">Settings</string>
+
+    <string name="carlink_home_eyebrow_setup">Setup</string>
+    <string name="carlink_home_eyebrow_ready">Ready</string>
+    <string name="carlink_home_eyebrow_connecting">Connecting</string>
+    <string name="carlink_home_eyebrow_connected">Connected</string>
+    <string name="carlink_home_eyebrow_problem">Needs attention</string>
+
+    <string name="carlink_home_permission_title">One quick permission</string>
+    <string name="carlink_home_permission_body">CarLink needs nearby devices, location and the microphone to find your phone and run CarPlay or Android Auto.</string>
+    <string name="carlink_home_permission_action">Allow</string>
+
+    <string name="carlink_home_bt_off_title">Bluetooth is off</string>
+    <string name="carlink_home_bt_off_body">Turn it on to connect wirelessly, or plug your phone in with a cable.</string>
+    <string name="carlink_home_bt_off_action">Turn on Bluetooth</string>
+
+    <string name="carlink_home_ready_title">Plug in or bring your phone close</string>
+    <string name="carlink_home_ready_body">iPhone starts CarPlay. Android phones start Android Auto.</string>
+    <string name="carlink_home_pair_action">Pair a phone</string>
+
+    <string name="carlink_home_ready_phone_title">Connect %1$s?</string>
+    <string name="carlink_home_ready_phone_body">%1$s over %2$s. Plugging in a cable works too.</string>
+    <string name="carlink_home_connect">Connect</string>
+    <string name="carlink_home_paused">Automatic connection is paused</string>
+    <string name="carlink_home_resume">Resume</string>
+
+    <string name="carlink_home_connecting_title">Starting %1$s</string>
+    <string name="carlink_home_connecting_body">Keep %1$s unlocked. This usually takes a few seconds.</string>
+    <string name="carlink_home_cancel">Cancel</string>
+    <string name="carlink_home_step_found">Found</string>
+    <string name="carlink_home_step_identified">Identified</string>
+    <string name="carlink_home_step_linked">Linked</string>
+    <string name="carlink_home_step_picture">Picture</string>
+
+    <string name="carlink_home_connected_title">%1$s is running</string>
+    <string name="carlink_home_connected_body">%1$s · %2$s · %3$s</string>
+    <string name="carlink_home_return">Return to %1$s</string>
+    <string name="carlink_home_disconnect">Disconnect</string>
+
+    <string name="carlink_home_try_again">Try again</string>
+    <string name="carlink_home_diagnostics">Diagnostics</string>
+    <string name="carlink_home_use_cable">Use a cable</string>
+    <string name="carlink_home_open_settings">Open settings</string>
+    <string name="carlink_home_error_auth_title">CarPlay can\'t sign in</string>
+    <string name="carlink_home_error_auth_body">This build is missing CarPlay\'s authentication files. Android Auto still works.</string>
+    <string name="carlink_home_error_iphone_title">Pair your iPhone first</string>
+    <string name="carlink_home_error_iphone_body">Pair it in the car\'s Bluetooth settings, then try again. A cable works without pairing.</string>
+    <string name="carlink_home_error_hotspot_details_title">Add the car hotspot</string>
+    <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car\'s hotspot. Add them once in Settings.</string>
+    <string name="carlink_home_error_hotspot_off_title">The car hotspot is off</string>
+    <string name="carlink_home_error_hotspot_off_body">Turn it on in the car\'s settings, or plug your phone in with a cable.</string>
+    <string name="carlink_home_error_wifi_details_title">Add your Wi-Fi password</string>
+    <string name="carlink_home_error_wifi_details_body">To connect over your Wi-Fi, CarLink needs its password once.</string>
+    <string name="carlink_home_error_engine_title">Couldn\'t connect</string>
+    <string name="carlink_home_error_engine_body">%1$s stopped the connection. Unlock your phone and try again.</string>
+
+    <string name="carlink_home_chip_connection">Connection</string>
+    <string name="carlink_home_chip_network">Network</string>
+    <string name="carlink_home_chip_phone">Phone</string>
+    <string name="carlink_home_bt_on">Bluetooth on</string>
+    <string name="carlink_home_bt_off">Bluetooth off</string>
+    <string name="carlink_home_bt_no_permission">Needs permission</string>
+    <string name="carlink_home_bt_unsupported">Cable only</string>
+    <string name="carlink_home_net_same_wifi">Same Wi-Fi · fastest</string>
+    <string name="carlink_home_net_same_wifi_named">%1$s · fastest</string>
+    <string name="carlink_home_net_hotspot">Car hotspot</string>
+    <string name="carlink_home_net_direct">Wi-Fi Direct</string>
+    <string name="carlink_home_no_phones">No phone yet</string>
+    <plurals name="carlink_home_phone_count">
+        <item quantity="one">%d phone</item>
+        <item quantity="other">%d phones</item>
+    </plurals>
+
+    <string name="carlink_home_phones_title">Phones</string>
+    <string name="carlink_home_phones_hint">Tap a phone to connect it.</string>
+    <string name="carlink_home_phone_connected">Connected to the car</string>
+    <string name="carlink_home_phone_not_nearby">Paired</string>
+    <string name="carlink_home_kind_title">What kind of phone is this?</string>
+    <string name="carlink_home_kind_iphone">iPhone</string>
+    <string name="carlink_home_kind_android">Android phone</string>
+    <string name="carlink_home_switch_title">Switch to %1$s?</string>
+    <string name="carlink_home_switch_body">%1$s will stop.</string>
+    <string name="carlink_home_switch_action">Switch</string>
+
+    <string name="carlink_home_path_same_wifi">your Wi-Fi</string>
+    <string name="carlink_home_path_hotspot">the car hotspot</string>
+    <string name="carlink_home_path_direct">Wi-Fi Direct</string>
+    <string name="carlink_home_path_usb">USB</string>
+</resources>

@@ -18,6 +18,11 @@ import com.carlink.app.detect.PairedPhone
 import com.carlink.app.detect.PhonesRepository
 import com.carlink.app.engine.EngineCoordinator
 import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.UnifiedSettings
+import com.carlink.app.settings.UnifiedSettingsStore
+import com.carlink.app.settings.WirelessPath
+import com.carlink.app.settings.WirelessPathSelector
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 import com.shilapi.xcertplay.CarPlayHostActivity
@@ -43,6 +48,9 @@ data class ConnectionPrefs(
     val startOnBoot: Boolean,
     val autoConnectPaused: Boolean,
 )
+
+/** The wireless path the next session would use, for Home's Network chip. */
+data class NetworkPreview(val path: WirelessPath, val ssid: String?)
 
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
 data class HomeState(
@@ -86,6 +94,18 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val connection: StateFlow<ConnectionPrefs> = _connection.asStateFlow()
 
     val onboardingDone: Boolean get() = preferences.onboardingDone
+
+    private val unifiedStore = UnifiedSettingsStore(app)
+    private val _unified = MutableStateFlow(unifiedStore.load())
+    /** The one set of settings both engines use. */
+    val unified: StateFlow<UnifiedSettings> = _unified.asStateFlow()
+
+    private val _network = MutableStateFlow<NetworkPreview?>(null)
+    val network: StateFlow<NetworkPreview?> = _network.asStateFlow()
+
+    private val _permissionsNeeded = MutableStateFlow(missingPermissions().isNotEmpty())
+    /** True until the runtime permissions CarLink needs to find phones are granted. */
+    val permissionsNeeded: StateFlow<Boolean> = _permissionsNeeded.asStateFlow()
 
     init {
         phonesRepository.start()
@@ -160,7 +180,43 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
     }
 
-    fun refreshPhones() = phonesRepository.refresh()
+    /** Re-reads phones, permissions and the network path (Home calls this on resume). */
+    fun refreshPhones() {
+        phonesRepository.refresh()
+        _permissionsNeeded.value = missingPermissions().isNotEmpty()
+        refreshNetwork()
+    }
+
+    private fun refreshNetwork() {
+        val engine = home.value.defaultPhone?.kind?.engine ?: Engine.CARPLAY
+        val wifi = EngineSettingsApplier.wifiEnvironment(app)
+        val path = WirelessPathSelector.select(engine, _unified.value, wifi)
+        _network.value = NetworkPreview(path, if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null)
+    }
+
+    /** Saves a change to the unified settings and writes it into both engines. */
+    fun updateSettings(change: (UnifiedSettings) -> UnifiedSettings) {
+        val next = change(_unified.value)
+        if (next == _unified.value) return
+        _unified.value = next
+        unifiedStore.save(next)
+        coordinator.applySettings()
+        refreshNetwork()
+    }
+
+    /** Runtime permissions CarLink asks for in one go (Bluetooth, Wi-Fi, location, microphone, notifications). */
+    fun missingPermissions(): List<String> = buildList {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            add(android.Manifest.permission.BLUETOOTH_CONNECT)
+            add(android.Manifest.permission.BLUETOOTH_SCAN)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+            add(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+        add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        add(android.Manifest.permission.RECORD_AUDIO)
+    }.filter { app.checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
 
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = phonesRepository.setKind(phone.address, kind)
 

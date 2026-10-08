@@ -8,7 +8,10 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.carlink.app.R
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -45,9 +48,9 @@ data class CarLinkDimens(
 ) {
     companion object {
         val Car = CarLinkDimens(
-            minTouch = 76.dp, primaryButton = 96.dp, secondaryButton = 76.dp, buttonRadius = 24.dp,
+            minTouch = 76.dp, primaryButton = 96.dp, secondaryButton = 76.dp, buttonRadius = 48.dp,
             rowOneLine = 88.dp, rowTwoLine = 112.dp, phoneRow = 112.dp, railItem = 88.dp, railWidth = 400.dp,
-            topBar = 96.dp, screenMargin = 32.dp, compactMargin = 24.dp, gutter = 24.dp, targetGap = 16.dp,
+            topBar = 88.dp, screenMargin = 48.dp, compactMargin = 24.dp, gutter = 24.dp, targetGap = 16.dp,
             cardPadding = 40.dp, iconPrimary = 44.dp, iconSecondary = 36.dp, iconTertiary = 24.dp,
             avatarHero = 76.dp, avatarRow = 56.dp, statusChip = 48.dp, focusRing = 4.dp,
             sideSheetWidth = 560.dp, contentMaxWidth = 960.dp,
@@ -55,7 +58,7 @@ data class CarLinkDimens(
 
         /** Material 3 phone/tablet sizes: 48dp targets, still generous for a mounted screen. */
         val Handheld = CarLinkDimens(
-            minTouch = 48.dp, primaryButton = 56.dp, secondaryButton = 48.dp, buttonRadius = 16.dp,
+            minTouch = 48.dp, primaryButton = 56.dp, secondaryButton = 48.dp, buttonRadius = 28.dp,
             rowOneLine = 64.dp, rowTwoLine = 80.dp, phoneRow = 76.dp, railItem = 56.dp, railWidth = 300.dp,
             topBar = 64.dp, screenMargin = 24.dp, compactMargin = 16.dp, gutter = 16.dp, targetGap = 8.dp,
             cardPadding = 24.dp, iconPrimary = 32.dp, iconSecondary = 24.dp, iconTertiary = 18.dp,
@@ -68,14 +71,24 @@ data class CarLinkDimens(
 val LocalCarLinkDimens = staticCompositionLocalOf { CarLinkDimens.Handheld }
 val LocalUiProfile = staticCompositionLocalOf { UiProfile.HANDHELD }
 
-/** DESIGN_SPEC §5.4. Buttons use [CarLinkDimens.buttonRadius], not a full pill. */
+/** Graphite and Ion shapes: large automotive radii; buttons and chips are pills. */
 val CarLinkShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(28.dp),
-    extraLarge = RoundedCornerShape(36.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(32.dp),
+    extraLarge = RoundedCornerShape(40.dp),
 )
+
+/** Inter v4 (SIL OFL 1.1, assets/licenses/Inter-OFL.txt), subset to the characters CarLink uses. */
+val Inter = FontFamily(
+    Font(R.font.carlink_inter_regular, FontWeight.Normal),
+    Font(R.font.carlink_inter_medium, FontWeight.Medium),
+    Font(R.font.carlink_inter_semibold, FontWeight.SemiBold),
+)
+
+/** Inter Display: tighter spacing drawn for large sizes (hero and display text only). */
+val InterDisplay = FontFamily(Font(R.font.carlink_inter_display_semibold, FontWeight.SemiBold))
 
 /** DESIGN_SPEC §5.7: explains state changes only; nothing longer than 350 ms, no overshoot. */
 object CarMotion {
@@ -90,26 +103,32 @@ object CarMotion {
 }
 
 /**
- * DESIGN_SPEC §5.2: Regular and Medium only (no bold), 4sp steps, centered line height with
- * font padding kept so Arabic diacritics are not clipped.
+ * RESEARCH_PREMIUM_UX §6.2: Inter; SemiBold with tight tracking only at display sizes (≥48sp
+ * on the car canvas), Regular/Medium for anything read while driving.
  */
-private fun style(size: TextUnit, line: TextUnit, medium: Boolean = false, tracking: TextUnit = 0.sp) = TextStyle(
+private fun style(size: TextUnit, line: TextUnit, medium: Boolean = false, tracking: TextUnit = 0.sp,
+                  semiBold: Boolean = false, display: Boolean = false) = TextStyle(
+    fontFamily = if (display) InterDisplay else Inter,
     fontSize = size,
     lineHeight = line,
-    fontWeight = if (medium) FontWeight.Medium else FontWeight.Normal,
+    fontWeight = when {
+        semiBold -> FontWeight.SemiBold
+        medium -> FontWeight.Medium
+        else -> FontWeight.Normal
+    },
     letterSpacing = tracking,
     lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
     platformStyle = PlatformTextStyle(includeFontPadding = true),
 )
 
 internal val CarTypography = Typography(
-    displayLarge = style(64.sp, 72.sp),
-    displayMedium = style(56.sp, 64.sp),
-    displaySmall = style(48.sp, 56.sp),
-    headlineLarge = style(40.sp, 48.sp),
-    headlineMedium = style(36.sp, 44.sp),
+    displayLarge = style(96.sp, 100.sp, semiBold = true, display = true, tracking = (-1.9).sp),
+    displayMedium = style(64.sp, 72.sp, semiBold = true, display = true, tracking = (-1).sp),
+    displaySmall = style(48.sp, 56.sp, semiBold = true, display = true, tracking = (-0.5).sp),
+    headlineLarge = style(40.sp, 48.sp, semiBold = true, tracking = (-0.4).sp),
+    headlineMedium = style(36.sp, 44.sp, semiBold = true, tracking = (-0.3).sp),
     headlineSmall = style(32.sp, 40.sp, medium = true),
-    titleLarge = style(32.sp, 40.sp),
+    titleLarge = style(32.sp, 40.sp, medium = true),
     titleMedium = style(28.sp, 36.sp, medium = true),
     titleSmall = style(24.sp, 32.sp, medium = true),
     bodyLarge = style(28.sp, 40.sp),
@@ -117,24 +136,25 @@ internal val CarTypography = Typography(
     bodySmall = style(24.sp, 32.sp),
     labelLarge = style(28.sp, 32.sp, medium = true),
     labelMedium = style(24.sp, 28.sp, medium = true),
-    labelSmall = style(20.sp, 24.sp, medium = true, tracking = 0.2.sp),
+    // Eyebrow: tracked caps on glass chip headers only (≤2 words).
+    labelSmall = style(20.sp, 24.sp, semiBold = true, tracking = 1.6.sp),
 )
 
 /** The same roles on the Material 3 phone scale, a step larger for a mounted, glanced-at screen. */
 internal val HandheldTypography = Typography(
-    displayLarge = style(48.sp, 56.sp),
-    displayMedium = style(40.sp, 48.sp),
-    displaySmall = style(34.sp, 42.sp),
-    headlineLarge = style(30.sp, 38.sp),
-    headlineMedium = style(26.sp, 34.sp),
-    headlineSmall = style(22.sp, 30.sp, medium = true),
-    titleLarge = style(22.sp, 28.sp),
-    titleMedium = style(18.sp, 24.sp, medium = true),
+    displayLarge = style(56.sp, 60.sp, semiBold = true, display = true, tracking = (-1.1).sp),
+    displayMedium = style(40.sp, 46.sp, semiBold = true, display = true, tracking = (-0.6).sp),
+    displaySmall = style(32.sp, 38.sp, semiBold = true, display = true, tracking = (-0.3).sp),
+    headlineLarge = style(28.sp, 34.sp, semiBold = true, tracking = (-0.2).sp),
+    headlineMedium = style(24.sp, 30.sp, semiBold = true),
+    headlineSmall = style(20.sp, 26.sp, medium = true),
+    titleLarge = style(20.sp, 26.sp, medium = true),
+    titleMedium = style(17.sp, 22.sp, medium = true),
     titleSmall = style(15.sp, 20.sp, medium = true),
     bodyLarge = style(17.sp, 24.sp),
     bodyMedium = style(15.sp, 22.sp),
     bodySmall = style(14.sp, 20.sp),
     labelLarge = style(16.sp, 20.sp, medium = true),
     labelMedium = style(14.sp, 18.sp, medium = true),
-    labelSmall = style(12.sp, 16.sp, medium = true, tracking = 0.2.sp),
+    labelSmall = style(12.sp, 16.sp, semiBold = true, tracking = 1.sp),
 )
