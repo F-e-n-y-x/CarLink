@@ -7,4 +7,14 @@
     <string name="notification_channel_launch">Open CarLink</string>
     <string name="notification_phone_ready">%1$s is nearby. Tap to connect.</string>
     <string name="notification_open">Tap to open CarLink.</string>
+
+    <!-- Shared vocabulary -->
+    <string name="carlink_back">Back</string>
+    <string name="carlink_engine_carplay">CarPlay</string>
+    <string name="carlink_engine_android_auto">Android Auto</string>
+    <string name="carlink_transport_usb">USB</string>
+    <string name="carlink_transport_wireless">Wireless</string>
+    <string name="carlink_state_on">On</string>
+    <string name="carlink_state_off">Off</string>
+    <string name="carlink_state_selected">Selected</string>
 </resources>

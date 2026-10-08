@@ -5,16 +5,42 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Text
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.ui.theme.CarLinkTheme
+import com.carlink.app.ui.theme.UiProfileDetector
 
 /** CarLink's launcher and hub. Hosts every CarLink screen (see ui/CarLinkApp.kt). */
 class HomeActivity : ComponentActivity() {
+    private val vm: CarLinkViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) consumeAutoPhone(intent)
-        setContent { Text("CarLink") }
+        setContent {
+            val display by vm.display.collectAsStateWithLifecycle()
+            val profile = remember(display.uiProfileMode) { UiProfileDetector.detect(this, display.uiProfileMode) }
+            CarLinkTheme(profile, display.themeMode, display.interfaceScale) {
+                CarLinkApp(vm, onExitToCarHome = ::exitToCarHome)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        vm.refreshPhones()
+    }
+
+    /** Back on Home goes to the car's own launcher, as DiAuto's "Car home" did. */
+    private fun exitToCarHome() {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(home) }.onFailure { moveTaskToBack(true) }
     }
 
     override fun onNewIntent(intent: Intent) {
