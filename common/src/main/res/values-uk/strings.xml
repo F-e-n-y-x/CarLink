@@ -77,10 +77,10 @@
     <string name="status_attaching_ncm">Підключення мережі NCM/AirPlay</string>
     <string name="status_failed">Помилка: %1$s</string>
     <string name="msg_car_hotspot_off">Точку доступу автомобіля «%1$s» вимкнено. Увімкніть її в налаштуваннях автомобіля перед підключенням.</string>
-    <string name="home_public_preview">ПУБЛІЧНЕ ПРЕВ’Ю  ·\u0020\u0020</string>
+    <string name="home_public_preview">ПУБЛІЧНЕ ПРЕВ’Ю\u0020·\u0020%1$s</string>
     <string name="choose_iphone_prefix">Вибрати iPhone ·\u0020</string>
     <string name="audio_saved_value">Збережено: %1$d</string>
-    <string name="about_public_preview_prefix">Попередня версія ·\u0020</string>
+    <string name="about_public_preview_prefix">Попередня версія\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">DiPlay підключається через точку доступу автомобіля «%1$s». Увімкніть її в налаштуваннях автомобіля, а потім підключіться.</string>
     <string name="edit_saved_hotspot_prefix">Змінити збережену точку доступу ·\u0020</string>
     <string name="cluster_adb_multi_device">Якщо ADB показує кілька пристроїв, виконайте adb -s &lt;car-device-ID&gt; shell appops set %1$s GET_USAGE_STATS allow. Ідентифікатор можна знайти командою adb devices.</string>
@@ -95,7 +95,7 @@
     <string name="language_section_title">Мова</string>
     <string name="language_app_language">Мова застосунку</string>
     <string name="language_system_default">Мова системи</string>
-    <string name="language_hint">Виберіть мову DiPlay. Якщо вибрано мову системи, застосунок використовуватиме мову пристрою.</string>
+    <string name="language_hint">Якщо вибрано мову системи, застосунок використовуватиме мову пристрою.</string>
     <string name="language_apply">Застосувати</string>
     <string name="common_cancel">Скасувати</string>
     <string name="a_familiar_drive">Знайома подорож.</string>
@@ -218,7 +218,7 @@
     <string name="hevc_software_decoder">Програмний декодер HEVC</string>
     <string name="hide_bottom_bar">Приховати нижню панель</string>
     <string name="hide_keyboard">Приховати клавіатуру</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Приховувати системні панелі автомобіля, коли відкрито CarPlay.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Приховувати вибрану системну панель у DiPlay та CarPlay.</string>
     <string name="hide_the_navigation_bar">Приховати панель навігації</string>
     <string name="hide_the_status_bar">Приховати рядок стану</string>
     <string name="hide_top_bar">Приховати верхню панель</string>

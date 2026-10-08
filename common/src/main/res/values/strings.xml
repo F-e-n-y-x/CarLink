@@ -76,10 +76,10 @@
     <string name="status_attaching_ncm">Attaching NCM/AirPlay network</string>
     <string name="status_failed">Failed: %1$s</string>
     <string name="msg_car_hotspot_off">The car hotspot “%1$s” is off. Turn it on in the car settings before connecting.</string>
-    <string name="home_public_preview">PUBLIC PREVIEW  ·\u0020\u0020</string>
+    <string name="home_public_preview">PUBLIC PREVIEW\u0020·\u0020%1$s</string>
     <string name="choose_iphone_prefix">Choose iPhone ·\u0020</string>
     <string name="audio_saved_value">Saved: %1$d</string>
-    <string name="about_public_preview_prefix">Public preview ·\u0020</string>
+    <string name="about_public_preview_prefix">Public preview\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">DiPlay connects through the car hotspot “%1$s”. Turn it on in the car settings, then connect.</string>
     <string name="edit_saved_hotspot_prefix">Edit saved hotspot ·\u0020</string>
     <string name="cluster_adb_multi_device">If ADB lists several devices, use adb -s &lt;car-device-ID&gt; shell appops set %1$s GET_USAGE_STATS allow. Find the ID with adb devices.</string>
@@ -94,7 +94,7 @@
     <string name="language_section_title">Language</string>
     <string name="language_app_language">App language</string>
     <string name="language_system_default">System default</string>
-    <string name="language_hint">Choose a language for DiPlay. System default follows the device language.</string>
+    <string name="language_hint">System default follows the device language.</string>
     <string name="language_apply">Apply</string>
     <string name="common_cancel">Cancel</string>
     <string name="a_familiar_drive">A familiar drive.</string>
@@ -220,7 +220,7 @@
     <string name="hevc_software_decoder">HEVC software decoder</string>
     <string name="hide_bottom_bar">Hide bottom bar</string>
     <string name="hide_keyboard">Hide keyboard</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Hide the car’s system bars while CarPlay is open.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Hide the selected system bar in DiPlay and CarPlay.</string>
     <string name="hide_the_navigation_bar">Hide the navigation bar</string>
     <string name="hide_the_status_bar">Hide the status bar</string>
     <string name="hide_top_bar">Hide top bar</string>
@@ -367,7 +367,7 @@
     <string name="settings_navigation">Navigation</string>
     <string name="settings_vehicle">Vehicle</string>
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_subtitle">Experimental and vehicle-specific controls for experienced users.</string>
+    <string name="settings_advanced_subtitle">Experimental and vehicle-specific controls for experienced users</string>
     <string name="settings_advanced_caution_title">Change with care</string>
     <string name="settings_advanced_caution_description">These features can depend on vehicle firmware, ADB access, or experimental CarPlay behavior. Everyday settings are organized in the categories above.</string>
     <string name="settings_search">Search</string>
@@ -392,8 +392,8 @@
     <string name="settings_advanced_media">Video and audio</string>
     <string name="settings_wheel_keys">Wheel keys</string>
     <string name="settings_experimental_display">Display (experimental)</string>
-    <string name="settings_diagnostics_summary">Save a local report when troubleshooting a connection.</string>
-    <string name="settings_full_screen_description">Hide both system bars while CarPlay is open.</string>
+    <string name="settings_diagnostics_summary">Save a local report when troubleshooting a connection</string>
+    <string name="settings_full_screen_description">Hide the status and navigation bars in DiPlay and CarPlay.</string>
     <string name="settings_vehicle_description">Vehicle and dashboard features vary by model and firmware. Review them in Advanced settings before enabling experimental controls.</string>
     <string name="settings_open_advanced">Open Advanced settings</string>
     <string name="setup_needs_attention">Setup needs attention</string>

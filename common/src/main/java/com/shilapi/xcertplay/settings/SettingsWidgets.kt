@@ -146,28 +146,11 @@ object SettingsWidgets {
                     info.isEnabled = switch.isEnabled
                 }
             }
-            clampDescription(descView)
         }
 
         return SwitchRowResult(row, switch)
     }
 
-    /** Long help stays two lines until tapped; screen readers still get the full text. */
-    private fun clampDescription(view: TextView) {
-        view.maxLines = COLLAPSED_DESCRIPTION_LINES
-        view.ellipsize = android.text.TextUtils.TruncateAt.END
-        view.post {
-            if ((view.layout?.getEllipsisCount(view.lineCount - 1) ?: 0) == 0) return@post
-            view.setOnClickListener {
-                view.maxLines = Int.MAX_VALUE
-                view.ellipsize = null
-                view.setOnClickListener(null)
-                view.isClickable = false
-            }
-        }
-    }
-
-    private const val COLLAPSED_DESCRIPTION_LINES = 2
     private const val ROW_RIPPLE = 0x336F9FD9
 
     fun <T> createChoiceRow(

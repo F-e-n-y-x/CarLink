@@ -76,10 +76,10 @@
     <string name="status_attaching_ncm">Conectando la red NCM/AirPlay</string>
     <string name="status_failed">Error: %1$s</string>
     <string name="msg_car_hotspot_off">El punto de acceso del coche «%1$s» está apagado. Actívalo en la configuración del coche antes de conectarte.</string>
-    <string name="home_public_preview">VISTA PREVIA PÚBLICA  ·\u0020\u0020</string>
+    <string name="home_public_preview">VISTA PREVIA PÚBLICA\u0020·\u0020%1$s</string>
     <string name="choose_iphone_prefix">Elegir iPhone ·\u0020</string>
     <string name="audio_saved_value">Guardado: %1$d</string>
-    <string name="about_public_preview_prefix">Vista previa ·\u0020</string>
+    <string name="about_public_preview_prefix">Vista previa\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">DiPlay se conecta a través del punto de acceso del coche «%1$s». Actívalo en la configuración del coche y luego conéctate.</string>
     <string name="edit_saved_hotspot_prefix">Editar punto de acceso guardado ·\u0020</string>
     <string name="cluster_adb_multi_device">Si ADB lista varios dispositivos, usa adb -s &lt;car-device-ID&gt; shell appops set %1$s GET_USAGE_STATS allow. Encuentra el ID con adb devices.</string>
@@ -92,7 +92,7 @@
     <string name="language_section_title">Idioma</string>
     <string name="language_app_language">Idioma de la aplicación</string>
     <string name="language_system_default">Predeterminado del sistema</string>
-    <string name="language_hint">Elige un idioma para DiPlay. «Sistema» sigue el idioma del dispositivo.</string>
+    <string name="language_hint">«Sistema» sigue el idioma del dispositivo.</string>
     <string name="language_apply">Aplicar</string>
     <string name="common_cancel">Cancelar</string>
     <string name="a_familiar_drive">Un trayecto familiar.</string>
@@ -213,7 +213,7 @@
     <string name="hevc_software_decoder">Decodificador por software HEVC</string>
     <string name="hide_bottom_bar">Ocultar barra inferior</string>
     <string name="hide_keyboard">Ocultar teclado</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Oculta las barras del sistema del coche mientras CarPlay está abierto.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">Oculta la barra del sistema correspondiente en DiPlay y CarPlay.</string>
     <string name="hide_the_navigation_bar">Ocultar barra de navegación</string>
     <string name="hide_the_status_bar">Ocultar barra de estado</string>
     <string name="hide_top_bar">Ocultar barra superior</string>

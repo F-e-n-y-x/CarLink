@@ -76,10 +76,10 @@
     <string name="status_attaching_ncm">جارٍ توصيل شبكة NCM/AirPlay</string>
     <string name="status_failed">فشل: %1$s</string>
     <string name="msg_car_hotspot_off">نقطة اتصال السيارة «%1$s» مُغلقة. شغّلها في إعدادات السيارة قبل الاتصال.</string>
-    <string name="home_public_preview">معاينة عامة  ·\u0020\u0020</string>
+    <string name="home_public_preview">معاينة عامة\u0020·\u0020%1$s</string>
     <string name="choose_iphone_prefix">اختر iPhone ·\u0020</string>
     <string name="audio_saved_value">تم الحفظ: %1$d</string>
-    <string name="about_public_preview_prefix">معاينة عامة ·\u0020</string>
+    <string name="about_public_preview_prefix">معاينة عامة\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">يتصل DiPlay عبر نقطة اتصال السيارة «%1$s». شغّلها في إعدادات السيارة ثم اتصل.</string>
     <string name="edit_saved_hotspot_prefix">تعديل نقطة الاتصال المحفوظة ·\u0020</string>
     <string name="cluster_adb_multi_device">إذا عرض ADB عدة أجهزة، استخدم adb -s &lt;car-device-ID&gt; shell appops set %1$s GET_USAGE_STATS allow. اعثر على المعرّف عبر adb devices.</string>
@@ -92,7 +92,7 @@
     <string name="language_section_title">اللغة</string>
     <string name="language_app_language">لغة التطبيق</string>
     <string name="language_system_default">إعدادات النظام الافتراضية</string>
-    <string name="language_hint">اختر لغة DiPlay. «إعدادات النظام» يتبع لغة الجهاز.</string>
+    <string name="language_hint">«إعدادات النظام» يتبع لغة الجهاز.</string>
     <string name="language_apply">تطبيق</string>
     <string name="common_cancel">إلغاء</string>
     <string name="a_familiar_drive">رحلة مألوفة.</string>
@@ -213,7 +213,7 @@
     <string name="hevc_software_decoder">مفكّك HEVC البرمجي</string>
     <string name="hide_bottom_bar">إخفاء الشريط السفلي</string>
     <string name="hide_keyboard">إخفاء لوحة المفاتيح</string>
-    <string name="hide_the_car_s_system_bars_while_carplay_is_open">إخفاء أشرطة النظام في السيارة أثناء فتح CarPlay.</string>
+    <string name="hide_the_car_s_system_bars_while_carplay_is_open">إخفاء شريط النظام المحدد في DiPlay وCarPlay.</string>
     <string name="hide_the_navigation_bar">إخفاء شريط التنقل</string>
     <string name="hide_the_status_bar">إخفاء شريط الحالة</string>
     <string name="hide_top_bar">إخفاء الشريط العلوي</string>
