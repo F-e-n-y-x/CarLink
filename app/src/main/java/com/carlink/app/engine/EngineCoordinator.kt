@@ -74,7 +74,7 @@ class EngineCoordinator internal constructor(
         val engine = engaged ?: return@Runnable
         if (_state.value.transport != Transport.USB) return@Runnable
         if (isUsbPhonePresent(engine)) return@Runnable
-        Log.i(TAG, "USB phone for $engine unplugged; ending the session")
+        note("USB phone for $engine unplugged; ending the session")
         stopAll()
     }
 
@@ -94,7 +94,7 @@ class EngineCoordinator internal constructor(
     fun onUsbPhone(kind: PhoneKind, phoneName: String?, attachIntent: Intent?) {
         val engine = kind.engine ?: return
         if (!preferences.autoConnectUsb) {
-            Log.i(TAG, "USB $engine phone: automatic USB start is off")
+            note("USB $engine phone: automatic USB start is off")
             return
         }
         val current = _state.value
@@ -103,14 +103,14 @@ class EngineCoordinator internal constructor(
         // switch is a new attach. The engine already running over USB handles those itself;
         // restarting it here would abort every attempt and never connect.
         if (current.isActive && current.engine == engine && current.transport == Transport.USB) {
-            Log.i(TAG, "USB re-attach during $engine session; left to the engine")
+            note("USB re-attach during $engine session; left to the engine")
             main.removeCallbacks(usbGoneCheck)
             return
         }
         // Stopping a wired session re-enumerates the phone too (an Android phone leaves accessory
         // mode, an iPhone its CarPlay configuration). That attach is not the driver plugging in.
         if (SystemClock.elapsedRealtime() - driverStoppedAt < REENUMERATION_WINDOW_MILLIS) {
-            Log.i(TAG, "USB $engine attach right after the driver stopped; not restarting")
+            note("USB $engine attach right after the driver stopped; not restarting")
             return
         }
         connect(engine, Transport.USB, address = null, phoneName = phoneName, usbAttach = attachIntent)
@@ -128,9 +128,9 @@ class EngineCoordinator internal constructor(
     fun onBluetoothPhone(address: String, kind: PhoneKind, phoneName: String?) {
         val engine = kind.engine ?: return
         when {
-            !preferences.autoConnectBluetooth -> Log.i(TAG, "Bluetooth $engine phone: automatic start is off")
-            preferences.autoConnectPaused -> Log.i(TAG, "Bluetooth $engine phone: paused by the driver")
-            _state.value.isActive -> Log.i(TAG, "Bluetooth $engine phone: a ${_state.value.engine} session is running")
+            !preferences.autoConnectBluetooth -> note("Bluetooth $engine phone: automatic start is off")
+            preferences.autoConnectPaused -> note("Bluetooth $engine phone: paused by the driver")
+            _state.value.isActive -> note("Bluetooth $engine phone: a ${_state.value.engine} session is running")
             else -> connect(engine, Transport.WIRELESS, address, phoneName)
         }
     }
@@ -145,14 +145,14 @@ class EngineCoordinator internal constructor(
 
     /** The driver cancelled or disconnected: stop, and pause automatic starts until they connect again. */
     fun disconnect() {
-        Log.i(TAG, "driver disconnect")
+        note("driver disconnect")
         preferences.autoConnectPaused = true
         driverStoppedAt = SystemClock.elapsedRealtime()
         stopAll()
     }
 
     fun stopAll() {
-        Log.i(TAG, "stop engaged=$engaged")
+        note("stop engaged=$engaged")
         when (engaged) {
             Engine.CARPLAY -> carPlay.stop()
             Engine.ANDROID_AUTO -> androidAuto.stop()
@@ -165,7 +165,7 @@ class EngineCoordinator internal constructor(
     }
 
     private fun connect(engine: Engine, transport: Transport, address: String?, phoneName: String?, usbAttach: Intent? = null) {
-        Log.i(TAG, "connect engine=$engine transport=$transport known=${address != null}")
+        note("connect engine=$engine transport=$transport known=${address != null}")
         if (engaged != null && engaged != engine) stopAll()
         main.removeCallbacks(usbGoneCheck)
         engaged = engine
@@ -179,7 +179,7 @@ class EngineCoordinator internal constructor(
                 .onFailure { Log.w(TAG, "could not apply settings", it) }
             main.post {
                 if (thisAttempt != attempt || engaged != engine) {
-                    Log.i(TAG, "attempt $thisAttempt superseded before $engine started")
+                    note("attempt $thisAttempt superseded before $engine started")
                     return@post
                 }
                 when (engine) {
@@ -211,14 +211,14 @@ class EngineCoordinator internal constructor(
         // A session CarLink did not start adopts its engine: CarPlay started from DiPlay's own
         // notification, or Android Auto still running in ":aa" after this process restarted.
         if (engaged == null && state.isActive) {
-            Log.i(TAG, "adopting a running $engine session (${state.stage})")
+            note("adopting a running $engine session (${state.stage})")
             if (engine == Engine.CARPLAY) androidAuto.stop() else carPlay.stop()
             engaged = engine
             setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
         }
         if (engaged != engine) return
         if (state.stage != _state.value.stage) {
-            Log.i(TAG, "$engine ${_state.value.stage} -> ${state.stage}${state.problem?.let { " problem=$it" } ?: ""}" +
+            note("$engine ${_state.value.stage} -> ${state.stage}${state.problem?.let { " problem=$it" } ?: ""}" +
                 (state.detail?.let { " ($it)" } ?: ""))
         }
         if (state.stage == LinkStage.CONNECTED) {
@@ -244,6 +244,12 @@ class EngineCoordinator internal constructor(
                 }
             }.onFailure { Log.w(TAG, "Could not set $name enabled=$enabled", it) }
         }
+    }
+
+    /** Logs a decision and shows it in Diagnostics' connection log. */
+    private fun note(message: String) {
+        Log.i(TAG, message)
+        com.carlink.app.diagnostics.EventLog.add("CarLink", message)
     }
 
     companion object {
