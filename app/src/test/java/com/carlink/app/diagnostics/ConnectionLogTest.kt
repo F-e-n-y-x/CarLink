@@ -44,6 +44,11 @@ class ConnectionLogTest {
         assertEquals(1760000000500, lines[1].timeMillis)
     }
 
+    @Test fun dropsDiAutoThreadIdPrefix() {
+        val lines = ConnectionLog.parseDiAuto(listOf("1760000000000 [4] [2] Decoder stopped: New surface"))
+        assertEquals("Decoder stopped: New surface", lines.single().text)
+    }
+
     @Test fun datesDiPlayLinesFromTheHeaderAndRollsOverMidnight() {
         val lines = ConnectionLog.parseDiPlay(listOf(
             "DiPlay log started 2026-10-09 23:59:58.000 pid=1 path=x",

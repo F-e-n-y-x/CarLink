@@ -42,7 +42,8 @@ object EventLog {
 
 /** Masks hardware addresses the way DiAuto's report does ("[address]"). */
 object LogMasking {
-    private val mac = Regex("(?i)(?<![0-9a-f:])(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}(?![0-9a-f:])")
+    // `[-:]`, not `[:-]`: Android's ICU regex reads `[:` as a POSIX class and fails to compile.
+    private val mac = Regex("(?i)(?<![0-9a-f:])(?:[0-9a-f]{2}[-:]){5}[0-9a-f]{2}(?![0-9a-f:])")
 
     fun mask(text: String): String = text.replace(mac, "[address]")
 }

@@ -150,7 +150,8 @@ object ConnectionLog {
 
     private fun headerFormat() = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
-    private val DIAUTO_LINE = Regex("(\\d{10,})\\s+\\[(\\d)]\\s?(.*)")
+    // DiAuto prefixes the logging thread's id ("[2] ") to each message; it is noise here.
+    private val DIAUTO_LINE = Regex("(\\d{10,})\\s+\\[(\\d)]\\s?(?:\\[\\d+]\\s)?(.*)")
     private val DIPLAY_LINE = Regex("(\\d{2}):(\\d{2}):(\\d{2})\\.(\\d{3})\\s+(.*)")
     private val DIPLAY_HEADER = Regex("DiPlay log started (\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3})")
 }
