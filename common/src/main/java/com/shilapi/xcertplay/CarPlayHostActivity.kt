@@ -277,6 +277,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var fallbackVideoBounds: CarPlaySurfaceBounds? = null
     // Smooth video (a setting): SurfaceView output with frames released at the iPhone's frame time.
     private var smoothVideo = false
+    // Direct video output (a setting): SurfaceView output with frames shown as soon as they are decoded.
+    private var directVideoOutput = false
     // Sinks whose sessions are being torn down; their decoders may still render to the current surface
     // until they have released their codecs, so a destroyed surface is detached from them too. A restart
     // and a shutdown can overlap, so this is a set.
@@ -1568,6 +1570,7 @@ class CarPlayHostActivity : ComponentActivity() {
         root.addView(safeAreaEditor, FrameLayout.LayoutParams(-1, -1))
         videoView = video
         smoothVideo = AirPlayPersistence.loadSmoothVideo(this)
+        directVideoOutput = AirPlayPersistence.loadDirectVideoOutput(this)
         observeVideoWindow(video)
         gestureOverlay = gestureLayer
         settingsGestureHint = gestureHint
@@ -3931,6 +3934,7 @@ class CarPlayHostActivity : ComponentActivity() {
             // Only a SurfaceView honours release timestamps; smooth video always selects one.
             videoPacingDelayMillis = if (smoothVideo) smoothVideoDelayMillis(fps) else 0,
             mainVideoFrameRate = fps,
+            vendorLowLatencyDecoder = AirPlayPersistence.loadLowLatencyDecoder(this),
         )
     }
 
@@ -4510,9 +4514,11 @@ class CarPlayHostActivity : ComponentActivity() {
             return
         }
         if (controller == null && adoptBackgroundSession()) return
-        // The video view is chosen once per activity; a changed Smooth video setting needs a new one.
-        if (controller == null && AirPlayPersistence.loadSmoothVideo(this) != smoothVideo) {
-            appendLog("Smooth video setting changed; rebuilding the video view")
+        // The video view is chosen once per activity; a changed Smooth video or Direct video output
+        // setting needs a new one.
+        if (controller == null && (AirPlayPersistence.loadSmoothVideo(this) != smoothVideo ||
+                AirPlayPersistence.loadDirectVideoOutput(this) != directVideoOutput)) {
+            appendLog("Video output setting changed; rebuilding the video view")
             // No session runs here, but a restart keeps this host as the session owner; the new instance
             // must be able to start its own.
             if (CarPlayBackgroundSession.isOwner(this)) CarPlayBackgroundSession.clear()
@@ -4788,9 +4794,9 @@ class CarPlayHostActivity : ComponentActivity() {
                 if (!texture.isAttachedToWindow) return true
                 removeVideoSurfaceProbe()
                 if (isDestroyed || videoView !== texture) return true
-                val mode = carPlayVideoSurfaceMode(texture.isHardwareAccelerated, smoothVideo)
+                val mode = carPlayVideoSurfaceMode(texture.isHardwareAccelerated, smoothVideo, directVideoOutput)
                 appendLog("Video output mode=$mode windowHardwareAccelerated=${texture.isHardwareAccelerated} " +
-                    "smoothVideo=$smoothVideo")
+                    "smoothVideo=$smoothVideo directVideoOutput=$directVideoOutput")
                 if (mode == CarPlayVideoSurfaceMode.TEXTURE) return true
                 useFallbackVideoSurface(texture)
                 return false // Measure the replacement before drawing the software window.
@@ -4835,6 +4841,9 @@ class CarPlayHostActivity : ComponentActivity() {
         appendLog(if (smoothVideo) {
             "Using SurfaceView video output: smooth video, frames shown at the iPhone's frame time + a delay " +
                 "starting at ${smoothVideoDelayMillis(fps)} ms; picture adjustments unavailable"
+        } else if (directVideoOutput) {
+            "Using SurfaceView video output: direct video output, frames shown as soon as they are decoded; " +
+                "picture adjustments unavailable"
         } else {
             "Using SurfaceView video output: window has no hardware acceleration; picture adjustments unavailable"
         })

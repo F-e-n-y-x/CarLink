@@ -195,6 +195,8 @@ class AndroidMediaSink(
     private val videoPacingDelayMillis: Int = 0,
     /** The main screen's frame rate (the frame-rate setting), requested from its decoder as the operating rate; 0 for none. */
     private val mainVideoFrameRate: Int = 0,
+    /** Low-latency decoding (a setting): ask Qualcomm decoders to output each frame as soon as it is decoded. */
+    private val vendorLowLatencyDecoder: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -607,6 +609,7 @@ class AndroidMediaSink(
         // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
         pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
         operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
+        vendorLowLatency = vendorLowLatencyDecoder,
     ).also { if (startImmediately) it.start() }
 
     @Synchronized
@@ -719,6 +722,17 @@ internal fun videoDecoderAttempts(operatingRate: Int, softwareDecoder: String?):
 internal fun nextOperatingRate(requested: Int, used: DecoderAttempt?): Int =
     if (requested > 0 && used != null && used.operatingRate == 0) 0 else requested
 
+/**
+ * Qualcomm's vendor parameters that make its decoders output each frame as soon as it is decoded, in
+ * decode order: without them c2.qti.avc.decoder released a frame only after about two more had been
+ * queued (docs/SMOOTH_WIRELESS.md). Empty for other decoders. CarPlay's screen stream has no B-frames,
+ * so decode order is display order.
+ */
+internal fun vendorLowLatencyKeys(codecName: String): List<String> =
+    if (codecName.startsWith("c2.qti.") || codecName.startsWith("OMX.qcom.")) {
+        listOf("vendor.qti-ext-dec-low-latency.enable", "vendor.qti-ext-dec-picture-order.enable")
+    } else emptyList()
+
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
 private class VideoDecoder(
     streamType: Int,
@@ -733,6 +747,8 @@ private class VideoDecoder(
     /** Called on the worker as its last step, after it has released its codec. */
     private val onExit: (VideoDecoder) -> Unit = {},
     operatingRate: Int = 0,
+    /** Set [vendorLowLatencyKeys] on the tuned configure attempts. */
+    private val vendorLowLatency: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -763,6 +779,8 @@ private class VideoDecoder(
     // the current codec was configured with.
     private var operatingRate = operatingRate
     private var configuredRate = 0
+    // Whether the vendor low-latency parameters were set on the codec being configured.
+    private var configuredVendorLowLatency = false
     private var submittedFrameLogged = false
     private var duplicateConfigLogged = false
     private var failureReports = 0
@@ -931,7 +949,8 @@ private class VideoDecoder(
         submittedFrameLogged = false
         if (next != null) {
             val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
-            report("decoder=${next.name} mime=$mime size=${width}x$height$rate")
+            val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
+            report("decoder=${next.name} mime=$mime size=${width}x$height$rate$lowLatency")
             Log.i(
                 TAG,
                 "video decoder configured name=${next.name} mime=$mime size=${width}x$height",
@@ -969,6 +988,9 @@ private class VideoDecoder(
                 codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
                 format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
             }
+            val vendorKeys = if (attempt.tuned && vendorLowLatency) vendorLowLatencyKeys(codec.name) else emptyList()
+            vendorKeys.forEach { format.setInteger(it, 1) }
+            configuredVendorLowLatency = vendorKeys.isNotEmpty()
             codec.configure(format, surface, null, 0)
             codec.start()
             codec
