@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CarLink Settings hub (DESIGN_SPEC §4.4, §6.3). Sentence case, no ALL CAPS. -->
+<resources>
+    <string name="carlink_settings_title">Settings</string>
+    <string name="carlink_settings_close">Close</string>
+    <!-- Top bar chip while a session runs. %1$s: "CarPlay" or "Android Auto". -->
+    <string name="carlink_settings_live_chip">%1$s connected</string>
+
+    <!-- Categories: rail labels and page descriptions -->
+    <string name="carlink_settings_category_overview">Overview</string>
+    <string name="carlink_settings_category_connection">Connection</string>
+    <string name="carlink_settings_category_display">Display</string>
+    <string name="carlink_settings_category_audio">Audio</string>
+    <string name="carlink_settings_category_navigation">Navigation and HUD</string>
+    <string name="carlink_settings_category_vehicle">Vehicle</string>
+    <string name="carlink_settings_category_diagnostics">Diagnostics</string>
+    <string name="carlink_settings_category_about">About</string>
+
+    <string name="carlink_settings_description_overview">Your setup at a glance, and the settings you change most.</string>
+    <string name="carlink_settings_description_connection">How and when phones connect.</string>
+    <string name="carlink_settings_description_display">How CarLink looks, and where to change the CarPlay and Android Auto picture.</string>
+    <string name="carlink_settings_description_audio">Sound for CarPlay and Android Auto.</string>
+    <string name="carlink_settings_description_navigation">Directions on the car\'s dashboard and head-up display.</string>
+    <string name="carlink_settings_description_vehicle">Steering wheel keys and how the car talks to your phone.</string>
+    <string name="carlink_settings_description_diagnostics">The connection log and checks, for when something goes wrong.</string>
+    <string name="carlink_settings_description_about">Version, licenses and credits.</string>
+
+    <!-- One-line summaries in the single-pane category list -->
+    <string name="carlink_settings_summary_auto_both">Connects automatically by Bluetooth and USB</string>
+    <string name="carlink_settings_summary_auto_bluetooth">Connects automatically by Bluetooth</string>
+    <string name="carlink_settings_summary_auto_usb">Connects automatically by USB</string>
+    <string name="carlink_settings_summary_auto_off">Automatic connection is off</string>
+    <string name="carlink_settings_summary_auto_paused">Automatic connection is paused</string>
+    <!-- %1$s: theme name, %2$s: interface size percentage. -->
+    <string name="carlink_settings_summary_display">%1$s · Interface size %2$s</string>
+    <string name="carlink_settings_summary_engines">In the CarPlay and Android Auto settings</string>
+    <string name="carlink_settings_summary_diagnostics">Connection log and checks</string>
+    <!-- %1$s: version name, for example 0.1.0. -->
+    <string name="carlink_settings_summary_about">Version %1$s</string>
+
+    <!-- Overview -->
+    <string name="carlink_settings_quick_settings">Quick settings</string>
+    <string name="carlink_settings_all_settings">All settings</string>
+    <string name="carlink_settings_ready_title">Ready to connect</string>
+    <plurals name="carlink_settings_ready_phones">
+        <item quantity="one">%1$d paired phone.</item>
+        <item quantity="other">%1$d paired phones.</item>
+    </plurals>
+    <!-- %1$s: the phone count sentence above; %2$s: how phones connect. -->
+    <string name="carlink_settings_ready_body">%1$s %2$s</string>
+    <string name="carlink_settings_ready_auto_both">They connect on their own by Bluetooth or USB.</string>
+    <string name="carlink_settings_ready_auto_bluetooth">They connect on their own when their Bluetooth connects.</string>
+    <string name="carlink_settings_ready_auto_usb">They connect on their own when plugged in.</string>
+    <string name="carlink_settings_ready_auto_off">Connect them from Home.</string>
+    <!-- %1$s: "CarPlay" or "Android Auto". -->
+    <string name="carlink_settings_ready_live_title">%1$s is running</string>
+    <!-- %1$s: phone name. -->
+    <string name="carlink_settings_ready_live_body">%1$s is connected.</string>
+    <string name="carlink_settings_ready_live_body_unnamed">Your phone is connected.</string>
+    <string name="carlink_settings_ready_bluetooth_off_title">Bluetooth is off</string>
+    <string name="carlink_settings_ready_bluetooth_off_body">Turn on Bluetooth so phones can connect wirelessly. USB still works.</string>
+    <string name="carlink_settings_ready_permission_title">CarLink can\'t see your phones</string>
+    <string name="carlink_settings_ready_permission_body">Allow Nearby devices so CarLink can find paired phones.</string>
+    <string name="carlink_settings_ready_no_bluetooth_title">No Bluetooth on this device</string>
+    <string name="carlink_settings_ready_no_bluetooth_body">Phones can still connect by USB.</string>
+    <string name="carlink_settings_ready_no_phones_title">No phones paired yet</string>
+    <string name="carlink_settings_ready_no_phones_body">Pair a phone in Bluetooth settings, or plug it in by USB.</string>
+    <string name="carlink_settings_paused_title">Automatic connection is paused</string>
+    <string name="carlink_settings_paused_body">You disconnected, so CarLink won\'t start a phone on its own until you resume.</string>
+    <string name="carlink_settings_resume">Resume</string>
+
+    <!-- Connection -->
+    <string name="carlink_settings_section_all_phones">For all phones</string>
+    <string name="carlink_settings_auto_bluetooth">Connect automatically when a phone\'s Bluetooth connects</string>
+    <string name="carlink_settings_auto_bluetooth_detail">Starts wireless CarPlay or Android Auto for a paired phone.</string>
+    <string name="carlink_settings_auto_usb">Connect automatically when a phone is plugged in</string>
+    <string name="carlink_settings_auto_usb_detail">Starts the right engine for an iPhone or Android phone on USB.</string>
+    <string name="carlink_settings_start_on_boot">Open CarLink when the car starts</string>
+    <string name="carlink_settings_start_on_boot_detail">Shows CarLink after the head unit starts up.</string>
+    <string name="carlink_settings_quick_auto_connect">Automatic connection</string>
+    <string name="carlink_settings_quick_auto_connect_detail">When a phone\'s Bluetooth connects</string>
+    <string name="carlink_settings_run_setup">Run setup again</string>
+    <string name="carlink_settings_run_setup_detail">Permissions, phones and the USB default.</string>
+    <string name="carlink_settings_bluetooth_settings">Bluetooth settings</string>
+    <string name="carlink_settings_bluetooth_settings_detail">Pair or forget phones.</string>
+    <string name="carlink_settings_app_permissions">App permissions</string>
+    <string name="carlink_settings_app_permissions_detail">Nearby devices, location and notifications.</string>
+
+    <!-- Engine sections -->
+    <string name="carlink_settings_applies_iphone">Applies to iPhone</string>
+    <string name="carlink_settings_applies_android">Applies to Android phones</string>
+    <string name="carlink_settings_engine_notice">For now, these settings open in each engine\'s own settings screen.</string>
+    <string name="carlink_settings_opens_carplay">Opens the CarPlay settings.</string>
+    <string name="carlink_settings_opens_android_auto">Opens the Android Auto settings.</string>
+    <string name="carlink_settings_carplay_connection">CarPlay connection, hotspot and iPhone settings</string>
+    <string name="carlink_settings_android_auto_connection">Android Auto wireless and USB settings</string>
+    <string name="carlink_settings_carplay_display">CarPlay icon size, resolution and frame rate</string>
+    <string name="carlink_settings_android_auto_display">Android Auto resolution, density and frame rate</string>
+    <string name="carlink_settings_carplay_audio">CarPlay audio settings</string>
+    <string name="carlink_settings_android_auto_audio">Android Auto audio and microphone settings</string>
+    <string name="carlink_settings_carplay_navigation">CarPlay navigation and dashboard settings</string>
+    <string name="carlink_settings_android_auto_navigation">Android Auto navigation and HUD settings</string>
+    <string name="carlink_settings_carplay_vehicle">CarPlay steering wheel key and vehicle settings</string>
+    <string name="carlink_settings_android_auto_vehicle">Android Auto key and vehicle settings</string>
+
+    <!-- Display: theme -->
+    <string name="carlink_settings_theme">Theme</string>
+    <string name="carlink_settings_theme_follow_car">Follow the car</string>
+    <string name="carlink_settings_theme_follow_car_detail">Day or night, as the car\'s screen is set.</string>
+    <string name="carlink_settings_theme_follow_system">Follow the system</string>
+    <string name="carlink_settings_theme_follow_system_detail">Light or dark, as this device is set.</string>
+    <string name="carlink_settings_theme_dark">Dark</string>
+    <string name="carlink_settings_theme_dark_detail">Easiest on the eyes at night.</string>
+    <string name="carlink_settings_theme_light">Light</string>
+    <string name="carlink_settings_theme_light_detail">Easier to read in bright sunlight.</string>
+
+    <!-- Display: layout (car or handheld sizing) -->
+    <string name="carlink_settings_layout">Layout</string>
+    <string name="carlink_settings_layout_description">Sets the size of buttons and text for the kind of screen CarLink runs on.</string>
+    <string name="carlink_settings_layout_auto">Automatic</string>
+    <string name="carlink_settings_layout_auto_detail">Detect the device.</string>
+    <string name="carlink_settings_layout_auto_value_car">Automatic: car display</string>
+    <string name="carlink_settings_layout_auto_value_handheld">Automatic: phone or tablet</string>
+    <string name="carlink_settings_layout_car">Car display</string>
+    <string name="carlink_settings_layout_car_detail">Larger controls for in-car use.</string>
+    <string name="carlink_settings_layout_handheld">Phone or tablet</string>
+    <string name="carlink_settings_layout_handheld_detail">Standard sizes.</string>
+
+    <!-- Display: interface size -->
+    <string name="carlink_settings_interface_size">Interface size</string>
+    <string name="carlink_settings_interface_size_description">Changes the size of CarLink\'s own screens. CarPlay and Android Auto have their own size settings.</string>
+    <string name="carlink_settings_size_small">Small</string>
+    <string name="carlink_settings_size_default">Default</string>
+    <string name="carlink_settings_size_large">Large</string>
+    <string name="carlink_settings_size_extra_large">Extra large</string>
+    <!-- %1$s: size name, %2$s: percentage, for example "Large, 115%". -->
+    <string name="carlink_settings_size_value">%1$s, %2$s</string>
+
+    <!-- Diagnostics and About -->
+    <string name="carlink_settings_open_diagnostics">Open diagnostics</string>
+    <string name="carlink_settings_open_diagnostics_detail">Connection log, device checks and what CarLink detected.</string>
+    <string name="carlink_settings_open_about">About CarLink</string>
+</resources>
