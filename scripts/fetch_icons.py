@@ -33,6 +33,9 @@ ICONS = {
     "mic": False, "location_on": False, "notifications": False, "battery_charging_full": False,
     "layers": False, "terminal": False, "play_arrow": True, "eject": False, "stop_circle": False,
     "open_in_new": False, "keyboard": False, "open_with": False, "text_fields": False,
+    # Onboarding (DESIGN_SPEC §6.4)
+    "local_parking": False, "wifi_find": False, "tablet_android": False, "aspect_ratio": False,
+    "android": False, "power_settings_new": False, "p2p": False, "bluetooth_searching": False,
 }
 
 # Directional glyphs mirror in RTL layouts (DESIGN_SPEC §7.3); device and media glyphs do not.

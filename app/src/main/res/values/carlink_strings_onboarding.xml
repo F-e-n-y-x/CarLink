@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Setup wizard (DESIGN_SPEC §6.4). Sentence case; no ALL CAPS; placeholders, never concatenation. -->
+<resources>
+    <!-- Frame -->
+    <string name="carlink_onboarding_title">Set up CarLink</string>
+    <string name="carlink_onboarding_skip_setup">Skip setup</string>
+    <string name="carlink_onboarding_skip_for_now">Skip for now</string>
+    <string name="carlink_onboarding_start">Start</string>
+    <string name="carlink_onboarding_continue">Continue</string>
+    <string name="carlink_onboarding_go_home">Go to Home</string>
+    <!-- Progress: "Step 2 of 5". -->
+    <string name="carlink_onboarding_step_of">Step %1$d of %2$d</string>
+    <!-- A step number shown in a circle. -->
+    <string name="carlink_onboarding_number">%1$d</string>
+    <!-- Screen-reader label of a step in the step list, e.g. "Step 3, Permissions". -->
+    <string name="carlink_onboarding_step_label">Step %1$d, %2$s</string>
+    <string name="carlink_onboarding_step_state_done">Done</string>
+    <string name="carlink_onboarding_step_state_current">Current step</string>
+    <string name="carlink_onboarding_step_state_pending">Not started</string>
+
+    <!-- Step names in the step list -->
+    <string name="carlink_onboarding_step_welcome">Welcome</string>
+    <string name="carlink_onboarding_step_device">Your device</string>
+    <string name="carlink_onboarding_step_permissions">Permissions</string>
+    <string name="carlink_onboarding_step_connect">Connect phone</string>
+    <string name="carlink_onboarding_step_done">Done</string>
+
+    <!-- 1. Welcome & safety -->
+    <string name="carlink_onboarding_welcome_title">Welcome to CarLink</string>
+    <string name="carlink_onboarding_welcome_body">CarLink detects your phone and starts CarPlay for iPhone or Android Auto for Android phones.</string>
+    <string name="carlink_onboarding_phone_iphone">iPhone</string>
+    <string name="carlink_onboarding_phone_android">Android phone</string>
+    <!-- Screen reader: "iPhone uses CarPlay". -->
+    <string name="carlink_onboarding_engine_map_cd">%1$s uses %2$s</string>
+    <string name="carlink_onboarding_safety_title">Set up CarLink while parked. It takes about 3 minutes.</string>
+    <string name="carlink_onboarding_safety_body">Tapping Start confirms that the car is parked. While driving, keep your attention on the road.</string>
+
+    <!-- 2. Your device -->
+    <string name="carlink_onboarding_device_title">Your device</string>
+    <string name="carlink_onboarding_device_body">CarLink checked what this device supports.</string>
+    <string name="carlink_onboarding_device_car">Car display</string>
+    <string name="carlink_onboarding_device_car_body">CarLink uses large, car-sized controls. You can change this in Settings.</string>
+    <string name="carlink_onboarding_device_handheld">Phone or tablet</string>
+    <string name="carlink_onboarding_device_handheld_body">CarLink uses standard phone and tablet controls. You can change this in Settings.</string>
+    <string name="carlink_onboarding_device_android">Android version</string>
+    <!-- "Android 14 (API 34)". -->
+    <string name="carlink_onboarding_device_android_value">Android %1$s (API %2$d)</string>
+    <string name="carlink_onboarding_device_screen">Screen</string>
+    <!-- Screen size in pixels, "1920 × 1080 px". -->
+    <string name="carlink_onboarding_device_screen_value">%1$d × %2$d px</string>
+    <string name="carlink_onboarding_checks_title">Quick checks</string>
+    <string name="carlink_onboarding_checks_good">Looks good</string>
+    <string name="carlink_onboarding_checks_limited">Some features are limited on this device</string>
+    <string name="carlink_onboarding_check_bluetooth">Bluetooth</string>
+    <string name="carlink_onboarding_check_bluetooth_on">On</string>
+    <string name="carlink_onboarding_check_bluetooth_off">Off. Turn it on to connect wirelessly.</string>
+    <string name="carlink_onboarding_check_bluetooth_unsupported">Not available. Connect with a USB cable.</string>
+    <string name="carlink_onboarding_check_bluetooth_turn_on">Turn on</string>
+    <string name="carlink_onboarding_check_usb">USB connections</string>
+    <string name="carlink_onboarding_check_usb_ok">Supported</string>
+    <string name="carlink_onboarding_check_usb_missing">Not supported. Connect wirelessly instead.</string>
+    <string name="carlink_onboarding_check_wifi_direct">Wi-Fi Direct</string>
+    <string name="carlink_onboarding_check_wifi_direct_ok">Supported</string>
+    <string name="carlink_onboarding_check_wifi_direct_missing">Not supported. Wireless connections may be limited.</string>
+    <string name="carlink_onboarding_start_on_boot">Open CarLink when the car starts</string>
+    <string name="carlink_onboarding_start_on_boot_body">CarLink is ready for your phone as soon as the screen turns on.</string>
+
+    <!-- 3. Permissions -->
+    <string name="carlink_onboarding_permissions_title">Allow access</string>
+    <string name="carlink_onboarding_permissions_body">CarLink needs these to connect your phone.</string>
+    <string name="carlink_onboarding_permissions_ready">Everything CarLink needs is allowed</string>
+    <string name="carlink_onboarding_permissions_skip_note">Wireless connections need the required permissions. You can run setup again from Settings.</string>
+    <string name="carlink_onboarding_need_required">Required</string>
+    <string name="carlink_onboarding_need_wireless">Required for wireless</string>
+    <string name="carlink_onboarding_need_recommended">Recommended</string>
+    <string name="carlink_onboarding_permission_allow">Allow</string>
+    <!-- Screen reader: "Allow Microphone". -->
+    <string name="carlink_onboarding_permission_allow_cd">Allow %1$s</string>
+    <string name="carlink_onboarding_permission_allowed">Allowed</string>
+    <string name="carlink_onboarding_permission_open_settings">Open settings</string>
+    <!-- Screen reader: "Open settings for Microphone". -->
+    <string name="carlink_onboarding_permission_open_settings_cd">Open settings for %1$s</string>
+    <string name="carlink_onboarding_permission_blocked">Android won’t ask again. Allow it in CarLink’s settings.</string>
+    <string name="carlink_onboarding_perm_nearby_title">Nearby devices</string>
+    <string name="carlink_onboarding_perm_nearby_why">Find and connect to your phone wirelessly.</string>
+    <string name="carlink_onboarding_perm_location_title">Precise location</string>
+    <string name="carlink_onboarding_perm_location_why">Needed by Android to set up the car’s Wi-Fi link.</string>
+    <string name="carlink_onboarding_perm_wifi_title">Nearby Wi-Fi devices</string>
+    <string name="carlink_onboarding_perm_wifi_why">Connects to your phone over Wi-Fi.</string>
+    <string name="carlink_onboarding_perm_mic_title">Microphone</string>
+    <string name="carlink_onboarding_perm_mic_why">Siri and Google Assistant hear you.</string>
+    <string name="carlink_onboarding_perm_notifications_title">Notifications</string>
+    <string name="carlink_onboarding_perm_notifications_why">Shows connection status in the notification shade.</string>
+    <string name="carlink_onboarding_perm_overlay_title">Display over other apps</string>
+    <string name="carlink_onboarding_perm_overlay_why">Lets CarLink open by itself when your phone connects.</string>
+    <string name="carlink_onboarding_perm_battery_title">Keep CarLink ready</string>
+    <string name="carlink_onboarding_perm_battery_why">Stops battery saving from closing CarLink.</string>
+
+    <!-- 4. Connect your phone -->
+    <string name="carlink_onboarding_connect_title">Connect your phone</string>
+    <string name="carlink_onboarding_connect_body">Choose your phone to see what to do on it. CarLink still detects it automatically.</string>
+    <string name="carlink_onboarding_phone_iphone_body">CarPlay</string>
+    <string name="carlink_onboarding_phone_android_body">Android Auto</string>
+    <string name="carlink_onboarding_connect_on_iphone">On your iPhone</string>
+    <string name="carlink_onboarding_connect_on_android">On your Android phone</string>
+    <string name="carlink_onboarding_iphone_step1">Pair your iPhone in the car’s Bluetooth settings, or plug it in with a USB cable.</string>
+    <string name="carlink_onboarding_iphone_step2">On the iPhone, go to Settings › General › CarPlay › this car, and turn on Allow CarPlay While Locked.</string>
+    <string name="carlink_onboarding_iphone_step3">Tap Connect below.</string>
+    <string name="carlink_onboarding_android_step1">Pair your phone in the car’s Bluetooth settings, or plug it in with a USB cable.</string>
+    <string name="carlink_onboarding_android_step2">On the phone, open Android Auto settings and turn on Start Android Auto automatically and Wireless Android Auto.</string>
+    <string name="carlink_onboarding_android_step3">Tap Connect below.</string>
+    <!-- Button: "Connect Sara's iPhone". -->
+    <string name="carlink_onboarding_connect_phone">Connect %1$s</string>
+    <string name="carlink_onboarding_connect_usb_hint">Using a cable? Plug the phone in and CarLink starts by itself.</string>
+    <!-- %1$s is "iPhone" or "Android phone". -->
+    <string name="carlink_onboarding_connect_none_paired">No %1$s is paired with this car yet. Pair it in Bluetooth settings, or plug it in with a USB cable.</string>
+    <!-- %1$s is "iPhone" or "Android phone". -->
+    <string name="carlink_onboarding_connect_bluetooth_off">Bluetooth is off, so CarLink can’t see your %1$s. Turn Bluetooth on, or plug the phone in with a USB cable.</string>
+    <string name="carlink_onboarding_connect_open_bluetooth">Open Bluetooth settings</string>
+    <string name="carlink_onboarding_connect_need_permission">Allow Nearby devices so CarLink can see the phones paired with this car.</string>
+    <string name="carlink_onboarding_connect_allow_access">Allow access</string>
+    <string name="carlink_onboarding_connect_usb_only">This device has no Bluetooth. Plug your phone in with a USB cable and CarLink starts by itself.</string>
+    <string name="carlink_onboarding_connect_skip_note">You can connect later from Home. CarLink also connects by itself when your phone is nearby or plugged in.</string>
+    <string name="carlink_onboarding_link_waiting">Waiting for your phone</string>
+    <!-- %1$s is the phone's name. -->
+    <string name="carlink_onboarding_link_waiting_for">Waiting for %1$s</string>
+    <string name="carlink_onboarding_link_connecting">Connecting</string>
+    <!-- %1$s is "CarPlay" or "Android Auto". -->
+    <string name="carlink_onboarding_link_starting">Starting %1$s</string>
+    <string name="carlink_onboarding_link_connected">Your phone is connected</string>
+    <!-- %1$s is the phone's name. -->
+    <string name="carlink_onboarding_link_connected_phone">%1$s is connected</string>
+    <string name="carlink_onboarding_link_failed">Couldn’t connect</string>
+    <string name="carlink_onboarding_link_retry">Try again</string>
+
+    <!-- 5. Done -->
+    <string name="carlink_onboarding_done_title">You’re set</string>
+    <string name="carlink_onboarding_done_body">CarLink connects your phone automatically.</string>
+    <!-- %1$s is the phone's name. -->
+    <string name="carlink_onboarding_done_body_phone">CarLink connects %1$s automatically.</string>
+    <string name="carlink_onboarding_done_phone">Phone</string>
+    <!-- %1$s is the phone's name. -->
+    <string name="carlink_onboarding_done_phone_connected">%1$s connected</string>
+    <string name="carlink_onboarding_done_phone_later">Not connected yet. Plug in or pair your phone any time.</string>
+    <string name="carlink_onboarding_done_permissions">Permissions</string>
+    <string name="carlink_onboarding_done_permissions_ok">All allowed</string>
+    <string name="carlink_onboarding_done_permissions_recommended">Required ones allowed. Some recommended ones are off.</string>
+    <string name="carlink_onboarding_done_permissions_missing">Some are not allowed. Wireless connections may not work.</string>
+</resources>
