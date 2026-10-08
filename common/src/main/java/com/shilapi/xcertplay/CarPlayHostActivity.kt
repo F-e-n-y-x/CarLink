@@ -1,6 +1,8 @@
 package com.shilapi.xcertplay
 
 import android.Manifest
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,10 +13,15 @@ import android.hardware.usb.UsbManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.RectF
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.net.Uri
@@ -31,6 +38,7 @@ import android.text.TextWatcher
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.PixelCopy
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -457,7 +465,57 @@ class CarPlayHostActivity : ComponentActivity() {
     private val shuttingDown = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var sidePanel: LinearLayout? = null
+    // Everything on the panel's card, in one layout so the resize blur covers it as a whole.
+    private var sidePanelContents: LinearLayout? = null
     private var sidePanelBattery: TextView? = null
+    // The side panel's tyres (TPMS), front left, front right, rear left, rear right; hidden without a reading.
+    private var sidePanelTyres: LinearLayout? = null
+    private var sidePanelTyreTexts: List<TextView> = emptyList()
+    // The side panel's whole screen in window pixels and the panel edge that faces CarPlay (Gravity.START when
+    // the panel is right of CarPlay, END when left of it, TOP when below it), for dragging that edge.
+    private var sidePanelScreen: RectF? = null
+    private var sidePanelEdge = Gravity.START
+    private var sidePanelDrag: FloatArray? = null
+    // The grip on the panel edge shows for a few seconds when the panel opens or its edge is touched, then fades.
+    private var sidePanelGrip: Drawable? = null
+    private var sidePanelGripAlpha = 255
+    private var sidePanelGripAnimator: ValueAnimator? = null
+    private val sidePanelGripFade = Runnable { animateSidePanelGrip(0, 600L) }
+    // The tab at the screen edge the side panel takes; dragging it out opens the panel (null drag: not dragged yet).
+    private var sidePanelTab: View? = null
+    private var sidePanelTabDrag: FloatArray? = null
+    private var sidePanelTabFrom: Int? = null
+    // While the panel edge moves: CarPlay's last picture blurred over the video, and the panel's contents blurred.
+    // It fades as soon as the finger lifts: in the car CarPlay's own resize transition looked quicker without it held.
+    private var sidePanelBlur: ImageView? = null
+    private var sidePanelBlurring = false
+    private var sidePanelBlurActive = false
+    private var sidePanelBlurGeneration = 0
+    private val sidePanelBlurEnd = Runnable { finishSidePanelBlur() }
+    private fun finishSidePanelBlur() {
+        sidePanelBlurActive = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            sidePanelContents?.setRenderEffect(null)
+        }
+        sidePanelBlur?.let { overlay ->
+            if (overlay.visibility != View.VISIBLE) return@let
+            overlay.animate().alpha(0f).setDuration(400L).withEndAction {
+                if (sidePanelBlurActive) return@withEndAction
+                overlay.visibility = View.GONE
+                overlay.setImageDrawable(null)
+            }.start()
+        }
+    }
+
+    // The tab's pill shows for a few seconds when a session starts or the tab is tapped, then fades; the tab still drags without it.
+    private var sidePanelTabHintFor: CarPlayViewAreas? = null
+    private var sidePanelTabHint = false
+    private val sidePanelTabFade = Runnable {
+        sidePanelTabHint = false
+        sidePanelTab?.background?.let { pill ->
+            ObjectAnimator.ofInt(pill, "alpha", pill.alpha, 0).setDuration(600L).start()
+        }
+    }
     private var sidePanelShown = false
     private val sidePanelTick = object : Runnable {
         override fun run() {
@@ -1368,6 +1426,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     override fun onDestroy() {
         resetSidePanel()
+        releaseSidePanelEffects()
         hostAppearanceResumed = false
         AppAppearanceRuntime.clearHost(this)
         nightModeController.pause()
@@ -1509,7 +1568,12 @@ class CarPlayHostActivity : ComponentActivity() {
         viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
         // Above the video and gesture layer, below the menus.
+        sidePanelBlur = ImageView(this).apply {
+            visibility = View.GONE
+            scaleType = ImageView.ScaleType.FIT_XY
+        }.also { root.addView(it, FrameLayout.LayoutParams(0, 0)) }
         sidePanel = buildSidePanel().also { root.addView(it, FrameLayout.LayoutParams(0, 0)) }
+        sidePanelTab = buildSidePanelTab().also { root.addView(it, FrameLayout.LayoutParams(0, 0)) }
         var preparationHeight = -1
         fun updatePreparationLayout() {
             val height = viewport.height - viewport.paddingTop - viewport.paddingBottom
@@ -1585,31 +1649,197 @@ class CarPlayHostActivity : ComponentActivity() {
             gravity = Gravity.CENTER
             isClickable = true
             visibility = View.GONE
-            setBackgroundColor(MENU_BACKGROUND)
+            background = sidePanelBackground()
+        }
+        panel.setOnTouchListener { view, event -> onSidePanelTouch(view, event) }
+        val contents = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
             setPadding(dp(24), dp(24), dp(24), dp(24))
         }
-        panel.addView(android.widget.TextClock(this).apply {
+        sidePanelContents = contents
+        panel.addView(contents, LinearLayout.LayoutParams(-1, -1))
+        contents.addView(android.widget.TextClock(this).apply {
             format24Hour = "HH:mm"
             format12Hour = "h:mm"
             textSize = 72f
-            setTextColor(MENU_PRIMARY)
+            setTextColor(SIDE_PANEL_PRIMARY)
             gravity = Gravity.CENTER
         })
         sidePanelBattery = TextView(this).apply {
             textSize = 30f
-            setTextColor(MENU_SECONDARY)
+            setTextColor(SIDE_PANEL_SECONDARY)
             gravity = Gravity.CENTER
             setPadding(0, dp(24), 0, dp(32))
         }
-        panel.addView(sidePanelBattery)
-        panel.addView(Button(this).apply {
-            text = getString(R.string.side_panel_full_screen)
-            textSize = 22f
-            setTextColor(MENU_BUTTON_TEXT)
-            backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
-            setOnClickListener { showSidePanel(false) }
-        })
+        contents.addView(sidePanelBattery)
+        contents.addView(buildSidePanelTyres())
         return panel
+    }
+
+    // A rounded card like CarPlay's, with a grip on the edge that faces CarPlay.
+    private fun sidePanelBackground(): Drawable {
+        val card = GradientDrawable().apply {
+            setColor(SIDE_PANEL_CARD)
+            cornerRadius = dp(28).toFloat()
+        }
+        val across = sidePanelEdge != Gravity.TOP
+        val grip = GradientDrawable().apply {
+            // The grip sits in the black gap beside CarPlay, so it stays light in either theme.
+            setColor(Color.rgb(170, 180, 190))
+            cornerRadius = dp(3).toFloat()
+            setSize(if (across) dp(6) else dp(72), if (across) dp(72) else dp(6))
+        }
+        grip.alpha = sidePanelGripAlpha
+        sidePanelGrip = grip
+        return LayerDrawable(arrayOf(card, grip)).apply {
+            // A gap only towards CarPlay, with the grip in it; beside CarPlay the bottom ends level with its dock.
+            val bottom = if (across) dp(6) else 0
+            when (sidePanelEdge) {
+                Gravity.TOP -> setLayerInset(0, 0, dp(10), 0, 0)
+                Gravity.END -> setLayerInset(0, 0, 0, dp(10), bottom)
+                else -> setLayerInset(0, dp(10), 0, 0, bottom)
+            }
+            setLayerInset(1, 0, 0, 0, bottom)
+            setLayerGravity(1, when (sidePanelEdge) {
+                Gravity.TOP -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                Gravity.END -> Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                else -> Gravity.LEFT or Gravity.CENTER_VERTICAL
+            })
+        }
+    }
+
+    /**
+     * Drags the panel edge that faces CarPlay: the panel follows the finger, and on release CarPlay moves to the
+     * declared share nearest to where the edge was let go (two thirds, half or one third of the screen), or to
+     * the whole screen, closing the panel, when it was let go nearer the far side.
+     */
+    private fun onSidePanelTouch(panel: View, event: MotionEvent): Boolean {
+        val screen = sidePanelScreen ?: return false
+        val params = panel.layoutParams as? FrameLayout.LayoutParams ?: return false
+        val vertical = sidePanelEdge == Gravity.TOP
+        val raw = if (vertical) event.rawY else event.rawX
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                // Only a touch near that edge drags; the rest of the panel keeps its taps.
+                val distance = when (sidePanelEdge) {
+                    Gravity.TOP -> event.y
+                    Gravity.END -> panel.width - event.x
+                    else -> event.x
+                }
+                if (distance > dp(56)) return false
+                showSidePanelGripHint()
+                val edge = when (sidePanelEdge) {
+                    Gravity.TOP -> params.topMargin.toFloat()
+                    Gravity.END -> (params.leftMargin + params.width).toFloat()
+                    else -> params.leftMargin.toFloat()
+                }
+                sidePanelDrag = floatArrayOf(raw, edge)
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val drag = sidePanelDrag ?: return false
+                // CarPlay keeps at least a quarter of the screen and can take all of it.
+                val quarter = sidePanelEdgeAt(screen, 0.25f)
+                val whole = sidePanelEdgeAt(screen, 1f)
+                val edge = (drag[1] + raw - drag[0]).coerceIn(minOf(quarter, whole), maxOf(quarter, whole))
+                startSidePanelBlur()
+                panel.alpha = if (sidePanelCarPlayShare(screen, edge) > SIDE_PANEL_CLOSE_SHARE) 0.5f else 1f
+                when (sidePanelEdge) {
+                    Gravity.TOP -> { params.topMargin = Math.round(edge); params.height = Math.round(screen.bottom - edge) }
+                    Gravity.END -> { params.leftMargin = Math.round(screen.left); params.width = Math.round(edge - screen.left) }
+                    else -> { params.leftMargin = Math.round(edge); params.width = Math.round(screen.right - edge) }
+                }
+                panel.layoutParams = params
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val drag = sidePanelDrag ?: return false
+                sidePanelDrag = null
+                panel.alpha = 1f
+                val carPlay = sidePanelCarPlayShare(screen, drag[1] + raw - drag[0])
+                if (event.actionMasked == MotionEvent.ACTION_UP && carPlay > SIDE_PANEL_CLOSE_SHARE) {
+                    appendLog("Side panel closed by dragging its edge")
+                    endSidePanelBlur()
+                    showSidePanel(false)
+                    if (sidePanelShown) videoView?.let { updateVideoLayout(it.width, it.height) }
+                    return true
+                }
+                val sixths = CarPlayViewAreas.nearestSidePanelSixths(carPlay.toDouble())
+                if (event.actionMasked == MotionEvent.ACTION_UP && sixths != SidePanelSettings.sixths(this)) {
+                    SidePanelSettings.setSixths(this, sixths)
+                    appendLog("Side panel resized: CarPlay $sixths/6 of the screen")
+                    endSidePanelBlur()
+                    showSidePanel(true)
+                } else {
+                    endSidePanelBlur()
+                    videoView?.let { updateVideoLayout(it.width, it.height) }
+                }
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun showSidePanelGripHint() {
+        if (sidePanelGripAlpha < 255) animateSidePanelGrip(255, 200L)
+        mainHandler.removeCallbacks(sidePanelGripFade)
+        mainHandler.postDelayed(sidePanelGripFade, SIDE_PANEL_TAB_HINT_MILLIS)
+    }
+
+    private fun animateSidePanelGrip(to: Int, millis: Long) {
+        sidePanelGripAnimator?.cancel()
+        sidePanelGripAnimator = ValueAnimator.ofInt(sidePanelGripAlpha, to).setDuration(millis).apply {
+            addUpdateListener {
+                sidePanelGripAlpha = it.animatedValue as Int
+                sidePanelGrip?.alpha = sidePanelGripAlpha
+            }
+            start()
+        }
+    }
+
+    // Where the panel edge is when CarPlay has [share] of the screen, and CarPlay's share with the edge at [edge].
+    private fun sidePanelEdgeAt(screen: RectF, share: Float): Float = when (sidePanelEdge) {
+        Gravity.TOP -> screen.top + screen.height() * share
+        Gravity.END -> screen.right - screen.width() * share
+        else -> screen.left + screen.width() * share
+    }
+
+    private fun sidePanelCarPlayShare(screen: RectF, edge: Float): Float = when (sidePanelEdge) {
+        Gravity.TOP -> (edge - screen.top) / screen.height()
+        Gravity.END -> (screen.right - edge) / screen.width()
+        else -> (edge - screen.left) / screen.width()
+    }
+
+    // TPMS as the cluster shows it: front tyres on the top row, rear on the bottom, left and right columns.
+    private fun buildSidePanelTyres(): LinearLayout {
+        val texts = List(4) { position ->
+            TextView(this).apply {
+                textSize = 24f
+                setTextColor(SIDE_PANEL_PRIMARY)
+                gravity = if (position % 2 == 0) Gravity.START else Gravity.END
+            }
+        }
+        sidePanelTyreTexts = texts
+        fun row(left: TextView, right: TextView) = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(left, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(right, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setPadding(dp(8), 0, dp(8), dp(28))
+            addView(TextView(this@CarPlayHostActivity).apply {
+                text = "TPMS"
+                textSize = 18f
+                setTextColor(SIDE_PANEL_SECONDARY)
+                gravity = Gravity.CENTER
+            })
+            addView(row(texts[0], texts[1]))
+            addView(row(texts[2], texts[3]))
+        }.also { sidePanelTyres = it }
     }
 
     // The panel's strip of the stream, mapped through the video's layout in the window.
@@ -1628,6 +1858,220 @@ class CarPlayHostActivity : ComponentActivity() {
             // Stream coordinates are physical pixels, independent of the UI's reading direction.
             Gravity.TOP or Gravity.LEFT,
         ).apply { leftMargin = left; topMargin = top }
+        val screen = display.viewAreas?.let { it.layoutArea(it.current) } ?: return
+        sidePanelScreen = sidePanelScreenRect(viewWidth, viewHeight)
+        sidePanelEdge = when {
+            strip.height < screen.height -> Gravity.TOP
+            strip.originX > screen.originX -> Gravity.START
+            else -> Gravity.END
+        }
+        panel.background = sidePanelBackground()
+    }
+
+    // The whole screen CarPlay lays out by (the panel's strip included), in the window.
+    private fun sidePanelScreenRect(viewWidth: Int, viewHeight: Int): RectF? {
+        val display = sessionDisplay ?: return null
+        val screen = display.viewAreas?.let { it.layoutArea(it.current) } ?: return null
+        val content = contentRect(viewWidth, viewHeight)
+        val scaleX = content.width / display.width
+        val scaleY = content.height / display.height
+        return RectF(content.left + screen.originX * scaleX, content.top + screen.originY * scaleY,
+            content.left + (screen.originX + screen.width) * scaleX, content.top + (screen.originY + screen.height) * scaleY)
+    }
+
+    // A small pill on CarPlay's edge, a little in from the screen edge, whose own back swipe the head unit keeps.
+    private fun buildSidePanelTab(): View = View(this).apply {
+        visibility = View.GONE
+        setOnTouchListener { view, event -> onSidePanelTabTouch(view, event) }
+    }
+
+    private fun placeSidePanelTab(viewWidth: Int, viewHeight: Int) {
+        val tab = sidePanelTab ?: return
+        val from = sidePanelOpenEdge()
+        val screen = sidePanelScreenRect(viewWidth, viewHeight)
+        if (from == null || screen == null || sidePanelTabDrag != null) {
+            if (sidePanelTabDrag == null) tab.visibility = View.GONE
+            return
+        }
+        val across = from != Gravity.BOTTOM
+        val reach = dp(64)
+        val length = dp(160)
+        if (from != sidePanelTabFrom) tab.background = sidePanelTabPill(from).apply { alpha = if (sidePanelTabHint) 255 else 0 }
+        sidePanelTabFrom = from
+        val areas = sessionDisplay?.viewAreas
+        if (areas !== sidePanelTabHintFor) {
+            sidePanelTabHintFor = areas
+            showSidePanelTabHint()
+        }
+        val params = FrameLayout.LayoutParams(if (across) reach else length, if (across) length else reach,
+            Gravity.TOP or Gravity.LEFT).apply {
+            leftMargin = Math.round(when (from) {
+                Gravity.BOTTOM -> screen.centerX() - length / 2f
+                Gravity.LEFT -> screen.left
+                else -> screen.right - reach
+            })
+            topMargin = Math.round(if (across) screen.centerY() - length / 2f else screen.bottom - reach)
+        }
+        val old = tab.layoutParams as? FrameLayout.LayoutParams
+        if (old == null || old.width != params.width || old.height != params.height ||
+            old.leftMargin != params.leftMargin || old.topMargin != params.topMargin) tab.layoutParams = params
+        tab.visibility = View.VISIBLE
+    }
+
+    private fun showSidePanelTabHint() {
+        sidePanelTabHint = true
+        sidePanelTab?.background?.let { pill ->
+            if (pill.alpha < 255) ObjectAnimator.ofInt(pill, "alpha", pill.alpha, 255).setDuration(200L).start()
+        }
+        mainHandler.removeCallbacks(sidePanelTabFade)
+        mainHandler.postDelayed(sidePanelTabFade, SIDE_PANEL_TAB_HINT_MILLIS)
+    }
+
+    private fun sidePanelTabPill(from: Int): Drawable {
+        val across = from != Gravity.BOTTOM
+        val pill = GradientDrawable().apply {
+            setColor(0xDDFFFFFF.toInt())
+            setStroke(dp(1), 0x66000000)
+            cornerRadius = dp(4).toFloat()
+            setSize(if (across) dp(8) else dp(88), if (across) dp(88) else dp(8))
+        }
+        return LayerDrawable(arrayOf(pill)).apply {
+            setLayerGravity(0, when (from) {
+                Gravity.BOTTOM -> Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                Gravity.LEFT -> Gravity.LEFT or Gravity.CENTER_VERTICAL
+                else -> Gravity.RIGHT or Gravity.CENTER_VERTICAL
+            })
+            when (from) {
+                Gravity.BOTTOM -> setLayerInsetBottom(0, dp(20))
+                Gravity.LEFT -> setLayerInsetLeft(0, dp(20))
+                else -> setLayerInsetRight(0, dp(20))
+            }
+        }
+    }
+
+    /**
+     * The tab follows the finger out as the panel itself; on release CarPlay moves to the declared share nearest to
+     * where it was let go, and nothing happens when it was let go nearer the screen edge. A tap shows the pill again.
+     */
+    private fun onSidePanelTabTouch(tab: View, event: MotionEvent): Boolean {
+        val panel = sidePanel ?: return false
+        val vertical = sidePanelOpenEdge() == Gravity.BOTTOM
+        val position = if (vertical) tab.y + event.y else tab.x + event.x
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val from = sidePanelOpenEdge() ?: return false
+                val view = videoView ?: return false
+                sidePanelScreen = sidePanelScreenRect(view.width, view.height) ?: return false
+                sidePanelEdge = when (from) {
+                    Gravity.BOTTOM -> Gravity.TOP
+                    Gravity.LEFT -> Gravity.END
+                    else -> Gravity.START
+                }
+                sidePanelTabDrag = floatArrayOf(position, 0f)
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val drag = sidePanelTabDrag ?: return false
+                val screen = sidePanelScreen ?: return false
+                if (drag[1] == 0f && Math.abs(position - drag[0]) < dp(8)) return true
+                drag[1] = 1f
+                tab.alpha = 0f
+                startSidePanelBlur()
+                val quarter = sidePanelEdgeAt(screen, 0.25f)
+                val whole = sidePanelEdgeAt(screen, 1f)
+                val edge = position.coerceIn(minOf(quarter, whole), maxOf(quarter, whole))
+                panel.alpha = if (sidePanelCarPlayShare(screen, edge) > SIDE_PANEL_CLOSE_SHARE) 0.5f else 1f
+                panel.layoutParams = (panel.layoutParams as FrameLayout.LayoutParams).apply {
+                    gravity = Gravity.TOP or Gravity.LEFT
+                    when (sidePanelEdge) {
+                        Gravity.TOP -> { leftMargin = Math.round(screen.left); width = Math.round(screen.width()); topMargin = Math.round(edge); height = Math.round(screen.bottom - edge) }
+                        Gravity.END -> { leftMargin = Math.round(screen.left); width = Math.round(edge - screen.left); topMargin = Math.round(screen.top); height = Math.round(screen.height()) }
+                        else -> { leftMargin = Math.round(edge); width = Math.round(screen.right - edge); topMargin = Math.round(screen.top); height = Math.round(screen.height()) }
+                    }
+                }
+                if (panel.visibility != View.VISIBLE) {
+                    panel.background = sidePanelBackground()
+                    refreshSidePanel()
+                    panel.visibility = View.VISIBLE
+                }
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val drag = sidePanelTabDrag ?: return false
+                sidePanelTabDrag = null
+                panel.alpha = 1f
+                tab.alpha = 1f
+                val screen = sidePanelScreen
+                val dragged = drag[1] != 0f
+                val carPlay = if (dragged && screen != null) sidePanelCarPlayShare(screen, position) else null
+                if (event.actionMasked == MotionEvent.ACTION_UP && !dragged) showSidePanelTabHint()
+                if (event.actionMasked == MotionEvent.ACTION_UP && carPlay != null && carPlay <= SIDE_PANEL_CLOSE_SHARE) {
+                    SidePanelSettings.setSixths(this, CarPlayViewAreas.nearestSidePanelSixths(carPlay.toDouble()))
+                    appendLog("Side panel opened from its tab: CarPlay ${SidePanelSettings.sixths(this)}/6 of the screen")
+                    showSidePanel(true)
+                }
+                endSidePanelBlur()
+                if (!sidePanelShown) panel.visibility = View.GONE
+                videoView?.let { updateVideoLayout(it.width, it.height) }
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Blurs CarPlay and the panel's contents while the panel edge moves, as CarPlay blurs apps whose size changes:
+     * CarPlay's last picture, copied small and blurred, covers the video until the finger lifts.
+     * Android 12 and later only (RenderEffect).
+     */
+    private fun startSidePanelBlur() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || sidePanelBlurring) return
+        val overlay = sidePanelBlur ?: return
+        val view = videoView ?: return
+        sidePanelBlurring = true
+        sidePanelBlurActive = true
+        val generation = ++sidePanelBlurGeneration
+        mainHandler.removeCallbacks(sidePanelBlurEnd)
+        overlay.animate().cancel()
+        val radius = dp(24).toFloat()
+        val contents = dp(32).toFloat()
+        sidePanelContents?.setRenderEffect(
+            RenderEffect.createBlurEffect(contents, contents, Shader.TileMode.DECAL))
+        val content = contentRect(view.width, view.height)
+        val width = (content.width / 4).toInt().coerceAtLeast(1)
+        val height = (content.height / 4).toInt().coerceAtLeast(1)
+        val show = { picture: Bitmap ->
+            if (generation == sidePanelBlurGeneration && sidePanelBlurActive) {
+                overlay.setImageBitmap(picture)
+                overlay.layoutParams = FrameLayout.LayoutParams(Math.round(content.width), Math.round(content.height),
+                    Gravity.TOP or Gravity.LEFT).apply {
+                    leftMargin = Math.round(content.left)
+                    topMargin = Math.round(content.top)
+                }
+                overlay.setRenderEffect(RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP))
+                overlay.alpha = 1f
+                overlay.visibility = View.VISIBLE
+            }
+        }
+        val surface = fallbackVideoView
+        if (surface != null) {
+            val picture = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            runCatching {
+                PixelCopy.request(surface, picture, { result ->
+                    if (result == PixelCopy.SUCCESS) show(picture)
+                }, mainHandler)
+            }
+        } else {
+            (view as? TextureView)?.getBitmap(width, height)?.let(show)
+        }
+    }
+
+    // Lifts the blur when the finger lifts; CarPlay then blurs its own picture while it changes size.
+    private fun endSidePanelBlur() {
+        if (!sidePanelBlurring) return
+        sidePanelBlurring = false
+        mainHandler.removeCallbacks(sidePanelBlurEnd)
+        mainHandler.post(sidePanelBlurEnd)
     }
 
     private fun showSidePanel(show: Boolean) {
@@ -1635,7 +2079,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val view = videoView ?: return
         val split = isMultiWindowActive()
         val portrait = if (split) screenPortrait() else view.height > view.width
-        val target = if (show) areas.sidePanel(portrait) else areas.indexFor(view.width, view.height, split, portrait)
+        val target = if (show) areas.sidePanel(portrait, SidePanelSettings.sixths(this)) else areas.indexFor(view.width, view.height, split, portrait)
         val sent = target != null && controller?.showViewArea(target) == true
         appendLog("Side panel ${if (show) "shown" else "hidden"}: view area $target sent=$sent")
         if (!sent || target == null) return
@@ -1643,7 +2087,9 @@ class CarPlayHostActivity : ComponentActivity() {
         sidePanelShown = show
         sidePanel?.visibility = if (show) View.VISIBLE else View.GONE
         mainHandler.removeCallbacks(sidePanelTick)
+        if (show) startSidePanelTyres() else com.shilapi.xcertplay.hud.BydTyreStatus.stop()
         if (show) sidePanelTick.run()
+        if (show) showSidePanelGripHint()
         updateVideoLayout(view.width, view.height)
     }
 
@@ -1651,6 +2097,39 @@ class CarPlayHostActivity : ComponentActivity() {
         sidePanelShown = false
         sidePanel?.visibility = View.GONE
         mainHandler.removeCallbacks(sidePanelTick)
+        com.shilapi.xcertplay.hud.BydTyreStatus.stop()
+        videoView?.let { placeSidePanelTab(it.width, it.height) }
+    }
+
+    // Tyres through the head unit's adb shell; the reader stops by itself where there is no BYD autoservice.
+    private fun startSidePanelTyres() {
+        com.shilapi.xcertplay.hud.BydTyreStatus.start(this)
+    }
+
+    // Stops the hints and the blur of a host that goes away.
+    private fun releaseSidePanelEffects() {
+        mainHandler.removeCallbacks(sidePanelGripFade)
+        mainHandler.removeCallbacks(sidePanelTabFade)
+        mainHandler.removeCallbacks(sidePanelBlurEnd)
+        sidePanelGripAnimator?.cancel()
+        sidePanelBlurring = false
+        sidePanelBlurActive = false
+        sidePanelBlur?.animate()?.cancel()
+        sidePanelBlur?.setImageDrawable(null)
+    }
+
+    // The screen edge the side panel would take now (where its tab is), or null when it is shown or unavailable.
+    private fun sidePanelOpenEdge(): Int? {
+        if (sidePanelShown) return null
+        val areas = sessionDisplay?.viewAreas ?: return null
+        val view = videoView ?: return null
+        val portrait = if (isMultiWindowActive()) screenPortrait() else view.height > view.width
+        val index = areas.sidePanel(portrait, SidePanelSettings.sixths(this)) ?: return null
+        return when {
+            portrait -> Gravity.BOTTOM
+            areas.areas[index].originX > 0 -> Gravity.LEFT
+            else -> Gravity.RIGHT
+        }
     }
 
     // The battery shows only where DiPlay already reads it for the iPhone.
@@ -1659,11 +2138,22 @@ class CarPlayHostActivity : ComponentActivity() {
             com.shilapi.xcertplay.hud.BydNavigationOutputs.batteryStatus(applicationContext).snapshot()
         } else null
         sidePanelBattery?.text = battery?.let { "🔋 ${Math.round(it.batteryPercent)} %  ·  ${it.rangeKm} km" }.orEmpty()
+        val tyres = com.shilapi.xcertplay.hud.BydTyreStatus.latest()
+        sidePanelTyres?.visibility = if (tyres == null) View.GONE else View.VISIBLE
+        if (tyres != null) sidePanelTyreTexts.forEachIndexed { tyre, text ->
+            val pressure = tyres.pressureKpa.getOrNull(tyre)?.let { "$it kPa" } ?: "—"
+            val temperature = tyres.temperatureC.getOrNull(tyre)?.let { "\n$it °C" }.orEmpty()
+            text.text = pressure + temperature
+        }
     }
 
     private val overlayPalette: DiPlayPalette get() = DiPlayPalette.of(appNight)
     private val settingsOverlayTheme: SettingsTheme get() = SettingsTheme.overlay(overlayPalette)
     private val MENU_BACKGROUND: Int get() = overlayPalette.overlayBackground
+    // The side panel card follows the app theme: black when dark, white (for now) when light.
+    private val SIDE_PANEL_CARD: Int get() = if (appNight) Color.BLACK else Color.WHITE
+    private val SIDE_PANEL_PRIMARY: Int get() = MENU_PRIMARY
+    private val SIDE_PANEL_SECONDARY: Int get() = MENU_SECONDARY
     private val MENU_PRIMARY: Int get() = overlayPalette.overlayPrimaryText
     private val MENU_SECONDARY: Int get() = overlayPalette.overlaySecondaryText
     private val MENU_ACCENT: Int get() = overlayPalette.overlayAccent
@@ -1705,13 +2195,12 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         sidePanel?.let { panel ->
-            panel.setBackgroundColor(MENU_BACKGROUND)
-            (panel.getChildAt(0) as? TextView)?.setTextColor(MENU_PRIMARY)
-            sidePanelBattery?.setTextColor(MENU_SECONDARY)
-            (panel.getChildAt(2) as? Button)?.apply {
-                setTextColor(MENU_BUTTON_TEXT)
-                backgroundTintList = ColorStateList.valueOf(MENU_ACCENT)
-            }
+            panel.background = sidePanelBackground()
+            val contents = sidePanelContents ?: return@let
+            (contents.getChildAt(0) as? TextView)?.setTextColor(SIDE_PANEL_PRIMARY)
+            sidePanelBattery?.setTextColor(SIDE_PANEL_SECONDARY)
+            sidePanelTyreTexts.forEach { it.setTextColor(SIDE_PANEL_PRIMARY) }
+            (sidePanelTyres?.getChildAt(0) as? TextView)?.setTextColor(SIDE_PANEL_SECONDARY)
         }
         (picturePanel as? CarPlayPicturePanel)?.applyPalette(overlayPalette)
     }
@@ -4096,7 +4585,9 @@ class CarPlayHostActivity : ComponentActivity() {
             // unused strip instead of leaving a blank third when a new host adopts the session.
             sidePanelShown = true
             sidePanel?.visibility = View.VISIBLE
+            startSidePanelTyres()
             sidePanelTick.run()
+            showSidePanelGripHint()
         }
         MapMirrors.reapply()
         CarPlayBackgroundSession.store(snapshot.controller, snapshot.sink, snapshot.width, snapshot.height,
@@ -4492,6 +4983,7 @@ class CarPlayHostActivity : ComponentActivity() {
             })
         }
         if (sidePanelShown) placeSidePanel(viewWidth, viewHeight)
+        placeSidePanelTab(viewWidth, viewHeight)
     }
 
     private fun recordDetectedMaximum(size: DisplaySize) {
@@ -4754,6 +5246,7 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun shutdown(terminateProcess: Boolean, reason: String, completion: () -> Unit = {}) {
         if (!shuttingDown.compareAndSet(false, true)) { completion(); return }
         resetSidePanel()
+        releaseSidePanelEffects()
         startupRetryBudget.disconnected()
         restartGeneration += 1
         mainHandler.removeCallbacks(applyDisplaySize)
@@ -5112,6 +5605,10 @@ class CarPlayHostActivity : ComponentActivity() {
         const val CLUSTER_SMALL_WINDOW_ON = 1
         const val CLUSTER_SMALL_WINDOW_AUTO = 2
         const val SIDE_PANEL_REFRESH_MILLIS = 5_000L
+        /** CarPlay's share past which letting go of the panel edge closes the panel: halfway from two thirds to all. */
+        const val SIDE_PANEL_CLOSE_SHARE = 5f / 6f
+        /** How long the side panel tab's pill (and the panel's grip) shows when it appears or is tapped. */
+        const val SIDE_PANEL_TAB_HINT_MILLIS = 10_000L
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
         const val SCREEN_TYPE_ALT = 111
