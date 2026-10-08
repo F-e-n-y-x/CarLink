@@ -749,4 +749,12 @@
     <string name="setup_badge_adb">需要网络 ADB</string>
     <string name="setup_done_title">准备就绪</string>
     <string name="setup_done_description">现在连接你的 iPhone。之后可在设置中再次打开本向导。</string>
+    <string name="cluster_small_window_card_theme">小屏转向卡主题</string>
+    <string name="cluster_small_window_card_theme_follow">跟随转向卡主题</string>
+    <string name="cluster_small_window_card_size">小屏转向卡 · 大小</string>
+    <string name="cluster_small_window_card_horizontal">小屏转向卡 · 左右</string>
+    <string name="cluster_small_window_card_vertical">小屏转向卡 · 上下</string>
+    <string name="cluster_small_window_card_opacity">小屏转向卡 · 透明度</string>
+    <string name="turn_card_theme_day">始终白天</string>
+    <string name="turn_card_theme_night">始终夜间</string>
 </resources>

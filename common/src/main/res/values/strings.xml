@@ -786,4 +786,12 @@
     <string name="setup_badge_adb">Needs ADB over network</string>
     <string name="setup_done_title">You’re ready</string>
     <string name="setup_done_description">Connect your iPhone now. You can open this guide again from Settings.</string>
+    <string name="cluster_small_window_card_theme">Small-window turn card theme</string>
+    <string name="cluster_small_window_card_theme_follow">Follow the turn card theme</string>
+    <string name="cluster_small_window_card_size">Small-window turn card · size</string>
+    <string name="cluster_small_window_card_horizontal">Small-window turn card · left/right</string>
+    <string name="cluster_small_window_card_vertical">Small-window turn card · up/down</string>
+    <string name="cluster_small_window_card_opacity">Small-window turn card · opacity</string>
+    <string name="turn_card_theme_day">Always day</string>
+    <string name="turn_card_theme_night">Always night</string>
 </resources>

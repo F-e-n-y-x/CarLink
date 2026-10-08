@@ -701,4 +701,12 @@
     <string name="setup_badge_adb">Потрібен ADB через мережу</string>
     <string name="setup_done_title">Усе готово</string>
     <string name="setup_done_description">Під’єднайте iPhone зараз. Цей майстер можна знову відкрити в налаштуваннях.</string>
+    <string name="cluster_small_window_card_theme">Тема картки в малому вікні</string>
+    <string name="cluster_small_window_card_theme_follow">Слідувати темі картки</string>
+    <string name="cluster_small_window_card_size">Картка в малому вікні · розмір</string>
+    <string name="cluster_small_window_card_horizontal">Картка в малому вікні · ліворуч / праворуч</string>
+    <string name="cluster_small_window_card_vertical">Картка в малому вікні · вгору / вниз</string>
+    <string name="cluster_small_window_card_opacity">Картка маневру в міні-вікні · прозорість</string>
+    <string name="turn_card_theme_day">Завжди день</string>
+    <string name="turn_card_theme_night">Завжди ніч</string>
 </resources>

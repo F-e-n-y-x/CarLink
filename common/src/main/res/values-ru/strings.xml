@@ -689,4 +689,12 @@
     <string name="setup_badge_adb">Требуется ADB по сети</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_done_description">Подключите iPhone сейчас. Этот мастер можно снова открыть в настройках.</string>
+    <string name="cluster_small_window_card_theme">Тема карточки в малом окне</string>
+    <string name="cluster_small_window_card_theme_follow">Следовать теме карточки</string>
+    <string name="cluster_small_window_card_size">Карточка в малом окне · размер</string>
+    <string name="cluster_small_window_card_horizontal">Карточка в малом окне · влево / вправо</string>
+    <string name="cluster_small_window_card_vertical">Карточка в малом окне · вверх / вниз</string>
+    <string name="cluster_small_window_card_opacity">Карточка манёвра в мини-окне · прозрачность</string>
+    <string name="turn_card_theme_day">Всегда день</string>
+    <string name="turn_card_theme_night">Всегда ночь</string>
 </resources>

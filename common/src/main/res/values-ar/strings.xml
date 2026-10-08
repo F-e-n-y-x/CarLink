@@ -689,4 +689,12 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="cluster_small_window_card_theme">ثيم بطاقة النافذة الصغيرة</string>
+    <string name="cluster_small_window_card_theme_follow">يتبع ثيم بطاقة الانعطاف</string>
+    <string name="cluster_small_window_card_size">بطاقة النافذة الصغيرة · الحجم</string>
+    <string name="cluster_small_window_card_horizontal">بطاقة النافذة الصغيرة · يسار / يمين</string>
+    <string name="cluster_small_window_card_vertical">بطاقة النافذة الصغيرة · أعلى / أسفل</string>
+    <string name="cluster_small_window_card_opacity">بطاقة المنعطف في النافذة الصغيرة · الشفافية</string>
+    <string name="turn_card_theme_day">نهاري دائمًا</string>
+    <string name="turn_card_theme_night">ليلي دائمًا</string>
 </resources>

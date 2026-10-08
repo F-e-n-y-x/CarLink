@@ -689,4 +689,12 @@
     <string name="setup_badge_adb">Requiere ADB por red</string>
     <string name="setup_done_title">Todo listo</string>
     <string name="setup_done_description">Conecta tu iPhone ahora. Puedes volver a abrir esta guía desde Ajustes.</string>
+    <string name="cluster_small_window_card_theme">Tema de la tarjeta en ventana pequeña</string>
+    <string name="cluster_small_window_card_theme_follow">Seguir el tema de la tarjeta</string>
+    <string name="cluster_small_window_card_size">Tarjeta en ventana pequeña · tamaño</string>
+    <string name="cluster_small_window_card_horizontal">Tarjeta en ventana pequeña · izquierda / derecha</string>
+    <string name="cluster_small_window_card_vertical">Tarjeta en ventana pequeña · arriba / abajo</string>
+    <string name="cluster_small_window_card_opacity">Tarjeta de giro en miniatura · opacidad</string>
+    <string name="turn_card_theme_day">Siempre día</string>
+    <string name="turn_card_theme_night">Siempre noche</string>
 </resources>
