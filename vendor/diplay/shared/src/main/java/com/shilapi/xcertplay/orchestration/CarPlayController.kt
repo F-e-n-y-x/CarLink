@@ -2001,7 +2001,10 @@ class CarPlayController(
             onStatus(CarPlayStatus.ConnectingControl)
             val carKitClient = LockdownCarKitClient(mux)
             // Temporary lab capture, limited to accessory/authentication messages and two minutes.
-            try {
+            // CarLink: off unless asked for. It streams the iPhone's whole system log over the
+            // same USBMUX link as CarPlay for two minutes on every wired start, competing with the
+            // control stream (user's tablet, 2026-10-09: wired starts slow and stuck at "Picture").
+            if (PhoneSyslogCapture.enabled) try {
                 val relay = carKitClient.openService(pairRecord, config.label, "com.apple.syslog_relay")
                 Thread({
                     try {
