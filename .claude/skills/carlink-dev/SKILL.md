@@ -40,8 +40,14 @@ non-trivial change. The user's decisions recorded there override older documents
 - **Detection is CarLink's job.** USB: Apple VID 0x05AC → CarPlay; Android interfaces → Android
   Auto; peripherals ignored (`PhoneClassifier`). Don't rely on Android's USB attach dispatch alone:
   iPhones also expose PTP, so Photos/MTP compete for it; CarLink watches USB itself.
-- **Wireless prefers the shared Wi-Fi.** When phone and car are on the same Wi-Fi, use it; fall
-  back to the car hotspot / Wi-Fi Direct only when needed.
+- **Wireless defaults only to paths proven on a real device.** Wi-Fi Direct is the engines' own
+  most reliable path (DiAuto/Open Headunit wiki: "Best for stability. No hotspot required";
+  DiPlay's Existing Wi-Fi is validated on one car only and needs the router to pass Bonjour).
+  Same Wi-Fi is an option, not something to assume. Any change to path choice is verified with the
+  `carlink-device` skill on the real tablet before it is called done.
+- **Generic, not BYD.** Both engines were written for BYD DiLink head units; the user's car is not
+  a BYD. Everything BYD-specific (HUD output, DiLink hooks, cluster, MAC quirks) stays off unless
+  the driver picks that car brand. See `docs/dissection/` for the per-engine maps.
 
 ## Build and test loop
 
