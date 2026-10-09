@@ -3,6 +3,10 @@ package com.carlink.app.gallery
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
 import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkProblem
 import com.carlink.app.core.LinkStage
@@ -19,6 +23,7 @@ import com.carlink.app.ui.diagnostics.previewChecks
 import com.carlink.app.ui.diagnostics.previewLink
 import com.carlink.app.ui.diagnostics.previewLog
 import com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING
+import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.home.HomeContent
 import com.carlink.app.ui.home.NetworkSheet
 import com.carlink.app.ui.home.PhonesSheet
@@ -85,7 +90,38 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     // Wireless, and the iPhone has not answered for 10 s: calm caution, held at the first step.
     home("connecting-not-answering") {
         HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 1, 4,
-            DETAIL_PHONE_NOT_ANSWERING)), actions)
+            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING))),
+            actions)
+    },
+    // Why it waits (SessionState.Active.notice): a fresh Wi-Fi Direct link after a slow join.
+    home("connecting-notice-wifi") {
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 3, 4,
+            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
+                com.carlink.app.core.LinkRecovery.FRESH_WIFI_DIRECT))), actions)
+    },
+    // A path-related failure moved the attempt to the car hotspot.
+    home("connecting-notice-next-path") {
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 2, 4,
+            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
+                com.carlink.app.core.LinkRecovery.TRY_CAR_HOTSPOT)), network = hotspot), actions)
+    },
+    // Android Auto retrying after the phone did not answer over Bluetooth.
+    home("connecting-notice-retrying") {
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.ANDROID_AUTO, Transport.WIRELESS, pixel.name, 2, 4,
+            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RETRYING,
+                reason = LinkProblem.BLUETOOTH)), phones = listOf(pixel.copy(connected = true))), actions)
+    },
+    // A USB phone that has not answered for 10 s (locked, or waiting for its prompt).
+    home("connecting-not-answering-usb") {
+        HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 1, 4,
+            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING)),
+            phones = listOf(pixel)), actions)
+    },
+    // A known phone's record under the headline.
+    home("ready-iphone-usual") {
+        HomeContent(ui(phones = listOf(iphone, pixel), network = NetworkPreview(com.carlink.app.settings.WirelessPath.WIFI_DIRECT,
+            ssid = null)).copy(usual = com.carlink.app.ui.home.PhoneUsual(5_200,
+            com.carlink.app.settings.WirelessPath.WIFI_DIRECT)), actions)
     },
     home("connected-carplay") {
         val since = remember { SystemClock.elapsedRealtime() - 754_000 }
@@ -140,6 +176,29 @@ private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("diagnostics", "connecting") {
         val started = remember { SystemClock.elapsedRealtime() - 12_000 }
         DiagnosticsContent(DiagnosticsUi(previewLink, null, started, previewChecks, previewLog()), GalleryDiagnosticsActions)
+    },
+    // Diagnostics › Phones: two phones' records (SessionManager.health) and a live notice in the session card.
+    GalleryEntry("diagnostics", "phones-health") {
+        val started = remember { SystemClock.elapsedRealtime() - 31_000 }
+        val link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, "Sara’s iPhone", 3, 4,
+            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
+                com.carlink.app.core.LinkRecovery.FRESH_WIFI_DIRECT))
+        DiagnosticsContent(DiagnosticsUi(link, null, started, previewChecks, previewLog(),
+            com.carlink.app.ui.diagnostics.previewHealth()), GalleryDiagnosticsActions)
+    },
+    // The Phones card alone (in the full screen it sits below the fold on most windows).
+    GalleryEntry("diagnostics", "phones-card") {
+        com.carlink.app.ui.premium.PremiumScreen("Diagnostics", onBack = {}) { margin ->
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = margin)
+                .widthIn(max = 900.dp)) {
+                com.carlink.app.ui.diagnostics.PhonesHealthCard(com.carlink.app.ui.diagnostics.previewHealth())
+            }
+        }
+    },
+    GalleryEntry("diagnostics", "phones-empty") {
+        DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog(), emptyList()), GalleryDiagnosticsActions)
     },
 )
 

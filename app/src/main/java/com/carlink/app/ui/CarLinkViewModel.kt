@@ -129,6 +129,14 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     }.stateIn(viewModelScope, SharingStarted.Eagerly,
         HomeState(LinkState.Idle, emptyList(), BluetoothAvailability.READY, null, null))
 
+    /** Each known phone's connection health (Diagnostics › Phones). */
+    val health: StateFlow<List<com.carlink.app.connection.PhoneHealth>> = session.health
+
+    /** How Home's default phone usually connects, from its record; null before it has one. */
+    val usual: StateFlow<com.carlink.app.ui.home.PhoneUsual?> = combine(session.health, home) { health, home ->
+        com.carlink.app.ui.home.usualFor(home.defaultPhone, health)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     private val _display = MutableStateFlow(readDisplay())
     val display: StateFlow<DisplayPrefs> = _display.asStateFlow()
 

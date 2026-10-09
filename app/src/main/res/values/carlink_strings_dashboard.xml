@@ -107,7 +107,9 @@
     <!-- A wireless attempt the phone has not answered for 10 s (connection detail "phone_not_answering"). -->
     <string name="carlink_home_eyebrow_not_answering">No answer</string>
     <string name="carlink_home_not_answering_title">Your phone isn’t answering</string>
-    <string name="carlink_home_not_answering_body_iphone">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen.</string>
+    <string name="carlink_home_not_answering_title_iphone">iPhone not reachable over Bluetooth</string>
+    <string name="carlink_home_not_answering_body_iphone">Unlock %1$s and check that its Bluetooth is on, or plug it in with a cable.</string>
+    <string name="carlink_home_not_answering_body_usb">Unlock %1$s and accept the prompt on its screen. If nothing happens, unplug it and plug it in again.</string>
     <string name="carlink_home_not_answering_body_android">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen. Android Auto starts by itself once it connects.</string>
     <!-- Connection v2: pre-flight problems and precise failures. -->
     <string name="carlink_home_error_bt_off_title">Bluetooth is off</string>
@@ -147,4 +149,35 @@
     <string name="carlink_switch_how">%1$s · %2$s</string>
     <string name="carlink_switch_via_usb">Plugged in by USB</string>
     <string name="carlink_switch_via_wireless">Available wirelessly</string>
+    <!--
+      Why an attempt is waiting (SessionState.Active.notice as core.LinkNotice), in the driver's
+      words. %1$s is "iPhone" or "phone" (carlink_notice_phone_*).
+    -->
+    <string name="carlink_notice_phone_iphone">iPhone</string>
+    <string name="carlink_notice_phone_other">phone</string>
+    <string name="carlink_notice_slow_reaching">Taking longer than usual to reach the %1$s…</string>
+    <string name="carlink_notice_slow_handshake">Taking longer than usual: the %1$s is still answering…</string>
+    <string name="carlink_notice_slow_linking">Taking longer than usual: joining Wi-Fi…</string>
+    <string name="carlink_notice_slow_picture">Taking longer than usual: starting the picture…</string>
+    <string name="carlink_notice_wake">Taking longer than usual: calling the %1$s again…</string>
+    <string name="carlink_notice_restart_usb">Taking longer than usual: restarting the USB link…</string>
+    <string name="carlink_notice_retry">Taking longer than usual: trying again…</string>
+    <string name="carlink_notice_fresh_wifi">Taking longer than usual: reconnecting Wi-Fi…</string>
+    <string name="carlink_notice_try_direct">Trying Wi-Fi Direct instead</string>
+    <string name="carlink_notice_try_hotspot">Trying the car hotspot instead</string>
+    <string name="carlink_notice_try_same_wifi">Trying your Wi-Fi instead</string>
+    <string name="carlink_notice_try_other">Trying another way to connect</string>
+    <string name="carlink_notice_replug">Unplug the %1$s and plug it in again</string>
+    <string name="carlink_notice_not_answering">The %1$s isn’t answering yet</string>
+    <string name="carlink_notice_retry_bluetooth">Trying again: the %1$s didn’t answer over Bluetooth</string>
+    <string name="carlink_notice_retry_refused">Trying again: the %1$s didn’t accept the car’s Wi-Fi</string>
+    <string name="carlink_notice_retry_unreached">Trying again: the %1$s didn’t reach the car’s Wi-Fi</string>
+    <string name="carlink_notice_retry_dropped">Trying again: the connection dropped</string>
+    <string name="carlink_notice_retry_usb">Trying again: the USB link restarted</string>
+    <string name="carlink_notice_retry_plain">Trying again…</string>
+    <!-- A known phone's record under Home's headline: "Usually connects in 5 s by Wi-Fi Direct". -->
+    <string name="carlink_home_usual">Usually connects in %1$s %2$s</string>
+    <string name="carlink_home_usual_by_cable">by cable</string>
+    <string name="carlink_home_usual_by_path">by %1$s</string>
+    <string name="carlink_seconds_short">%1$s s</string>
 </resources>

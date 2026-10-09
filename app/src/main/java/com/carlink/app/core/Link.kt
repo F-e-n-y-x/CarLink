@@ -90,10 +90,49 @@ data class LinkState(
     val stepCount: Int = 0,
     val detail: String? = null,
     val problem: LinkProblem? = null,
+    /** Why the attempt is taking long and what is being done about it; null while on time. */
+    val notice: LinkNotice? = null,
 ) {
     val isActive: Boolean get() = stage != LinkStage.IDLE && stage != LinkStage.FAILED
 
     companion object {
         val Idle = LinkState()
     }
+}
+
+/**
+ * Why an attempt waits, in terms the screens word for the driver (never an engine string):
+ * the session layer's notice, or a retry it is running.
+ */
+data class LinkNotice(
+    val kind: LinkNoticeKind,
+    /** What is being done about it, when something is. */
+    val recovery: LinkRecovery? = null,
+    /** For [LinkNoticeKind.RETRYING]: what went wrong, when known. */
+    val reason: LinkProblem? = null,
+)
+
+enum class LinkNoticeKind {
+    /** The phone has been silent for a while (wireless or USB). */
+    NOT_ANSWERING,
+    /** A later step is slower than this phone usually is. */
+    SLOW,
+    /** A step passed its deadline and a recovery ([LinkNotice.recovery]) runs. */
+    RECOVERING,
+    /** The engine is trying again after [LinkNotice.reason]. */
+    RETRYING,
+}
+
+/** What CarLink does about a slow step, as the driver is told it. */
+enum class LinkRecovery {
+    WAKE_PHONE,
+    RESTART_USB,
+    RETRY,
+    FRESH_WIFI_DIRECT,
+    TRY_WIFI_DIRECT,
+    TRY_CAR_HOTSPOT,
+    TRY_SAME_WIFI,
+    /** Some other connection (the next path is not known). */
+    TRY_OTHER_PATH,
+    REPLUG,
 }

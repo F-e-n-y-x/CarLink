@@ -224,4 +224,36 @@
     <string name="carlink_about_credit_bydmate">BYD HUD maneuver icons. Copyright AndyShaman.</string>
     <string name="carlink_about_credit_symbols_name" translatable="false">Material Symbols</string>
     <string name="carlink_about_credit_symbols">Icons by Google, Apache License 2.0.</string>
+    <!-- Diagnostics › Phones: each known phone's connection record (SessionManager.health). -->
+    <string name="carlink_diag_phones">Phones</string>
+    <string name="carlink_diag_phones_empty_title">No connections yet</string>
+    <string name="carlink_diag_phones_empty_body">Each phone’s record appears here after its first connection: how often it connects, how fast, and what went wrong.</string>
+    <string name="carlink_diag_phone_attempts">%1$s · %2$d of %3$d connected</string>
+    <string name="carlink_diag_phone_rate">%1$d%%</string>
+    <string name="carlink_diag_phone_rate_none">—</string>
+    <string name="carlink_diag_phone_rate_description">Connects %1$d%% of the time</string>
+    <string name="carlink_diag_phone_typical">Usual time</string>
+    <string name="carlink_diag_phone_best">Works best by</string>
+    <string name="carlink_diag_phone_not_yet">Not yet</string>
+    <string name="carlink_diag_phone_cable">Cable</string>
+    <string name="carlink_diag_phone_problems">Recent problems</string>
+    <string name="carlink_diag_phone_no_problems">No problems lately</string>
+    <string name="carlink_diag_phone_problem_on">%1$s · %2$s</string>
+    <string name="carlink_diag_time_yesterday">Yesterday %1$s</string>
+    <string name="carlink_diag_problem_no_answer">Phone didn’t answer</string>
+    <string name="carlink_diag_problem_bluetooth">Bluetooth link failed</string>
+    <string name="carlink_diag_problem_refused_wifi">Phone refused the car’s Wi-Fi</string>
+    <string name="carlink_diag_problem_unreached">Phone didn’t reach the car’s Wi-Fi</string>
+    <string name="carlink_diag_problem_dropped">Connection dropped</string>
+    <string name="carlink_diag_problem_wifi_setup">Car Wi-Fi link didn’t start</string>
+    <string name="carlink_diag_problem_usb">USB link failed</string>
+    <string name="carlink_diag_problem_blocked">A permission or switch was missing</string>
+    <string name="carlink_diag_problem_auth">CarPlay authentication failed</string>
+    <string name="carlink_diag_problem_engine">The engine stopped</string>
+    <string name="carlink_diag_problem_slow_reaching">Slow to answer</string>
+    <string name="carlink_diag_problem_slow_handshake">Slow handshake</string>
+    <string name="carlink_diag_problem_slow_linking">Slow to join Wi-Fi</string>
+    <string name="carlink_diag_problem_slow_picture">Slow to start the picture</string>
+    <string name="carlink_diag_problem_slow_total">Took too long overall</string>
+    <string name="carlink_diag_problem_other">Connection problem</string>
 </resources>

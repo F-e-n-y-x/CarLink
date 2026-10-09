@@ -124,6 +124,8 @@ internal data class DiagnosticsUi(
     val checks: List<CheckResult>?,
     /** Newest first; null while the engine logs are read. */
     val log: List<LogLine>?,
+    /** Each known phone's connection record, most recently used first. */
+    val health: List<com.carlink.app.connection.PhoneHealth> = emptyList(),
 )
 
 internal interface DiagnosticsActions {
@@ -150,6 +152,7 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
     val home by vm.home.collectAsStateWithLifecycle()
     val connection by vm.connection.collectAsStateWithLifecycle()
     val attemptStartedAt by vm.attemptStartedAt.collectAsStateWithLifecycle()
+    val health by vm.health.collectAsStateWithLifecycle()
 
     var resumes by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { resumes++ }
@@ -202,7 +205,7 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
             override fun back() = onBack()
         }
     }
-    DiagnosticsContent(DiagnosticsUi(home.link, home.connectedSince, attemptStartedAt, checks, log), actions)
+    DiagnosticsContent(DiagnosticsUi(home.link, home.connectedSince, attemptStartedAt, checks, log, health), actions)
 }
 
 /**
@@ -249,6 +252,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                 ) {
                     Summary(ui.checks)
                     SessionCard(ui)
+                    PhonesHealthCard(ui.health)
                     ChecksCard(ui.checks, actions)
                 }
                 Spacer(Modifier.width(dimens.gutter * 1.5f))
@@ -265,9 +269,9 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                 ) {
                     Summary(ui.checks)
                     if (compact) {
-                        ChecksCard(ui.checks, actions); SessionCard(ui)
+                        ChecksCard(ui.checks, actions); SessionCard(ui); PhonesHealthCard(ui.health)
                     } else {
-                        SessionCard(ui); ChecksCard(ui.checks, actions)
+                        SessionCard(ui); PhonesHealthCard(ui.health); ChecksCard(ui.checks, actions)
                     }
                     LogPanel(ui.log, filter, { filter = it }, actions::shareLog, Modifier.fillMaxWidth().height(logHeight))
                 }
@@ -387,7 +391,9 @@ private fun ActiveSession(ui: DiagnosticsUi) {
         StatTile(tiles[i].label, tiles[i].value, m)
     }
 
-    val detail = link.detail?.takeIf { it.isNotBlank() }
+    // The driver's wording of why it waits; a failure's own detail; never the internal "phone_not_answering" marker.
+    val detail = com.carlink.app.ui.home.noticeText(link)
+        ?: link.detail?.takeIf { it.isNotBlank() && it != com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING }
     if (detail != null) {
         val failed = link.stage == LinkStage.FAILED
         Spacer(Modifier.height(CarLinkTokens.dimens.targetGap))
@@ -398,14 +404,14 @@ private fun ActiveSession(ui: DiagnosticsUi) {
 
 /** A value on a lighter glass tile: label above, value in tabular figures. */
 @Composable
-private fun StatTile(label: String, value: String, modifier: Modifier, tint: Color? = null, maxLines: Int = 2) {
+internal fun StatTile(label: String, value: String, modifier: Modifier, tint: Color? = null, maxLines: Int = 2, labelLines: Int = 1) {
     val scheme = MaterialTheme.colorScheme
     Column(
         modifier.clip(MaterialTheme.shapes.medium).background(scheme.onSurface.copy(alpha = 0.05f))
             .padding(horizontal = if (isCar) 24.dp else 16.dp, vertical = if (isCar) 18.dp else 12.dp)
             .semantics(mergeDescendants = true) {},
     ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = CarLinkTokens.colors.onSurfaceTertiary, maxLines = 1,
+        Text(label, style = MaterialTheme.typography.labelMedium, color = CarLinkTokens.colors.onSurfaceTertiary, maxLines = labelLines,
             overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Top) {

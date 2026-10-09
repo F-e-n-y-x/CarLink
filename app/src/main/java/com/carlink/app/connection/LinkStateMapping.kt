@@ -1,8 +1,12 @@
 package com.carlink.app.connection
 
+import com.carlink.app.core.LinkNotice
+import com.carlink.app.core.LinkNoticeKind
 import com.carlink.app.core.LinkProblem
+import com.carlink.app.core.LinkRecovery
 import com.carlink.app.core.LinkStage
 import com.carlink.app.core.LinkState
+import com.carlink.app.settings.WirelessPath
 
 /** [SessionState] in the terms the current screens use. */
 fun SessionState.toLinkState(): LinkState = when (this) {
@@ -11,27 +15,66 @@ fun SessionState.toLinkState(): LinkState = when (this) {
         problem = problems.first().toLinkProblem())
     is SessionState.Failed -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
         detail = detail, problem = reason.toLinkProblem())
-    is SessionState.Active -> when (val p = phase) {
-        SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS,
-            detail = notice?.message)
-        is SessionState.Phase.Progress -> {
-            val silent = p.stage == ProgressStage.PHONE_NOT_ANSWERING
-            LinkState(
-                if (silent || p.stage == ProgressStage.WAITING_FOR_PHONE) LinkStage.WAITING else LinkStage.CONNECTING,
-                request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
-                detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message)
-        }
-        // A retry stays on the step it happened in, with its reason (RELIABILITY_AUDIT K4): a dial
-        // the iPhone never answered is not "phone answered". A phone that stays silent across
-        // retries is still "not answering".
-        is SessionState.Phase.Retrying -> {
-            val silent = notice?.kind == Notice.Kind.PHONE_NOT_ANSWERING && stepOf(p.stage) == 1
-            LinkState(if (silent) LinkStage.WAITING else LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
-                stepOf(p.stage), STEPS,
-                detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message ?: p.detail?.let { "Retrying: $it" } ?: "retrying")
-        }
-        SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.transport, request.phoneName, STEPS, STEPS)
+    is SessionState.Active -> activeLinkState().copy(notice = linkNotice())
+}
+
+private fun SessionState.Active.activeLinkState(): LinkState = when (val p = phase) {
+    SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS,
+        detail = notice?.message)
+    is SessionState.Phase.Progress -> {
+        val silent = p.stage == ProgressStage.PHONE_NOT_ANSWERING
+        LinkState(
+            if (silent || p.stage == ProgressStage.WAITING_FOR_PHONE) LinkStage.WAITING else LinkStage.CONNECTING,
+            request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
+            detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message)
     }
+    // A retry stays on the step it happened in, with its reason (RELIABILITY_AUDIT K4): a dial
+    // the iPhone never answered is not "phone answered". A phone that stays silent across
+    // retries is still "not answering".
+    is SessionState.Phase.Retrying -> {
+        val silent = notice?.kind == Notice.Kind.PHONE_NOT_ANSWERING && stepOf(p.stage) == 1
+        LinkState(if (silent) LinkStage.WAITING else LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
+            stepOf(p.stage), STEPS,
+            detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message ?: p.detail?.let { "Retrying: $it" } ?: "retrying")
+    }
+    SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.transport, request.phoneName, STEPS, STEPS)
+}
+
+/**
+ * [SessionState.Active.notice] (or a retry under way) as [LinkNotice], which the screens word for
+ * the driver. A retry that moved to the next wireless path reads as "trying <path> instead".
+ */
+private fun SessionState.Active.linkNotice(): LinkNotice? {
+    if (phase == SessionState.Phase.Connected) return null
+    notice?.let { n ->
+        return when (n.kind) {
+            Notice.Kind.PHONE_NOT_ANSWERING -> LinkNotice(LinkNoticeKind.NOT_ANSWERING)
+            Notice.Kind.SLOW -> LinkNotice(LinkNoticeKind.SLOW)
+            Notice.Kind.RECOVERING -> LinkNotice(LinkNoticeKind.RECOVERING, n.action?.let { recoveryOf(it, path) })
+        }
+    }
+    val p = phase as? SessionState.Phase.Retrying ?: return null
+    val movedPath = p.reason.pathRelated && attempt > 1 && p.attempt == attempt && path != null
+    return if (movedPath) LinkNotice(LinkNoticeKind.RECOVERING, tryPath(path))
+    else LinkNotice(LinkNoticeKind.RETRYING, reason = p.reason.toLinkProblem())
+}
+
+private fun recoveryOf(action: RecoveryAction, path: WirelessPath?): LinkRecovery? = when (action) {
+    RecoveryAction.NUDGE -> LinkRecovery.WAKE_PHONE
+    RecoveryAction.RESWITCH_USB -> LinkRecovery.RESTART_USB
+    RecoveryAction.RETRY_STEP -> LinkRecovery.RETRY
+    RecoveryAction.RESET_WIFI_DIRECT -> LinkRecovery.FRESH_WIFI_DIRECT
+    // The state already holds the next path when the notice is shown.
+    RecoveryAction.NEXT_PATH -> tryPath(path)
+    RecoveryAction.ASK_REPLUG -> LinkRecovery.REPLUG
+    RecoveryAction.GIVE_UP -> null
+}
+
+private fun tryPath(path: WirelessPath?): LinkRecovery = when (path) {
+    WirelessPath.WIFI_DIRECT -> LinkRecovery.TRY_WIFI_DIRECT
+    WirelessPath.CAR_HOTSPOT -> LinkRecovery.TRY_CAR_HOTSPOT
+    WirelessPath.SAME_WIFI -> LinkRecovery.TRY_SAME_WIFI
+    null -> LinkRecovery.TRY_OTHER_PATH
 }
 
 /** [LinkState.detail] while a phone has not answered for a while; Home explains what to check. */

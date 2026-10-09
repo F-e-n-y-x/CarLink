@@ -116,7 +116,7 @@ internal enum class HomeMode {
 
 internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = when {
     home.link.stage == LinkStage.CONNECTED -> HomeMode.CONNECTED
-    home.link.stage == LinkStage.WAITING && home.link.detail == DETAIL_PHONE_NOT_ANSWERING -> HomeMode.NOT_ANSWERING
+    phoneSilent(home.link) -> HomeMode.NOT_ANSWERING
     home.link.stage == LinkStage.WAITING || home.link.stage == LinkStage.CONNECTING -> HomeMode.CONNECTING
     home.link.stage == LinkStage.FAILED -> HomeMode.FAILED
     permissionsNeeded -> HomeMode.PERMISSION
@@ -125,12 +125,19 @@ internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = w
     else -> HomeMode.READY_EMPTY
 }
 
+/** The phone has not answered for a while (wireless or USB), and the attempt is still on its first step. */
+private fun phoneSilent(link: LinkState): Boolean =
+    (link.stage == LinkStage.WAITING || link.stage == LinkStage.CONNECTING) && link.step <= 1 &&
+        (link.detail == DETAIL_PHONE_NOT_ANSWERING || link.notice?.kind == com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING)
+
 /** Everything Home needs, so previews and the screenshot gallery can render it without a ViewModel. */
 internal data class HomeUi(
     val home: HomeState,
     val connection: ConnectionPrefs,
     val network: NetworkPreview?,
     val permissionsNeeded: Boolean,
+    /** How the default phone usually connects (from its connection record), or null before it has one. */
+    val usual: PhoneUsual? = null,
 )
 
 internal interface HomeActions {
@@ -156,6 +163,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val connection by vm.connection.collectAsStateWithLifecycle()
     val network by vm.network.collectAsStateWithLifecycle()
     val permissionsNeeded by vm.permissionsNeeded.collectAsStateWithLifecycle()
+    val usual by vm.usual.collectAsStateWithLifecycle()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refreshPhones() }
     val actions = remember(vm) {
         object : HomeActions {
@@ -175,7 +183,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun navigate(route: Route) = navigate(route)
         }
     }
-    HomeContent(HomeUi(home, connection, network, permissionsNeeded), actions)
+    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -459,9 +467,15 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 !sessionPhoneConnected(ui) -> stringResource(R.string.carlink_home_connecting_connect_bluetooth, phoneName)
                 else -> stringResource(R.string.carlink_home_connecting_android_wireless, phoneName)
             }
-        HomeMode.NOT_ANSWERING -> stringResource(R.string.carlink_home_not_answering_title) to stringResource(
-            if (link.engine == Engine.ANDROID_AUTO) R.string.carlink_home_not_answering_body_android
-            else R.string.carlink_home_not_answering_body_iphone, phoneName)
+        HomeMode.NOT_ANSWERING -> {
+            val usb = link.transport == Transport.USB
+            stringResource(if (!usb && link.engine == Engine.CARPLAY) R.string.carlink_home_not_answering_title_iphone
+                else R.string.carlink_home_not_answering_title) to stringResource(when {
+                usb -> R.string.carlink_home_not_answering_body_usb
+                link.engine == Engine.ANDROID_AUTO -> R.string.carlink_home_not_answering_body_android
+                else -> R.string.carlink_home_not_answering_body_iphone
+            }, phoneName)
+        }
         HomeMode.CONNECTED -> {
             val elapsed by rememberElapsedMillis(ui.home.connectedSince)
             stringResource(R.string.carlink_home_connected_title, engine) to
@@ -501,6 +515,19 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     Text(body, Modifier.widthIn(max = if (car) 760.dp else 520.dp),
         style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
         color = scheme.onSurfaceVariant, textAlign = align)
+    // Why it is waiting (slower than usual, recovering, trying another path), in plain words.
+    val notice = if (mode == HomeMode.CONNECTING) noticeText(link) else null
+    if (notice != null) {
+        Spacer(Modifier.height(if (car) 18.dp else 12.dp))
+        NoticeLine(notice, noticeIcon(link))
+    }
+    // A known phone's record: "Usually connects in 5 s by Wi-Fi Direct".
+    // Only when it describes the path the next start takes, so it never contradicts the line above.
+    val usual = ui.usual.takeIf { mode == HomeMode.READY_PHONE && it?.path == ui.network?.path }
+    if (usual != null) {
+        Spacer(Modifier.height(if (car) 14.dp else 8.dp))
+        com.carlink.app.ui.premium.TransportInline(R.drawable.carlink_ic_schedule, usualText(usual), colors.onSurfaceTertiary)
+    }
 
     if ((mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING) && steps) {
         Spacer(Modifier.height(sectionGap))
