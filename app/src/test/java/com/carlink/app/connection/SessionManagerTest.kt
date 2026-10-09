@@ -226,4 +226,18 @@ class SessionManagerTest {
         assertEquals(SessionState.Idle, m.state.value)
         assertTrue(env.autoConnectPaused)
     }
+
+    @Test fun aSecondUsbPhoneAsksBeforeTakingOver() {
+        val m = manager()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
+        assertEquals("nothing replaced yet", 1, starts.size)
+        assertEquals("Pixel", m.pendingSwitch.value?.phoneName)
+        m.declineSwitch(); idle()
+        assertEquals(null, m.pendingSwitch.value)
+        assertEquals(1, starts.size)
+        m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
+        m.acceptSwitch(); idle()
+        assertEquals(listOf("CARPLAY start USB null", "ANDROID_AUTO start USB null"), starts)
+    }
 }

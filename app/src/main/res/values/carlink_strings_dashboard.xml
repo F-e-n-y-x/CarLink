@@ -134,4 +134,8 @@
     <string name="carlink_home_fix_allow">Allow</string>
     <string name="carlink_home_fix_open_settings">Open settings</string>
     <string name="carlink_home_fix_use_direct">Use Wi-Fi Direct</string>
+    <string name="carlink_switch_title">Switch to %1$s?</string>
+    <string name="carlink_switch_body">%1$s will stop.</string>
+    <string name="carlink_switch_confirm">Switch</string>
+    <string name="carlink_switch_keep">Not now</string>
 </resources>

@@ -40,7 +40,7 @@ class UsbRouterActivity : Activity() {
             Log.i(TAG, "USB attach already routed by the watcher")
             return
         }
-        val name = runCatching { device.productName }.getOrNull()
+        val name = com.carlink.app.detect.UsbPhoneNames.resolve(this, kind, device)
         // The attach intent carries the UsbDevice: DiPlay reads it for a wired iPhone, and the
         // Android Auto engine switches that exact phone to accessory mode.
         Connection.get(this).onUsbPhone(kind, name, intent)

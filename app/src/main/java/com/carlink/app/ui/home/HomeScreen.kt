@@ -176,6 +176,24 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
         }
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded), actions)
+    // A second USB phone: the floating overlay asks over any screen; without the overlay
+    // permission Home asks itself.
+    val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
+    pendingSwitch?.let { request ->
+        // TODO(overlay): once the floating prompt is merged, ask here only without the overlay permission.
+        SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
+    }
+}
+
+@Composable
+private fun SwitchPhoneDialog(phoneName: String, running: Engine?, onSwitch: () -> Unit, onKeep: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onKeep,
+        title = { Text(stringResource(R.string.carlink_switch_title, phoneName)) },
+        text = { Text(stringResource(R.string.carlink_switch_body, running?.let { engineName(it) } ?: "")) },
+        confirmButton = { IonButton(stringResource(R.string.carlink_switch_confirm), onSwitch) },
+        dismissButton = { GlassButton(stringResource(R.string.carlink_switch_keep), onKeep) },
+    )
 }
 
 @Composable

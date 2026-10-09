@@ -122,6 +122,13 @@ class SessionManager(
     private val _state = MutableStateFlow<SessionState>(SessionState.Idle)
     val state: StateFlow<SessionState> = _state.asStateFlow()
 
+    private val _pendingSwitch = MutableStateFlow<SessionRequest?>(null)
+    /**
+     * A second phone was plugged in while another session runs: the driver is asked
+     * "Switch to <phone>?" (user decision, 2026-10-09) instead of it taking over by itself.
+     */
+    val pendingSwitch: StateFlow<SessionRequest?> = _pendingSwitch.asStateFlow()
+
     /** Increases with every new session or stop; events from older sessions are ignored. */
     private var token = 0
     private var running: Engine? = null
@@ -166,11 +173,36 @@ class SessionManager(
         if (SystemClock.uptimeMillis() - driverStoppedAt < REENUMERATION_WINDOW_MILLIS) {
             return note("USB $engine attach right after the driver stopped; not restarting")
         }
-        start(SessionRequest(engine, Transport.USB, null, phoneName, attach))
+        val request = SessionRequest(engine, Transport.USB, null, phoneName, attach)
+        if (current is SessionState.Active) {
+            note("USB $engine phone while a ${current.request.engine} session runs; asking the driver")
+            _pendingSwitch.value = request
+            return
+        }
+        start(request)
+    }
+
+    /** The driver answered "Switch" to [pendingSwitch]. */
+    fun acceptSwitch() {
+        val request = _pendingSwitch.value ?: return
+        _pendingSwitch.value = null
+        environment.autoConnectPaused = false
+        start(request)
+    }
+
+    /** The driver answered "Not now": the running session stays; the phone waits until picked. */
+    fun declineSwitch() {
+        _pendingSwitch.value?.let { note("driver kept the ${_state.value.engine} session") }
+        _pendingSwitch.value = null
     }
 
     /** A USB device left. A USB session whose phone does not come back within the grace ends. */
     fun onUsbDetached() {
+        _pendingSwitch.value?.let { pending ->
+            main.postDelayed({
+                if (_pendingSwitch.value === pending && !environment.usbPhonePresent(pending.engine)) _pendingSwitch.value = null
+            }, USB_GONE_GRACE_MILLIS)
+        }
         val current = _state.value as? SessionState.Active ?: return
         if (current.request.transport != Transport.USB) return
         main.removeCallbacks(usbGoneCheck)

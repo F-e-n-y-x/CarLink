@@ -87,6 +87,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private val preferences = CarLinkPreferences(app)
     private val phonesRepository = PhonesRepository(app)
 
+    /** A second USB phone waiting for the driver's "Switch to …?" answer. */
+    val pendingSwitch = session.pendingSwitch
+    fun acceptSwitch() = session.acceptSwitch()
+    fun declineSwitch() = session.declineSwitch()
+
     val link: StateFlow<LinkState> = session.state.map { it.toLinkState() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState())
 
