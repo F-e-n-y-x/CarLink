@@ -108,19 +108,29 @@ object Connection {
         val wifi = WifiEnvironmentReader.read(app, stored)
         val settings = effectiveSettings(stored, wifi)
         val profile = vehicleProfile(app)
+        val picture = automaticPicture(app, settings)
         when (plan.engine) {
             Engine.CARPLAY -> {
                 val fineLocation = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 CarPlaySettingsPolicy.apply(app, CarPlaySettingsPolicy.map(settings, plan.path, profile, fineLocation,
-                    brandName = app.getString(R.string.app_name)))
+                    brandName = app.getString(R.string.app_name), picture = picture))
             }
             Engine.ANDROID_AUTO -> {
                 val values = AaSessionSettings.values(settings, plan.transport, plan.path, profile,
-                    carName = app.getString(R.string.app_name), panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi)
+                    carName = app.getString(R.string.app_name), panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
+                    picture = picture)
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
             }
         }
+    }
+
+    /** Automatic picture from this device's decoders ([PicturePolicy]); probed once, on the session worker. */
+    private fun automaticPicture(app: Context, settings: UnifiedSettings): PictureChoice {
+        if (settings.picture != com.carlink.app.settings.Picture.AUTOMATIC) return PicturePolicy.ENGINE_DEFAULTS
+        val choice = runCatching { PicturePolicy.choose(DeviceCapabilities.read(app)) }.getOrDefault(PicturePolicy.ENGINE_DEFAULTS)
+        com.carlink.app.diagnostics.EventLog.add("CarLink", "Automatic picture: ${choice.summary}")
+        return choice
     }
 
     /** Each engine's own checks, in [Problem] terms. */

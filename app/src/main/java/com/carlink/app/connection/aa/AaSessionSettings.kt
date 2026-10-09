@@ -2,6 +2,8 @@ package com.carlink.app.connection.aa
 
 import android.content.Context
 import android.os.Bundle
+import com.carlink.app.connection.PictureChoice
+import com.carlink.app.connection.PicturePolicy
 import com.carlink.app.core.Transport
 import com.carlink.app.engine.AndroidAutoSettings
 import com.carlink.app.settings.DayNight
@@ -41,6 +43,7 @@ object AaSessionSettings {
         carName: String,
         panelDensityDpi: Int,
         wifi: WifiEnvironment? = null,
+        picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
     ): AaSessionValues {
         var problem: String? = null
         val values = buildMap<String, Any> {
@@ -70,7 +73,7 @@ object AaSessionSettings {
             })
             // BYD's HUD/cluster outputs only on a BYD (DA§12.2).
             put("byd-navigation-enabled", profile == VehicleProfile.BYD_DILINK && settings.bydDirections)
-            putPicture(settings, panelDensityDpi)
+            putPicture(settings, panelDensityDpi, picture)
             put("night-mode", when (settings.dayNight) {
                 DayNight.AUTOMATIC -> 0 // sunrise/sunset
                 DayNight.DAY -> 1
@@ -127,9 +130,14 @@ object AaSessionSettings {
         return AaSessionValues(values, problem)
     }
 
-    private fun MutableMap<String, Any>.putPicture(settings: UnifiedSettings, panelDensityDpi: Int) {
+    private fun MutableMap<String, Any>.putPicture(settings: UnifiedSettings, panelDensityDpi: Int, picture: PictureChoice) {
         when (settings.picture) {
-            Picture.AUTOMATIC -> { put("resolutionId", 0); put("fps-limit", 60) }
+            // The device's decoder decides ([PicturePolicy]): DiAuto's own Automatic at 60 fps unless it needs less.
+            Picture.AUTOMATIC -> {
+                put("resolutionId", picture.aaResolutionId)
+                put("fps-limit", picture.aaFps)
+                picture.aaCodec?.let { put("video-codec", it) }
+            }
             Picture.BEST -> { put("resolutionId", 3); put("fps-limit", 60) }
             Picture.BALANCED -> { put("resolutionId", 2); put("fps-limit", 30) }
             Picture.LIGHT -> { put("resolutionId", 1); put("fps-limit", 30) }

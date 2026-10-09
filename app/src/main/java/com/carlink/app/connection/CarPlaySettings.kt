@@ -29,6 +29,8 @@ data class CarPlayEngineSettings(
     val wirelessMode: WirelessHotspotMode?,
     val displayScalePercent: Int?,
     val fps: Int?,
+    /** DiPlay's HEVC switch; false only when Automatic picture found no hardware HEVC decoder ([PicturePolicy]). */
+    val hevc: Boolean? = null,
     val widthPhysicalMm: Int?,
     /** DiPlay's night-mode key: system, day, night or schedule. */
     val nightModeKey: String,
@@ -73,10 +75,12 @@ object CarPlaySettingsPolicy {
         profile: VehicleProfile,
         fineLocationGranted: Boolean,
         brandName: String = "CarLink",
+        picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
     ): CarPlayEngineSettings {
-        // Picture and size: unchanged from v1's settings mapping (verified correct, F17).
+        // Picture and size: v1's settings mapping (verified correct, F17); Automatic follows the
+        // device's decoder ([PicturePolicy]: DiPlay's own 100 % / 30 fps unless the decoder needs less).
         val (scale, fps) = when (settings.picture) {
-            Picture.AUTOMATIC -> 100 to 30 // DiPlay's own defaults
+            Picture.AUTOMATIC -> picture.carPlayScalePercent to picture.carPlayFps
             Picture.BEST -> 100 to 60
             Picture.BALANCED -> 100 to 30
             Picture.LIGHT -> 75 to 30
@@ -98,6 +102,7 @@ object CarPlaySettingsPolicy {
             },
             displayScalePercent = scale,
             fps = fps,
+            hevc = if (settings.picture == Picture.AUTOMATIC) picture.carPlayHevc else null,
             widthPhysicalMm = widthMm,
             nightModeKey = when (settings.dayNight) {
                 DayNight.AUTOMATIC -> "system"
@@ -133,6 +138,7 @@ object CarPlaySettingsPolicy {
         values.wirelessMode?.let { AirPlayPersistence.saveWirelessHotspotMode(context, it) }
         values.displayScalePercent?.let { AirPlayPersistence.saveDisplayScalePercent(context, it) }
         values.fps?.let { AirPlayPersistence.saveFps(context, it) }
+        values.hevc?.let { AirPlayPersistence.saveHevcEnabled(context, it) }
         values.widthPhysicalMm?.let { AirPlayPersistence.saveWidthPhysicalMm(context, it) }
         AirPlayPersistence.saveCarPlayNightMode(context, CarPlayNightMode.fromKey(values.nightModeKey))
         runCatching {
