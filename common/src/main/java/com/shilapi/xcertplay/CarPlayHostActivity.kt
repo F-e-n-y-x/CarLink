@@ -784,23 +784,8 @@ class CarPlayHostActivity : ComponentActivity() {
             checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
         }
 
-    private fun requiredWirelessPermissions(): List<String> = when {
-        wirelessHotspotMode == WirelessHotspotMode.EXISTING_WIFI ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) listOf(Manifest.permission.BLUETOOTH_CONNECT) else emptyList()
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> listOf(
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.NEARBY_WIFI_DEVICES,
-        )
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> listOf(
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
-        else -> listOf(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
-    }
+    private fun requiredWirelessPermissions(): List<String> =
+        WirelessPermissions.required(wirelessHotspotMode, Build.VERSION.SDK_INT)
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
