@@ -18,7 +18,7 @@ import com.carlink.app.ui.diagnostics.DiagnosticsUi
 import com.carlink.app.ui.diagnostics.previewChecks
 import com.carlink.app.ui.diagnostics.previewLink
 import com.carlink.app.ui.diagnostics.previewLog
-import com.carlink.app.ui.home.DETAIL_PHONE_NOT_ANSWERING
+import com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING
 import com.carlink.app.ui.home.HomeContent
 import com.carlink.app.ui.home.NetworkSheet
 import com.carlink.app.ui.home.PhonesSheet

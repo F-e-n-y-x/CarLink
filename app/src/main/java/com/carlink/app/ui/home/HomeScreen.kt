@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.R
+import com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING
 import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkProblem
 import com.carlink.app.core.LinkStage
@@ -112,12 +113,6 @@ internal enum class HomeMode {
     NOT_ANSWERING,
     CONNECTED, FAILED,
 }
-
-/**
- * The session's detail while a wireless attempt has had no answer from the phone for 10 s.
- * Mirrors `com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING`; the UI only reads the value.
- */
-internal const val DETAIL_PHONE_NOT_ANSWERING = "phone_not_answering"
 
 internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = when {
     home.link.stage == LinkStage.CONNECTED -> HomeMode.CONNECTED

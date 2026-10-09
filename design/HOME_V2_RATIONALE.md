@@ -54,5 +54,3 @@ back towards 1×.
 - In very short windows (phone landscape with the Wi-Fi offer, BYD ⅓ split with long failure copy)
   the status bar drops out to keep the copy whole. That follows the rule, but a future pass could
   move the strip into the top bar there.
-- `DETAIL_PHONE_NOT_ANSWERING` is mirrored in `HomeScreen.kt` until the connection constant lands
-  on main. Switch to the connection constant then.
