@@ -6,6 +6,10 @@ Pulls CarLink's logcat lines, DiAuto's journal (files/diagnostics/current.log) a
 a connection, then a verdict per attempt. Read-only: never changes the device.
 
 usage: report.py [--serial S] [--package P] [--since HH:MM[:SS]] [--all]
+
+A release build (--package com.carlink.app, `dev.sh install-release`) is not debuggable, so its
+files cannot be read with run-as; the engines' lines then come from logcat (by the app's uid),
+which rotates within minutes: run the report right after the test.
 """
 import argparse, datetime as dt, re, subprocess, sys
 
@@ -55,6 +59,22 @@ def main():
             continue
         t = dt.datetime.strptime(f"{now.year}-{m.group(1)} {m.group(2)[:8]}", "%Y-%m-%d %H:%M:%S")
         events.append((t, "carlink", f"{m.group(4)}: {m.group(5)}"))
+
+    # A release build is not debuggable: its files cannot be read, so take the engines' lines from
+    # the app's own logcat instead (both processes share the app's uid).
+    readable = subprocess.run(["adb", "-s", a.serial, "shell", "run-as", a.package, "true"],
+                              capture_output=True, text=True).returncode == 0
+    if not readable:
+        print(f"note: {a.package} is not debuggable; engine lines come from logcat only", file=sys.stderr)
+        uid = re.search(r"uid:(\d+)", adb(a.serial, "shell", "cmd", "package", "list", "packages", "-U", a.package))
+        for line in adb(a.serial, "logcat", "-d", "-v", "time", f"--uid={uid.group(1)}").splitlines() if uid else []:
+            m = re.match(r"(\d\d-\d\d) (\d\d:\d\d:\d\d\.\d+) (\w)/(\S+?)\(\s*\d+\): (.*)", line)
+            if not m or KEY_CARLINK.search(m.group(4)):
+                continue
+            t = dt.datetime.strptime(f"{now.year}-{m.group(1)} {m.group(2)[:8]}", "%Y-%m-%d %H:%M:%S")
+            if a.all or KEY_DIAUTO.search(m.group(5)) or KEY_DIPLAY.search(m.group(5)):
+                # DiAuto logs under its AppLog tag OPENHU; the rest is DiPlay's.
+                events.append((t, "aa" if m.group(4) == "OPENHU" else "carplay", m.group(5)))
 
     # CarLink's own file log (survives logcat rotation); when present, its session lines replace logcat's.
     carlink_file = adb(a.serial, "shell", "run-as", a.package, "cat", "files/logs/carlink.log")
