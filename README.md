@@ -129,19 +129,30 @@ log, so any device can be measured; see the `carlink-device` skill.
                 └────────────────────────────────────────────────────────────────────┘
 ```
 
-- `app/src/main/java/com/carlink/app/connection/` is the connection layer: `SessionManager`
-  (one state machine, one engine at a time), `WirelessPolicy` (which paths, in which order),
-  `DevicePreflight` and `CarPlayPreflight` (problems with a one-tap fix before anything opens),
-  `CarPlayAdapter` and `AndroidAutoAdapter` (drive each engine through small hooks), and
-  `connection/aa/` (the Android Auto side that runs in `:aa`).
+Modules:
+
+| Module | Directory | Holds |
+|---|---|---|
+| `:app` | `app/` | The APK: `CarLinkApplication`, Home and the other screens (`ui/`), the floating switcher (`switcher/`), `entry/HomeLauncher`, Diagnostics, `engine/EngineChrome`, UI copy and theme |
+| `:carlink-core` | `carlink-core/` | The connection backend as a library: `connection/` (`CarLinkCore`, `SessionManager`, adapters, `aa/`), `detect/`, `settings/`, `core/`, the USB/boot/Bluetooth entry points, `EventLog`, and the engines' manifest overrides |
+| `:carplay-shared`, `:carplay-common` | `vendor/diplay/` | The CarPlay engine (DiPlay), main process |
+| `:androidauto`, `:androidauto-contract` | `vendor/diauto/` | The Android Auto engine (DiAuto), `:aa` process |
+
+- `carlink-core/src/main/java/com/carlink/app/connection/` is the connection layer:
+  `SessionManager` (one state machine, one engine at a time), `WirelessPolicy` (which paths, in
+  which order), `DevicePreflight` and `CarPlayPreflight` (problems with a one-tap fix before
+  anything opens), `CarPlayAdapter` and `AndroidAutoAdapter` (drive each engine through small
+  hooks), and `connection/aa/` (the Android Auto side that runs in `:aa`). The library keeps the
+  `com.carlink.app.*` packages.
 - `detect/` tells iPhones from Android phones; `entry/` holds the USB, boot and Bluetooth entry
-  points; `settings/` the unified settings; `ui/` and `switcher/` the screens.
+  points; `settings/` the unified settings (all in `:carlink-core`); `ui/` and `switcher/` the
+  screens (in `:app`).
 - **Process isolation.** Android Auto runs in its own `:aa` process, so DiAuto's singletons, car
   mode, Conscrypt and its "kill process on disconnect" option cannot affect a CarPlay session.
 - **Minimal engine changes.** Every edit inside `vendor/` is a small, documented hook:
   [docs/VENDOR_CHANGES.md](docs/VENDOR_CHANGES.md). Engines update with `git subtree pull`.
-- **Reusable backend.** The connection layer, detection, settings and engines are meant to be
-  reused by another app (a car-stereo launcher): [docs/INTEGRATION.md](docs/INTEGRATION.md).
+- **Reusable backend.** `:carlink-core` (with the engines) is a library another app, such as a
+  car-stereo launcher, can depend on: [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
 Design and engineering references: [design/REBUILD_V2.md](design/REBUILD_V2.md) (the current
 connection design), [docs/dissection/DIPLAY.md](docs/dissection/DIPLAY.md) and
@@ -161,7 +172,7 @@ Set `ANDROID_HOME` (and no conflicting `ANDROID_SDK_ROOT`) or put `sdk.dir=...` 
 
 ```sh
 python3 scripts/resource_collisions.py --check
-./gradlew :app:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
+./gradlew :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
           :carplay-shared:testDebugUnitTest :carplay-common:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ```

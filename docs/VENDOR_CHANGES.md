@@ -104,7 +104,10 @@ screens use are left alone. CarLink also sets DiAuto's `vehicle-display-name` (t
 phone shows) to "CarLink" when the driver never chose one. Likewise it sets DiPlay's CarPlay manufacturer and model (what
 the iPhone shows for the car) to "CarLink" while they are still DiPlay's default "DiPlay".
 
-## Behaviour changed only through CarLink's manifest (`app/src/main/AndroidManifest.xml`)
+## Behaviour changed only through CarLink's manifests (`carlink-core/src/main/AndroidManifest.xml`, `app/src/main/AndroidManifest.xml`)
+
+The engine overrides below live in the backend library's manifest, so every host of `:carlink-core`
+gets them; the app manifest adds only `HomeActivity` and CarLink's UI entries.
 
 - CarLink's `HomeActivity` is the only launcher. `UsbRouterActivity` is the only USB-attach handler.
   `SystemEventReceiver` replaces DiPlay's `BootReceiver` and DiAuto's boot, Bluetooth and Wi-Fi

@@ -2,7 +2,7 @@
 
 > **Status (2026-10-09): partly superseded; kept for reference.** Written for BYD DiLink head
 > units and the v1 app. The connection behaviour (state machine, stages, error handling) is
-> replaced by [REBUILD_V2.md](REBUILD_V2.md) and `app/.../connection/`; the look and the Home and
+> replaced by [REBUILD_V2.md](REBUILD_V2.md) and `carlink-core/.../connection/`; the look and the Home and
 > Settings structure by [RESEARCH_HOME_V2.md](RESEARCH_HOME_V2.md) and
 > [HOME_V2_RATIONALE.md](HOME_V2_RATIONALE.md). Still useful for touch-target and text sizes,
 > canvas scaling and the driver-facing error wording.

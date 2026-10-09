@@ -5,7 +5,7 @@
 > `AndroidAutoCommandReceiver`, `AndroidAutoStateReporter`, `AndroidAutoWifiFallback`,
 > `EngineSettingsApplier`, `EngineMappings`/`WirelessPathSelector`) and the hooks
 > `EXTRA_CARLINK_CONNECT` and `onPhoneWifiJoinFailed` have been removed; the v2 replacements are in
-> `app/.../connection/` ([design/REBUILD_V2.md](../../design/REBUILD_V2.md)). Engine findings are
+> `carlink-core/.../connection/` ([design/REBUILD_V2.md](../../design/REBUILD_V2.md)). Engine findings are
 > unaffected.
 
 This is the engineering reference for DiAuto (DiAuto 0.3.11, vendored at `vendor/diauto`), the Android Auto receiver that CarLink runs in its `:aa` process. It covers how the engine actually works, what it needs, how it fails, and how CarLink drives it.

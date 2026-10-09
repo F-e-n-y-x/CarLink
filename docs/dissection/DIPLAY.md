@@ -5,7 +5,7 @@
 > `AndroidAutoCommandReceiver`, `AndroidAutoStateReporter`, `AndroidAutoWifiFallback`,
 > `EngineSettingsApplier`, `EngineMappings`/`WirelessPathSelector`) and the hooks
 > `EXTRA_CARLINK_CONNECT` and `onPhoneWifiJoinFailed` have been removed; the v2 replacements are in
-> `app/.../connection/` ([design/REBUILD_V2.md](../../design/REBUILD_V2.md)). Engine findings are
+> `carlink-core/.../connection/` ([design/REBUILD_V2.md](../../design/REBUILD_V2.md)). Engine findings are
 > unaffected.
 
 DiPlay version vendored: **0.2.15** (`vendor/diplay/mobile/build.gradle.kts:21`, `CHANGELOG.md:1`).
@@ -447,7 +447,7 @@ Note: `DiPlayBootstrap.ensure()` turns debug logs **off** at every bootstrap (`D
   - DiPlay core has **none**. When the iPhone comes back, nothing restarts a closed session.
   - In standalone, the optional `PhoneBluetoothReceiver` (ACL_CONNECTED for the selected address) opens DiPlayActivity, which calls `connect(true)`.
   - Inside a running session, the host's backoff loop keeps retrying (§2.3). So an iPhone that returns within the retry budget reconnects, and one that returns after the budget is spent does not [V/I].
-  - CarLink replaces this with `SystemEventReceiver` (ACL_CONNECTED, then SDP-based classification if needed, then `HomeLauncher.open`, then `EngineCoordinator.onBluetoothPhone`; `app/.../entry/SystemEventReceiver.kt`). It needs the overlay permission on Android 10+, otherwise a full-screen notification is used (`app/.../entry/HomeLauncher.kt:33-40`).
+  - CarLink replaces this with `SystemEventReceiver` (ACL_CONNECTED, then SDP-based classification if needed, then `HomeLauncher.open`, then `EngineCoordinator.onBluetoothPhone`; `carlink-core/.../entry/SystemEventReceiver.kt`). It needs the overlay permission on Android 10+, otherwise a full-screen notification is used (`app/.../entry/HomeLauncher.kt:33-40`).
 - **Head unit vs tablet:**
   - **Head units:** OEM Bluetooth apps may hold the stack, so third-party RFCOMM fails (#227 com.syu.bt, #98 RK3326, #330/#354 Android 9, #435 ac8x).
   - **Tablets:** the stack is generic, so RFCOMM generally works. HarmonyOS was the exception (#142).
@@ -665,7 +665,7 @@ Files read:
 
 - `app/.../engine/CarPlayPreflight.kt`, `CarPlayEngine.kt`, `EngineCoordinator.kt`, `WifiDirectReset.kt`
 - `app/.../settings/EngineSettingsApplier.kt`, `EngineMappings.kt`
-- `app/.../entry/SystemEventReceiver.kt`, `HomeLauncher.kt`
+- `carlink-core/.../entry/SystemEventReceiver.kt`, `HomeLauncher.kt`
 - `app/.../CarLinkApplication.kt`, `app/src/main/AndroidManifest.xml`
 
 The findings are ranked.

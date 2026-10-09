@@ -81,9 +81,17 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
   screen.
 - **Generic, not BYD.** `VehicleProfile.GENERIC` is the default; everything BYD-specific (HUD and
   cluster outputs, wheel codes, DiLink window claims) runs only with `BYD_DILINK`.
-- **Reusable backend.** `connection/`, `detect/`, `settings/`, `entry/` and the engines will be
-  reused by a launcher (`docs/INTEGRATION.md`). Do not add new dependencies from them on `ui/`,
-  `switcher/` or `R`; the existing ones are listed there under "Coupling to remove".
+- **Reusable backend: `:carlink-core`.** `connection/`, `detect/`, `settings/`, `core/`, the USB,
+  boot and Bluetooth entry points (`entry/UsbRouterActivity`, `UsbWatcher`,
+  `SystemEventReceiver`), `engine/AndroidAutoSettingsProvider`, `engine/WifiDirectReset` and
+  `diagnostics/EventLog` live in the library module `carlink-core/` (same `com.carlink.app.*`
+  packages; its own R class is `com.carlink.core.R`), with their unit tests and the engines'
+  manifest overrides (`carlink-core/src/main/AndroidManifest.xml`). A launcher will reuse it
+  (`docs/INTEGRATION.md`). The app supplies what the backend needs through
+  `CarLinkCore.install(app, CarLinkConfig(accessoryName, host, waitingView))` in
+  `CarLinkApplication`; `entry/HomeLauncher` is CarLink's `CarLinkHost`. The library cannot see
+  `ui/`, `switcher/` or the app's `R`: anything it needs from the app goes through
+  `CarLinkConfig`/`CarLinkHost`, and backend code goes into `carlink-core/`, UI copy into `app/`.
 
 ## Vendor engines
 
@@ -102,7 +110,7 @@ The hooks CarLink sets (where):
 | | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
-| | `accessoryName`, `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` | `connection/CarPlayAdapter.install`, `CarPlayWaitingView` |
+| | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
@@ -115,7 +123,7 @@ emulator-only default):
 ```sh
 S=.claude/skills/carlink-dev/scripts/dev.sh
 $S build        # debug APK; includes ~/.carlink-private CarPlay files when present
-$S test         # resource-collision check + all four unit-test suites
+$S test         # resource-collision check + all five unit-test suites (app, carlink-core, engines)
 $S install      # install on the emulator and launch
 $S shot home    # /tmp/carlink-shots/home.png — then LOOK at it with the Read tool
 $S size 1080x2400 420   # phone; "1920x1080 240" head unit; "reset" to restore

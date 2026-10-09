@@ -1,7 +1,7 @@
 # CarLink v2: rebuild plan
 
 > **Status: current.** The connection layer described here is what the app runs
-> (`app/.../connection/`); milestone 4 (v1 removal, docs, skills) is done.
+> (`carlink-core/.../connection/`); milestone 4 (v1 removal, docs, skills) is done.
 
 Status: approved direction (user, 2026-10-09: "first dissect both projects, understand them, then
 make the app; start from scratch if you have to"). Built on `docs/dissection/DIPLAY.md`,
@@ -40,7 +40,7 @@ phone's internet on Wi-Fi during wireless Android Auto (impossible for apps: DA�
 Vehicle profile (`GENERIC` default, `BYD_DILINK` opt-in or auto-detected via
 `BydOutputSettings.available()` / `BYD-AUTO/` fingerprint) gates every BYD item (DP§12, DA§12).
 
-## 4. Connection layer v2 (`app/.../connection/`)
+## 4. Connection layer v2 (`carlink-core/.../connection/`)
 
 - `SessionManager` (main process, replaces EngineCoordinator): one state machine
   `Idle → Preflight → Starting(path) → Connecting(step) → Retrying(n, reason) → Connected →
