@@ -644,6 +644,12 @@
     <string name="call_voice_filter_description">Reduce los graves del audio de llamadas de CarPlay. Puede cambiar cómo suenan las voces. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="smooth_video">Vídeo fluido (experimental)</string>
     <string name="smooth_video_description">Muestra cada fotograma de la pantalla principal de CarPlay en el momento que marcó el iPhone más un pequeño retardo, en lugar de en cuanto se decodifica. El retardo se ajusta solo para que la mayoría de los fotogramas se decodifiquen a tiempo; los que aun así no están listos a tiempo se muestran al instante. El desplazamiento puede verse más uniforme, pero el toque responde más tarde. Los ajustes de imagen no se aplican. Reconecta CarPlay.</string>
+    <string name="settings_direct_video_output">Salida de vídeo directa (experimental)</string>
+    <string name="settings_direct_video_output_description">Envía la imagen de CarPlay directamente al compositor de la unidad principal en lugar de dibujarla dentro de la ventana de DiPlay. Puede reducir el retardo en aproximadamente un refresco de pantalla. Los ajustes de imagen no se aplican. Vuelve a conectar CarPlay.</string>
+    <string name="settings_low_latency_decoder">Decodificación de baja latencia (experimental)</string>
+    <string name="settings_low_latency_decoder_description">Pide a los decodificadores de vídeo de Qualcomm que entreguen cada fotograma en cuanto se decodifica, en lugar de retener los siguientes, y muestra cada fotograma decodificado desde un hilo dedicado sin esperar a que llegue el siguiente. Puede reducir el retardo en decenas de milisegundos. Desactívalo si la imagen muestra artefactos o se congela. Se aplica en la próxima conexión.</string>
+    <string name="settings_fps_counter">Contador de FPS</string>
+    <string name="settings_fps_counter_description">Muestra un contador en la esquina superior derecha de CarPlay: fotogramas mostrados por segundo (verde desde 50, amarillo desde 30, rojo por debajo), fotogramas recibidos del iPhone por segundo y el tiempo de decodificación. Una pantalla quieta muestra pocos fotogramas porque el iPhone no envía ninguno.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
     <string name="car_button_icon">Icono</string>
     <string name="car_button_icon_custom">Icono personalizado</string>
