@@ -60,10 +60,6 @@ android {
 
         // The Android Auto engine library ships two distribution flavors; CarLink uses github.
         missingDimensionStrategy("distribution", "github")
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
-        }
     }
 
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.directories.add(it.path) }
@@ -80,12 +76,20 @@ android {
         }
     }
 
+    // Car stereos and tablets are ARM: arm64-v8a, and armeabi-v7a for the many 32-bit head units.
+    // x86_64 is only for the emulator: debug builds carry it, release builds only with
+    // -Pcarlink.emulatorAbi=true (measuring a release build on the emulator). It is 3.3 MB of
+    // native code no car stereo runs (docs/LOW_END_PERFORMANCE.md).
+    val armAbis = listOf("arm64-v8a", "armeabi-v7a")
+    val releaseEmulatorAbi = providers.gradleProperty("carlink.emulatorAbi").orNull == "true"
     buildTypes {
         debug {
             applicationIdSuffix = providers.gradleProperty("carlink.debugApplicationIdSuffix").get()
             versionNameSuffix = "-hud-test"
+            ndk { abiFilters += armAbis + "x86_64" }
         }
         release {
+            ndk { abiFilters += if (releaseEmulatorAbi) armAbis + "x86_64" else armAbis }
             // Both engines rely on reflection into framework and BYD classes; DiPlay ships
             // unshrunk for the same reason.
             optimization {
@@ -118,6 +122,13 @@ android {
                 "META-INF/license.txt", "META-INF/NOTICE", "META-INF/NOTICE.txt",
                 "META-INF/notice.txt", "META-INF/ASL2.0", "META-INF/*.kotlin_module",
                 "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
+                // Bouncy Castle's Picnic (post-quantum signature) tables, 1.2 MB: neither engine
+                // uses Picnic, and only Picnic's own classes read them.
+                "org/bouncycastle/pqc/crypto/picnic/*.properties",
+                // Its German certificate-path messages (CarLink ships English only).
+                "org/bouncycastle/x509/CertPathReviewerMessages_de.properties",
+                // kotlinx-coroutines' debug-agent probes; only read by an attached debug agent.
+                "DebugProbesKt.bin",
             )
         }
     }
