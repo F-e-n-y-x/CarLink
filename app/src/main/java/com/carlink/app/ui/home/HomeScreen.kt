@@ -2,60 +2,40 @@ package com.carlink.app.ui.home
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.DrawableRes
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Placeable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,16 +45,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Placeable
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.R
@@ -94,25 +84,28 @@ import com.carlink.app.ui.HomeState
 import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.Route
 import com.carlink.app.ui.components.CarLinkMark
+import com.carlink.app.ui.components.TertiaryButton
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.formatElapsed
 import com.carlink.app.ui.components.isolate
+import com.carlink.app.ui.components.phoneIcon
 import com.carlink.app.ui.components.rememberElapsedMillis
 import com.carlink.app.ui.premium.Atmosphere
-import com.carlink.app.ui.premium.Eyebrow
+import com.carlink.app.ui.premium.DialReading
 import com.carlink.app.ui.premium.GlassButton
 import com.carlink.app.ui.premium.GlassCard
-import com.carlink.app.ui.premium.GlassChip
-import com.carlink.app.ui.premium.GlyphDisc
-import com.carlink.app.ui.premium.HeroPhone
 import com.carlink.app.ui.premium.IonButton
+import com.carlink.app.ui.premium.LinkDial
 import com.carlink.app.ui.premium.ProgressLine
+import com.carlink.app.ui.premium.RoundGlassIconButton
+import com.carlink.app.ui.premium.TellTale
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
+import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.WidthClass
 
-/** The modes of Home's hero (design/RESEARCH_PREMIUM_UX.md §7.3). */
+/** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
 internal enum class HomeMode { PERMISSION, BLUETOOTH_OFF, READY_EMPTY, READY_PHONE, CONNECTING, CONNECTED, FAILED }
 
 internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = when {
@@ -189,176 +182,222 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
 
 @Composable
 private fun SwitchPhoneDialog(phoneName: String, running: Engine?, onSwitch: () -> Unit, onKeep: () -> Unit) {
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onKeep,
         title = { Text(stringResource(R.string.carlink_switch_title, phoneName)) },
         text = { Text(stringResource(R.string.carlink_switch_body, running?.let { engineName(it) } ?: "")) },
         confirmButton = { IonButton(stringResource(R.string.carlink_switch_confirm), onSwitch) },
         dismissButton = { GlassButton(stringResource(R.string.carlink_switch_keep), onKeep) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
     )
 }
 
+/** The state's light: Ion while ready or connecting, Live when connected, Fault, Caution, or neutral. */
+@Composable
+private fun modeColor(mode: HomeMode): Color = when (mode) {
+    HomeMode.CONNECTED -> CarLinkTokens.colors.success
+    HomeMode.CONNECTING, HomeMode.READY_PHONE -> MaterialTheme.colorScheme.primary
+    HomeMode.FAILED -> MaterialTheme.colorScheme.error
+    HomeMode.PERMISSION, HomeMode.BLUETOOTH_OFF -> CarLinkTokens.colors.warning
+    HomeMode.READY_EMPTY -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+/** Where the dial sits, as fractions of the window, and its radius in px: the stage light follows it. */
+private data class DialSpot(val center: Offset, val radius: Float)
+
+/**
+ * Home, "Instrument" (design/RESEARCH_HOME_V2.md §4): a link dial as the focal object, one
+ * tell-tale, one sentence, one action, and the status bar docked to the bottom edge. On large
+ * handhelds the stage is scaled to read like the car canvas ([HomeScaled]).
+ */
 @Composable
 internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
-    val mode = homeMode(ui.home, ui.permissionsNeeded)
-    val scheme = MaterialTheme.colorScheme
-    val colors = CarLinkTokens.colors
-    val glow = when (mode) {
-        HomeMode.CONNECTED -> colors.success
-        HomeMode.CONNECTING, HomeMode.READY_PHONE -> scheme.primary
-        HomeMode.FAILED -> scheme.error.copy(alpha = 0.6f)
-        else -> scheme.primary.copy(alpha = 0.35f)
-    }
     var phonesOpen by rememberSaveable { mutableStateOf(false) }
     var networkOpen by rememberSaveable { mutableStateOf(false) }
+    HomeScaled {
+        HomeStageScreen(ui, actions, onPhones = { phonesOpen = true }, onNetwork = { networkOpen = true })
+    }
+    if (phonesOpen) PhonesSheet(ui, actions, onDismiss = { phonesOpen = false })
+    if (networkOpen) NetworkSheet(ui, actions, onDismiss = { networkOpen = false })
+}
+
+@Composable
+private fun HomeStageScreen(ui: HomeUi, actions: HomeActions, onPhones: () -> Unit, onNetwork: () -> Unit) {
+    val mode = homeMode(ui.home, ui.permissionsNeeded)
     val layout = CarLinkTokens.layout
     val dimens = CarLinkTokens.dimens
+    val car = CarLinkTokens.profile == UiProfile.CAR
+    val dark = MaterialTheme.colorScheme.background.let { (it.red + it.green + it.blue) / 3f < 0.5f }
+    var spot by remember { mutableStateOf<DialSpot?>(null) }
+    val light = modeColor(mode).let { if (mode == HomeMode.READY_EMPTY) MaterialTheme.colorScheme.primary.copy(alpha = 0.45f) else it }
+    val fallbackCenter = if (layout.isLandscape) Offset(0.72f, 0.45f) else Offset(0.5f, 0.3f)
 
-    Atmosphere(Modifier.fillMaxSize(), glow = glow, glowCenter = if (layout.isLandscape) androidx.compose.ui.geometry.Offset(0.74f, 0.6f)
-        else androidx.compose.ui.geometry.Offset(0.5f, 0.3f)) {
+    Atmosphere(
+        Modifier.fillMaxSize(),
+        glow = light.copy(alpha = light.alpha * (if (dark) 0.85f else 0.6f) * (if (mode == HomeMode.FAILED) 0.55f else 1f)),
+        glowCenter = spot?.center ?: fallbackCenter,
+        glowRadius = spot?.radius?.times(2.1f),
+        lightCenter = (spot?.center ?: fallbackCenter).let { Offset(it.x, it.y - 0.35f) },
+        floor = true,
+    ) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             TopBar(onSettings = { actions.navigate(Route.SETTINGS) })
             BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                 val landscape = maxWidth > maxHeight && layout.width >= WidthClass.MEDIUM
-                val taps = StatusTaps(onBluetooth = actions::openBluetoothSettings,
-                    onNetwork = { networkOpen = true }, onPhones = { phonesOpen = true })
-                if (landscape) {
-                    // Two columns on one grid: copy and status on the start side, the phone centred on
-                    // the end side, fully inside its column with room for its shadow.
-                    Row(Modifier.fillMaxSize().padding(start = dimens.screenMargin, end = dimens.screenMargin,
-                        bottom = dimens.screenMargin * 0.75f)) {
-                        // Copy, action and status read as one group, centred against the phone.
-                        FitColumn(
-                            Modifier.weight(0.6f).fillMaxHeight(),
-                            statusGap = dimens.gutter * 2,
-                            main = { dense -> HeroText(mode, ui, actions, dense) },
-                            status = { StatusChips(mode, ui, taps) },
-                            strip = { StatusStrip(mode, ui, taps) },
-                        )
-                        Spacer(Modifier.width(dimens.gutter * 2))
-                        Box(Modifier.weight(0.4f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                            Hero(mode, ui, Modifier.fillMaxHeight(0.86f))
-                        }
-                    }
-                } else {
-                    val compact = layout.width == WidthClass.COMPACT
-                    FitColumn(
-                        Modifier.fillMaxSize()
-                            .padding(horizontal = if (compact) dimens.compactMargin else dimens.screenMargin)
-                            .padding(bottom = dimens.gutter),
-                        statusGap = dimens.gutter * 1.5f,
-                        main = { dense -> HeroText(mode, ui, actions, dense) },
-                        status = { if (compact) StatusList(mode, ui, taps) else StatusChips(mode, ui, taps) },
-                        strip = { StatusStrip(mode, ui, taps) },
-                        // The phone takes what the copy and status leave, and steps aside when that is too little.
-                        hero = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Hero(mode, ui, Modifier.fillMaxHeight(0.92f))
+                val compact = layout.width == WidthClass.COMPACT
+                val margin = if (compact) dimens.compactMargin else dimens.screenMargin
+                val taps = StatusTaps(onBluetooth = actions::openBluetoothSettings, onNetwork = onNetwork, onPhones = onPhones)
+                HomeStage(
+                    Modifier.fillMaxSize().padding(start = margin, end = margin, bottom = if (car) dimens.gutter else dimens.targetGap * 2),
+                    landscape = landscape,
+                    statusGap = if (car) dimens.gutter * 1.5f else dimens.gutter,
+                    columnGap = dimens.gutter * 2,
+                    dialMin = if (car) 300.dp else 176.dp,
+                    dialMax = if (car) 560.dp else 520.dp,
+                    copy = { dense, steps -> HeroText(mode, ui, actions, dense, steps, centered = !landscape) },
+                    panel = {
+                        val items = statusItems(mode, ui, taps)
+                        if (compact) StatusRows(items) else StatusPanel(items)
+                    },
+                    strip = { StatusStrip(statusItems(mode, ui, taps)) },
+                    dial = {
+                        HomeDial(mode, ui, Modifier.onGloballyPositioned { c ->
+                            val root = c.findRootCoordinates().size
+                            val pos = c.localToRoot(Offset(c.size.width / 2f, c.size.height / 2f))
+                            if (root.width > 0 && root.height > 0) {
+                                val next = DialSpot(Offset(pos.x / root.width, pos.y / root.height), c.size.width / 2f)
+                                if (next != spot) spot = next
                             }
-                        },
-                        // Room for the phone's contact shadow.
-                        heroGap = dimens.gutter * 2.5f,
-                        heroMin = dimens.avatarHero * 3,
-                    )
-                }
+                        })
+                    },
+                )
             }
         }
-    }
-    if (phonesOpen) {
-        PhonesSheet(ui, actions, onDismiss = { phonesOpen = false })
-    }
-    if (networkOpen) {
-        NetworkSheet(ui, actions, onDismiss = { networkOpen = false })
     }
 }
 
 @Composable
 private fun TopBar(onSettings: () -> Unit) {
     val dimens = CarLinkTokens.dimens
+    val car = CarLinkTokens.profile == UiProfile.CAR
+    val margin = if (CarLinkTokens.layout.width == WidthClass.COMPACT) dimens.compactMargin else dimens.screenMargin
     Row(
-        Modifier.fillMaxWidth().height(dimens.topBar).padding(horizontal = dimens.screenMargin - 8.dp),
+        Modifier.fillMaxWidth().height(dimens.topBar + if (car) 8.dp else 0.dp).padding(horizontal = margin),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Spacer(Modifier.width(8.dp))
-        CarLinkMark(Modifier.size(dimens.iconSecondary))
-        Spacer(Modifier.width(14.dp))
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall,
+        CarLinkMark(Modifier.size(if (car) 34.dp else 24.dp))
+        Spacer(Modifier.width(if (car) 16.dp else 12.dp))
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.semantics { heading() })
         Spacer(Modifier.weight(1f))
-        GlassCard(shape = androidx.compose.foundation.shape.CircleShape, onClick = onSettings,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-            modifier = Modifier.size(dimens.minTouch)) {
-            Icon(painterResource(R.drawable.carlink_ic_settings), stringResource(R.string.carlink_home_settings),
-                Modifier.align(Alignment.Center).size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
-        }
+        RoundGlassIconButton(R.drawable.carlink_ic_settings, stringResource(R.string.carlink_home_settings), onSettings)
     }
 }
 
-/** The phone render with live status on its screen. */
+/** Which of the four attempt steps (Found, Identified, Linked, Picture) is in progress. */
+private fun activeStep(link: LinkState): Int = when {
+    link.step <= 1 -> 0
+    link.step == 2 -> 1
+    link.step == 3 -> 2
+    else -> 3
+}
+
 @Composable
-private fun Hero(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
+private fun stepNames() = listOf(
+    stringResource(R.string.carlink_home_step_found), stringResource(R.string.carlink_home_step_identified),
+    stringResource(R.string.carlink_home_step_linked), stringResource(R.string.carlink_home_step_picture),
+)
+
+/** The link dial with the state's glyph and reading in its core. */
+@Composable
+private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
     val link = ui.home.link
+    val color = modeColor(mode)
+    val reading = when (mode) {
+        HomeMode.CONNECTING -> DialReading(color, segments = 4, active = activeStep(link))
+        HomeMode.CONNECTED -> DialReading(color, progress = 1f)
+        HomeMode.FAILED -> DialReading(color, progress = 1f, dimmed = true)
+        HomeMode.READY_PHONE -> DialReading(color, armed = true)
+        else -> DialReading(color)
+    }
     val kind = when (link.engine) {
         Engine.CARPLAY -> PhoneKind.IPHONE
         Engine.ANDROID_AUTO -> PhoneKind.ANDROID
         null -> ui.home.defaultPhone?.kind ?: PhoneKind.UNKNOWN
     }
-    val glow = when (mode) {
-        HomeMode.CONNECTED -> colors.success
-        HomeMode.CONNECTING, HomeMode.READY_PHONE -> scheme.primary
-        HomeMode.FAILED -> scheme.error
-        else -> Color.Transparent
-    }
-    HeroPhone(kind, modifier, glow = glow) {
-        AnimatedContent(mode, transitionSpec = {
-            fadeIn(tween(CarMotion.MEDIUM)) togetherWith fadeOut(tween(CarMotion.MEDIUM))
-        }, label = "screen") { state ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                val size = CarLinkTokens.dimens.avatarHero
-                when (state) {
-                    HomeMode.CONNECTING -> {
-                        if (LocalReduceMotion.current) GlyphDisc(R.drawable.carlink_ic_sync, scheme.primary, size)
-                        else CircularProgressIndicator(Modifier.size(size), color = scheme.primary, strokeWidth = 5.dp)
+    val engine = link.engine?.let { engineName(it) } ?: ui.home.defaultPhone?.kind?.engine?.let { engineName(it) }
+    LinkDial(reading, modifier) {
+        BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val side = maxWidth
+            val glyph = side * 0.34f
+            val small = side < 150.dp
+            val caption = if (small) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleSmall
+            AnimatedContent(mode, transitionSpec = { fadeIn(tween(CarMotion.MEDIUM)) togetherWith fadeOut(tween(CarMotion.MEDIUM)) },
+                label = "dial") { state ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(side * 0.05f)) {
+                    when (state) {
+                        HomeMode.READY_EMPTY, HomeMode.PERMISSION -> CarLinkMark(Modifier.size(glyph))
+                        HomeMode.BLUETOOTH_OFF -> Icon(painterResource(R.drawable.carlink_ic_bluetooth_disabled), null,
+                            Modifier.size(glyph), tint = colors.warning)
+                        HomeMode.READY_PHONE, HomeMode.CONNECTING -> Icon(painterResource(phoneIcon(kind)), null,
+                            Modifier.size(glyph), tint = if (state == HomeMode.CONNECTING) scheme.primary else scheme.onSurface)
+                        HomeMode.CONNECTED -> {
+                            val elapsed by rememberElapsedMillis(ui.home.connectedSince)
+                            Icon(painterResource(R.drawable.carlink_ic_check_circle_filled), null, Modifier.size(glyph * 0.55f),
+                                tint = colors.success)
+                            Text(formatElapsed(elapsed), style = (if (small) MaterialTheme.typography.headlineMedium
+                                else MaterialTheme.typography.displaySmall).tabular(), color = scheme.onSurface, maxLines = 1)
+                        }
+                        HomeMode.FAILED -> Icon(painterResource(R.drawable.carlink_ic_error_filled), null, Modifier.size(glyph),
+                            tint = scheme.error)
                     }
-                    HomeMode.CONNECTED -> GlyphDisc(R.drawable.carlink_ic_check_circle_filled, colors.success, size)
-                    HomeMode.FAILED -> GlyphDisc(R.drawable.carlink_ic_error_filled, scheme.error, size)
-                    // The phone's screen is always dark, so the mark uses fixed light colors.
-                    HomeMode.READY_PHONE -> com.carlink.app.ui.components.CarLinkMark(Modifier.size(size),
-                        primaryTint = Color(0xFFEEF2F6), accentTint = Color(0xFF5BD6F0))
-                    else -> com.carlink.app.ui.components.CarLinkMark(Modifier.size(size),
-                        primaryTint = Color(0xFFEEF2F6).copy(alpha = 0.55f), accentTint = Color(0xFF5BD6F0).copy(alpha = 0.7f))
-                }
-                val label = link.engine?.let { engineName(it) } ?: ui.home.defaultPhone?.kind?.engine?.let { engineName(it) }
-                if (label != null) {
-                    Text(label, style = MaterialTheme.typography.titleSmall, color = Color(0xFFEEF2F6), maxLines = 1)
+                    val showEngine = engine != null && state != HomeMode.READY_EMPTY && state != HomeMode.PERMISSION &&
+                        state != HomeMode.BLUETOOTH_OFF
+                    if (showEngine) {
+                        Text(engine!!, style = caption, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
+                    }
+                    if (state == HomeMode.CONNECTING) {
+                        Text(stepNames()[activeStep(link)].uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall,
+                            color = scheme.primary, textAlign = TextAlign.Center, maxLines = 1)
+                    }
                 }
             }
         }
     }
 }
 
-/** Eyebrow, headline, body and actions for the current mode. */
+/** Tabular figures so a running timer does not jitter. */
+private fun TextStyle.tabular() = copy(fontFeatureSettings = "tnum")
+
+/** Tell-tale, headline, body and actions for the current mode. */
 @Composable
-private fun HeroText(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean) {
+private fun HeroText(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean, steps: Boolean, centered: Boolean) {
     val reduceMotion = LocalReduceMotion.current
     AnimatedContent(mode, transitionSpec = {
         val duration = if (reduceMotion) 0 else CarMotion.MEDIUM
         (fadeIn(tween(duration)) + slideInVertically(tween(duration, easing = CarMotion.EmphasizedDecelerate)) { it / 12 }) togetherWith
             fadeOut(tween(duration / 2))
-    }, label = "hero") { state ->
-        Column(Modifier.widthIn(max = 900.dp)) { HeroCopy(state, ui, actions, dense) }
+    }, label = "hero", contentAlignment = if (centered) Alignment.TopCenter else Alignment.TopStart) { state ->
+        Column(Modifier.widthIn(max = 900.dp).then(if (centered) Modifier.fillMaxWidth() else Modifier),
+            horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start) {
+            HeroCopy(state, ui, actions, dense, steps, centered)
+        }
     }
 }
 
 @Composable
-private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean) {
+private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeActions, dense: Boolean, steps: Boolean,
+                                 centered: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
     val dimens = CarLinkTokens.dimens
-    // Dense: the variant Home falls back to when the window is short (tighter rhythm, no card body).
+    val car = CarLinkTokens.profile == UiProfile.CAR
+    // Dense: the variant Home falls back to when the window is short (tighter rhythm, no pill, no card body).
     val sectionGap = if (dense) dimens.gutter else dimens.gutter * 1.5f
+    val align = if (centered) TextAlign.Center else TextAlign.Start
     val link = ui.home.link
     val engine = link.engine?.let { engineName(it) } ?: ""
     val phone = ui.home.defaultPhone
@@ -371,13 +410,8 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         HomeMode.FAILED, HomeMode.BLUETOOTH_OFF -> R.string.carlink_home_eyebrow_problem
         else -> R.string.carlink_home_eyebrow_ready
     }
-    Eyebrow(stringResource(eyebrow), color = when (mode) {
-        HomeMode.CONNECTED -> colors.success
-        HomeMode.FAILED -> scheme.error
-        HomeMode.CONNECTING -> scheme.primary
-        else -> colors.onSurfaceTertiary
-    })
-    Spacer(Modifier.height(12.dp))
+    TellTale(stringResource(eyebrow), modeColor(mode), pill = !dense)
+    Spacer(Modifier.height(if (dense) 12.dp else if (car) 28.dp else 18.dp))
 
     val (title, body) = when (mode) {
         HomeMode.PERMISSION -> stringResource(R.string.carlink_home_permission_title) to stringResource(R.string.carlink_home_permission_body)
@@ -402,28 +436,27 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         }
         HomeMode.FAILED -> failureCopy(link)
     }
-    Text(title, style = if (title.length <= 14) MaterialTheme.typography.displayLarge else MaterialTheme.typography.displayMedium,
-        color = scheme.onSurface, modifier = Modifier.semantics { heading(); liveRegion = LiveRegionMode.Polite })
-    Spacer(Modifier.height(16.dp))
-    Text(body, style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant)
+    val titleStyle = when {
+        title.length <= 14 -> MaterialTheme.typography.displayLarge
+        title.length <= 26 -> MaterialTheme.typography.displayMedium
+        else -> MaterialTheme.typography.displaySmall
+    }
+    Text(title, style = titleStyle.copy(lineBreak = LineBreak.Heading), color = scheme.onSurface, textAlign = align,
+        modifier = Modifier.semantics { heading(); liveRegion = LiveRegionMode.Polite })
+    Spacer(Modifier.height(if (car) 16.dp else 10.dp))
+    // A reading measure of about 60 characters, so lines do not run across the whole stage.
+    Text(body, Modifier.widthIn(max = if (car) 760.dp else 520.dp),
+        style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
+        color = scheme.onSurfaceVariant, textAlign = align)
 
-    if (mode == HomeMode.CONNECTING) {
+    if (mode == HomeMode.CONNECTING && steps) {
         Spacer(Modifier.height(sectionGap))
-        val active = when {
-            link.step <= 1 -> 0
-            link.step == 2 -> 1
-            link.step == 3 -> 2
-            else -> 3
-        }
-        ProgressLine(listOf(
-            stringResource(R.string.carlink_home_step_found), stringResource(R.string.carlink_home_step_identified),
-            stringResource(R.string.carlink_home_step_linked), stringResource(R.string.carlink_home_step_picture),
-        ), active, failed = false, modifier = Modifier.widthIn(max = 720.dp))
+        ProgressLine(stepNames(), activeStep(link), failed = false, modifier = Modifier.widthIn(max = 720.dp))
     }
 
     Spacer(Modifier.height(sectionGap))
     // Actions wrap to a second line on narrow windows instead of running off the edge.
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap),
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap, if (centered) Alignment.CenterHorizontally else Alignment.Start),
         verticalArrangement = Arrangement.spacedBy(dimens.targetGap), itemVerticalAlignment = Alignment.CenterVertically) {
         when (mode) {
             HomeMode.PERMISSION -> IonButton(stringResource(R.string.carlink_home_permission_action), actions::requestPermissions,
@@ -461,7 +494,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         Spacer(Modifier.height(dimens.targetGap))
         FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.carlink_home_paused), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceTertiary)
-            com.carlink.app.ui.components.TertiaryButton(stringResource(R.string.carlink_home_resume), actions::resumeAutoConnect)
+            TertiaryButton(stringResource(R.string.carlink_home_resume), actions::resumeAutoConnect)
         }
     }
 }
@@ -512,11 +545,12 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
             IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_p2p)
-            GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry)
+            GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
         }
         else -> {
             IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
-            GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) })
+            GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
+                icon = R.drawable.carlink_ic_monitor_heart)
         }
     }
 }
@@ -529,248 +563,81 @@ private fun pathName(path: WirelessPath?, transport: Transport?): String = strin
     else -> R.string.carlink_home_path_direct
 })
 
-/** One line of Home's status: Bluetooth, the wireless path, the phone. */
-private class StatusItem(val eyebrow: String, val value: String, @DrawableRes val icon: Int, val status: Color?,
-    val onClick: (() -> Unit)? = null)
-
-/** What tapping each status opens: Bluetooth settings, the connection-type picker, the phone list. */
-private class StatusTaps(val onBluetooth: () -> Unit, val onNetwork: () -> Unit, val onPhones: () -> Unit)
-
-@Composable
-private fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<StatusItem> {
-    val colors = CarLinkTokens.colors
-    val bt = ui.home.bluetooth
-    val path = if (mode == HomeMode.CONNECTED && ui.home.link.transport == Transport.USB) null else ui.network?.path
-    val phones = ui.home.phones
-    val phone = ui.home.defaultPhone
-    return listOf(
-        StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {
-            BluetoothAvailability.READY -> R.string.carlink_home_bt_chip_on
-            BluetoothAvailability.OFF -> R.string.carlink_home_bt_chip_off
-            BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission
-            BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_chip_unsupported
-        }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled,
-            if (bt == BluetoothAvailability.READY) colors.success else colors.warning, taps.onBluetooth),
-        StatusItem(stringResource(R.string.carlink_home_chip_network), when (path) {
-            WirelessPath.SAME_WIFI -> ui.network?.ssid?.let { stringResource(R.string.carlink_home_net_same_wifi_named, isolate(it)) }
-                ?: stringResource(R.string.carlink_home_net_same_wifi)
-            WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
-            WirelessPath.WIFI_DIRECT -> stringResource(R.string.carlink_home_net_direct)
-            null -> stringResource(R.string.carlink_home_path_usb)
-        }, when (path) {
-            WirelessPath.SAME_WIFI -> R.drawable.carlink_ic_wifi
-            WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
-            WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
-            null -> R.drawable.carlink_ic_usb
-        }, if (path == WirelessPath.SAME_WIFI) colors.success else null, taps.onNetwork),
-        StatusItem(stringResource(R.string.carlink_home_chip_phone),
-            phone?.name?.let(::isolate)
-                ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
-                else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
-            phone?.let { com.carlink.app.ui.components.phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
-            if (phone?.connected == true) colors.success else null, taps.onPhones),
-    )
-}
-
-/** Three glass chips of one height: Bluetooth, Network, Phone; each opens what [StatusTaps] names. */
-@Composable
-private fun StatusChips(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
-    val items = statusItems(mode, ui, taps)
-    val dimens = CarLinkTokens.dimens
-    val measurer = rememberTextMeasurer()
-    val value = MaterialTheme.typography.titleSmall
-    val eyebrow = MaterialTheme.typography.labelSmall
-    // What each chip needs to keep its value and header on one line.
-    val natural = with(LocalDensity.current) {
-        items.map { item ->
-            val valueLine = measurer.measure(item.value, value, maxLines = 1).size.width + (dimens.iconSecondary + 12.dp).roundToPx()
-            // Eyebrow plus the status dot and its gap.
-            val header = measurer.measure(item.eyebrow.uppercase(java.util.Locale.ROOT), eyebrow, maxLines = 1).size.width +
-                24.dp.roundToPx()
-            maxOf(valueLine, header) + (dimens.gutter * 2).roundToPx()
-        }
-    }
-    Layout(
-        content = {
-            items.forEachIndexed { index, item ->
-                GlassChip(item.eyebrow, item.value, item.icon, status = item.status,
-                    onClick = item.onClick)
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
-    ) { measurables, constraints ->
-        val gap = dimens.targetGap.roundToPx()
-        val widths = chipWidths(natural, constraints.maxWidth - gap * (items.size - 1))
-        // One height for all: the tallest chip at its width (a value that cannot fit wraps to two lines).
-        val height = measurables.indices.maxOf { measurables[it].maxIntrinsicHeight(widths[it]) }
-        val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixed(widths[i], height)) }
-        layout(constraints.maxWidth, height) {
-            var x = 0
-            placeables.forEach { it.place(x, 0); x += it.width + gap }
-        }
-    }
-}
-
 /**
- * Shares [available] px between chips that each want [natural] px: chips that fit their fair
- * share get what they need, the rest split what is left; leftover space is spread evenly, so a
- * short value ("On") never takes room a phone name needs.
- */
-private fun chipWidths(natural: List<Int>, available: Int): List<Int> {
-    val widths = IntArray(natural.size)
-    var remaining = available
-    var open = natural.indices.sortedBy { natural[it] }
-    while (open.isNotEmpty()) {
-        val share = remaining / open.size
-        val small = open.filter { natural[it] <= share }
-        if (small.isEmpty()) {
-            open.forEach { widths[it] = share }
-            remaining -= share * open.size
-            break
-        }
-        small.forEach { widths[it] = natural[it]; remaining -= natural[it] }
-        open = open - small.toSet()
-    }
-    // Spread what is left (all chips fit) evenly; rounding remainder goes to the last chip.
-    if (remaining > 0) {
-        val extra = remaining / natural.size
-        natural.indices.forEach { widths[it] += extra }
-        widths[natural.lastIndex] += remaining - extra * natural.size
-    }
-    return widths.toList()
-}
-
-/** Narrow windows: the three statuses as one glass card with aligned rows instead of three stacked chips. */
-@Composable
-private fun StatusList(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
-    val colors = CarLinkTokens.colors
-    val dimens = CarLinkTokens.dimens
-    val items = statusItems(mode, ui, taps)
-    GlassCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp)) {
-        Column {
-            items.forEachIndexed { index, item ->
-                if (index > 0) HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
-                Row(Modifier.fillMaxWidth().heightIn(min = dimens.rowOneLine)
-                    .then(item.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
-                    .padding(horizontal = dimens.gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(item.icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.width(dimens.gutter))
-                    Eyebrow(item.eyebrow)
-                    Spacer(Modifier.width(dimens.gutter))
-                    Text(item.value, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End)
-                    // The dot's space is kept on every row so values stay aligned.
-                    Spacer(Modifier.width(12.dp))
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(item.status ?: Color.Transparent))
-                }
-            }
-        }
-    }
-}
-
-/**
- * Short windows: the three statuses on one glass pill. Values are shown when they all fit on the
- * line; otherwise Bluetooth and Network shrink to their icons (named for TalkBack) and only the
- * phone keeps its name. Each part opens what its chip opens.
+ * Home's stage. The status bar is docked to the bottom edge; the copy and the dial share the room
+ * above it, side by side in [landscape] and stacked (dial first) otherwise.
+ *
+ * Nothing is ever clipped or cut short: the richest arrangement that fits wins. Status: [panel],
+ * else the one-line [strip], else none; copy: regular, else dense (`copy(true, _)`: tighter
+ * rhythm, no pill, no card body). The dial takes the room left, up to [dialMax], and steps aside
+ * under [dialMin]; without it the copy shows the attempt's steps itself (`copy(_, true)`). The
+ * stage only scrolls when even the dense copy is taller than the window (very large font scale).
  */
 @Composable
-private fun StatusStrip(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
-    val dimens = CarLinkTokens.dimens
-    val colors = CarLinkTokens.colors
-    val items = statusItems(mode, ui, taps)
-    val style = MaterialTheme.typography.titleSmall
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val icon = dimens.iconTertiary + 4.dp
-    val iconGap = 10.dp
-    val gap = dimens.gutter
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val text = with(density) { items.sumOf { measurer.measure(it.value, style, maxLines = 1).size.width }.toDp() }
-        val fixed = gap * 2 + (icon + iconGap) * items.size + (gap * 2 + 1.dp) * (items.size - 1)
-        val labels = text + fixed <= maxWidth
-        GlassCard(Modifier.heightIn(min = dimens.minTouch), shape = CircleShape,
-            contentPadding = PaddingValues(horizontal = gap, vertical = 8.dp)) {
-            Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(gap)) {
-                items.forEachIndexed { index, item ->
-                    if (index > 0) Box(Modifier.width(1.dp).height(icon).background(colors.glassStrokeTop))
-                    val showValue = labels || index == items.lastIndex
-                    Row((if (showValue && !labels) Modifier.weight(1f, fill = false) else Modifier)
-                        .heightIn(min = dimens.minTouch).clip(CircleShape)
-                        .then(item.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(icon)) {
-                            Icon(painterResource(item.icon), if (showValue) null else "${item.eyebrow}: ${item.value}",
-                                Modifier.fillMaxSize(), tint = MaterialTheme.colorScheme.onSurface)
-                            if (item.status != null) {
-                                Box(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(9.dp)
-                                    .clip(CircleShape).background(item.status))
-                            }
-                        }
-                        if (showValue) {
-                            Spacer(Modifier.width(iconGap))
-                            Text(item.value, style = style, color = MaterialTheme.colorScheme.onSurface, maxLines = 2,
-                                overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Home's column: [main] (copy and actions) always, then the richest status that still fits the
- * window: [status] (chips or the list), else [strip], else none. When the regular copy leaves no
- * room for any status, the dense copy (`main(true)`: tighter rhythm, shorter cards) is tried
- * before the status is dropped. An optional [hero] above takes the height that is left, up to
- * [heroMaxFraction] of the window, and is left out when that is under [heroMin]. The group is
- * centred vertically; it only scrolls when even the dense copy is taller than the window (very
- * large font scale), and then keeps the strip at the end.
- */
-@Composable
-private fun FitColumn(
+private fun HomeStage(
     modifier: Modifier,
+    landscape: Boolean,
     statusGap: Dp,
-    main: @Composable (dense: Boolean) -> Unit,
-    status: @Composable () -> Unit,
+    columnGap: Dp,
+    dialMin: Dp,
+    dialMax: Dp,
+    copy: @Composable (dense: Boolean, steps: Boolean) -> Unit,
+    panel: @Composable () -> Unit,
     strip: @Composable () -> Unit,
-    hero: (@Composable () -> Unit)? = null,
-    heroGap: Dp = 0.dp,
-    heroMin: Dp = 0.dp,
-    heroMaxFraction: Float = 0.5f,
+    dial: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier) {
         val viewport = constraints.maxHeight
         Layout(
-            contents = listOf({ Box { main(false) } }, { Box { main(true) } }, { Box { status() } }, { Box { strip() } },
-                { if (hero != null) Box { hero() } }),
+            contents = listOf({ Box { copy(false, false) } }, { Box { copy(true, false) } },
+                { Box { copy(false, true) } }, { Box { copy(true, true) } },
+                { Box { panel() } }, { Box { strip() } }, { Box { dial() } }),
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        ) { (regularSlot, denseSlot, statusSlot, stripSlot, heroSlot), constraints ->
+        ) { slots, constraints ->
             val width = constraints.maxWidth
-            val loose = Constraints(maxWidth = width)
-            val regular = regularSlot.first().measure(loose)
-            val dense = denseSlot.first().measure(loose)
-            val statusP = statusSlot.first().measure(loose)
-            val stripP = stripSlot.first().measure(loose)
             val gap = statusGap.roundToPx()
-            fun fits(copy: Placeable, below: Placeable?) = copy.height + (below?.let { gap + it.height } ?: 0) <= viewport
-            // The first arrangement that fits, richest first.
-            val (mainP, chosen) = listOf(regular to statusP, regular to stripP, dense to statusP, dense to stripP,
-                regular to null, dense to null).firstOrNull { (copy, below) -> fits(copy, below) } ?: (dense to stripP)
-            val used = mainP.height + (chosen?.let { gap + it.height } ?: 0)
-            val heroP = heroSlot.firstOrNull()?.let { slot ->
-                val height = minOf(viewport - used - heroGap.roundToPx(), (viewport * heroMaxFraction).toInt())
-                if (height >= heroMin.roundToPx()) slot.measure(Constraints.fixed(width, height)) else null
+            val colGap = columnGap.roundToPx()
+            // Landscape: the copy keeps a little over half the width, the dial is centred in the rest.
+            val copyWidth = if (landscape) (width * 0.55f).toInt() else width
+            val loose = Constraints(maxWidth = copyWidth)
+            val regular = slots[0].first().measure(loose)
+            val dense = slots[1].first().measure(loose)
+            val panelP = slots[4].first().measure(Constraints(maxWidth = width))
+            val stripP = slots[5].first().measure(Constraints(maxWidth = width))
+            fun room(status: Placeable?) = viewport - (status?.let { it.height + gap } ?: 0)
+            val (firstCopy, status) = listOf(regular to panelP, regular to stripP, dense to panelP, dense to stripP,
+                regular to null, dense to null).firstOrNull { (c, s) -> c.height <= room(s) } ?: (dense to stripP)
+            var copyP: Placeable = firstCopy
+            val stage = room(status)
+
+            val dialGap = (columnGap * 0.75f).roundToPx()
+            val side = if (landscape) minOf(width - copyWidth - colGap, stage, dialMax.roundToPx()) * 92 / 100
+            else minOf(stage - copyP.height - dialGap, (width * 0.72f).toInt(), (viewport * 0.46f).toInt(), dialMax.roundToPx())
+            val dialP = if (side >= dialMin.roundToPx()) slots[6].first().measure(Constraints.fixed(side, side)) else null
+            if (dialP == null) {
+                // No dial to show the attempt's progress: the copy names the steps, when that still fits.
+                val regularSteps = if (copyP === regular) slots[2].first().measure(loose) else null
+                copyP = when {
+                    regularSteps != null && regularSteps.height <= stage -> regularSteps
+                    else -> slots[3].first().measure(loose).takeIf { it.height <= stage } ?: copyP
+                }
             }
-            val total = used + (heroP?.let { it.height + heroGap.roundToPx() } ?: 0)
-            layout(width, maxOf(total, viewport)) {
-                var y = maxOf(0, (viewport - total) / 2)
-                heroP?.let { it.place(0, y); y += it.height + heroGap.roundToPx() }
-                mainP.place(0, y)
-                y += mainP.height
-                chosen?.place(0, y + gap)
+
+            val stageHeight = maxOf(stage, copyP.height)
+            val total = stageHeight + (status?.let { gap + it.height } ?: 0)
+            val height = maxOf(total, viewport)
+            layout(width, height) {
+                if (landscape) {
+                    copyP.place(0, (stageHeight - copyP.height) / 2)
+                    dialP?.place(copyWidth + colGap + (width - copyWidth - colGap - dialP.width) / 2, (stageHeight - dialP.height) / 2)
+                } else {
+                    val group = copyP.height + (dialP?.let { it.height + dialGap } ?: 0)
+                    var y = maxOf(0, (stageHeight - group) / 2)
+                    dialP?.let { it.place((width - it.width) / 2, y); y += it.height + dialGap }
+                    copyP.place((width - copyP.width) / 2, y)
+                }
+                // Docked: the status bar always sits on the bottom edge.
+                status?.place(0, height - status.height)
             }
         }
     }
@@ -796,9 +663,9 @@ private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {
             val inline = maxWidth >= dimens.contentMaxWidth * 0.45f
             @Composable
             fun copy(modifier: Modifier) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-                Icon(painterResource(R.drawable.carlink_ic_wifi), null, Modifier.size(dimens.iconSecondary),
-                    tint = CarLinkTokens.colors.success)
-                Spacer(Modifier.width(dimens.targetGap))
+                com.carlink.app.ui.premium.IconTile(R.drawable.carlink_ic_wifi, tint = CarLinkTokens.colors.success,
+                    size = dimens.avatarRow * 0.85f)
+                Spacer(Modifier.width(dimens.targetGap * 1.5f))
                 Column {
                     Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid)),
                         style = MaterialTheme.typography.titleSmall, color = scheme.onSurface)
@@ -822,7 +689,7 @@ private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {
             }
         }
     }
-    if (asking) SameWifiDialog(ssid, actions, onDismiss = { asking = false })
+    if (asking) HomeUnscaled { SameWifiDialog(ssid, actions, onDismiss = { asking = false }) }
 }
 
 @Composable

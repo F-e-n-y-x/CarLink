@@ -89,6 +89,16 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
         HomeContent(ui(link = failed(LinkProblem.CARPLAY_AUTH_MISSING, transport = Transport.USB)), actions)
     },
     home("failed-car-hotspot-off") { HomeContent(ui(link = failed(LinkProblem.CAR_HOTSPOT_OFF)), actions) },
+    // Connection v2 problems with one-tap fixes: a radio switch, and a path switch with a second action.
+    home("failed-wifi-off") { HomeContent(ui(link = failed(LinkProblem.WIFI_OFF)), actions) },
+    home("failed-iphone-unreached") {
+        HomeContent(ui(link = failed(LinkProblem.PHONE_NEVER_REACHED_CAR), network = sameWifi), actions)
+    },
+    home("connected-android-auto-usb") {
+        val since = remember { SystemClock.elapsedRealtime() - 3_725_000 }
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTED, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 6, 6),
+            phones = listOf(pixel.copy(connected = true), iphone), connectedSince = since), actions)
+    },
     home("failed-engine") {
         HomeContent(ui(link = failed(LinkProblem.ENGINE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel, iphone)), actions)
     },

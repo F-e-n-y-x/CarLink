@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -79,34 +80,50 @@ import kotlin.random.Random
  * blur and no shadows: head-unit GPUs are mid-range, so depth comes from light and tone.
  */
 
-/** Full-bleed canvas: one soft light source top-start, an optional state glow, and noise against banding. */
+/**
+ * Full-bleed canvas: one soft key light (top-start by default; Home puts it behind its dial), an
+ * optional state glow, an optional floor vignette that grounds a bar docked at the bottom, and
+ * noise against banding.
+ */
 @Composable
 fun Atmosphere(modifier: Modifier = Modifier, glow: Color = Color.Transparent, glowCenter: Offset = Offset(0.72f, 0.55f),
+               lightCenter: Offset = Offset(0.08f, -0.1f), glowRadius: Float? = null, floor: Boolean = false,
                content: @Composable BoxScope.() -> Unit) {
     val colors = CarLinkTokens.colors
     val base = MaterialTheme.colorScheme.background
     val animatedGlow by animateColorAsState(glow, tween(if (LocalReduceMotion.current) 0 else 600), label = "glow")
     val noise = rememberNoise()
+    val floorColor = if (base.luminance() < 0.5f) Color.Black.copy(alpha = 0.45f) else colors.atmosphereFill
     Box(
         modifier
             .background(base)
-            .atmosphere(colors.atmosphereLight, colors.atmosphereFill, animatedGlow, glowCenter, noise),
+            .atmosphere(colors.atmosphereLight, colors.atmosphereFill, animatedGlow, glowCenter, glowRadius, lightCenter,
+                if (floor) floorColor else Color.Transparent, noise),
         content = content,
     )
 }
 
-private fun Modifier.atmosphere(light: Color, fill: Color, glow: Color, glowCenter: Offset, noise: ImageBitmap) =
+private fun Modifier.atmosphere(light: Color, fill: Color, glow: Color, glowCenter: Offset, glowRadius: Float?,
+                                lightCenter: Offset, floor: Color, noise: ImageBitmap) =
     drawBehind {
         val diagonal = kotlin.math.hypot(size.width, size.height)
-        // The single light source, top-start, like a cabin light on graphite.
+        // The single key light, like a cabin light on graphite.
         drawRect(Brush.radialGradient(listOf(light, light.copy(alpha = 0f)),
-            center = Offset(size.width * 0.08f, -size.height * 0.1f), radius = diagonal * 0.75f))
+            center = Offset(size.width * lightCenter.x, size.height * lightCenter.y), radius = diagonal * 0.75f))
         // A broad, faint fill from the bottom-end for depth.
         drawRect(Brush.radialGradient(listOf(fill.copy(alpha = 0.7f), fill.copy(alpha = 0f)),
             center = Offset(size.width, size.height * 1.1f), radius = diagonal * 0.6f))
         if (glow.alpha > 0f) {
-            drawRect(Brush.radialGradient(listOf(glow.copy(alpha = glow.alpha * 0.45f), glow.copy(alpha = 0f)),
-                center = Offset(size.width * glowCenter.x, size.height * glowCenter.y), radius = size.minDimension * 0.62f))
+            // The state's light behind the focal object; three stops so it falls off softly, not as a disc.
+            val strength = glow.alpha * 0.45f
+            drawRect(Brush.radialGradient(
+                0f to glow.copy(alpha = strength), 0.45f to glow.copy(alpha = strength * 0.4f), 1f to glow.copy(alpha = 0f),
+                center = Offset(size.width * glowCenter.x, size.height * glowCenter.y),
+                radius = glowRadius ?: (size.minDimension * 0.62f)))
+        }
+        if (floor.alpha > 0f) {
+            // The floor: a ground under the docked status bar, so the stage does not float.
+            drawRect(Brush.verticalGradient(listOf(floor.copy(alpha = 0f), floor), startY = size.height * 0.5f, endY = size.height))
         }
         drawRect(ShaderBrush(ImageShader(noise, TileMode.Repeated, TileMode.Repeated)), alpha = 0.035f)
     }
@@ -179,17 +196,69 @@ fun GlassChip(eyebrow: String, value: String, @DrawableRes icon: Int, modifier: 
     }
 }
 
-/** Solid Ion pill: the one primary action of a state. */
+/**
+ * A cabin tell-tale: a lit dot and a short tracked label in the state's colour ("CONNECTED",
+ * "NEEDS ATTENTION"). [pill] seats it on a faint tinted capsule; dense layouts drop the capsule.
+ */
+@Composable
+fun TellTale(text: String, color: Color, modifier: Modifier = Modifier, pill: Boolean = true) {
+    val car = CarLinkTokens.profile == com.carlink.app.ui.theme.UiProfile.CAR
+    val dot = if (car) 10.dp else 8.dp
+    Row(
+        modifier.then(if (pill) Modifier.clip(PillShape).background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.30f), PillShape)
+            .padding(horizontal = if (car) 18.dp else 12.dp, vertical = if (car) 8.dp else 5.dp) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The dot is "lit": a solid core with a soft halo, like an indicator lamp.
+        Box(Modifier.size(dot).drawBehind {
+            drawCircle(color.copy(alpha = 0.28f), radius = size.minDimension)
+            drawCircle(color)
+        })
+        Spacer(Modifier.width(if (car) 14.dp else 10.dp))
+        Text(text.uppercase(Locale.ROOT), style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+    }
+}
+
+/**
+ * A small rounded tile that seats an icon, tinted by [tint] when it carries a state (Bluetooth on,
+ * same Wi-Fi) and neutral otherwise. Used in status cells, setting rows and lists.
+ */
+@Composable
+fun IconTile(@DrawableRes icon: Int, modifier: Modifier = Modifier, tint: Color? = null, size: Dp = CarLinkTokens.dimens.avatarRow) {
+    val ink = MaterialTheme.colorScheme.onSurface
+    Box(
+        modifier.size(size).clip(RoundedCornerShape(size * 0.3f))
+            .background(tint?.copy(alpha = 0.14f) ?: ink.copy(alpha = 0.06f))
+            .border(1.dp, (tint ?: ink).copy(alpha = if (tint != null) 0.22f else 0.08f), RoundedCornerShape(size * 0.3f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(painterResource(icon), null, Modifier.size(size * 0.5f), tint = tint ?: ink)
+    }
+}
+
+/**
+ * Solid Ion pill: the one primary action of a state. A top-lit sheen and a hairline highlight
+ * make it read as a lit control rather than a flat Material pill (RESEARCH_HOME_V2 §4).
+ */
 @Composable
 fun IonButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, @DrawableRes icon: Int? = null) {
     val dimens = CarLinkTokens.dimens
     val scheme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
     Row(
         modifier
             .defaultMinSize(minHeight = dimens.primaryButton, minWidth = dimens.primaryButton * 2.6f)
             .clip(CircleShape)
             .background(scheme.primary)
-            .clickable(role = Role.Button, onClick = onClick)
+            .drawBehind {
+                drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (pressed) 0f else 0.20f), Color.Transparent),
+                    endY = size.height * 0.6f))
+                if (pressed) drawRect(Color.Black.copy(alpha = 0.12f))
+            }
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0f))), CircleShape)
+            .clickable(interaction, indication = androidx.compose.material3.ripple(), role = Role.Button, onClick = onClick)
             .padding(horizontal = dimens.gutter * 1.5f, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -199,6 +268,16 @@ fun IonButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
             Spacer(Modifier.width(14.dp))
         }
         Text(text, style = MaterialTheme.typography.labelLarge, color = scheme.onPrimary, maxLines = 2)
+    }
+}
+
+/** A round glass icon button (Back, Settings, Close) at the minimum touch size. */
+@Composable
+fun RoundGlassIconButton(@DrawableRes icon: Int, contentDescription: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val dimens = CarLinkTokens.dimens
+    GlassCard(modifier.size(dimens.minTouch), shape = CircleShape, onClick = onClick, contentPadding = PaddingValues(0.dp)) {
+        Icon(painterResource(icon), contentDescription, Modifier.align(Alignment.Center).size(dimens.iconSecondary * 0.9f),
+            tint = MaterialTheme.colorScheme.onSurface)
     }
 }
 

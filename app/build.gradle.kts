@@ -140,6 +140,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("carlink.repoRoot", repoRootPath)
     systemProperty("carlink.screenshots", recordingScreenshots.toString())
     providers.gradleProperty("carlink.gallery.areas").orNull?.let { systemProperty("carlink.gallery.areas", it) }
+    // `-Pcarlink.only=<regex>` renders only the images whose file name matches (fast iteration).
+    systemProperty("carlink.screenshots.only", providers.gradleProperty("carlink.only").orNull ?: "")
     if (recordingScreenshots && name == "testDebugUnitTest") {
         filter.includeTestsMatching("com.carlink.app.gallery.*")
         outputs.upToDateWhen { false }

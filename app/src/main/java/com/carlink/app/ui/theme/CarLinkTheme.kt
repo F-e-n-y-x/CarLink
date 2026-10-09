@@ -119,14 +119,14 @@ private fun screenShortSidePx(context: android.content.Context): Float {
     return min(metrics.widthPixels, metrics.heightPixels).toFloat()
 }
 
-private fun widthClass(width: Dp) = when {
+internal fun widthClass(width: Dp) = when {
     width < 600.dp -> WidthClass.COMPACT
     width < 840.dp -> WidthClass.MEDIUM
     width < 1200.dp -> WidthClass.EXPANDED
     else -> WidthClass.LARGE
 }
 
-private fun heightClass(height: Dp) = when {
+internal fun heightClass(height: Dp) = when {
     height < 480.dp -> HeightClass.COMPACT
     height < 900.dp -> HeightClass.MEDIUM
     else -> HeightClass.EXPANDED
