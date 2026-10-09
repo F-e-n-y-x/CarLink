@@ -5,10 +5,10 @@ import android.os.Build
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 
 /**
- * Runtime permissions a wireless CarPlay start needs per Android release. Android 17 drops local
- * IPv4 traffic for apps targeting API 37 until [Manifest.permission.ACCESS_LOCAL_NETWORK] is
- * granted, which also covers the inbound AirPlay listener; link-local IPv6 keeps working without
- * it, so affected units hang at the preparing screen instead of failing loudly.
+ * Runtime permissions a wireless CarPlay start needs per Android release. Android 17 requires
+ * [Manifest.permission.ACCESS_LOCAL_NETWORK] for local traffic, including the inbound AirPlay
+ * listener. A ROM where link-local IPv6 happened to work without it does not establish a general
+ * permission exemption for IPv6.
  */
 internal object WirelessPermissions {
     fun required(hotspotMode: WirelessHotspotMode, sdkInt: Int): List<String> = when {
