@@ -1,0 +1,108 @@
+package com.carlink.app.connection
+
+import android.content.Intent
+import com.carlink.app.core.Engine
+import com.carlink.app.core.Transport
+import com.carlink.app.settings.WirelessPath
+
+/**
+ * The contract between [SessionManager] (one session, one engine at a time, path policy,
+ * pre-flight) and the engine adapters ([CarPlayAdapter], [AndroidAutoAdapter]). Main process.
+ * See design/REBUILD_V2.md §4.
+ *
+ * An adapter starts exactly the session it is handed, reports what happens in [AdapterEvent]s on
+ * the main thread, and never decides paths or retries across paths: it reports what failed and
+ * whether a different path could help, and [SessionManager] decides.
+ */
+interface EngineAdapter {
+    val engine: Engine
+
+    /**
+     * Starts [plan]. Settings for the session were already written by [SessionManager]. Reports
+     * through [listener] until [AdapterEvent.Ended] or a terminal [AdapterEvent.Failed].
+     * Only called when [hasSession] is false (the previous session's stop completed).
+     */
+    fun start(plan: SessionPlan, listener: (AdapterEvent) -> Unit)
+
+    /**
+     * Ends the current session (any stage) and calls [onStopped] on the main thread once the
+     * engine has fully released its resources (service, Wi-Fi Direct group, sockets), so the next
+     * session can start safely. Calls [onStopped] at once when nothing runs.
+     */
+    fun stop(onStopped: () -> Unit)
+
+    /** True from [start] until the engine's teardown completes, including internal restarts. */
+    fun hasSession(): Boolean
+}
+
+/** One session to start. */
+data class SessionPlan(
+    val engine: Engine,
+    val transport: Transport,
+    /** Wireless only: the path [SessionManager] chose and wrote into the engine's settings. */
+    val path: WirelessPath?,
+    /** Bluetooth address of the phone, when known (wireless always; USB when remembered). */
+    val phoneAddress: String?,
+    val phoneName: String?,
+    /** USB only: the attach intent that identifies the device. */
+    val usbAttach: Intent? = null,
+    /** 1 for the first attempt of a request, 2+ for a retry on another path. */
+    val attempt: Int = 1,
+)
+
+/** What an engine reports during a session. */
+sealed interface AdapterEvent {
+    /** The engine is working through its stages; [step] of [stepCount] for Home's timeline. */
+    data class Progress(val step: Int, val stepCount: Int, val stage: ProgressStage) : AdapterEvent
+
+    /** The engine is retrying on its own after [reason]; not a failure yet. */
+    data class Retrying(val attempt: Int, val reason: FailureReason) : AdapterEvent
+
+    /** Projection is up (first frame shown). */
+    data object Connected : AdapterEvent
+
+    /** The session ended without an error (phone left, driver exited, engine closed). */
+    data class Ended(val byUser: Boolean) : AdapterEvent
+
+    /** Terminal for this session: the engine stopped trying. */
+    data class Failed(val reason: FailureReason, val detail: String? = null) : AdapterEvent
+}
+
+/** Driver-facing progress, the same words for both engines. */
+enum class ProgressStage {
+    /** Waiting for the phone to answer (Bluetooth wake, USB permission, phone locked). */
+    WAITING_FOR_PHONE,
+    /** Bluetooth handshake / iAP2 / authentication. */
+    HANDSHAKE,
+    /** The phone is joining the car's Wi-Fi link. */
+    JOINING_WIFI,
+    /** Network link up; projection protocol and video starting. */
+    STARTING_PROJECTION,
+}
+
+/**
+ * Why something failed, precise enough for [SessionManager] to pick a fix or another path.
+ * [pathRelated] is true only when a different wireless path could succeed.
+ */
+enum class FailureReason(val pathRelated: Boolean) {
+    /** Android Auto: the phone refused the network it was handed (wrong/missing password, BSSID). */
+    PHONE_REFUSED_WIFI(true),
+    /** CarPlay: the iPhone authenticated but never reached the car over Wi-Fi (no AirPlay TCP). */
+    PHONE_NEVER_REACHED_CAR(true),
+    /** Video stalled or never arrived on an established link. */
+    LINK_TOO_WEAK(true),
+    /** The Wi-Fi Direct group or hotspot could not be created or is owned by another app. */
+    WIFI_SETUP_FAILED(true),
+    /** Bluetooth: phone not reachable / not paired / RFCOMM failed. */
+    BLUETOOTH(false),
+    /** The phone never answered within the engine's time budget. */
+    PHONE_DID_NOT_ANSWER(false),
+    /** USB permission denied, interface claim failed, accessory switch failed. */
+    USB(false),
+    /** A permission, consent or system switch is missing (engine-side detection). */
+    BLOCKED(false),
+    /** CarPlay authentication (MFi) failed. */
+    AUTHENTICATION(false),
+    /** Anything else the engine reported. */
+    ENGINE(false),
+}
