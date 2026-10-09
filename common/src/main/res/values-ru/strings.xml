@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">Открывает Siri кнопкой на руле, которую вы выберете, пока CarPlay на экране. Кнопка, которую автомобиль оставляет себе, работает только со службой кнопок руля; служба работает и когда CarPlay в фоне. Без CarPlay или во время звонка кнопка сохраняет своё действие в автомобиле.</string>
     <string name="wheel_key_role_back">назад</string>
     <string name="wheel_key_service_label">Кнопки руля DiPlay</string>
-    <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
+    <string name="wheel_key_service_description">Необязательная фильтрация клавиш руля для громкости голосовых подсказок навигации, масштаба карты на панели, джойстика CarPlay и управления звонками. Содержимое экрана не читается.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
     <string name="carplay_calls_on_dashboard">Звонки CarPlay на приборной панели</string>

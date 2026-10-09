@@ -638,7 +638,7 @@
     <string name="wheel_siri_key_description">在 CarPlay 顯示於螢幕時，用你選擇的方向盤按鍵開啟 Siri。車輛自身保留的按鍵只能搭配方向盤按鍵服務使用，該服務在 CarPlay 處於背景時也可使用。未連接 CarPlay 或通話時，該按鍵保留車輛原有功能。</string>
     <string name="wheel_key_role_back">返回</string>
     <string name="wheel_key_service_label">DiPlay 方向盤按鍵</string>
-    <string name="wheel_key_service_description">讓 DiPlay 使用在設定中選擇的方向盤按鍵縮放儀表板上的 CarPlay 地圖，並在 CarPlay 螢幕上移動選擇。它只接收按鍵，不讀取螢幕內容。</string>
+    <string name="wheel_key_service_description">可選的方向盤按鍵過濾，用於導航播報音量、儀表地圖縮放、CarPlay 搖桿及通話控制。不讀取螢幕內容。</string>
     <string name="cluster_song_on_change">僅在切換歌曲時顯示</string>
     <string name="cluster_song_on_change_description">新歌曲在儀表板上顯示 5 秒，然後清除卡片。暫停和繼續播放不會再次顯示。</string>
     <string name="cluster_safe_area_edit">儀表安全區域 · 編輯框</string>

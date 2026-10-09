@@ -692,7 +692,7 @@
     <string name="wheel_siri_key_description">Opens Siri with a wheel key you choose while CarPlay is on the screen. A key that the car keeps for itself works only with the wheel key service, which also works when CarPlay is in the background. Without CarPlay, or during a call, the key keeps the car\'s own action.</string>
     <string name="wheel_key_role_back">back</string>
     <string name="wheel_key_service_label">DiPlay wheel keys</string>
-    <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard and to move around CarPlay\'s screen. It only receives key presses and does not read the screen.</string>
+    <string name="wheel_key_service_description">Optional wheel key filtering for navigation volume during spoken guidance, dashboard map zoom, CarPlay joystick and call controls. No screen content is read.</string>
     <string name="cluster_song_on_change">Song only when it changes</string>
     <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
     <string name="carplay_calls_on_dashboard">CarPlay calls on the dashboard</string>

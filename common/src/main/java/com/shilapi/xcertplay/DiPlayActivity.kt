@@ -94,6 +94,7 @@ internal enum class SettingsSection {
     ADVANCED_MEDIA,
     CAR_BUTTON,
     AUDIO_ROUTING,
+    NAVIGATION_WHEEL,
     LOCATION,
     CLUSTER_MAP,
     BYD_NAVIGATION,
@@ -125,6 +126,7 @@ internal object SettingsInformationArchitecture {
             SettingsSection.CLUSTER_MAP,
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
+            SettingsSection.NAVIGATION_WHEEL,
         ),
     )
 }
@@ -1675,6 +1677,10 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                 AirPlayPersistence.saveMediaBufferMillis(this, bufferPresets[it])
             }
         }
+        filteredSection(content, SettingsSection.NAVIGATION_WHEEL,
+            getString(R.string.settings_navigation_wheel_volume), R.drawable.ic_dp_audio) { card ->
+            navigationWheelControls(card)
+        }
         filteredSection(content, SettingsSection.LOCATION,
             getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),
@@ -3059,6 +3065,32 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             .setView(ScrollView(appDialogContext()).apply { addView(body) })
             .setPositiveButton(getString(R.string.close)) { _, _ -> render() }
             .show()
+    }
+
+    /** Optional guidance-volume routing through the existing wheel service. */
+    private fun navigationWheelControls(card: LinearLayout) {
+        toggle(card, getString(R.string.settings_navigation_wheel_volume), getString(R.string.settings_navigation_wheel_volume_description),
+            NavigationWheelSettings.enabled(this)) {
+            NavigationWheelSettings.setEnabled(this, it)
+            render()
+        }
+        if (!NavigationWheelSettings.enabled(this) || WheelKeyService.connected()) return
+        card.addView(label(getString(R.string.settings_navigation_wheel_service_required), 14, WARNING))
+        card.addView(button(getString(R.string.wheel_keys_open_settings), false) {
+            runCatching { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                .onFailure { toast(getString(R.string.wheel_keys_no_settings)) }
+        }, matchButton(10, 56))
+        card.addView(button(getString(R.string.wheel_keys_enable_adb), false) {
+            Thread({
+                val access = WheelKeyService.enableOverAdb(this)
+                runOnUiThread {
+                    if (access != com.shilapi.xcertplay.adb.LocalAdb.Access.READY) {
+                        toast(getString(R.string.wheel_keys_adb_failed, access.name))
+                    }
+                    render()
+                }
+            }, "diplay-navigation-wheel-enable").start()
+        }, matchButton(10, 56))
     }
 
     /** Steering-wheel keys for the dashboard map zoom and the CarPlay joystick: the switches, the key service and the keys. */

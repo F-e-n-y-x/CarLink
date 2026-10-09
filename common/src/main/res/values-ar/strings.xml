@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">يفتح Siri بزر على المقود تختاره عندما تكون CarPlay على الشاشة. الزر الذي تحتفظ به السيارة لنفسها لا يعمل إلا مع خدمة أزرار المقود، التي تعمل أيضًا عندما تكون CarPlay في الخلفية. من دون CarPlay، أو أثناء مكالمة، يحتفظ الزر بوظيفته في السيارة.</string>
     <string name="wheel_key_role_back">رجوع</string>
     <string name="wheel_key_service_label">أزرار المقود في DiPlay</string>
-    <string name="wheel_key_service_description">تتيح لـ DiPlay استخدام أزرار المقود المختارة في إعداداته لتكبير خريطة CarPlay على لوحة العدادات وللتنقل في شاشة CarPlay. تستقبل ضغطات الأزرار فقط ولا تقرأ الشاشة.</string>
+    <string name="wheel_key_service_description">تصفية اختيارية لمفاتيح المقود لضبط صوت الملاحة أثناء الإرشادات الصوتية وتقريب خريطة لوحة العدادات وعصا تحكم CarPlay والتحكم بالمكالمات. لا تتم قراءة محتوى الشاشة.</string>
     <string name="cluster_song_on_change">الأغنية عند تغيّرها فقط</string>
     <string name="cluster_song_on_change_description">تظهر الأغنية الجديدة على لوحة العدادات لمدة 5 ثوانٍ، ثم تُفرَّغ البطاقة. الإيقاف المؤقت والاستئناف لا يعرضانها مرة أخرى.</string>
     <string name="carplay_calls_on_dashboard">مكالمات CarPlay على لوحة العدادات</string>

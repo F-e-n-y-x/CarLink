@@ -655,7 +655,7 @@
     <string name="wheel_siri_key_description">在 CarPlay 显示于屏幕时，用你选择的方向盘按键打开 Siri。车辆自身保留的按键只能配合方向盘按键服务使用，该服务在 CarPlay 处于后台时也可使用。未连接 CarPlay 或通话时，该按键保留车辆原有功能。</string>
     <string name="wheel_key_role_back">返回</string>
     <string name="wheel_key_service_label">DiPlay 方向盘按键</string>
-    <string name="wheel_key_service_description">让 DiPlay 使用在设置中选择的方向盘按键缩放仪表盘上的 CarPlay 地图，并在 CarPlay 屏幕上移动选择。它只接收按键，不读取屏幕内容。</string>
+    <string name="wheel_key_service_description">可选方向盘按键过滤，用于导航播报音量、仪表地图缩放、CarPlay摇杆及通话控制。不读取屏幕内容。</string>
     <string name="cluster_song_on_change">仅在切歌时显示</string>
     <string name="cluster_song_on_change_description">新歌曲在仪表盘上显示 5 秒，然后清空卡片。暂停和继续播放不会再次显示。</string>
     <string name="carplay_calls_on_dashboard">仪表盘显示 CarPlay 通话</string>

@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">Abre Siri con un botón del volante que elijas mientras CarPlay está en pantalla. Un botón que el coche reserva para sí mismo solo funciona con el servicio de botones del volante, que también funciona con CarPlay en segundo plano. Sin CarPlay, o durante una llamada, el botón conserva su función en el coche.</string>
     <string name="wheel_key_role_back">atrás</string>
     <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
-    <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
+    <string name="wheel_key_service_description">Filtrado opcional de las teclas del volante para el volumen de las indicaciones de navegación, el zoom del mapa del panel, el joystick de CarPlay y los controles de llamada. No se lee el contenido de la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
     <string name="carplay_calls_on_dashboard">Llamadas de CarPlay en el cuadro</string>
