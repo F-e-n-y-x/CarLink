@@ -35,7 +35,8 @@ class HomeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        Connection.prewarm(this)
+        // After the first frames: the ":aa" process start competes with Home's first draw (CarLinkApplication.deferStartupWork).
+        window.decorView.postDelayed({ Connection.prewarm(this) }, PREWARM_DELAY_MILLIS)
         Connection.onHomeShown(this)
         vm.refreshPhones()
         UsbWatcher.get(this).start()
@@ -80,6 +81,7 @@ class HomeActivity : ComponentActivity() {
         const val EXTRA_AUTO_PHONE_ADDRESS = "com.carlink.app.extra.AUTO_PHONE_ADDRESS"
         const val EXTRA_AUTO_PHONE_KIND = "com.carlink.app.extra.AUTO_PHONE_KIND"
         const val EXTRA_AUTO_PHONE_NAME = "com.carlink.app.extra.AUTO_PHONE_NAME"
+        private const val PREWARM_DELAY_MILLIS = 2_500L
         fun intent(context: Context): Intent = Intent(context, HomeActivity::class.java)
     }
 }

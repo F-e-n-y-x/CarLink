@@ -1,0 +1,6 @@
+# CarLink's baseline profile (docs/LOW_END_PERFORMANCE.md). AGP merges it with the libraries'
+# own profiles (Compose, Material 3) into the APK; ProfileInstaller hands it to ART on first run,
+# so CarLink's own code is compiled ahead of time instead of interpreted during the first launches.
+# CarLink's code is small; the whole package is listed rather than a recorded startup trace.
+HSPLcom/carlink/app/**->**(**)**
+Lcom/carlink/app/**;

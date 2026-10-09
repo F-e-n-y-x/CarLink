@@ -43,10 +43,28 @@ class CarLinkApplication : App() {
             com.carlink.app.connection.CarPlayAdapter.install(this, com.carlink.app.connection.Connection.vehicleProfile(this))
             com.carlink.app.ui.home.CarPlayWaitingContent.register()
             com.carlink.app.entry.UsbWatcher.get(this).start()
-            com.carlink.app.connection.Connection.prewarm(this)
             // The floating switcher over CarPlay / Android Auto (and the USB switch prompt).
             com.carlink.app.switcher.SwitcherController.install(this)
+            deferStartupWork()
         }
+    }
+
+    /**
+     * Work that helps the first connection but not the first frame waits until the app has been up
+     * for a moment (docs/LOW_END_PERFORMANCE.md). Starting Android Auto's ":aa" process here used to
+     * fork and initialise a second app process while Home drew its first frame (two cores on a
+     * cheap head unit), and made the session layer, created a few milliseconds later, see a live
+     * engine process and run an orphan check and stop on every cold start.
+     */
+    private fun deferStartupWork() {
+        val app = this
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            com.carlink.app.connection.Connection.prewarm(app)
+            // The decoder probe for Automatic picture, so the first session does not pay for it.
+            Thread({ runCatching { com.carlink.app.connection.DeviceCapabilities.read(app) } }, "carlink-capabilities").apply {
+                priority = Thread.MIN_PRIORITY
+            }.start()
+        }, STARTUP_DEFER_MILLIS)
     }
 
     /**
@@ -112,6 +130,8 @@ class CarLinkApplication : App() {
 
     private companion object {
         const val TOAST_TAG = "CarLink-EngineToast"
+        /** After Home's first frame on a slow head unit (≈1.3 s on the low-end emulator), with margin. */
+        const val STARTUP_DEFER_MILLIS = 2_500L
         const val KEY_VEHICLE_DISPLAY_NAME = "vehicle-display-name"
     }
 }
