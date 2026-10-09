@@ -1,7 +1,7 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
 
 /**
  * How long each connection phase may take before [SessionManager] acts (pure; unit tested).

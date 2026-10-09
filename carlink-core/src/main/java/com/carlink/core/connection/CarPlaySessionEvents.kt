@@ -1,6 +1,6 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Transport
+import com.carlink.core.core.Transport
 import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupPolicy

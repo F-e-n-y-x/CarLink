@@ -1,11 +1,11 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import com.andrerinas.openheadunit.HostIntegration.EngineEvent
-import com.carlink.app.connection.AdapterEvent
-import com.carlink.app.connection.FailureReason
-import com.carlink.app.connection.ProgressStage
-import com.carlink.app.core.Transport
-import com.carlink.app.connection.aa.AaProtocol as P
+import com.carlink.core.connection.AdapterEvent
+import com.carlink.core.connection.FailureReason
+import com.carlink.core.connection.ProgressStage
+import com.carlink.core.core.Transport
+import com.carlink.core.connection.aa.AaProtocol as P
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

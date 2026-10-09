@@ -1,4 +1,4 @@
-package com.carlink.app.core
+package com.carlink.core.core
 
 /** The projection engine that serves a phone. */
 enum class Engine {

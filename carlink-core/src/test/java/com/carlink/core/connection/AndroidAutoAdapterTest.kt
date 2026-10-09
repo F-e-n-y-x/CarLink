@@ -1,16 +1,16 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.app.Application
 import android.content.Intent
 import android.os.Looper
 import android.os.SystemClock
 import com.andrerinas.openheadunit.HostIntegration.EngineEvent
-import com.carlink.app.connection.aa.AaProtocol as P
-import com.carlink.app.connection.aa.AaSessionTracker
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.VehicleProfile
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.connection.aa.AaProtocol as P
+import com.carlink.core.connection.aa.AaSessionTracker
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WirelessPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -1,10 +1,10 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.hardware.usb.UsbDevice
 import android.util.Log
 import com.andrerinas.openheadunit.HostIntegration.EngineEvent
 import com.andrerinas.openheadunit.aap.AapService
-import com.carlink.app.settings.VehicleProfile
+import com.carlink.core.settings.VehicleProfile
 
 /**
  * What the ":aa" process remembers about the engine between commands: the wireless settings it was

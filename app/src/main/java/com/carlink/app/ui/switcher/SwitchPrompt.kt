@@ -33,8 +33,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.PhoneKind
 import com.carlink.app.ui.components.PhoneAvatar
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.isolate
@@ -42,6 +40,8 @@ import com.carlink.app.ui.premium.GlassButton
 import com.carlink.app.ui.premium.IonButton
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.Engine
+import com.carlink.core.core.PhoneKind
 
 /**
  * "Switch to <phone>?": asked when another phone is plugged in while a session runs, over the
@@ -56,7 +56,7 @@ fun SwitchPrompt(
     onSwitch: () -> Unit,
     onDecline: () -> Unit,
     /** How the offered phone is reachable: plugged in (USB) or over Bluetooth/Wi-Fi. */
-    newTransport: com.carlink.app.core.Transport = com.carlink.app.core.Transport.USB,
+    newTransport: com.carlink.core.core.Transport = com.carlink.core.core.Transport.USB,
     modifier: Modifier = Modifier,
     safePadding: PaddingValues = PaddingValues(0.dp),
 ) {
@@ -92,7 +92,7 @@ fun SwitchPrompt(
             Spacer(Modifier.height(8.dp))
             // Which phone, which app and how it is connected (user request, 2026-10-09).
             Text(stringResource(R.string.carlink_switch_how, engineName(newEngine),
-                    stringResource(if (newTransport == com.carlink.app.core.Transport.USB) R.string.carlink_switch_via_usb
+                    stringResource(if (newTransport == com.carlink.core.core.Transport.USB) R.string.carlink_switch_via_usb
                         else R.string.carlink_switch_via_wireless)),
                 style = MaterialTheme.typography.titleSmall, color = scheme.primary, textAlign = TextAlign.Center)
             Spacer(Modifier.height(4.dp))

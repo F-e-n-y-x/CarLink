@@ -1,4 +1,4 @@
-package com.carlink.app.entry
+package com.carlink.core.entry
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,9 +8,9 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.connection.Connection
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.PhoneClassifier
+import com.carlink.core.connection.Connection
 
 /**
  * Finds phones on USB while CarLink is open, without relying on the system's attach dispatch.
@@ -75,10 +75,10 @@ class UsbWatcher private constructor(context: Context) {
         if (!claim(device)) return
         val kind = PhoneClassifier.classifyUsb(UsbRouterActivity.describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
-        com.carlink.app.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
+        com.carlink.core.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
         val attach = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
-        Connection.get(app).onUsbPhone(kind, com.carlink.app.detect.UsbPhoneNames.resolve(app, kind, device), attach)
+        Connection.get(app).onUsbPhone(kind, com.carlink.core.detect.UsbPhoneNames.resolve(app, kind, device), attach)
     }
 
     companion object {

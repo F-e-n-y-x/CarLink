@@ -1,12 +1,12 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.app.Application
 import android.content.Intent
 import android.hardware.usb.UsbManager
 import android.os.Looper
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus

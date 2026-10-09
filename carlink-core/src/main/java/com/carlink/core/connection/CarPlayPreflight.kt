@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.Manifest
 import android.bluetooth.BluetoothManager
@@ -7,11 +7,11 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.os.Build
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.WifiEnvironmentReader
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.WifiEnvironmentReader
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotStatus

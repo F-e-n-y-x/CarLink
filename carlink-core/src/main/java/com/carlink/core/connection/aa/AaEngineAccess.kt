@@ -1,4 +1,4 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager

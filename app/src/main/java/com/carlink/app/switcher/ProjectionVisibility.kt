@@ -11,7 +11,7 @@ import android.os.Bundle
 import android.os.Process
 import androidx.core.content.ContextCompat
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
-import com.carlink.app.core.Engine
+import com.carlink.core.core.Engine
 import com.shilapi.xcertplay.CarPlayHostActivity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

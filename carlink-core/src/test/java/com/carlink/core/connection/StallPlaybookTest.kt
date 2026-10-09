@@ -1,7 +1,7 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

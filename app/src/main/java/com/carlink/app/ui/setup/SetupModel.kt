@@ -5,14 +5,14 @@ import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.carlink.app.R
-import com.carlink.app.connection.CarPlayPreflight
-import com.carlink.app.connection.DevicePreflight
-import com.carlink.app.connection.PairingSession
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.VehicleProfile
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.connection.CarPlayPreflight
+import com.carlink.core.connection.DevicePreflight
+import com.carlink.core.connection.PairingSession
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WirelessPath
 
 /** The setup's steps, in order. */
 enum class SetupStep { WELCOME, PERMISSIONS, CAR, PAIR, DONE }
@@ -112,7 +112,7 @@ interface SetupActions {
     fun setVehicle(profile: VehicleProfile) {}
     fun makeVisible() {}
     fun turnOnBluetooth() {}
-    fun setKind(kind: com.carlink.app.core.PhoneKind) {}
+    fun setKind(kind: com.carlink.core.core.PhoneKind) {}
     fun connectKnown(phone: PairedPhone) {}
     fun useCable(cable: Boolean) {}
     fun retry() {}

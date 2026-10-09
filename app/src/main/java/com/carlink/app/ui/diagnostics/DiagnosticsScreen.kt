@@ -65,10 +65,10 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.Transport
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.Transport
 import com.carlink.app.diagnostics.AppInfo
 import com.carlink.app.diagnostics.CarLinkFileProvider
 import com.carlink.app.diagnostics.CarPlayAuthSource
@@ -80,11 +80,11 @@ import com.carlink.app.diagnostics.CheckStatus
 import com.carlink.app.diagnostics.Checks
 import com.carlink.app.diagnostics.ConnectionLog
 import com.carlink.app.diagnostics.DecoderInfo
-import com.carlink.app.diagnostics.EventLog
+import com.carlink.core.diagnostics.EventLog
 import com.carlink.app.diagnostics.LogLine
 import com.carlink.app.diagnostics.LogSource
 import com.carlink.app.diagnostics.SystemScreens
-import com.carlink.app.settings.SettingsCategory
+import com.carlink.core.settings.SettingsCategory
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.components.StatGrid
 import com.carlink.app.ui.components.engineName
@@ -125,7 +125,7 @@ internal data class DiagnosticsUi(
     /** Newest first; null while the engine logs are read. */
     val log: List<LogLine>?,
     /** Each known phone's connection record, most recently used first. */
-    val health: List<com.carlink.app.connection.PhoneHealth> = emptyList(),
+    val health: List<com.carlink.core.connection.PhoneHealth> = emptyList(),
 )
 
 internal interface DiagnosticsActions {
@@ -393,7 +393,7 @@ private fun ActiveSession(ui: DiagnosticsUi) {
 
     // The driver's wording of why it waits; a failure's own detail; never the internal "phone_not_answering" marker.
     val detail = com.carlink.app.ui.home.noticeText(link)
-        ?: link.detail?.takeIf { it.isNotBlank() && it != com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING }
+        ?: link.detail?.takeIf { it.isNotBlank() && it != com.carlink.core.connection.DETAIL_PHONE_NOT_ANSWERING }
     if (detail != null) {
         val failed = link.stage == LinkStage.FAILED
         Spacer(Modifier.height(CarLinkTokens.dimens.targetGap))

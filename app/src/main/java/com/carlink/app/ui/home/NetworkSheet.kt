@@ -3,12 +3,12 @@ package com.carlink.app.ui.home
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.carlink.app.R
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.settings.ChoiceSheet
 import com.carlink.app.ui.settings.Preset
 import com.carlink.app.ui.settings.connectionMethodLabel
 import com.carlink.app.ui.settings.methodIcon
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WirelessPath
 
 /**
  * Opened from Home's Network status: the same connection types as Settings › Connection, so the

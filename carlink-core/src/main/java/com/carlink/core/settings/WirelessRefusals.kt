@@ -1,7 +1,7 @@
-package com.carlink.app.settings
+package com.carlink.core.settings
 
 import android.content.Context
-import com.carlink.app.core.Engine
+import com.carlink.core.core.Engine
 import java.security.MessageDigest
 
 /**

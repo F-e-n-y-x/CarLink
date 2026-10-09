@@ -1,7 +1,7 @@
 package com.carlink.app.ui.theme
 
 import android.content.Context
-import com.carlink.app.detect.HeadUnitDetector
+import com.carlink.core.detect.HeadUnitDetector
 
 /**
  * Which sizing CarLink uses. The same layouts serve both; only the tokens change.

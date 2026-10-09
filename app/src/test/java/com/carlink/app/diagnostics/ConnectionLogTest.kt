@@ -1,6 +1,8 @@
 package com.carlink.app.diagnostics
 
 import android.app.Application
+import com.carlink.core.diagnostics.EventLog
+import com.carlink.core.diagnostics.LogMasking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

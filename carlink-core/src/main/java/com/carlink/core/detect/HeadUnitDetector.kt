@@ -1,4 +1,4 @@
-package com.carlink.app.detect
+package com.carlink.core.detect
 
 import android.content.Context
 import android.content.Intent

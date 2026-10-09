@@ -30,9 +30,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.PairedPhone
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.isolate
 import com.carlink.app.ui.components.phoneIcon
@@ -44,6 +41,9 @@ import com.carlink.app.ui.premium.IonButton
 import com.carlink.app.ui.premium.SheetHeader
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.PairedPhone
 
 /** Paired phones: tap to connect (or switch, with a confirmation while another phone projects). */
 @Composable
@@ -94,18 +94,18 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                             val current = link.isActive && link.phoneName == phone.name && link.transport != null
                             // A wired session's own phone is the plugged-in one of its kind.
                             val sessionKind = when (link.engine) {
-                                com.carlink.app.core.Engine.CARPLAY -> PhoneKind.IPHONE
-                                com.carlink.app.core.Engine.ANDROID_AUTO -> PhoneKind.ANDROID
+                                com.carlink.core.core.Engine.CARPLAY -> PhoneKind.IPHONE
+                                com.carlink.core.core.Engine.ANDROID_AUTO -> PhoneKind.ANDROID
                                 null -> null
                             }
                             val plugged = phone.kind in ui.home.usbKinds &&
-                                !(link.isActive && link.transport == com.carlink.app.core.Transport.USB && phone.kind == sessionKind)
+                                !(link.isActive && link.transport == com.carlink.core.core.Transport.USB && phone.kind == sessionKind)
                             val (icon, text) = when {
                                 current -> com.carlink.app.ui.premium.transportIcon(link.transport, ui.network?.path) to
                                     stringResource(R.string.carlink_transport_with_path, stringResource(R.string.carlink_home_eyebrow_connected),
                                         com.carlink.app.ui.premium.transportLabel(link.transport!!, ui.network?.path))
                                 plugged -> R.drawable.carlink_ic_usb to stringResource(R.string.carlink_transport_plugged_in)
-                                else -> com.carlink.app.ui.premium.transportIcon(com.carlink.app.core.Transport.WIRELESS) to
+                                else -> com.carlink.app.ui.premium.transportIcon(com.carlink.core.core.Transport.WIRELESS) to
                                     stringResource(R.string.carlink_transport_wireless)
                             }
                             Spacer(Modifier.height(2.dp))

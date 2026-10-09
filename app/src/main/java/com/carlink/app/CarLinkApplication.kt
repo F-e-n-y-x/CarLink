@@ -3,11 +3,11 @@ package com.carlink.app
 import android.util.Log
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
-import com.carlink.app.connection.CarLinkConfig
-import com.carlink.app.connection.CarLinkCore
 import com.carlink.app.entry.HomeLauncher
 import com.carlink.app.ui.HomeActivity
 import com.carlink.app.ui.home.CarPlayWaitingContent
+import com.carlink.core.connection.CarLinkConfig
+import com.carlink.core.connection.CarLinkCore
 import com.shilapi.xcertplay.CarPlayHostIntegration
 
 /**

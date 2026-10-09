@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
@@ -11,9 +11,9 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.KnownPhones
-import com.carlink.app.detect.PhoneClassifier
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.KnownPhones
+import com.carlink.core.detect.PhoneClassifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

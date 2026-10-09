@@ -53,13 +53,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Engine
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.focusRing
 import com.carlink.app.ui.premium.Eyebrow
 import com.carlink.app.ui.premium.GlassCard
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.Engine
 
 /*
  * Settings building blocks on the Graphite and Ion materials (design/RESEARCH_PREMIUM_UX.md

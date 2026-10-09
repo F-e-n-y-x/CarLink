@@ -1,4 +1,4 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 /**
  * The wireless settings AapService arms itself with. `initWifiMode()` re-arms on its own only when

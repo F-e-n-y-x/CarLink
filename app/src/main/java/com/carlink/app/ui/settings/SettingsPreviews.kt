@@ -2,20 +2,20 @@ package com.carlink.app.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.carlink.app.settings.AdvancedSettings
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.Control
-import com.carlink.app.settings.DayNight
-import com.carlink.app.settings.Picture
-import com.carlink.app.settings.SettingsCategory
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiDetails
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.DisplayPrefs
 import com.carlink.app.ui.theme.CarLinkTheme
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.UiProfileMode
+import com.carlink.core.settings.AdvancedSettings
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.Control
+import com.carlink.core.settings.DayNight
+import com.carlink.core.settings.Picture
+import com.carlink.core.settings.SettingsCategory
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiDetails
 
 /** Fake engine values: plausible defaults for every Advanced and Lab row. */
 internal val previewEngineValues: Map<String, String> = AdvancedSettings.all.associate { setting ->
@@ -48,8 +48,8 @@ fun settingsPreviewUi(
     display = DisplayPrefs(ThemeMode.FOLLOW_SYSTEM, UiProfileMode.AUTO, 1f),
     joinedWifi = "Garage Wi-Fi",
     isByd = byd,
-    vehicle = if (byd) com.carlink.app.settings.VehicleProfile.BYD_DILINK else com.carlink.app.settings.VehicleProfile.GENERIC,
-    detectedVehicle = com.carlink.app.settings.VehicleProfile.GENERIC,
+    vehicle = if (byd) com.carlink.core.settings.VehicleProfile.BYD_DILINK else com.carlink.core.settings.VehicleProfile.GENERIC,
+    detectedVehicle = com.carlink.core.settings.VehicleProfile.GENERIC,
     versionName = "1.0.0",
     advancedValues = if (loading) null else previewEngineValues,
 )

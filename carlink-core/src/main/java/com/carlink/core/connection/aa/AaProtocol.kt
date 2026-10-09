@@ -1,7 +1,7 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 /**
- * Broadcasts between [com.carlink.app.connection.AndroidAutoAdapter] (main process) and
+ * Broadcasts between [com.carlink.core.connection.AndroidAutoAdapter] (main process) and
  * [AaCommandReceiver] / [AaEngineHooks] (the ":aa" process). Every broadcast is explicit
  * (setClass or setPackage) and every receiver is unexported, so no other app can drive or read the
  * engine.
@@ -20,7 +20,7 @@ internal object AaProtocol {
     const val EXTRA_TOKEN = "token"
     const val EXTRA_ADDRESS = "address"
     const val EXTRA_USB_DEVICE = "usb_device"
-    /** [com.carlink.app.settings.VehicleProfile] name; gates BYD-only engine behaviour. */
+    /** [com.carlink.core.settings.VehicleProfile] name; gates BYD-only engine behaviour. */
     const val EXTRA_VEHICLE_PROFILE = "vehicle_profile"
 
     const val COMMAND_START_WIRELESS = "start_wireless"

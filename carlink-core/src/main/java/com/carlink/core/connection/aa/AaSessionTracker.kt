@@ -1,15 +1,15 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import com.andrerinas.openheadunit.HostIntegration.EngineEvent
-import com.carlink.app.connection.AdapterEvent
-import com.carlink.app.connection.FailureReason
-import com.carlink.app.connection.ProgressStage
-import com.carlink.app.core.Transport
+import com.carlink.core.connection.AdapterEvent
+import com.carlink.core.connection.FailureReason
+import com.carlink.core.connection.ProgressStage
+import com.carlink.core.core.Transport
 
 /**
  * One Android Auto session as the main process sees it: DiAuto's CommManager states and engine
  * events (DA§2.1, DA§11.5.2) in, [AdapterEvent]s out. Pure (time is passed in) so every rule is
- * unit tested; [com.carlink.app.connection.AndroidAutoAdapter] does the I/O.
+ * unit tested; [com.carlink.core.connection.AndroidAutoAdapter] does the I/O.
  *
  * The engine never gives up on its own: it re-offers a refused network, re-pokes and re-arms after a
  * drop forever (DA§2.6, §3.3.2). The adapter therefore turns repeats into a terminal

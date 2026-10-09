@@ -2,8 +2,8 @@ package com.carlink.app.ui.theme
 
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.carlink.app.connection.DeviceCapabilities
-import com.carlink.app.connection.DeviceSignals
+import com.carlink.core.connection.DeviceCapabilities
+import com.carlink.core.connection.DeviceSignals
 
 /** The driver's choice in Settings › General › Visual effects. */
 enum class RenderingMode { AUTO, FULL, LITE }

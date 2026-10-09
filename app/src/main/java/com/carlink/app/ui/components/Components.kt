@@ -23,10 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
 import com.carlink.app.ui.theme.CarLinkTokens
+import com.carlink.core.core.Engine
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
 
 /** Small shared building blocks. Every size comes from CarLinkTokens.dimens. */
 

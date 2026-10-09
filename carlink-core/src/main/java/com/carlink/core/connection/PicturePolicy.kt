@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 /**
  * Android Auto's stream resolutions (DiAuto `Settings.Resolution` ids). [stream] is the size the

@@ -80,15 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.R
-import com.carlink.app.connection.PairingSession
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PairedPhone
 import com.carlink.app.diagnostics.SystemScreens
-import com.carlink.app.settings.VehicleProfile
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.components.CarLinkMark
 import com.carlink.app.ui.components.engineName
@@ -117,6 +109,14 @@ import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 import com.carlink.app.ui.theme.WidthClass
+import com.carlink.core.connection.PairingSession
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.VehicleProfile
 
 /**
  * First-time setup (design/RESEARCH_PLUG_AND_PLAY.md "Lessons"): welcome, one permission step
@@ -789,7 +789,7 @@ private fun FoundCard(ui: SetupUi, session: LinkState?) {
                     else -> (session.step - 1).coerceIn(0, 3)
                 }
                 ProgressLine(stepNames(), active, failed = session.stage == LinkStage.FAILED,
-                    still = session.notice?.kind == com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING)
+                    still = session.notice?.kind == com.carlink.core.core.LinkNoticeKind.NOT_ANSWERING)
                 noticeText(session)?.let {
                     Spacer(Modifier.height(if (isCar) 18.dp else 12.dp))
                     NoticeLine(it, noticeIcon(session))

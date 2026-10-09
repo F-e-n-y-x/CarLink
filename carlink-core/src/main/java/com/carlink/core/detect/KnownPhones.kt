@@ -1,7 +1,7 @@
-package com.carlink.app.detect
+package com.carlink.core.detect
 
 import android.content.Context
-import com.carlink.app.core.PhoneKind
+import com.carlink.core.core.PhoneKind
 import java.util.Locale
 
 /**

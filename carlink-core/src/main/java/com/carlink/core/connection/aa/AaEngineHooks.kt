@@ -1,4 +1,4 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.content.Context
 import android.content.Intent

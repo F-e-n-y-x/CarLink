@@ -1,4 +1,4 @@
-package com.carlink.app.settings
+package com.carlink.core.settings
 
 import android.content.Context
 

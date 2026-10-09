@@ -1,15 +1,5 @@
 package com.carlink.app.gallery
 
-import com.carlink.app.connection.PairingSession
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkNotice
-import com.carlink.app.core.LinkNoticeKind
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.VehicleProfile
 import com.carlink.app.ui.setup.SetupActions
 import com.carlink.app.ui.setup.SetupContent
 import com.carlink.app.ui.setup.SetupItem
@@ -17,6 +7,16 @@ import com.carlink.app.ui.setup.SetupPermission
 import com.carlink.app.ui.setup.SetupPermissions
 import com.carlink.app.ui.setup.SetupStep
 import com.carlink.app.ui.setup.SetupUi
+import com.carlink.core.connection.PairingSession
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkNotice
+import com.carlink.core.core.LinkNoticeKind
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.VehicleProfile
 
 private object GallerySetupActions : SetupActions
 

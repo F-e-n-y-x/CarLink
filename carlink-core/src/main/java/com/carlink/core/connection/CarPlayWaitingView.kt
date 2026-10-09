@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.content.Context
 import android.view.Gravity

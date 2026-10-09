@@ -1,11 +1,11 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Engine
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.isValid
+import com.carlink.core.core.Engine
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
 
 /**
  * Which wireless paths a session tries, in order (design/REBUILD_V2.md §3).

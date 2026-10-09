@@ -32,14 +32,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.connection.AttemptOutcome
-import com.carlink.app.connection.ConnectionProfiles
-import com.carlink.app.connection.FailureReason
-import com.carlink.app.connection.PhoneHealth
-import com.carlink.app.connection.ProblemRecord
-import com.carlink.app.connection.ProgressStage
-import com.carlink.app.core.Engine
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.components.StatGrid
 import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.isolate
@@ -53,6 +45,14 @@ import com.carlink.app.ui.settings.RowGlyph
 import com.carlink.app.ui.settings.isCar
 import com.carlink.app.ui.settings.rowPadding
 import com.carlink.app.ui.theme.CarLinkTokens
+import com.carlink.core.connection.AttemptOutcome
+import com.carlink.core.connection.ConnectionProfiles
+import com.carlink.core.connection.FailureReason
+import com.carlink.core.connection.PhoneHealth
+import com.carlink.core.connection.ProblemRecord
+import com.carlink.core.connection.ProgressStage
+import com.carlink.core.core.Engine
+import com.carlink.core.settings.WirelessPath
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -66,7 +66,7 @@ private const val MAX_PROBLEMS = 3
 
 /**
  * Diagnostics › Phones: each known phone's record from the session layer
- * ([com.carlink.app.connection.SessionManager.health]) as an instrument reading: a success gauge,
+ * ([com.carlink.core.connection.SessionManager.health]) as an instrument reading: a success gauge,
  * the usual time to picture, the path that works best and the last few problems with their time.
  */
 @Composable
@@ -238,8 +238,8 @@ internal fun previewHealth(now: Long = System.currentTimeMillis()): List<PhoneHe
         key = "CARPLAY:AA:BB:CC:00:00:01", engine = Engine.CARPLAY, phoneName = "Sara’s iPhone",
         attempts = 13, successes = 12, successRate = 12 / 13f, medianTimeToPictureMillis = 17_400,
         bestPath = WirelessPath.WIFI_DIRECT.name,
-        paths = listOf(com.carlink.app.connection.PathHealth(WirelessPath.WIFI_DIRECT.name, 11, 11, 17_400, true),
-            com.carlink.app.connection.PathHealth(WirelessPath.CAR_HOTSPOT.name, 2, 1, 21_000, false)),
+        paths = listOf(com.carlink.core.connection.PathHealth(WirelessPath.WIFI_DIRECT.name, 11, 11, 17_400, true),
+            com.carlink.core.connection.PathHealth(WirelessPath.CAR_HOTSPOT.name, 2, 1, 21_000, false)),
         lastProblems = listOf(
             ProblemRecord(now - 25 * 60_000, WirelessPath.WIFI_DIRECT.name, ProgressStage.JOINING_WIFI,
                 AttemptOutcome.stallKind(ProgressStage.JOINING_WIFI), null),
@@ -252,7 +252,7 @@ internal fun previewHealth(now: Long = System.currentTimeMillis()): List<PhoneHe
     PhoneHealth(
         key = "ANDROID_AUTO:usb:pixel 8", engine = Engine.ANDROID_AUTO, phoneName = "Pixel 8",
         attempts = 6, successes = 6, successRate = 1f, medianTimeToPictureMillis = 3_800, bestPath = ConnectionProfiles.USB,
-        paths = listOf(com.carlink.app.connection.PathHealth(ConnectionProfiles.USB, 6, 6, 3_800, true)),
+        paths = listOf(com.carlink.core.connection.PathHealth(ConnectionProfiles.USB, 6, 6, 3_800, true)),
         lastProblems = emptyList(),
     ),
 )

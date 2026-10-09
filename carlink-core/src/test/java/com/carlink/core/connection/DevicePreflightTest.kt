@@ -1,11 +1,11 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

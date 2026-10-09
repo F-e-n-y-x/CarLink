@@ -1,4 +1,4 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -7,7 +7,7 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.util.Log
-import com.carlink.app.settings.VehicleProfile
+import com.carlink.core.settings.VehicleProfile
 import java.util.concurrent.Executors
 
 /**

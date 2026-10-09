@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -10,11 +10,11 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
 import androidx.core.location.LocationManagerCompat
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.isValid
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
 
 /**
  * The checks both engines need before a session, done by CarLink so the driver gets a one-tap fix

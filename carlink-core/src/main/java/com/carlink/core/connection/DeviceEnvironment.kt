@@ -1,21 +1,21 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.util.Log
-import com.carlink.app.core.Engine
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.HeadUnitDetector
-import com.carlink.app.detect.KnownPhones
-import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.diagnostics.EventLog
-import com.carlink.app.entry.UsbRouterActivity
-import com.carlink.app.settings.CarLinkPreferences
-import com.carlink.app.settings.WifiEnvironmentReader
-import com.carlink.app.settings.UnifiedSettingsStore
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Engine
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.HeadUnitDetector
+import com.carlink.core.detect.KnownPhones
+import com.carlink.core.detect.PhoneClassifier
+import com.carlink.core.diagnostics.EventLog
+import com.carlink.core.entry.UsbRouterActivity
+import com.carlink.core.settings.CarLinkPreferences
+import com.carlink.core.settings.WifiEnvironmentReader
+import com.carlink.core.settings.UnifiedSettingsStore
+import com.carlink.core.settings.WirelessPath
 
 /**
  * [SessionManager.Environment] on a real device. [enginePreflight] adds each engine's own checks

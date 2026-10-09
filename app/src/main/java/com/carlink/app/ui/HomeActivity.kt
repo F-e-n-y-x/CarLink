@@ -10,9 +10,9 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.connection.Connection
-import com.carlink.app.entry.UsbWatcher
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.connection.Connection
+import com.carlink.core.entry.UsbWatcher
 import com.carlink.app.ui.theme.CarLinkTheme
 import com.carlink.app.ui.theme.UiProfileDetector
 
@@ -65,7 +65,7 @@ class HomeActivity : ComponentActivity() {
         intent.removeExtra("page")
         Connection.get(this).stop()
         val app = applicationContext
-        Thread({ com.carlink.app.engine.WifiDirectReset.removeGroup(app) }, "carlink-wifi-recovery").start()
+        Thread({ com.carlink.core.engine.WifiDirectReset.removeGroup(app) }, "carlink-wifi-recovery").start()
     }
 
     private fun consumeAutoPhone(intent: Intent) {

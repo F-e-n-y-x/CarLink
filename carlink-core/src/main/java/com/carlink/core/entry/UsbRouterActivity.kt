@@ -1,4 +1,4 @@
-package com.carlink.app.entry
+package com.carlink.core.entry
 
 import android.app.Activity
 import android.content.Intent
@@ -8,9 +8,9 @@ import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.connection.Connection
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.PhoneClassifier
+import com.carlink.core.connection.Connection
 
 /**
  * CarLink's only USB_DEVICE_ATTACHED handler (both engines' filters are removed from the merged
@@ -35,13 +35,13 @@ class UsbRouterActivity : Activity() {
         val device = usbDevice(intent) ?: return
         val kind = PhoneClassifier.classifyUsb(describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
-        com.carlink.app.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
+        com.carlink.core.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
         if (!UsbWatcher.get(this).claim(device)) {
             Log.i(TAG, "USB attach already routed by the watcher")
             return
         }
-        val name = com.carlink.app.detect.UsbPhoneNames.resolve(this, kind, device)
+        val name = com.carlink.core.detect.UsbPhoneNames.resolve(this, kind, device)
         // The attach intent carries the UsbDevice: DiPlay reads it for a wired iPhone, and the
         // Android Auto engine switches that exact phone to accessory mode.
         Connection.get(this).onUsbPhone(kind, name, intent)

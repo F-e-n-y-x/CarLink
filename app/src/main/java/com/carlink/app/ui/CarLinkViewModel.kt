@@ -7,27 +7,27 @@ import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.detect.PhonesRepository
-import com.carlink.app.connection.Connection
-import com.carlink.app.connection.DevicePreflight
-import com.carlink.app.connection.SessionState
-import com.carlink.app.connection.WirelessPolicy
-import com.carlink.app.connection.toLinkState
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.detect.PhonesRepository
+import com.carlink.core.connection.Connection
+import com.carlink.core.connection.DevicePreflight
+import com.carlink.core.connection.SessionState
+import com.carlink.core.connection.WirelessPolicy
+import com.carlink.core.connection.toLinkState
 import kotlinx.coroutines.flow.map
-import com.carlink.app.settings.CarLinkPreferences
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.WifiEnvironmentReader
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.UnifiedSettingsStore
-import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.isValid
+import com.carlink.core.settings.CarLinkPreferences
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WifiEnvironmentReader
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.UnifiedSettingsStore
+import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 import com.shilapi.xcertplay.CarPlayHostActivity
@@ -80,8 +80,8 @@ data class NetworkPreview(
 
 /** The car-brand setting: the driver's choice (or the detected one until they choose) and what was detected. */
 data class VehicleChoice(
-    val profile: com.carlink.app.settings.VehicleProfile,
-    val detected: com.carlink.app.settings.VehicleProfile,
+    val profile: com.carlink.core.settings.VehicleProfile,
+    val detected: com.carlink.core.settings.VehicleProfile,
 )
 
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
@@ -137,7 +137,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         HomeState(LinkState.Idle, emptyList(), BluetoothAvailability.READY, null, null))
 
     /** Each known phone's connection health (Diagnostics › Phones). */
-    val health: StateFlow<List<com.carlink.app.connection.PhoneHealth>> = session.health
+    val health: StateFlow<List<com.carlink.core.connection.PhoneHealth>> = session.health
 
     /** How Home's default phone usually connects, from its record; null before it has one. */
     val usual: StateFlow<com.carlink.app.ui.home.PhoneUsual?> = combine(session.health, home) { health, home ->
@@ -149,13 +149,13 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val vehicle: StateFlow<VehicleChoice> = _vehicle.asStateFlow()
 
     /** Stores the car brand; it applies from the next connection (the CarPlay hooks are re-installed at once). */
-    fun setVehicleProfile(profile: com.carlink.app.settings.VehicleProfile) {
+    fun setVehicleProfile(profile: com.carlink.core.settings.VehicleProfile) {
         Connection.setVehicleProfile(app, profile)
         _vehicle.value = readVehicle()
     }
 
     private fun readVehicle() = VehicleChoice(Connection.vehicleProfile(app),
-        com.carlink.app.settings.VehicleProfile.detect(app))
+        com.carlink.core.settings.VehicleProfile.detect(app))
 
     /**
      * First-time setup runs at launch until it is finished or skipped once. A device that already
@@ -163,7 +163,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
      */
     fun setupNeeded(): Boolean {
         if (uiPreferences.setupDone) return false
-        val knowsPhone = com.carlink.app.connection.DeviceEnvironment.lastPhoneAddress(app) != null ||
+        val knowsPhone = com.carlink.core.connection.DeviceEnvironment.lastPhoneAddress(app) != null ||
             home.value.phones.any { it.kind != PhoneKind.UNKNOWN } || session.health.value.isNotEmpty()
         if (knowsPhone) uiPreferences.setupDone = true
         return !knowsPhone
@@ -308,7 +308,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     /** Remembers the car's current Wi-Fi so wireless CarPlay can use it (Same Wi-Fi). */
     fun saveSameWifi(ssid: String, password: String) =
-        updateSettings { it.copy(homeWifi = com.carlink.app.settings.WifiDetails(ssid, password)) }
+        updateSettings { it.copy(homeWifi = com.carlink.core.settings.WifiDetails(ssid, password)) }
 
     /** Saves a change to the unified settings and writes it into both engines. */
     fun updateSettings(change: (UnifiedSettings) -> UnifiedSettings) {
@@ -328,17 +328,17 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
      * The one-tap fix for a problem Home shows. Radios and system switches can only be offered by
      * Android's own panels; the driver then taps Try again (or the session retries on its own).
      */
-    fun fix(problem: com.carlink.app.core.LinkProblem) {
+    fun fix(problem: com.carlink.core.core.LinkProblem) {
         val intent = when (problem) {
-            com.carlink.app.core.LinkProblem.BLUETOOTH_OFF -> Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            com.carlink.app.core.LinkProblem.WIFI_OFF -> Intent(if (android.os.Build.VERSION.SDK_INT >= 29)
+            com.carlink.core.core.LinkProblem.BLUETOOTH_OFF -> Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            com.carlink.core.core.LinkProblem.WIFI_OFF -> Intent(if (android.os.Build.VERSION.SDK_INT >= 29)
                 android.provider.Settings.Panel.ACTION_WIFI else android.provider.Settings.ACTION_WIFI_SETTINGS)
-            com.carlink.app.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-            com.carlink.app.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            com.carlink.core.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 android.net.Uri.parse("package:${app.packageName}"))
-            com.carlink.app.core.LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(app) ?: return retry()
-            com.carlink.app.core.LinkProblem.PHONE_REFUSED_WIFI, com.carlink.app.core.LinkProblem.PHONE_NEVER_REACHED_CAR -> {
-                updateSettings { it.copy(connectionMethod = com.carlink.app.settings.ConnectionMethod.WIFI_DIRECT) }
+            com.carlink.core.core.LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(app) ?: return retry()
+            com.carlink.core.core.LinkProblem.PHONE_REFUSED_WIFI, com.carlink.core.core.LinkProblem.PHONE_NEVER_REACHED_CAR -> {
+                updateSettings { it.copy(connectionMethod = com.carlink.core.settings.ConnectionMethod.WIFI_DIRECT) }
                 return retry()
             }
             else -> return
@@ -388,7 +388,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         fun byAddress(address: String?) = address?.let { a -> known.firstOrNull { it.address.equals(a, ignoreCase = true) } }
         val current = (session.state.value as? SessionState.Active)?.request?.phoneAddress
         return byAddress(current)
-            ?: byAddress(com.carlink.app.connection.DeviceEnvironment.lastPhoneAddress(app))
+            ?: byAddress(com.carlink.core.connection.DeviceEnvironment.lastPhoneAddress(app))
             ?: known.firstOrNull { it.connected }
             ?: known.firstOrNull()
     }

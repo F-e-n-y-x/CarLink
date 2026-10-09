@@ -1,19 +1,19 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.content.Context
 import android.os.Bundle
-import com.carlink.app.connection.PictureChoice
-import com.carlink.app.connection.PicturePolicy
-import com.carlink.app.core.Transport
-import com.carlink.app.engine.AndroidAutoSettings
-import com.carlink.app.settings.DayNight
-import com.carlink.app.settings.InterfaceSize
-import com.carlink.app.settings.Picture
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.VehicleProfile
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.isValid
+import com.carlink.core.connection.PictureChoice
+import com.carlink.core.connection.PicturePolicy
+import com.carlink.core.core.Transport
+import com.carlink.core.engine.AndroidAutoSettings
+import com.carlink.core.settings.DayNight
+import com.carlink.core.settings.InterfaceSize
+import com.carlink.core.settings.Picture
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
 import kotlin.math.roundToInt
 
 /** DiAuto's settings for one session, or why the chosen path cannot be configured. */

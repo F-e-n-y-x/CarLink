@@ -9,9 +9,9 @@ import android.media.MediaCodecList
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.detect.PairedPhone
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.detect.PairedPhone
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.orchestration.MfiTarget
 import java.io.File

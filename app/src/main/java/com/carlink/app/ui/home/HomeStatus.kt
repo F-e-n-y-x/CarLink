@@ -40,15 +40,15 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.components.isolate
 import com.carlink.app.ui.components.phoneIcon
 import com.carlink.app.ui.premium.GlassCard
 import com.carlink.app.ui.premium.IconTile
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.settings.WirelessPath
 import java.util.Locale
 
 /** One cell of Home's status bar: Bluetooth, the wireless path, the phone. */
@@ -71,9 +71,9 @@ internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<Sta
     // USB sessions have no Bluetooth address, so the paired list may not hold the phone; its name still does.
     val sessionPhone = link.phoneName?.takeIf { inSession }
     val sessionKind = when (link.engine) {
-        com.carlink.app.core.Engine.CARPLAY -> com.carlink.app.core.PhoneKind.IPHONE
-        com.carlink.app.core.Engine.ANDROID_AUTO -> com.carlink.app.core.PhoneKind.ANDROID
-        null -> com.carlink.app.core.PhoneKind.UNKNOWN
+        com.carlink.core.core.Engine.CARPLAY -> com.carlink.core.core.PhoneKind.IPHONE
+        com.carlink.core.core.Engine.ANDROID_AUTO -> com.carlink.core.core.PhoneKind.ANDROID
+        null -> com.carlink.core.core.PhoneKind.UNKNOWN
     }
     return listOf(
         StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {

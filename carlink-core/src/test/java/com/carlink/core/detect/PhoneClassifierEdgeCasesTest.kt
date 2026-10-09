@@ -1,9 +1,9 @@
-package com.carlink.app.detect
+package com.carlink.core.detect
 
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.PhoneClassifier.BluetoothDeviceInfo
-import com.carlink.app.detect.PhoneClassifier.UsbDeviceInfo
-import com.carlink.app.detect.PhoneClassifier.UsbInterfaceInfo
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.PhoneClassifier.BluetoothDeviceInfo
+import com.carlink.core.detect.PhoneClassifier.UsbDeviceInfo
+import com.carlink.core.detect.PhoneClassifier.UsbInterfaceInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

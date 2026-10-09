@@ -7,15 +7,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.carlink.app.connection.Connection
-import com.carlink.app.connection.SessionState
-import com.carlink.app.connection.toLinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.PairedPhone
+import com.carlink.core.connection.Connection
+import com.carlink.core.connection.SessionState
+import com.carlink.core.connection.toLinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.PairedPhone
 import com.carlink.app.ui.NetworkPreview
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.settings.CarLinkPreferences
 import com.carlink.app.ui.UiPreferences
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.HomeActivity
@@ -30,7 +30,7 @@ import com.carlink.app.ui.theme.UiProfileDetector
  * Android phone while connecting (design/REBUILD_V2.md §7; DIPLAY.md F2).
  */
 object CarPlayWaitingContent {
-    /** The waiting view for [com.carlink.app.connection.CarLinkConfig.waitingView]. */
+    /** The waiting view for [com.carlink.core.connection.CarLinkConfig.waitingView]. */
     fun create(context: Context): View = ComposeView(context).apply {
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
         val session = Connection.get(context)

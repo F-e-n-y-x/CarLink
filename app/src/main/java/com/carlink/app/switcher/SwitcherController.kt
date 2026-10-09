@@ -24,15 +24,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import com.carlink.app.R
-import com.carlink.app.connection.Connection
-import com.carlink.app.connection.SessionRequest
-import com.carlink.app.connection.SessionState
-import com.carlink.app.core.Engine
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.detect.PhonesRepository
+import com.carlink.core.connection.Connection
+import com.carlink.core.connection.SessionRequest
+import com.carlink.core.connection.SessionState
+import com.carlink.core.core.Engine
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.detect.PhonesRepository
 import com.carlink.app.ui.UiPreferences
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.UnifiedSettingsStore
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.UnifiedSettingsStore
 import com.carlink.app.ui.HomeActivity
 import com.carlink.app.ui.switcher.SwitchPrompt
 import com.carlink.app.ui.switcher.SwitcherActions
@@ -180,13 +180,13 @@ object SwitcherController {
         else removePrompt()
         val show = SwitcherRules.shouldShow(session, front.projections, front.carLinkScreenInFront,
             canDrawOverlays(), preferences.floatingSwitcher, promptShowing = prompt != null)
-        val inputs = "show=$show phase=${(session as? com.carlink.app.connection.SessionState.Active)?.phase?.javaClass?.simpleName} " +
+        val inputs = "show=$show phase=${(session as? com.carlink.core.connection.SessionState.Active)?.phase?.javaClass?.simpleName} " +
             "projections=${front.projections} carLinkInFront=${front.carLinkScreenInFront} overlay=${canDrawOverlays()} " +
             "enabled=${preferences.floatingSwitcher} prompt=${prompt != null}"
         if (inputs != lastDecision) {
             lastDecision = inputs
             Log.i(TAG, inputs)
-            com.carlink.app.diagnostics.EventLog.add("Switcher", inputs)
+            com.carlink.core.diagnostics.EventLog.add("Switcher", inputs)
         }
         if (switching) {
             // "Switching…" stays until its linger ends, unless CarLink's own screen took over.

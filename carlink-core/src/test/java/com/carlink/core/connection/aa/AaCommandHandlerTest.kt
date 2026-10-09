@@ -1,9 +1,9 @@
-package com.carlink.app.connection.aa
+package com.carlink.core.connection.aa
 
 import android.app.Application
 import android.hardware.usb.UsbDevice
 import com.andrerinas.openheadunit.aap.AapService
-import com.carlink.app.settings.VehicleProfile
+import com.carlink.core.settings.VehicleProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.app.Application
 import android.content.Context
@@ -8,11 +8,11 @@ import android.os.Looper
 import android.os.Process
 import android.view.View
 import com.andrerinas.openheadunit.utils.Settings
-import com.carlink.app.connection.aa.AaEngineHooks
-import com.carlink.app.connection.aa.AaProtocol
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.diagnostics.EventLog
-import com.carlink.app.entry.UsbWatcher
+import com.carlink.core.connection.aa.AaEngineHooks
+import com.carlink.core.connection.aa.AaProtocol
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.diagnostics.EventLog
+import com.carlink.core.entry.UsbWatcher
 import com.shilapi.xcertplay.AirPlayPersistence
 
 /**

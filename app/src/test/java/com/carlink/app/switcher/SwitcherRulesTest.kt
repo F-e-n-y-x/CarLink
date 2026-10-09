@@ -1,16 +1,16 @@
 package com.carlink.app.switcher
 
-import com.carlink.app.connection.FailureReason
-import com.carlink.app.connection.ProgressStage
-import com.carlink.app.connection.SessionRequest
-import com.carlink.app.connection.SessionState
-import com.carlink.app.connection.SessionState.Phase
-import com.carlink.app.core.Engine
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.switcher.switchCandidates
+import com.carlink.core.connection.FailureReason
+import com.carlink.core.connection.ProgressStage
+import com.carlink.core.connection.SessionRequest
+import com.carlink.core.connection.SessionState
+import com.carlink.core.connection.SessionState.Phase
+import com.carlink.core.core.Engine
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.WirelessPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

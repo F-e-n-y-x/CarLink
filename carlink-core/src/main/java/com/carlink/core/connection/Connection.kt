@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.Manifest
 import android.content.Context
@@ -6,15 +6,15 @@ import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.carlink.app.core.Engine
-import com.carlink.app.settings.WifiEnvironmentReader
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.UnifiedSettingsStore
-import com.carlink.app.settings.VehicleProfile
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.isValid
-import com.carlink.app.connection.aa.AaSessionSettings
+import com.carlink.core.core.Engine
+import com.carlink.core.settings.WifiEnvironmentReader
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.UnifiedSettingsStore
+import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
+import com.carlink.core.connection.aa.AaSessionSettings
 import java.util.concurrent.Executors
 
 /**
@@ -44,9 +44,9 @@ object Connection {
         Thread({
             try {
                 val started = android.os.SystemClock.uptimeMillis()
-                runCatching { com.carlink.app.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
+                runCatching { com.carlink.core.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
                 val took = android.os.SystemClock.uptimeMillis() - started
-                if (took > 300) com.carlink.app.diagnostics.EventLog.add("CarLink", "Android Auto engine process warmed in $took ms")
+                if (took > 300) com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto engine process warmed in $took ms")
             } finally {
                 prewarming.set(false)
             }
@@ -60,7 +60,7 @@ object Connection {
     fun onHomeShown(context: Context) {
         val app = context.applicationContext
         val address = DeviceEnvironment.lastPhoneAddress(app) ?: return
-        val kind = com.carlink.app.detect.KnownPhones(app).kindOf(address)
+        val kind = com.carlink.core.detect.KnownPhones(app).kindOf(address)
         val name = runCatching {
             app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.bondedDevices
                 ?.firstOrNull { it.address.equals(address, ignoreCase = true) }?.name
@@ -115,7 +115,7 @@ object Connection {
         try {
             writeSession(app, plan)
         } finally {
-            com.carlink.app.diagnostics.EventLog.add("CarLink",
+            com.carlink.core.diagnostics.EventLog.add("CarLink",
                 "${plan.engine} settings written in ${android.os.SystemClock.uptimeMillis() - started} ms")
         }
     }
@@ -144,9 +144,9 @@ object Connection {
 
     /** Automatic picture from this device's decoders ([PicturePolicy]); probed once, on the session worker. */
     private fun automaticPicture(app: Context, settings: UnifiedSettings): PictureChoice {
-        if (settings.picture != com.carlink.app.settings.Picture.AUTOMATIC) return PicturePolicy.ENGINE_DEFAULTS
+        if (settings.picture != com.carlink.core.settings.Picture.AUTOMATIC) return PicturePolicy.ENGINE_DEFAULTS
         val choice = runCatching { PicturePolicy.choose(DeviceCapabilities.read(app)) }.getOrDefault(PicturePolicy.ENGINE_DEFAULTS)
-        com.carlink.app.diagnostics.EventLog.add("CarLink", "Automatic picture: ${choice.summary}")
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Automatic picture: ${choice.summary}")
         return choice
     }
 

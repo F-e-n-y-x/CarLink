@@ -1,19 +1,19 @@
 package com.carlink.app.gallery
 
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.HomeState
 import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.home.HomeActions
 import com.carlink.app.ui.home.HomeUi
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.WirelessPath
 
 /** Fake state for Home's gallery entries. */
 internal object HomeFakes {

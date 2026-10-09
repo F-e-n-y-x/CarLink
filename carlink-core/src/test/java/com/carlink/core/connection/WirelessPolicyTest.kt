@@ -1,13 +1,13 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.Engine
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.WifiEnvironment
-import com.carlink.app.settings.WirelessPath.CAR_HOTSPOT
-import com.carlink.app.settings.WirelessPath.SAME_WIFI
-import com.carlink.app.settings.WirelessPath.WIFI_DIRECT
+import com.carlink.core.core.Engine
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.WifiEnvironment
+import com.carlink.core.settings.WirelessPath.CAR_HOTSPOT
+import com.carlink.core.settings.WirelessPath.SAME_WIFI
+import com.carlink.core.settings.WirelessPath.WIFI_DIRECT
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -17,7 +17,7 @@ class WirelessPolicyTest {
     private val onHome = WifiEnvironment(1, "Home", carHotspotOn = null, joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0")
 
     private fun paths(engine: Engine, settings: UnifiedSettings, wifi: WifiEnvironment = onHome, headUnit: Boolean = false,
-                      last: com.carlink.app.settings.WirelessPath? = null) =
+                      last: com.carlink.core.settings.WirelessPath? = null) =
         WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, settings, wifi, headUnit, last))
 
     @Test fun automaticNeverPicksTheSharedRouter() {

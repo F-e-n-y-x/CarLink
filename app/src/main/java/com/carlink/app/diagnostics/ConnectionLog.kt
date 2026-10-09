@@ -1,6 +1,8 @@
 package com.carlink.app.diagnostics
 
 import android.content.Context
+import com.carlink.core.diagnostics.EventLog
+import com.carlink.core.diagnostics.LogMasking
 import java.io.File
 import java.io.RandomAccessFile
 import java.text.SimpleDateFormat

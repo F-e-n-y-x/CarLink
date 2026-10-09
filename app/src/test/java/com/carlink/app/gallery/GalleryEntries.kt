@@ -7,12 +7,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.BluetoothAvailability
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.BluetoothAvailability
 import com.carlink.app.ui.about.AboutContent
 import com.carlink.app.ui.about.AboutSheet
 import com.carlink.app.ui.about.previewFacts
@@ -22,13 +22,13 @@ import com.carlink.app.ui.diagnostics.DiagnosticsUi
 import com.carlink.app.ui.diagnostics.previewChecks
 import com.carlink.app.ui.diagnostics.previewLink
 import com.carlink.app.ui.diagnostics.previewLog
-import com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING
+import com.carlink.core.connection.DETAIL_PHONE_NOT_ANSWERING
 import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.home.HomeContent
 import com.carlink.app.ui.home.NetworkSheet
 import com.carlink.app.ui.home.PhonesSheet
-import com.carlink.app.settings.AdvancedSettings
-import com.carlink.app.settings.SettingsCategory
+import com.carlink.core.settings.AdvancedSettings
+import com.carlink.core.settings.SettingsCategory
 import com.carlink.app.ui.settings.EssentialSheet
 import com.carlink.app.ui.settings.SettingsContent
 import com.carlink.app.ui.settings.SettingsPreviewActions
@@ -91,38 +91,38 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     // Wireless, and the iPhone has not answered for 10 s: calm caution, held at the first step.
     home("connecting-not-answering") {
         HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 1, 4,
-            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING))),
+            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.NOT_ANSWERING))),
             actions)
     },
     // Why it waits (SessionState.Active.notice): a fresh Wi-Fi Direct link after a slow join.
     home("connecting-notice-wifi") {
         HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 3, 4,
-            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
-                com.carlink.app.core.LinkRecovery.FRESH_WIFI_DIRECT))), actions)
+            notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.RECOVERING,
+                com.carlink.core.core.LinkRecovery.FRESH_WIFI_DIRECT))), actions)
     },
     // A path-related failure moved the attempt to the car hotspot.
     home("connecting-notice-next-path") {
         HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 2, 4,
-            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
-                com.carlink.app.core.LinkRecovery.TRY_CAR_HOTSPOT)), network = hotspot), actions)
+            notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.RECOVERING,
+                com.carlink.core.core.LinkRecovery.TRY_CAR_HOTSPOT)), network = hotspot), actions)
     },
     // Android Auto retrying after the phone did not answer over Bluetooth.
     home("connecting-notice-retrying") {
         HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.ANDROID_AUTO, Transport.WIRELESS, pixel.name, 2, 4,
-            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RETRYING,
+            notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.RETRYING,
                 reason = LinkProblem.BLUETOOTH)), phones = listOf(pixel.copy(connected = true))), actions)
     },
     // A USB phone that has not answered for 10 s (locked, or waiting for its prompt).
     home("connecting-not-answering-usb") {
         HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 1, 4,
-            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING)),
+            DETAIL_PHONE_NOT_ANSWERING, notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.NOT_ANSWERING)),
             phones = listOf(pixel)), actions)
     },
     // A known phone's record under the headline.
     home("ready-iphone-usual") {
-        HomeContent(ui(phones = listOf(iphone, pixel), network = NetworkPreview(com.carlink.app.settings.WirelessPath.WIFI_DIRECT,
+        HomeContent(ui(phones = listOf(iphone, pixel), network = NetworkPreview(com.carlink.core.settings.WirelessPath.WIFI_DIRECT,
             ssid = null)).copy(usual = com.carlink.app.ui.home.PhoneUsual(5_200,
-            com.carlink.app.settings.WirelessPath.WIFI_DIRECT)), actions)
+            com.carlink.core.settings.WirelessPath.WIFI_DIRECT)), actions)
     },
     home("connected-carplay") {
         val since = remember { SystemClock.elapsedRealtime() - 754_000 }
@@ -146,7 +146,7 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("sheet-phones-usb", opensWindow = true) {
         val ui = ui(link = LinkState(LinkStage.CONNECTED, Engine.CARPLAY, Transport.USB, iphone.name, 6, 6),
             phones = listOf(iphone, pixel, unknown), connectedSince = remember { SystemClock.elapsedRealtime() - 60_000 })
-            .let { it.copy(home = it.home.copy(usbKinds = setOf(com.carlink.app.core.PhoneKind.IPHONE))) }
+            .let { it.copy(home = it.home.copy(usbKinds = setOf(com.carlink.core.core.PhoneKind.IPHONE))) }
         HomeContent(ui, actions)
         PhonesSheet(ui, actions, onDismiss = {})
     },
@@ -182,8 +182,8 @@ private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("diagnostics", "phones-health") {
         val started = remember { SystemClock.elapsedRealtime() - 31_000 }
         val link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, "Sara’s iPhone", 3, 4,
-            notice = com.carlink.app.core.LinkNotice(com.carlink.app.core.LinkNoticeKind.RECOVERING,
-                com.carlink.app.core.LinkRecovery.FRESH_WIFI_DIRECT))
+            notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.RECOVERING,
+                com.carlink.core.core.LinkRecovery.FRESH_WIFI_DIRECT))
         DiagnosticsContent(DiagnosticsUi(link, null, started, previewChecks, previewLog(),
             com.carlink.app.ui.diagnostics.previewHealth()), GalleryDiagnosticsActions)
     },

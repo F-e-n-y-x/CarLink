@@ -1,9 +1,9 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.content.Context
-import com.carlink.app.core.Engine
-import com.carlink.app.detect.KnownPhones
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Engine
+import com.carlink.core.detect.KnownPhones
+import com.carlink.core.settings.WirelessPath
 
 /** The wireless path that last connected, per phone and engine; tried first next time. */
 class PathMemory(context: Context) {

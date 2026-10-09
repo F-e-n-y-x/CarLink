@@ -22,16 +22,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkNoticeKind
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.core.LinkRecovery
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.premium.IconTile
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkNoticeKind
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.core.LinkRecovery
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.WirelessPath
 import java.util.Locale
 
 /**
@@ -115,7 +115,7 @@ internal fun NoticeLine(text: String, @DrawableRes icon: Int, modifier: Modifier
 
 /**
  * A known phone's usual connection: its median time to picture on its best path
- * ([com.carlink.app.connection.PhoneHealth]); [path] is null for a cable.
+ * ([com.carlink.core.connection.PhoneHealth]); [path] is null for a cable.
  */
 data class PhoneUsual(val millis: Long, val path: WirelessPath?)
 
@@ -140,15 +140,15 @@ internal fun usualText(usual: PhoneUsual): String = stringResource(R.string.carl
  * [phone]'s usual connection from its record, or null until its best path has connected at least
  * [MIN_USUAL_SUCCESSES] times (one fast or slow start says little).
  */
-internal fun usualFor(phone: com.carlink.app.detect.PairedPhone?, health: List<com.carlink.app.connection.PhoneHealth>): PhoneUsual? {
+internal fun usualFor(phone: com.carlink.core.detect.PairedPhone?, health: List<com.carlink.core.connection.PhoneHealth>): PhoneUsual? {
     val engine = phone?.kind?.engine ?: return null
-    val key = com.carlink.app.connection.ConnectionProfiles.keyOf(
-        com.carlink.app.connection.SessionRequest(engine, Transport.WIRELESS, phone.address, phone.name))
+    val key = com.carlink.core.connection.ConnectionProfiles.keyOf(
+        com.carlink.core.connection.SessionRequest(engine, Transport.WIRELESS, phone.address, phone.name))
     val record = health.firstOrNull { it.key == key } ?: return null
     val best = record.paths.firstOrNull { it.path == record.bestPath } ?: return null
     val millis = best.medianTimeToPictureMillis ?: return null
     if (best.successes < MIN_USUAL_SUCCESSES) return null
-    val path = if (best.path == com.carlink.app.connection.ConnectionProfiles.USB) null
+    val path = if (best.path == com.carlink.core.connection.ConnectionProfiles.USB) null
         else runCatching { WirelessPath.valueOf(best.path) }.getOrNull() ?: return null
     return PhoneUsual(millis, path)
 }

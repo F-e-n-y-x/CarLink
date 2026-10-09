@@ -1,8 +1,8 @@
 package com.carlink.app.switcher
 
-import com.carlink.app.connection.SessionRequest
-import com.carlink.app.connection.SessionState
-import com.carlink.app.core.Engine
+import com.carlink.core.connection.SessionRequest
+import com.carlink.core.connection.SessionState
+import com.carlink.core.core.Engine
 import kotlin.math.roundToInt
 
 /**

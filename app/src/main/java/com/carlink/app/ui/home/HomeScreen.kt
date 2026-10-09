@@ -68,17 +68,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.R
-import com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING
-import com.carlink.app.core.Engine
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.BluetoothAvailability
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.HomeState
@@ -105,6 +94,17 @@ import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.WidthClass
+import com.carlink.core.connection.DETAIL_PHONE_NOT_ANSWERING
+import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WirelessPath
 
 /** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
 internal enum class HomeMode {
@@ -128,7 +128,7 @@ internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = w
 /** The phone has not answered for a while (wireless or USB), and the attempt is still on its first step. */
 private fun phoneSilent(link: LinkState): Boolean =
     (link.stage == LinkStage.WAITING || link.stage == LinkStage.CONNECTING) && link.step <= 1 &&
-        (link.detail == DETAIL_PHONE_NOT_ANSWERING || link.notice?.kind == com.carlink.app.core.LinkNoticeKind.NOT_ANSWERING)
+        (link.detail == DETAIL_PHONE_NOT_ANSWERING || link.notice?.kind == com.carlink.core.core.LinkNoticeKind.NOT_ANSWERING)
 
 /** Everything Home needs, so previews and the screenshot gallery can render it without a ViewModel. */
 internal data class HomeUi(

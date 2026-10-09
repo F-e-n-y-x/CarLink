@@ -1,4 +1,4 @@
-package com.carlink.app.entry
+package com.carlink.core.entry
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -15,13 +15,13 @@ import android.os.ParcelUuid
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.detect.KnownPhones
-import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.connection.CarLinkCore
-import com.carlink.app.connection.CarLinkHost
-import com.carlink.app.connection.Connection
-import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.KnownPhones
+import com.carlink.core.detect.PhoneClassifier
+import com.carlink.core.connection.CarLinkCore
+import com.carlink.core.connection.CarLinkHost
+import com.carlink.core.connection.Connection
+import com.carlink.core.settings.CarLinkPreferences
 
 /**
  * CarLink's boot and Bluetooth entry points (each engine's own receivers are removed from the

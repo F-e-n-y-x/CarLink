@@ -1,8 +1,8 @@
 package com.carlink.app.ui
 
-import com.carlink.app.connection.DeviceSignals
 import com.carlink.app.ui.theme.RenderingMode
 import com.carlink.app.ui.theme.RenderingPolicy
+import com.carlink.core.connection.DeviceSignals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

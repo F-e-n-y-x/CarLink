@@ -1,4 +1,4 @@
-package com.carlink.app.detect
+package com.carlink.core.detect
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -14,7 +14,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import com.carlink.app.core.PhoneKind
+import com.carlink.core.core.PhoneKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

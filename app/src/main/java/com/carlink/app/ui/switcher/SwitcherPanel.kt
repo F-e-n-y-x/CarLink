@@ -52,12 +52,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.Engine
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PairedPhone
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.switcher.Edge
 import com.carlink.app.ui.components.CarLinkMark
 import com.carlink.app.ui.components.PhoneAvatar
@@ -79,6 +73,12 @@ import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.Engine
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PairedPhone
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WirelessPath
 
 enum class SwitcherPage { MAIN, CONNECTION_TYPE }
 

@@ -1,9 +1,9 @@
-package com.carlink.app.settings
+package com.carlink.core.settings
 
 import android.content.Context
 import android.os.Bundle
-import com.carlink.app.core.Engine
-import com.carlink.app.engine.AndroidAutoSettings
+import com.carlink.core.core.Engine
+import com.carlink.core.engine.AndroidAutoSettings
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayDock
 

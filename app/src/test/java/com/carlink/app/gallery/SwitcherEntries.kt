@@ -19,10 +19,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WirelessPath
 import com.carlink.app.switcher.Edge
 import com.carlink.app.ui.switcher.SwitchPrompt
 import com.carlink.app.ui.switcher.SwitcherActions
@@ -62,7 +62,7 @@ internal fun switcherEntries(): List<GalleryEntry> = with(HomeFakes) {
             val since = remember { SystemClock.elapsedRealtime() - 1_394_000 }
             FakeProjection {
                 SwitcherOverlay(ui(since = since).copy(phoneName = "iPhone", transport = Transport.USB, path = null,
-                    usbKinds = setOf(com.carlink.app.core.PhoneKind.IPHONE, com.carlink.app.core.PhoneKind.ANDROID)),
+                    usbKinds = setOf(com.carlink.core.core.PhoneKind.IPHONE, com.carlink.core.core.PhoneKind.ANDROID)),
                     GallerySwitcherActions)
             }
         },

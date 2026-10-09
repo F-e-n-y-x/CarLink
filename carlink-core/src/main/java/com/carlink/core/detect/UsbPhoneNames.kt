@@ -1,11 +1,11 @@
-package com.carlink.app.detect
+package com.carlink.core.detect
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.hardware.usb.UsbDevice
-import com.carlink.app.connection.DeviceEnvironment
-import com.carlink.app.core.PhoneKind
+import com.carlink.core.connection.DeviceEnvironment
+import com.carlink.core.core.PhoneKind
 import java.util.Locale
 
 /**

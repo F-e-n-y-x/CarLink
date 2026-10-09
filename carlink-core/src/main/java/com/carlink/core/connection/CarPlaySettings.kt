@@ -1,13 +1,13 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.content.Context
-import com.carlink.app.settings.DayNight
-import com.carlink.app.settings.InterfaceSize
-import com.carlink.app.settings.Picture
-import com.carlink.app.settings.UnifiedSettings
-import com.carlink.app.settings.VehicleProfile
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.settings.DayNight
+import com.carlink.core.settings.InterfaceSize
+import com.carlink.core.settings.Picture
+import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.CarPlayNightMode

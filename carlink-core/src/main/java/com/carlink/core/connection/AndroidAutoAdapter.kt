@@ -1,4 +1,4 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.app.ActivityManager
 import android.content.BroadcastReceiver
@@ -13,12 +13,12 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.carlink.app.connection.aa.AaCommandReceiver
-import com.carlink.app.connection.aa.AaProtocol
-import com.carlink.app.connection.aa.AaSessionTracker
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.VehicleProfile
+import com.carlink.core.connection.aa.AaCommandReceiver
+import com.carlink.core.connection.aa.AaProtocol
+import com.carlink.core.connection.aa.AaSessionTracker
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.VehicleProfile
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Commands go to [AaCommandReceiver]; CommManager states, engine events and stop acknowledgements
  * come back as package broadcasts ([AaProtocol]). [AaSessionTracker] turns them into
  * [AdapterEvent]s. The session's settings are written beforehand by [SessionManager] through
- * [com.carlink.app.connection.aa.AaSessionSettings].
+ * [com.carlink.core.connection.aa.AaSessionSettings].
  *
  * [hasSession] is true from [start] until ":aa" acknowledges the stop: AapService gone and Android
  * Auto's Wi-Fi Direct group released. When ":aa" dies under a session the session fails and stays

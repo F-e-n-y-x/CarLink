@@ -1,4 +1,4 @@
-package com.carlink.app.settings
+package com.carlink.core.settings
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -7,10 +7,10 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import com.andrerinas.openheadunit.utils.HotspotConfigReader
-import com.carlink.app.core.Engine
+import com.carlink.core.core.Engine
 import com.shilapi.xcertplay.network.CarHotspotStatus
 
-/** The wireless network a session will use, chosen by [com.carlink.app.connection.WirelessPolicy]. */
+/** The wireless network a session will use, chosen by [com.carlink.core.connection.WirelessPolicy]. */
 enum class WirelessPath { SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT }
 
 /** What CarLink knows about the car's Wi-Fi right before a wireless session. */
@@ -41,7 +41,7 @@ fun WifiDetails.isValid(): Boolean {
     return ssidBytes in 1..32 && (password.isEmpty() || password.length in 8..63)
 }
 
-/** Reads the car's current Wi-Fi state for [com.carlink.app.connection.WirelessPolicy] and pre-flight. */
+/** Reads the car's current Wi-Fi state for [com.carlink.core.connection.WirelessPolicy] and pre-flight. */
 object WifiEnvironmentReader {
     /**
      * Client Wi-Fi networks of the car (not VPN), the joined SSID when readable, and hotspot state.

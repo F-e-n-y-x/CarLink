@@ -1,12 +1,12 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
-import com.carlink.app.core.LinkNotice
-import com.carlink.app.core.LinkNoticeKind
-import com.carlink.app.core.LinkProblem
-import com.carlink.app.core.LinkRecovery
-import com.carlink.app.core.LinkStage
-import com.carlink.app.core.LinkState
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.LinkNotice
+import com.carlink.core.core.LinkNoticeKind
+import com.carlink.core.core.LinkProblem
+import com.carlink.core.core.LinkRecovery
+import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkState
+import com.carlink.core.settings.WirelessPath
 
 /** [SessionState] in the terms the current screens use. */
 fun SessionState.toLinkState(): LinkState = when (this) {

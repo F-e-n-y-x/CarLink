@@ -34,7 +34,7 @@
 
         <!-- Sole USB_DEVICE_ATTACHED handler; routes iPhones to CarPlay, Android phones to Android Auto. -->
         <activity
-            android:name="com.carlink.app.entry.UsbRouterActivity"
+            android:name="com.carlink.core.entry.UsbRouterActivity"
             android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="true"
@@ -50,7 +50,7 @@
         </activity>
 
         <receiver
-            android:name="com.carlink.app.entry.SystemEventReceiver"
+            android:name="com.carlink.core.entry.SystemEventReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -64,13 +64,13 @@
 
         <!-- Android Auto engine command endpoint (connection/aa); lives in (and starts) the ":aa" process. -->
         <receiver
-            android:name="com.carlink.app.connection.aa.AaCommandReceiver"
+            android:name="com.carlink.core.connection.aa.AaCommandReceiver"
             android:exported="false"
             android:process=":aa" />
 
         <!-- Android Auto settings owner: DiAuto's preferences are read and written only in ":aa". -->
         <provider
-            android:name="com.carlink.app.engine.AndroidAutoSettingsProvider"
+            android:name="com.carlink.core.engine.AndroidAutoSettingsProvider"
             android:authorities="${applicationId}.androidauto.settings"
             android:exported="false"
             android:process=":aa" />

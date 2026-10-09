@@ -24,13 +24,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.PhoneKind
-import com.carlink.app.core.Transport
-import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.entry.UsbRouterActivity
-import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.core.core.PhoneKind
+import com.carlink.core.core.Transport
+import com.carlink.core.detect.PhoneClassifier
+import com.carlink.core.entry.UsbRouterActivity
+import com.carlink.core.settings.WirelessPath
 
 /*
  * Cable or wireless, said the same way everywhere (Home, the Phones sheet, the switcher): a

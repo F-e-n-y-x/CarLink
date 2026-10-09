@@ -52,15 +52,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.carlink.app.R
 import com.carlink.app.diagnostics.AppInfo
-import com.carlink.app.settings.AdvancedSetting
-import com.carlink.app.settings.AdvancedSettings
-import com.carlink.app.settings.Control
-import com.carlink.app.settings.EngineAccess
-import com.carlink.app.settings.InterfaceSize
-import com.carlink.app.settings.Overrides
-import com.carlink.app.settings.Picture
-import com.carlink.app.settings.SettingsCategory
-import com.carlink.app.settings.UnifiedSettings
+import com.carlink.core.settings.AdvancedSetting
+import com.carlink.core.settings.AdvancedSettings
+import com.carlink.core.settings.Control
+import com.carlink.core.settings.EngineAccess
+import com.carlink.core.settings.InterfaceSize
+import com.carlink.core.settings.Overrides
+import com.carlink.core.settings.Picture
+import com.carlink.core.settings.SettingsCategory
+import com.carlink.core.settings.UnifiedSettings
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.Route
 import com.carlink.app.ui.premium.Atmosphere
@@ -116,7 +116,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setAutoConnectUsb(on: Boolean) = vm.setAutoConnectUsb(on)
             override fun setStartOnBoot(on: Boolean) = vm.setStartOnBoot(on)
             override fun setFloatingSwitcher(on: Boolean) = vm.setFloatingSwitcher(on)
-            override fun openOverlayPermission() = vm.fix(com.carlink.app.core.LinkProblem.OVERLAY)
+            override fun openOverlayPermission() = vm.fix(com.carlink.core.core.LinkProblem.OVERLAY)
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
             override fun setUiProfileMode(mode: UiProfileMode) = vm.setUiProfileMode(mode)
@@ -124,7 +124,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setRenderingMode(mode: com.carlink.app.ui.theme.RenderingMode) = vm.setRenderingMode(mode)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun openAppSettings() = vm.openAppSettings()
-            override fun setVehicleProfile(profile: com.carlink.app.settings.VehicleProfile) = vm.setVehicleProfile(profile)
+            override fun setVehicleProfile(profile: com.carlink.core.settings.VehicleProfile) = vm.setVehicleProfile(profile)
             override fun navigate(route: Route) = goTo(route)
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
@@ -146,7 +146,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         unified = unified, connection = connection, display = display,
         joinedWifi = network?.joinedSsid,
         // The BYD-only rows follow the car brand the driver chose (or the detected one).
-        isByd = vehicle.profile == com.carlink.app.settings.VehicleProfile.BYD_DILINK,
+        isByd = vehicle.profile == com.carlink.core.settings.VehicleProfile.BYD_DILINK,
         versionName = AppInfo.versionName,
         advancedValues = engineValues.value,
         overlayAllowed = overlayAllowed,

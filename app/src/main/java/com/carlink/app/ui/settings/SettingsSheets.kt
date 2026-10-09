@@ -58,14 +58,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.settings.Applies
-import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.Control
-import com.carlink.app.settings.DayNight
-import com.carlink.app.settings.InterfaceSize
-import com.carlink.app.settings.Picture
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.isValid
+import com.carlink.core.settings.Applies
+import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.Control
+import com.carlink.core.settings.DayNight
+import com.carlink.core.settings.InterfaceSize
+import com.carlink.core.settings.Picture
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.isValid
 import com.carlink.app.ui.premium.GlassButton
 import com.carlink.app.ui.premium.IonButton
 import com.carlink.app.ui.theme.CarLinkTokens
@@ -95,7 +95,7 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
         return
     }
     val u = ui.unified
-    val select: ((com.carlink.app.settings.UnifiedSettings) -> com.carlink.app.settings.UnifiedSettings) -> Unit =
+    val select: ((com.carlink.core.settings.UnifiedSettings) -> com.carlink.core.settings.UnifiedSettings) -> Unit =
         { change -> actions.update(change); onDismiss() }
     when (SheetKey.essential(key)) {
         null -> Unit
@@ -239,13 +239,13 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
  * was detected as. Settings › Car › Car brand and the setup's car step.
  */
 @Composable
-internal fun CarBrandChoice(selected: com.carlink.app.settings.VehicleProfile, detected: com.carlink.app.settings.VehicleProfile,
-                            onSelect: (com.carlink.app.settings.VehicleProfile) -> Unit) {
+internal fun CarBrandChoice(selected: com.carlink.core.settings.VehicleProfile, detected: com.carlink.core.settings.VehicleProfile,
+                            onSelect: (com.carlink.core.settings.VehicleProfile) -> Unit) {
     PresetGrid(
         listOf(
-            Preset(com.carlink.app.settings.VehicleProfile.GENERIC, vehicleLabel(com.carlink.app.settings.VehicleProfile.GENERIC),
+            Preset(com.carlink.core.settings.VehicleProfile.GENERIC, vehicleLabel(com.carlink.core.settings.VehicleProfile.GENERIC),
                 stringResource(R.string.carlink_settings_car_generic_detail), R.drawable.carlink_ic_devices),
-            Preset(com.carlink.app.settings.VehicleProfile.BYD_DILINK, vehicleLabel(com.carlink.app.settings.VehicleProfile.BYD_DILINK),
+            Preset(com.carlink.core.settings.VehicleProfile.BYD_DILINK, vehicleLabel(com.carlink.core.settings.VehicleProfile.BYD_DILINK),
                 stringResource(R.string.carlink_settings_car_byd_detail), R.drawable.carlink_ic_directions_car),
         ),
         selected, onSelect,

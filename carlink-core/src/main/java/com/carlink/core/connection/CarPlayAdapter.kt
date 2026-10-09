@@ -1,13 +1,13 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.carlink.app.core.Engine
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.VehicleProfile
+import com.carlink.core.core.Engine
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.VehicleProfile
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostActivity
 import com.shilapi.xcertplay.CarPlayHostIntegration

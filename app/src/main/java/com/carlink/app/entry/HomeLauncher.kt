@@ -10,10 +10,10 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.carlink.app.R
-import com.carlink.app.connection.CarLinkHost
-import com.carlink.app.connection.CarLinkHost.OpenReason
-import com.carlink.app.core.PhoneKind
 import com.carlink.app.ui.HomeActivity
+import com.carlink.core.connection.CarLinkHost
+import com.carlink.core.connection.CarLinkHost.OpenReason
+import com.carlink.core.core.PhoneKind
 
 /**
  * CarLink's [CarLinkHost]: brings Home to the front from the background. Android 10+ blocks

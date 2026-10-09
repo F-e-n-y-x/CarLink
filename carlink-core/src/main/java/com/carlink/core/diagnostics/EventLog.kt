@@ -1,4 +1,4 @@
-package com.carlink.app.diagnostics
+package com.carlink.core.diagnostics
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

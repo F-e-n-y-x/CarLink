@@ -1,9 +1,9 @@
-package com.carlink.app.connection
+package com.carlink.core.connection
 
 import android.Manifest
-import com.carlink.app.core.Transport
-import com.carlink.app.settings.WifiDetails
-import com.carlink.app.settings.WirelessPath
+import com.carlink.core.core.Transport
+import com.carlink.core.settings.WifiDetails
+import com.carlink.core.settings.WirelessPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
