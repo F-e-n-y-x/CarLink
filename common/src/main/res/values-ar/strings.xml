@@ -551,10 +551,10 @@
     <string name="turn_card_distance_m">%1$d م</string>
     <string name="turn_card_distance_km">%1$.1f كم</string>
     <string name="turn_card_exit">مخرج %1$d</string>
-    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح إعدادات DiPlay.</string>
+    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح القائمة السريعة.</string>
     <string name="carplay_controls">تحكم CarPlay</string>
-    <string name="settings_gesture_fingers">فتح الإعدادات · سحب بـ %1$d أصابع (انقر للتبديل)</string>
-    <string name="settings_gesture_fingers_label">فتح الإعدادات · عدد أصابع السحب لأسفل</string>
+    <string name="settings_gesture_fingers">القائمة السريعة · سحب بـ %1$d أصابع (انقر للتبديل)</string>
+    <string name="settings_gesture_fingers_label">القائمة السريعة · عدد أصابع السحب لأسفل</string>
     <string name="settings_gesture_fingers_option">%1$d أصابع</string>
     <string name="settings_gesture_fingers_hint">اختر عددًا من الأصابع لا يستخدمه جهاز السيارة. تأخذ وحدة BYD السحب لأسفل بثلاثة أصابع للوحة التكييف.</string>
     <string name="auto_car_hotspot_title">تشغيل نقطة اتصال السيارة تلقائيًا</string>
@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">يفتح Siri بزر على المقود تختاره عندما تكون CarPlay على الشاشة. الزر الذي تحتفظ به السيارة لنفسها لا يعمل إلا مع خدمة أزرار المقود، التي تعمل أيضًا عندما تكون CarPlay في الخلفية. من دون CarPlay، أو أثناء مكالمة، يحتفظ الزر بوظيفته في السيارة.</string>
     <string name="wheel_key_role_back">رجوع</string>
     <string name="wheel_key_service_label">أزرار المقود في DiPlay</string>
-    <string name="wheel_key_service_description">تتيح لـ DiPlay استخدام أزرار المقود المختارة في إعداداته لتكبير خريطة CarPlay على لوحة العدادات وللتنقل في شاشة CarPlay. تستقبل ضغطات الأزرار فقط ولا تقرأ الشاشة.</string>
+    <string name="wheel_key_service_description">تصفية اختيارية لمفاتيح المقود لضبط صوت الملاحة أثناء الإرشادات الصوتية وتقريب خريطة لوحة العدادات وعصا تحكم CarPlay والتحكم بالمكالمات. لا تتم قراءة محتوى الشاشة.</string>
     <string name="cluster_song_on_change">الأغنية عند تغيّرها فقط</string>
     <string name="cluster_song_on_change_description">تظهر الأغنية الجديدة على لوحة العدادات لمدة 5 ثوانٍ، ثم تُفرَّغ البطاقة. الإيقاف المؤقت والاستئناف لا يعرضانها مرة أخرى.</string>
     <string name="carplay_calls_on_dashboard">مكالمات CarPlay على لوحة العدادات</string>
@@ -644,6 +644,12 @@
     <string name="call_voice_filter_description">يخفض الجهير في صوت مكالمات CarPlay. قد يغيّر صوت المتحدثين. يُطبَّق عند الاتصال التالي بـ CarPlay.</string>
     <string name="smooth_video">فيديو سلس (تجريبي)</string>
     <string name="smooth_video_description">يعرض كل إطار من الشاشة الرئيسية لـ CarPlay في الوقت الذي وسمه به iPhone مع تأخير قصير، بدلًا من عرضه فور فك ترميزه. يضبط التأخير نفسه تلقائيًا حتى يُفك ترميز معظم الإطارات في الوقت المناسب، وتُعرض الإطارات غير الجاهزة في وقتها رغم ذلك فورًا. قد يبدو التمرير أكثر انتظامًا، لكن الاستجابة للمس تتأخر. لا تنطبق إعدادات الصورة. يعيد توصيل CarPlay.</string>
+    <string name="settings_direct_video_output">إخراج الفيديو المباشر (تجريبي)</string>
+    <string name="settings_direct_video_output_description">يرسل صورة CarPlay مباشرة إلى مُركِّب شاشة الوحدة الرئيسية بدلًا من رسمها داخل نافذة DiPlay. قد يقلل التأخير بمقدار تحديث شاشة واحد تقريبًا. لا تنطبق تعديلات الصورة. يعيد الاتصال بـ CarPlay.</string>
+    <string name="settings_low_latency_decoder">فك ترميز منخفض التأخير (تجريبي)</string>
+    <string name="settings_low_latency_decoder_description">يطلب من أجهزة فك ترميز الفيديو من Qualcomm إخراج كل إطار فور فك ترميزه بدلًا من الاحتفاظ بالإطارات التالية، ويعرض كل إطار مفكوك من سلسلة معالجة مخصصة دون انتظار وصول الإطار التالي. قد يقلل التأخير بعشرات المللي ثانية. أوقفه إذا ظهرت تشوهات في الصورة أو تجمّدت. يُطبَّق عند الاتصال التالي.</string>
+    <string name="settings_fps_counter">عداد الإطارات في الثانية</string>
+    <string name="settings_fps_counter_description">يعرض عدادًا في الزاوية العلوية اليمنى من CarPlay: الإطارات المعروضة في الثانية (أخضر من 50، أصفر من 30، أحمر أقل من ذلك)، والإطارات المستلمة من iPhone في الثانية، ووقت فك الترميز. تعرض الشاشة الثابتة إطارات قليلة لأن iPhone لا يرسل أي إطارات.</string>
     <string name="car_button_in_carplay">زر السيارة في CarPlay</string>
     <string name="car_button_icon">الأيقونة</string>
     <string name="car_button_icon_custom">أيقونة مخصصة</string>
@@ -690,4 +696,14 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="settings_discard_pending_title">تجاهل التغييرات؟</string>
+    <string name="settings_discard_pending_message">لم يتم بعد حفظ الدقة ومعدل الإطارات والاتصال وباقي الإعدادات التي غيرتها. حفظ وإعادة الاتصال يطبقها.</string>
+    <string name="settings_discard_pending_confirm">تجاهل</string>
+    <string name="settings_gesture_disabled">إيقاف</string>
+    <string name="settings_gesture_disabled_hint">تم تعطيل اختصار السحب لأسفل.</string>
+    <string name="settings_gesture_disabled_action">القائمة السريعة · السحب معطّل (انقر للتبديل)</string>
+    <string name="bt_suspend_delay">تأخير إيقاف البلوتوث</string>
+    <string name="bt_suspend_delay_option">%1$d ث بعد الاتصال</string>
+    <string name="bt_suspend_during_carplay">إيقاف بلوتوث السيارة أثناء CarPlay · يتطلب ADB</string>
+    <string name="bt_suspend_during_carplay_description">يبقى الهاتف متصلًا بنظام التحدث الحر في السيارة، فرنين المكالمة يظهر على هاتف السيارة وعلى CarPlay معًا. عند التشغيل: يُوقف بلوتوث السيارة مؤقتًا عبر ADB طوال جلسة CarPlay فترد المكالمات على CarPlay فقط؛ ومع إيقاف البلوتوث تخرج مكالمات CarPlay من سماعة السيارة وميكروفونها. يُعاد تشغيله عند انتهاء الجلسة وقبل مصافحة الاتصال اللاسلكي التالية. لا يتأثر الاقتران. يسري التغيير عند الاتصال التالي.</string>
 </resources>

@@ -632,10 +632,10 @@
     <string name="adb_cluster_routing">Launching cluster map through ADB…</string>
     <string name="adb_cluster_routed">Cluster task routed; waiting for iPhone map</string>
     <string name="adb_cluster_route_failed">Cluster launch failed; export diagnostics.</string>
-    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
+    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open the quick menu.</string>
     <string name="carplay_controls">CarPlay controls</string>
-    <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
-    <string name="settings_gesture_fingers_label">Open settings · swipe-down fingers</string>
+    <string name="settings_gesture_fingers">Quick menu · swipe with %1$d fingers (tap to change)</string>
+    <string name="settings_gesture_fingers_label">Quick menu · swipe-down fingers</string>
     <string name="settings_gesture_fingers_option">%1$d fingers</string>
     <string name="settings_gesture_fingers_hint">Pick a finger count your head unit does not already use. BYD takes three-finger swipe-down for its air-conditioning panel.</string>
     <string name="auto_car_hotspot_title">Automatically turn on the car hotspot</string>
@@ -692,7 +692,7 @@
     <string name="wheel_siri_key_description">Opens Siri with a wheel key you choose while CarPlay is on the screen. A key that the car keeps for itself works only with the wheel key service, which also works when CarPlay is in the background. Without CarPlay, or during a call, the key keeps the car\'s own action.</string>
     <string name="wheel_key_role_back">back</string>
     <string name="wheel_key_service_label">DiPlay wheel keys</string>
-    <string name="wheel_key_service_description">Lets DiPlay use the steering-wheel keys chosen in its settings to zoom the CarPlay map on the dashboard and to move around CarPlay\'s screen. It only receives key presses and does not read the screen.</string>
+    <string name="wheel_key_service_description">Optional wheel key filtering for navigation volume during spoken guidance, dashboard map zoom, CarPlay joystick and call controls. No screen content is read.</string>
     <string name="cluster_song_on_change">Song only when it changes</string>
     <string name="cluster_song_on_change_description">A new song shows on the dashboard for 5 seconds, then the card is emptied. Pause and play alone do not show it again.</string>
     <string name="carplay_calls_on_dashboard">CarPlay calls on the dashboard</string>
@@ -741,6 +741,16 @@
     <string name="call_voice_filter_description">Cuts bass from CarPlay call audio. This may change how voices sound. Applies at the next CarPlay connection.</string>
     <string name="smooth_video">Smooth video (experimental)</string>
     <string name="smooth_video_description">Shows each main-screen CarPlay frame at the time the iPhone stamped on it plus a short delay, instead of as soon as it is decoded. The delay adjusts itself so that most frames are decoded in time; frames still not ready by their time are shown at once. Scrolling can look more even, but touches respond later. Picture adjustments do not apply. Reconnects CarPlay.</string>
+    <string name="settings_direct_video_output">Direct video output (experimental)</string>
+    <string name="settings_direct_video_output_description">Sends the CarPlay picture straight to the head unit\'s compositor instead of drawing it inside the DiPlay window. Can lower the delay by about one screen refresh. Picture adjustments do not apply. Reconnects CarPlay.</string>
+    <string name="settings_low_latency_decoder">Low-latency decoding (experimental)</string>
+    <string name="settings_low_latency_decoder_description">Asks Qualcomm video decoders to output each frame as soon as it is decoded instead of holding the next ones, and shows each decoded frame from a dedicated thread without waiting for the next one to arrive. Can lower the delay by tens of milliseconds. Turn it off if the picture shows artifacts or freezes. Applies at the next connection.</string>
+    <string name="settings_fps_counter">FPS counter</string>
+    <string name="settings_fps_counter_description">Shows a counter in the top-right corner of CarPlay: frames shown per second (green from 50, yellow from 30, red below), frames received from the iPhone per second, and the decode time. A still screen shows few frames because the iPhone sends none.</string>
+    <string name="fps_counter_text" translatable="false">%1$d FPS\nRX %2$d · %3$s</string>
+    <string name="fps_counter_millis" translatable="false">%1$d ms</string>
+    <string name="fps_counter_no_value" translatable="false">–</string>
+    <string name="fps_counter_waiting" translatable="false">-- FPS</string>
     <string name="car_button_in_carplay">Car button in CarPlay</string>
     <string name="car_button_icon">Icon</string>
     <string name="car_button_icon_custom">Custom icon</string>
@@ -787,4 +797,14 @@
     <string name="setup_badge_adb">Needs ADB over network</string>
     <string name="setup_done_title">You’re ready</string>
     <string name="setup_done_description">Connect your iPhone now. You can open this guide again from Settings.</string>
+    <string name="settings_discard_pending_title">Discard your changes?</string>
+    <string name="settings_discard_pending_message">Resolution, frame rate, connection and the other settings you just changed are not saved yet. Save and reconnect applies them.</string>
+    <string name="settings_discard_pending_confirm">Discard</string>
+    <string name="settings_gesture_disabled">Off</string>
+    <string name="settings_gesture_disabled_hint">Swipe-down shortcut is disabled.</string>
+    <string name="settings_gesture_disabled_action">Quick menu · swipe disabled (tap to change)</string>
+    <string name="bt_suspend_delay">Bluetooth pause delay</string>
+    <string name="bt_suspend_delay_option">%1$d s after connecting</string>
+    <string name="bt_suspend_during_carplay">Pause car Bluetooth during CarPlay · needs ADB</string>
+    <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth over ADB so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection.</string>
 </resources>

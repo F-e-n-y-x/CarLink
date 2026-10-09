@@ -21,6 +21,7 @@ import com.shilapi.xcertplay.airplay.MicrophoneConfig
 import com.shilapi.xcertplay.airplay.VideoCodec
 import com.shilapi.xcertplay.airplay.toHexString
 import com.shilapi.xcertplay.compat.AudioFocusRequestCompat
+import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
@@ -205,6 +206,11 @@ class AndroidMediaSink(
     private val videoPacingDelayMillis: Int = 0,
     /** The main screen's frame rate (the frame-rate setting), requested from its decoder as the operating rate; 0 for none. */
     private val mainVideoFrameRate: Int = 0,
+    /**
+     * Low-latency decoding (a setting): ask Qualcomm decoders to output each frame as soon as it is decoded,
+     * and hand decoded frames to the screen from a thread of their own.
+     */
+    private val vendorLowLatencyDecoder: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -387,6 +393,9 @@ class AndroidMediaSink(
     val videoPacingEnabled: Boolean get() = videoPacingDelayMillis > 0
 
     /** Requests a keyframe for stream [type], e.g. after its surface came back. */
+    /** Running totals of the main screen's decoder for a live FPS counter; null while it has none. */
+    fun liveVideoCounters(): LiveVideoCounters? = videoDecoders[MAIN_SCREEN_TYPE]?.liveCounters()
+
     fun refreshPicture(type: Int) {
         videoDecoders[type]?.refreshPicture()
     }
@@ -509,10 +518,13 @@ class AndroidMediaSink(
     override fun onMicrophoneStarted(id: AudioStreamId, config: MicrophoneConfig) {
         // This callback runs on the downlink thread; microphone failures must not stop playback.
         try {
-            if (config.audioType == "telephony") enterCommunicationMode(id)
+            val speakerphoneCall = config.audioType == "telephony" &&
+                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext)
+            if (config.audioType == "telephony" && !speakerphoneCall) enterCommunicationMode(id)
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
-                    if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
+                    speakerphoneCall = speakerphoneCall,
+                    echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
             }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
@@ -631,6 +643,9 @@ class AndroidMediaSink(
         // Only the main screen goes to the host's SurfaceView; mirrors and the cluster keep their path.
         pacingDelayNanos = if (type == MAIN_SCREEN_TYPE && statsLabel == null) videoPacingDelayMillis * 1_000_000L else 0L,
         operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
+        vendorLowLatency = vendorLowLatencyDecoder,
+        dedicatedOutputThread = vendorLowLatencyDecoder,
+        framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
     ).also { if (startImmediately) it.start() }
 
     @Synchronized
@@ -655,8 +670,10 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
-            echoReference,
-            callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
+            speakerphoneCall = format.audioType == "telephony" &&
+                appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
+            echoReference = echoReference,
+            voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
         ).also { audioRenderers[id] = it }
     }
 
@@ -727,9 +744,16 @@ internal data class DecoderAttempt(val codecName: String?, val tuned: Boolean, v
 /**
  * Configure attempts in order. Some vendor decoders (e.g. MediaTek c2.mtk.avc.decoder) reject the tuned
  * parameters with BAD_VALUE, so a minimal format and then software follow. An [operatingRate] is tried
- * first on its own, so a decoder that refuses it keeps the tuned format it gets without one.
+ * first on its own, so a decoder that refuses it keeps the tuned format it gets without one. A
+ * [lowLatencyDecoder] gets its tuned attempts before the default decoder's.
  */
-internal fun videoDecoderAttempts(operatingRate: Int, softwareDecoder: String?): List<DecoderAttempt> = listOfNotNull(
+internal fun videoDecoderAttempts(
+    operatingRate: Int,
+    softwareDecoder: String?,
+    lowLatencyDecoder: String? = null,
+): List<DecoderAttempt> = listOfNotNull(
+    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 } },
+    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true) },
     DecoderAttempt(codecName = null, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 },
     DecoderAttempt(codecName = null, tuned = true),
     DecoderAttempt(codecName = null, tuned = false),
@@ -742,6 +766,40 @@ internal fun videoDecoderAttempts(operatingRate: Int, softwareDecoder: String?):
  */
 internal fun nextOperatingRate(requested: Int, used: DecoderAttempt?): Int =
     if (requested > 0 && used != null && used.operatingRate == 0) 0 else requested
+
+/**
+ * Qualcomm's vendor parameters that make its decoders output each frame as soon as it is decoded, in
+ * decode order: without them c2.qti.avc.decoder released a frame only after about two more had been
+ * queued (docs/SMOOTH_WIRELESS.md). Empty for other decoders. CarPlay's screen stream has no B-frames,
+ * so decode order is display order.
+ */
+internal fun vendorLowLatencyKeys(codecName: String): List<String> =
+    if (codecName.startsWith("c2.qti.") || codecName.startsWith("OMX.qcom.")) {
+        listOf("vendor.qti-ext-dec-low-latency.enable", "vendor.qti-ext-dec-picture-order.enable")
+    } else emptyList()
+
+/** One regular decoder of the stream's type, as [lowLatencyDecoderName] sees it. */
+internal data class DecoderCandidate(val name: String, val hardware: Boolean, val alias: Boolean, val lowLatency: Boolean)
+
+/**
+ * The decoder the main screen tries first with smooth video: the first hardware decoder (not an alias) that
+ * advertises the low-latency feature, whose tuned format then asks for low latency. On my Tang this is
+ * c2.qti.avc.decoder.low_latency; the default c2.qti.avc.decoder does not advertise the feature.
+ */
+internal fun lowLatencyDecoderName(candidates: List<DecoderCandidate>): String? =
+    candidates.firstOrNull { it.lowLatency && it.hardware && !it.alias }?.name
+
+/** The low-latency decoder to try at the next configure: none once another decoder ([used]) worked after it. */
+internal fun nextLowLatencyDecoder(requested: String?, used: DecoderAttempt?): String? =
+    if (requested != null && used != null && used.codecName != requested) null else requested
+
+/**
+ * Qualcomm's decoder parameter for output in decoding order. Without it my Tang's decoders released a frame
+ * only once one or two later frames had been queued. Decoding order is the display order only for a stream
+ * without reordered (B) frames; the iPhone's CarPlay H.264 had none. It is set only for the main screen's H.264
+ * with smooth video, and only on a decoder that lists the parameter.
+ */
+internal const val PICTURE_ORDER_PARAMETER = "vendor.qti-ext-dec-picture-order.enable"
 
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
 private class VideoDecoder(
@@ -757,6 +815,18 @@ private class VideoDecoder(
     /** Called on the worker as its last step, after it has released its codec. */
     private val onExit: (VideoDecoder) -> Unit = {},
     operatingRate: Int = 0,
+    /** Set [vendorLowLatencyKeys] on the tuned configure attempts. */
+    private val vendorLowLatency: Boolean = false,
+    /**
+     * Release decoded frames from a thread that waits on the codec's output, instead of when the worker
+     * next comes back from its queue or from feeding: a frame is shown as soon as it is decoded.
+     */
+    dedicatedOutputThread: Boolean = false,
+    /**
+     * The main screen with smooth video: for H.264, try a low-latency decoder first ([lowLatencyDecoderName]) and
+     * ask decoders that list it for [PICTURE_ORDER_PARAMETER], so each frame leaves the decoder as soon as it can.
+     */
+    private val framesAtOnce: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -782,11 +852,18 @@ private class VideoDecoder(
     private var outputSurface: Surface? = surface
     private var parking: ParkingOutput? = null
     private var lastConfig: VideoJob.Config? = null
-    private var renderedFrameLogged = false
+    @Volatile private var renderedFrameLogged = false
     // The operating rate still asked for, dropped for this stream once a decoder refuses it; and the rate
     // the current codec was configured with.
     private var operatingRate = operatingRate
     private var configuredRate = 0
+    // Whether the vendor low-latency parameters were set on the codec being configured.
+    private var configuredVendorLowLatency = false
+    // Likewise the low-latency decoder, not tried again once another decoder had to take over; and what the
+    // codec that tryConfigure started last was given.
+    private var lowLatencyDecoderRefused = false
+    private var startedLowLatency = false
+    private var startedPictureOrder = false
     private var submittedFrameLogged = false
     private var duplicateConfigLogged = false
     private var failureReports = 0
@@ -794,9 +871,35 @@ private class VideoDecoder(
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
     private val stats = VideoStats(statsLabel ?: if (streamType == MAIN_SCREEN_TYPE) "" else " stream=$streamType")
-    private val thread = Thread(::run, "carplay-video").apply { isDaemon = true }
+    // Running totals for the live FPS counter, read from the UI thread.
+    private val liveReceived = AtomicLong()
+    private val liveRendered = AtomicLong()
+    private val liveDecodeNanos = AtomicLong()
+    private val liveDecodeSamples = AtomicLong()
 
-    fun start() { thread.start() }
+    fun liveCounters() = LiveVideoCounters(
+        received = liveReceived.get(),
+        rendered = liveRendered.get(),
+        decodeNanos = liveDecodeNanos.get(),
+        decodeSamples = liveDecodeSamples.get(),
+    )
+    private val thread = Thread(::run, "carplay-video").apply { isDaemon = true }
+    private val outputThread = if (dedicatedOutputThread) {
+        Thread(::runOutput, "carplay-video-output").apply { isDaemon = true }
+    } else null
+    // Guards the codec handoff between the worker and the output thread: [decoder] changes, [outputSurface]
+    // and [parking] changes, the per-frame bookkeeping, and the output thread's handling of one buffer.
+    // The output thread waits inside dequeueOutputBuffer without it.
+    private val outputLock = Object()
+    // The codec the output thread is waiting on; the worker waits for it to return before releasing that codec.
+    private var dequeuing: MediaCodec? = null
+    // A failure on the output thread, handled by the worker as if its own job had failed.
+    @Volatile private var outputFailure: Exception? = null
+
+    fun start() {
+        thread.start()
+        outputThread?.start()
+    }
 
     fun configure(codec: VideoCodec, codecData: ByteArray) {
         queue.offer(VideoJob.Config(codec, codecData))
@@ -804,6 +907,7 @@ private class VideoDecoder(
 
     fun submit(nalus: ByteArray, senderNanos: Long = 0L, arrivalNanos: Long = 0L) {
         stats.onReceived(nalus.size)
+        liveReceived.incrementAndGet()
         // Pacing runs on the worker, in queue order: callbacks of a replaced stream may still deliver here.
         queue.offer(VideoJob.Frame(nalus, senderNanos = senderNanos, arrivalNanos = arrivalNanos))
     }
@@ -856,6 +960,10 @@ private class VideoDecoder(
         try {
             while (running) {
                 val job = queue.poll(5)
+                outputFailure?.let { failure ->
+                    outputFailure = null
+                    onJobFailure("output", failure)
+                }
                 try {
                     when (job) {
                         is VideoJob.Config -> configureDecoder(job)
@@ -875,20 +983,11 @@ private class VideoDecoder(
                         is VideoJob.Resync -> recover("video queue overflow")
                         null -> Unit
                     }
-                    decoder?.let(::drainOutput)
+                    if (outputThread == null) decoder?.let(::drainOutput)
                     stats.logIfDue()?.let(report)
                     if (referenceChain.needsKeyFrame && lastConfig != null && outputSurface != null) requestKeyFrameIfDue()
                 } catch (error: Exception) {
-                    if (running) Log.e(TAG, "video decoder job failed: ${job?.javaClass?.simpleName}", error)
-                    if (running) reportFailure("stage=${job?.javaClass?.simpleName ?: "drain"}", error)
-                    // A codec can accept the rate and still fail once it runs (start errors may surface on
-                    // later calls): one that failed before its first frame with it is not given it again.
-                    if (configuredRate > 0 && !renderedFrameLogged && error is MediaCodec.CodecException) {
-                        dropOperatingRate("codec failed before its first frame")
-                    }
-                    releaseDecoder()
-                    referenceChain.reset()
-                    requestKeyFrameIfDue()
+                    onJobFailure(job?.javaClass?.simpleName ?: "drain", error)
                 } catch (error: LinkageError) {
                     if (running) reportFailure("stage=${job?.javaClass?.simpleName ?: "drain"}", error)
                     throw error
@@ -897,12 +996,68 @@ private class VideoDecoder(
         } catch (_: InterruptedException) {
             // Worker shut down.
         } finally {
+            running = false
             releaseDecoder()
+            outputThread?.let { output ->
+                output.interrupt()
+                joinUninterruptibly(output, OUTPUT_EXIT_WAIT_MS)
+            }
             // The codec is gone, so nothing renders to any surface or to the parking consumer any more.
             parking?.close()
             parking = null
             queue.drain().forEach { (it as? VideoJob.DetachSurface)?.request?.complete(DetachOutcome.RELEASED) }
             runCatching { onExit(this) }
+        }
+    }
+
+    private fun onJobFailure(stage: String, error: Exception) {
+        if (running) Log.e(TAG, "video decoder job failed: $stage", error)
+        if (running) reportFailure("stage=$stage", error)
+        // A codec can accept the rate and still fail once it runs (start errors may surface on
+        // later calls): one that failed before its first frame with it is not given it again.
+        if (configuredRate > 0 && !renderedFrameLogged && error is MediaCodec.CodecException) {
+            dropOperatingRate("codec failed before its first frame")
+        }
+        releaseDecoder()
+        referenceChain.reset()
+        requestKeyFrameIfDue()
+    }
+
+    /** The output thread: waits on the current codec's output and releases each frame as it comes. */
+    private fun runOutput() {
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY) }
+        val info = MediaCodec.BufferInfo()
+        while (running) {
+            val codec = synchronized(outputLock) {
+                val current = decoder
+                if (current == null || outputFailure != null) {
+                    try { outputLock.wait(OUTPUT_IDLE_WAIT_MS) } catch (_: InterruptedException) { return }
+                    null
+                } else {
+                    dequeuing = current
+                    current
+                }
+            } ?: continue
+            var index = MediaCodec.INFO_TRY_AGAIN_LATER
+            var failure: Exception? = null
+            try {
+                index = codec.dequeueOutputBuffer(info, OUTPUT_TIMEOUT_US)
+            } catch (error: Exception) {
+                failure = error
+            }
+            synchronized(outputLock) {
+                dequeuing = null
+                outputLock.notifyAll()
+                // A codec the worker released or replaced meanwhile has no buffers left to hand out.
+                if (decoder === codec) {
+                    try {
+                        if (failure != null) throw failure
+                        handleOutput(codec, index, info)
+                    } catch (error: Exception) {
+                        if (running) outputFailure = error
+                    }
+                }
+            }
         }
     }
 
@@ -939,23 +1094,35 @@ private class VideoDecoder(
             )
         }
         val requestedRate = operatingRate
+        val atOnce = framesAtOnce && codec == VideoCodec.H264
+        val requestedLowLatency = if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
         var next: MediaCodec? = null
         var used: DecoderAttempt? = null
-        for (attempt in videoDecoderAttempts(requestedRate, softwareDecoderName(mime))) {
-            next = tryConfigure(mime, csd, surface, attempt)
+        for (attempt in videoDecoderAttempts(requestedRate, softwareDecoderName(mime), requestedLowLatency)) {
+            next = tryConfigure(mime, csd, surface, attempt, atOnce)
             if (next != null) { used = attempt; break }
         }
         if (next == null) {
             report("decoder configuration failed mime=$mime size=${width}x$height")
         }
         if (nextOperatingRate(requestedRate, used) != requestedRate) dropOperatingRate("refused at configure")
-        decoder = next
-        configuredRate = used?.operatingRate ?: 0
+        if (nextLowLatencyDecoder(requestedLowLatency, used) != requestedLowLatency) {
+            report("low-latency decoder $requestedLowLatency dropped: refused at configure")
+            lowLatencyDecoderRefused = true
+        }
         renderedFrameLogged = false
         submittedFrameLogged = false
+        synchronized(outputLock) {
+            decoder = next
+            outputLock.notifyAll()
+        }
+        configuredRate = used?.operatingRate ?: 0
         if (next != null) {
             val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
-            report("decoder=${next.name} mime=$mime size=${width}x$height$rate")
+            val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
+            val output = if (outputThread != null) " outputThread=true" else ""
+            val atOnceReport = if (atOnce) " lowLatency=$startedLowLatency pictureOrder=$startedPictureOrder" else ""
+            report("decoder=${next.name} mime=$mime size=${width}x$height$rate$lowLatency$output$atOnceReport")
             Log.i(
                 TAG,
                 "video decoder configured name=${next.name} mime=$mime size=${width}x$height",
@@ -983,18 +1150,26 @@ private class VideoDecoder(
         csd: List<ByteArray>,
         surface: Surface,
         attempt: DecoderAttempt,
+        /** Ask for [PICTURE_ORDER_PARAMETER] when the decoder lists it ([framesAtOnce], H.264). */
+        atOnce: Boolean = false,
     ): MediaCodec? {
         var candidate: MediaCodec? = null
         return try {
             val format = buildFormat(mime, csd, attempt)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
-            if (attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
-                format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
-            }
+            val lowLatency = attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")
+            if (lowLatency) format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
+            val vendorKeys = if (attempt.tuned && vendorLowLatency) vendorLowLatencyKeys(codec.name.orEmpty()) else emptyList()
+            vendorKeys.forEach { format.setInteger(it, 1) }
+            configuredVendorLowLatency = vendorKeys.isNotEmpty()
+            val pictureOrder = attempt.tuned && atOnce && listsPictureOrder(codec)
+            if (pictureOrder) format.setInteger(PICTURE_ORDER_PARAMETER, 1)
             codec.configure(format, surface, null, 0)
             codec.start()
+            startedLowLatency = lowLatency
+            startedPictureOrder = pictureOrder
             codec
         } catch (error: Exception) {
             runCatching { candidate?.release() }
@@ -1008,6 +1183,28 @@ private class VideoDecoder(
             null
         }
     }
+
+    /** Android 11 added the low-latency feature; aliases and software-only flags exist from Android 10. */
+    private fun findLowLatencyDecoder(mime: String): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return runCatching {
+            lowLatencyDecoderName(MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { !it.isEncoder && mime in it.supportedTypes }
+                .map { info ->
+                    DecoderCandidate(
+                        name = info.name,
+                        hardware = info.isHardwareAccelerated,
+                        alias = info.isAlias,
+                        lowLatency = info.getCapabilitiesForType(mime).isFeatureSupported("low-latency"),
+                    )
+                })
+        }.getOrNull()
+    }
+
+    /** Android 12 lets a codec list its vendor parameters. */
+    private fun listsPictureOrder(codec: MediaCodec): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            runCatching { PICTURE_ORDER_PARAMETER in codec.supportedVendorParameters }.getOrDefault(false)
 
     private fun softwareDecoderName(mime: String): String? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
@@ -1041,7 +1238,7 @@ private class VideoDecoder(
         } else 0L
 
     /** Completes [request] once the codec no longer renders to its surface, whatever happens here. */
-    private fun detach(request: SurfaceDetachRequest) {
+    private fun detach(request: SurfaceDetachRequest): Unit = synchronized(outputLock) {
         var outcome = DetachOutcome.RELEASED
         try {
             outcome = detachAction(outputSurface, request.surface, request.park, decoder != null)
@@ -1076,7 +1273,7 @@ private class VideoDecoder(
         }
     }
 
-    private fun changeSurface(surface: Surface?) {
+    private fun changeSurface(surface: Surface?): Unit = synchronized(outputLock) {
         if (outputSurface === surface) return
         outputSurface = surface
         if (surface == null) {
@@ -1117,7 +1314,7 @@ private class VideoDecoder(
             )
         }
         val index = VideoInputPump.acquire(
-            running = { running }, drain = { drainOutput(codec) },
+            running = { running }, drain = { if (outputThread == null) drainOutput(codec) },
             dequeue = { codec.dequeueInputBuffer(INPUT_TIMEOUT_US) },
         )
         if (index < 0) { recover("video decoder input stalled"); return }
@@ -1127,30 +1324,33 @@ private class VideoDecoder(
             input.put(annexB)
             // A paced frame carries its local time; MediaCodec returns it with the decoded output.
             val presentationUs = if (presentNs > 0) presentNs / 1000 else System.nanoTime() / 1000
-            codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
-            val queuedNow = System.nanoTime()
-            if (lastQueuedNanos != 0L && queuedNow - lastQueuedNanos > STILL_GAP_NS) resumedAtNanos = queuedNow
-            lastQueuedNanos = queuedNow
-            queuedPresentationUs[queuedSlot] = presentationUs
-            queuedAtNanos[queuedSlot] = queuedNow
-            queuedPaced[queuedSlot] = presentNs > 0
-            queuedBeforePause[queuedSlot] = false
-            if (presentNs > 0) {
-                // A gap between consecutive iPhone frame times, not a decoder backlog, marks a pause.
-                if (lastQueuedLocalNanos != 0L && presentNs - lastQueuedLocalNanos > SENDER_PAUSE_NS) {
-                    recentPacedSlots.forEach { if (it >= 0) queuedBeforePause[it] = true }
+            // Recorded before queueing: the output thread may dequeue the frame as soon as it is queued.
+            synchronized(outputLock) {
+                val queuedNow = System.nanoTime()
+                if (lastQueuedNanos != 0L && queuedNow - lastQueuedNanos > STILL_GAP_NS) resumedAtNanos = queuedNow
+                lastQueuedNanos = queuedNow
+                queuedPresentationUs[queuedSlot] = presentationUs
+                queuedAtNanos[queuedSlot] = queuedNow
+                queuedPaced[queuedSlot] = presentNs > 0
+                queuedBeforePause[queuedSlot] = false
+                if (presentNs > 0) {
+                    // A gap between consecutive iPhone frame times, not a decoder backlog, marks a pause.
+                    if (lastQueuedLocalNanos != 0L && presentNs - lastQueuedLocalNanos > SENDER_PAUSE_NS) {
+                        recentPacedSlots.forEach { if (it >= 0) queuedBeforePause[it] = true }
+                    }
+                    lastQueuedLocalNanos = presentNs
+                    recentPacedSlots.copyInto(recentPacedSlots, 1, 0, PAUSE_HELD_FRAMES - 1)
+                    recentPacedSlots[0] = queuedSlot
                 }
-                lastQueuedLocalNanos = presentNs
-                recentPacedSlots.copyInto(recentPacedSlots, 1, 0, PAUSE_HELD_FRAMES - 1)
-                recentPacedSlots[0] = queuedSlot
+                queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
             }
-            queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
+            codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
             referenceChain.onQueued()
         } else {
             recover("video frame exceeded codec input capacity")
             return
         }
-        drainOutput(codec)
+        if (outputThread == null) drainOutput(codec)
     }
 
     private fun recover(reason: String) {
@@ -1176,46 +1376,58 @@ private class VideoDecoder(
     private fun drainOutput(codec: MediaCodec) {
         val info = MediaCodec.BufferInfo()
         while (running) {
-            val index = codec.dequeueOutputBuffer(info, 0)
-            when {
-                index == MediaCodec.INFO_TRY_AGAIN_LATER -> return
-                index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
-                index >= 0 -> {
-                    val render = outputSurface != null
-                    // Parked output goes to the offscreen consumer: it keeps the codec's state, but it is
-                    // not shown, so it is neither paced nor counted.
-                    val shown = render && outputSurface !== parking?.surface
-                    val now = System.nanoTime()
-                    val slot = queuedSlotOf(info.presentationTimeUs)
-                    val queued = if (slot >= 0) queuedAtNanos[slot] else 0L
-                    val heldOverGap = queued in 1 until resumedAtNanos
-                    if (queued > 0 && !heldOverGap) stats.onDecodeLatency(now - queued)
-                    val delay = pacingDelay
-                    val paced = shown && delay != null && slot >= 0 && queuedPaced[slot]
-                    val localNs = info.presentationTimeUs * 1000
-                    val pauseHeld = paced && queuedBeforePause[slot]
-                    val targetNs = if (paced && delay != null) {
-                        if (!heldOverGap && !pauseHeld) delay.onFrame(now - localNs)
-                        stats.onPacingDelay(delay.nanos)
-                        localNs + delay.nanos
-                    } else 0L
-                    if (targetNs - now in 1..MAX_PACING_AHEAD_NS) {
-                        codec.releaseOutputBuffer(index, targetNs)
-                    } else {
-                        if (shown && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
-                        codec.releaseOutputBuffer(index, render)
-                    }
-                    if (shown) stats.onRendered()
-                    if (shown && !renderedFrameLogged) {
-                        renderedFrameLogged = true
-                        report("first frame rendered")
-                        Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
-                    }
-                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
-                }
-                else -> return
-            }
+            if (!handleOutput(codec, codec.dequeueOutputBuffer(info, 0), info)) return
         }
+    }
+
+    /** Handles one dequeueOutputBuffer result; false when there is nothing more to drain for now. */
+    private fun handleOutput(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo): Boolean {
+        when {
+            index == MediaCodec.INFO_TRY_AGAIN_LATER -> return false
+            index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
+            index >= 0 -> {
+                val render = outputSurface != null
+                // Parked output goes to the offscreen consumer: it keeps the codec's state, but it is
+                // not shown, so it is neither paced nor counted.
+                val shown = render && outputSurface !== parking?.surface
+                val now = System.nanoTime()
+                val slot = queuedSlotOf(info.presentationTimeUs)
+                val queued = if (slot >= 0) queuedAtNanos[slot] else 0L
+                val heldOverGap = queued in 1 until resumedAtNanos
+                if (queued > 0 && !heldOverGap) {
+                    stats.onDecodeLatency(now - queued)
+                    liveDecodeNanos.addAndGet(now - queued)
+                    liveDecodeSamples.incrementAndGet()
+                }
+                val delay = pacingDelay
+                val paced = shown && delay != null && slot >= 0 && queuedPaced[slot]
+                val localNs = info.presentationTimeUs * 1000
+                val pauseHeld = paced && queuedBeforePause[slot]
+                val targetNs = if (paced && delay != null) {
+                    if (!heldOverGap && !pauseHeld) delay.onFrame(now - localNs)
+                    stats.onPacingDelay(delay.nanos)
+                    localNs + delay.nanos
+                } else 0L
+                if (targetNs - now in 1..MAX_PACING_AHEAD_NS) {
+                    codec.releaseOutputBuffer(index, targetNs)
+                } else {
+                    if (shown && delay != null && !heldOverGap && !pauseHeld) stats.onLate()
+                    codec.releaseOutputBuffer(index, render)
+                }
+                if (shown) {
+                    stats.onRendered()
+                    liveRendered.incrementAndGet()
+                }
+                if (shown && !renderedFrameLogged) {
+                    renderedFrameLogged = true
+                    report("first frame rendered")
+                    Log.i(TAG, "video decoder rendered first frame bytes=${info.size}")
+                }
+                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return false
+            }
+            else -> return false
+        }
+        return true
     }
 
     private fun logOutputFormat(format: MediaFormat) {
@@ -1246,10 +1458,15 @@ private class VideoDecoder(
             MediaFailureSummary.describe(error)) }
     }
 
-    @Synchronized
+    // Worker only; [outputLock] orders it against the output thread.
     private fun releaseDecoder() {
-        val codec = decoder
-        decoder = null
+        val codec: MediaCodec?
+        synchronized(outputLock) {
+            codec = decoder
+            decoder = null
+            // The output thread returns from dequeueOutputBuffer within its timeout and then sees no codec.
+            awaitNotDequeuing(codec)
+        }
         configuredRate = 0
         if (codec != null) {
             try {
@@ -1265,9 +1482,37 @@ private class VideoDecoder(
         }
     }
 
+    /** Waits, holding [outputLock], until the output thread no longer waits on [codec]; keeps an interrupt. */
+    private fun awaitNotDequeuing(codec: MediaCodec?) {
+        if (codec == null) return
+        var interrupted = false
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(OUTPUT_EXIT_WAIT_MS)
+        while (dequeuing === codec) {
+            val leftMillis = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+            if (leftMillis <= 0) break
+            try { outputLock.wait(leftMillis) } catch (_: InterruptedException) { interrupted = true }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
+    private fun joinUninterruptibly(thread: Thread, timeoutMillis: Long) {
+        var interrupted = false
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        while (thread.isAlive) {
+            val leftMillis = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+            if (leftMillis <= 0) break
+            try { thread.join(leftMillis) } catch (_: InterruptedException) { interrupted = true }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+    }
+
     private companion object {
         const val TAG = "xcertplay-usb"
         const val MAX_INPUT_SIZE = 8 * 1024 * 1024
+        // The output thread's wait for a decoded frame; a release waits at most this long for it to return.
+        const val OUTPUT_TIMEOUT_US = 10_000L
+        const val OUTPUT_IDLE_WAIT_MS = 10L
+        const val OUTPUT_EXIT_WAIT_MS = 500L
         const val INPUT_TIMEOUT_US = 10_000L
         const val MAX_FRAME_AGE_NS = 250_000_000L
         // A paced frame more than this ahead is treated as a bad mapping and shown at once.
@@ -1305,6 +1550,7 @@ private class AudioRenderer(
     private val navigationStreamType: Int,
     private val mediaBufferMillis: Int,
     private val report: (String) -> Unit,
+    private val speakerphoneCall: Boolean = false,
     /** Receives the played call audio so the call microphone can cancel its echo. */
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
@@ -1316,6 +1562,8 @@ private class AudioRenderer(
 
     private var trackAttributes: AudioAttributes? = null
     private var mappedChannel: AudioChannel? = null
+    private val navigationPlaybackToken = NavigationPlayback.open()
+    private var actualLegacyStreamType: Int? = null
     private val queue = LinkedBlockingQueue<AudioPacket>(MAX_QUEUED_PACKETS)
     @Volatile private var running = true
     @Volatile private var started = false
@@ -1386,6 +1634,7 @@ private class AudioRenderer(
 
     override fun close() {
         running = false
+        NavigationPlayback.close(navigationPlaybackToken)
         thread.interrupt()
     }
 
@@ -1492,6 +1741,7 @@ private class AudioRenderer(
         val selection = mappedSelection()
         mappedChannel = selection.channel
         val streamOverride = channelOverride(selection.channel)
+        actualLegacyStreamType = streamOverride.takeIf { it != 0 }
         var attributes = audioAttributesFor(selection, streamOverride)
         trackAttributes = attributes
         val plan = MediaAudioBuffer.plan(selection.channel == AudioChannel.MEDIA,
@@ -1522,6 +1772,7 @@ private class AudioRenderer(
                 createFallback = {
                     diagnosticStage = "track-fallback-build"
                     routeLabel = "streamType=$streamType(fallback=usage)"
+                    actualLegacyStreamType = null
                     Log.w(TAG, "streamType=$streamType rejected by this ROM; falling back to usage-based track")
                     attributes = audioAttributesFor(selection)
                     AudioTrack.Builder()
@@ -1601,11 +1852,12 @@ private class AudioRenderer(
         } else {
             AudioChannelMappingMode.MOBILE_COMPATIBLE
         }
-        return AudioChannelMapper.map(
+        val selection = AudioChannelMapper.map(
             audioType = format.audioType,
             payloadType = format.payloadType,
             mode = mode,
         )
+        return if (speakerphoneCall) AudioChannelMapper.playCallOnSpeaker(selection) else selection
     }
 
     private fun audioAttributesFor(selection: AudioChannelSelection): AudioAttributes =
@@ -1876,6 +2128,7 @@ private class AudioRenderer(
             writtenFramesThisWindow += framesWritten
             bufferProgress.written(count)
             lastPcmWriteNs = System.nanoTime()
+            if (playbackStarted) reportNavigationPlayback(track)
             if (!playbackStarted) {
                 prebufferBytes += count
                 if (prebufferBytes >= startThresholdBytes) {
@@ -1899,6 +2152,19 @@ private class AudioRenderer(
         underrunsAtPlaybackStart = track.underrunCount
         track.play()
         playbackStarted = true
+        reportNavigationPlayback(track)
+    }
+
+    private fun reportNavigationPlayback(track: AudioTrack) {
+        if (!running) return
+        val priorityVoice = mappedChannel == AudioChannel.PHONE || mappedChannel == AudioChannel.ASSISTANT
+        if (mappedChannel != AudioChannel.NAVIGATION && !priorityVoice) return
+        // The optional key-routing hint must never interrupt audio on unusual vendor ROMs.
+        runCatching {
+            val pendingFrames = bufferProgress.queuedBytes(track.playbackHeadPosition) / frameBytes
+            val bufferedMillis = (pendingFrames * 1000L + format.sampleRate - 1L) / format.sampleRate
+            NavigationPlayback.played(navigationPlaybackToken, actualLegacyStreamType, bufferedMillis, priorityVoice)
+        }
     }
 
     private fun maintainPlaybackBuffer() {
@@ -2005,6 +2271,7 @@ private class AudioRenderer(
 
     @Synchronized
     private fun release() {
+        NavigationPlayback.close(navigationPlaybackToken)
         abandonAudioFocus()
         val codec = codec
         this.codec = null

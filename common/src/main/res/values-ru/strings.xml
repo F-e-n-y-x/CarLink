@@ -551,10 +551,10 @@
     <string name="turn_card_distance_m">%1$d м</string>
     <string name="turn_card_distance_km">%1$.1f км</string>
     <string name="turn_card_exit">Съезд %1$d</string>
-    <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть настройки DiPlay.</string>
+    <string name="open_diplay_settings_hint">В CarPlay проведите вниз %1$d пальцами, чтобы открыть быстрое меню.</string>
     <string name="carplay_controls">Управление CarPlay</string>
-    <string name="settings_gesture_fingers">Открыть настройки · свайп %1$d пальцами (нажмите для смены)</string>
-    <string name="settings_gesture_fingers_label">Открыть настройки · количество пальцев</string>
+    <string name="settings_gesture_fingers">Быстрое меню · свайп %1$d пальцами (нажмите для смены)</string>
+    <string name="settings_gesture_fingers_label">Быстрое меню · количество пальцев</string>
     <string name="settings_gesture_fingers_option">%1$d пальцев</string>
     <string name="settings_gesture_fingers_hint">Выберите число пальцев, не занятое головным устройством. BYD использует свайп тремя пальцами вниз для панели кондиционера.</string>
     <string name="auto_car_hotspot_title">Автоматически включать точку доступа автомобиля</string>
@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">Открывает Siri кнопкой на руле, которую вы выберете, пока CarPlay на экране. Кнопка, которую автомобиль оставляет себе, работает только со службой кнопок руля; служба работает и когда CarPlay в фоне. Без CarPlay или во время звонка кнопка сохраняет своё действие в автомобиле.</string>
     <string name="wheel_key_role_back">назад</string>
     <string name="wheel_key_service_label">Кнопки руля DiPlay</string>
-    <string name="wheel_key_service_description">Позволяет DiPlay использовать выбранные в настройках кнопки руля для масштаба карты CarPlay на приборной панели и для перемещения по экрану CarPlay. Только получает нажатия кнопок и не читает экран.</string>
+    <string name="wheel_key_service_description">Необязательная фильтрация клавиш руля для громкости голосовых подсказок навигации, масштаба карты на панели, джойстика CarPlay и управления звонками. Содержимое экрана не читается.</string>
     <string name="cluster_song_on_change">Песня только при смене</string>
     <string name="cluster_song_on_change_description">Новая песня видна на приборной панели 5 секунд, затем карточка очищается. Пауза и продолжение её не показывают.</string>
     <string name="carplay_calls_on_dashboard">Звонки CarPlay на приборной панели</string>
@@ -644,6 +644,12 @@
     <string name="call_voice_filter_description">Снижает басы в звонках CarPlay. Может изменить звучание голосов. Применяется при следующем подключении CarPlay.</string>
     <string name="smooth_video">Плавное видео (экспериментально)</string>
     <string name="smooth_video_description">Показывает каждый кадр главного экрана CarPlay по времени, которое отметил на нём iPhone, плюс небольшой запас, а не сразу после декодирования. Запас подстраивается сам, чтобы большинство кадров успевало декодироваться; кадры, всё равно не готовые к своему времени, показываются сразу. Прокрутка может стать ровнее, но отклик на касание запаздывает. Настройки картинки не применяются. Переподключает CarPlay.</string>
+    <string name="settings_direct_video_output">Прямой вывод видео (экспериментально)</string>
+    <string name="settings_direct_video_output_description">Передаёт изображение CarPlay напрямую системному компоновщику головного устройства, а не рисует его внутри окна DiPlay. Может уменьшить задержку примерно на одно обновление экрана. Настройки изображения не применяются. Переподключает CarPlay.</string>
+    <string name="settings_low_latency_decoder">Декодирование с низкой задержкой (экспериментально)</string>
+    <string name="settings_low_latency_decoder_description">Просит видеодекодеры Qualcomm выдавать каждый кадр сразу после декодирования, не удерживая следующие, и показывает каждый декодированный кадр из отдельного потока, не дожидаясь прихода следующего. Может уменьшить задержку на десятки миллисекунд. Отключите, если на изображении появляются артефакты или оно зависает. Применяется при следующем подключении.</string>
+    <string name="settings_fps_counter">Счётчик FPS</string>
+    <string name="settings_fps_counter_description">Показывает счётчик в правом верхнем углу CarPlay: кадры на экране в секунду (зелёный от 50, жёлтый от 30, красный ниже), кадры от iPhone в секунду и время декодирования. На неподвижном экране кадров мало, потому что iPhone их не отправляет.</string>
     <string name="car_button_in_carplay">Кнопка автомобиля в CarPlay</string>
     <string name="car_button_icon">Значок</string>
     <string name="car_button_icon_custom">Свой значок</string>
@@ -690,4 +696,14 @@
     <string name="setup_badge_adb">Требуется ADB по сети</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_done_description">Подключите iPhone сейчас. Этот мастер можно снова открыть в настройках.</string>
+    <string name="settings_discard_pending_title">Отменить изменения?</string>
+    <string name="settings_discard_pending_message">Разрешение, частота кадров, подключение и остальные изменённые настройки ещё не сохранены. «Сохранить и переподключиться» применяет их.</string>
+    <string name="settings_discard_pending_confirm">Отменить</string>
+    <string name="settings_gesture_disabled">Выключено</string>
+    <string name="settings_gesture_disabled_hint">Жест смахивания вниз для открытия быстрого меню отключён.</string>
+    <string name="settings_gesture_disabled_action">Быстрое меню · свайп отключён (нажмите для смены)</string>
+    <string name="bt_suspend_delay">Задержка паузы Bluetooth</string>
+    <string name="bt_suspend_delay_option">%1$d с после подключения</string>
+    <string name="bt_suspend_during_carplay">Приостановить Bluetooth автомобиля при CarPlay · нужен ADB</string>
+    <string name="bt_suspend_during_carplay_description">Телефон держит hands-free связь с автомобилем, поэтому входящий звонок звонит и в телефоне автомобиля, и в CarPlay. При включении: Bluetooth автомобиля приостанавливается через ADB на время сеанса CarPlay — звонки идут только в CarPlay; пока Bluetooth выключен, звонки CarPlay идут через динамик и микрофон автомобиля. Включается обратно после сеанса и перед следующим беспроводным соединением. Сопряжение не затрагивается. Применится при следующем подключении.</string>
 </resources>

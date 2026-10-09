@@ -551,10 +551,10 @@
     <string name="turn_card_distance_m">%1$d m</string>
     <string name="turn_card_distance_km">%1$.1f km</string>
     <string name="turn_card_exit">Salida %1$d</string>
-    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir los ajustes de DiPlay.</string>
+    <string name="open_diplay_settings_hint">En CarPlay, desliza hacia abajo con %1$d dedos para abrir el menú rápido.</string>
     <string name="carplay_controls">Controles de CarPlay</string>
-    <string name="settings_gesture_fingers">Abrir ajustes · deslizar con %1$d dedos (toca para cambiar)</string>
-    <string name="settings_gesture_fingers_label">Abrir ajustes · dedos del deslizamiento</string>
+    <string name="settings_gesture_fingers">Menú rápido · deslizar con %1$d dedos (toca para cambiar)</string>
+    <string name="settings_gesture_fingers_label">Menú rápido · dedos del deslizamiento</string>
     <string name="settings_gesture_fingers_option">%1$d dedos</string>
     <string name="settings_gesture_fingers_hint">Elige un número de dedos que tu unidad no use ya. BYD reserva el deslizamiento con tres dedos para el panel del aire acondicionado.</string>
     <string name="auto_car_hotspot_title">Activar automáticamente el punto de acceso del coche</string>
@@ -611,7 +611,7 @@
     <string name="wheel_siri_key_description">Abre Siri con un botón del volante que elijas mientras CarPlay está en pantalla. Un botón que el coche reserva para sí mismo solo funciona con el servicio de botones del volante, que también funciona con CarPlay en segundo plano. Sin CarPlay, o durante una llamada, el botón conserva su función en el coche.</string>
     <string name="wheel_key_role_back">atrás</string>
     <string name="wheel_key_service_label">Botones del volante de DiPlay</string>
-    <string name="wheel_key_service_description">Permite a DiPlay usar los botones del volante elegidos en sus ajustes para hacer zoom en el mapa de CarPlay del panel de instrumentos y moverse por la pantalla de CarPlay. Solo recibe pulsaciones de botones y no lee la pantalla.</string>
+    <string name="wheel_key_service_description">Filtrado opcional de las teclas del volante para el volumen de las indicaciones de navegación, el zoom del mapa del panel, el joystick de CarPlay y los controles de llamada. No se lee el contenido de la pantalla.</string>
     <string name="cluster_song_on_change">Canción solo al cambiar</string>
     <string name="cluster_song_on_change_description">Una canción nueva se muestra en el cuadro durante 5 segundos y luego la tarjeta se vacía. Pausar y reanudar no la vuelven a mostrar.</string>
     <string name="carplay_calls_on_dashboard">Llamadas de CarPlay en el cuadro</string>
@@ -644,6 +644,12 @@
     <string name="call_voice_filter_description">Reduce los graves del audio de llamadas de CarPlay. Puede cambiar cómo suenan las voces. Se aplica en la próxima conexión de CarPlay.</string>
     <string name="smooth_video">Vídeo fluido (experimental)</string>
     <string name="smooth_video_description">Muestra cada fotograma de la pantalla principal de CarPlay en el momento que marcó el iPhone más un pequeño retardo, en lugar de en cuanto se decodifica. El retardo se ajusta solo para que la mayoría de los fotogramas se decodifiquen a tiempo; los que aun así no están listos a tiempo se muestran al instante. El desplazamiento puede verse más uniforme, pero el toque responde más tarde. Los ajustes de imagen no se aplican. Reconecta CarPlay.</string>
+    <string name="settings_direct_video_output">Salida de vídeo directa (experimental)</string>
+    <string name="settings_direct_video_output_description">Envía la imagen de CarPlay directamente al compositor de la unidad principal en lugar de dibujarla dentro de la ventana de DiPlay. Puede reducir el retardo en aproximadamente un refresco de pantalla. Los ajustes de imagen no se aplican. Vuelve a conectar CarPlay.</string>
+    <string name="settings_low_latency_decoder">Decodificación de baja latencia (experimental)</string>
+    <string name="settings_low_latency_decoder_description">Pide a los decodificadores de vídeo de Qualcomm que entreguen cada fotograma en cuanto se decodifica, en lugar de retener los siguientes, y muestra cada fotograma decodificado desde un hilo dedicado sin esperar a que llegue el siguiente. Puede reducir el retardo en decenas de milisegundos. Desactívalo si la imagen muestra artefactos o se congela. Se aplica en la próxima conexión.</string>
+    <string name="settings_fps_counter">Contador de FPS</string>
+    <string name="settings_fps_counter_description">Muestra un contador en la esquina superior derecha de CarPlay: fotogramas mostrados por segundo (verde desde 50, amarillo desde 30, rojo por debajo), fotogramas recibidos del iPhone por segundo y el tiempo de decodificación. Una pantalla quieta muestra pocos fotogramas porque el iPhone no envía ninguno.</string>
     <string name="car_button_in_carplay">Botón del coche en CarPlay</string>
     <string name="car_button_icon">Icono</string>
     <string name="car_button_icon_custom">Icono personalizado</string>
@@ -690,4 +696,14 @@
     <string name="setup_badge_adb">Requiere ADB por red</string>
     <string name="setup_done_title">Todo listo</string>
     <string name="setup_done_description">Conecta tu iPhone ahora. Puedes volver a abrir esta guía desde Ajustes.</string>
+    <string name="settings_discard_pending_title">¿Descartar los cambios?</string>
+    <string name="settings_discard_pending_message">La resolución, la velocidad de fotogramas, la conexión y los demás ajustes que acabas de cambiar todavía no se han guardado. Guardar y reconectar los aplica.</string>
+    <string name="settings_discard_pending_confirm">Descartar</string>
+    <string name="settings_gesture_disabled">Desactivado</string>
+    <string name="settings_gesture_disabled_hint">El gesto de deslizar hacia abajo está desactivado.</string>
+    <string name="settings_gesture_disabled_action">Menú rápido · deslizamiento desactivado (toca para cambiar)</string>
+    <string name="bt_suspend_delay">Retraso al pausar Bluetooth</string>
+    <string name="bt_suspend_delay_option">%1$d s tras conectar</string>
+    <string name="bt_suspend_during_carplay">Pausar el Bluetooth del coche con CarPlay · requiere ADB</string>
+    <string name="bt_suspend_during_carplay_description">El teléfono mantiene el manos libres del coche, por lo que una llamada suena en el teléfono Bluetooth del coche y en CarPlay a la vez. Al activarlo: se pausa el Bluetooth del coche por ADB durante la sesión de CarPlay y las llamadas suenan solo en CarPlay; con el Bluetooth apagado, las llamadas de CarPlay salen por el altavoz y el micrófono del coche. Se reactiva al terminar y antes del próximo enlace inalámbrico. El emparejamiento no se toca. Surte efecto en la próxima conexión.</string>
 </resources>
