@@ -35,6 +35,7 @@ class HomeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Connection.prewarm(this)
         vm.refreshPhones()
         UsbWatcher.get(this).start()
     }

@@ -41,6 +41,7 @@ class CarLinkApplication : App() {
             com.carlink.app.connection.CarPlayAdapter.install(this, com.carlink.app.connection.Connection.vehicleProfile(this))
             com.carlink.app.ui.home.CarPlayWaitingContent.register()
             com.carlink.app.entry.UsbWatcher.get(this).start()
+            com.carlink.app.connection.Connection.prewarm(this)
         }
     }
 

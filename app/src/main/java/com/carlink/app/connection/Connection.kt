@@ -33,6 +33,21 @@ object Connection {
         instance ?: create(context.applicationContext).also { instance = it }
     }
 
+    /**
+     * Starts Android Auto's ":aa" process ahead of time (reading one setting starts the process
+     * but not the engine), so a phone plugged in later does not wait for a cold process start:
+     * 4.5 s from plug-in to the engine on the tablet (2026-10-09). Cheap when it already runs.
+     */
+    fun prewarm(context: Context) {
+        val app = context.applicationContext
+        Thread({
+            val started = android.os.SystemClock.uptimeMillis()
+            runCatching { com.carlink.app.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
+            val took = android.os.SystemClock.uptimeMillis() - started
+            if (took > 300) com.carlink.app.diagnostics.EventLog.add("CarLink", "Android Auto engine process warmed in $took ms")
+        }, "carlink-prewarm").start()
+    }
+
     /** The driver's car brand choice, or what this device looks like when they never chose. */
     fun vehicleProfile(context: Context): VehicleProfile {
         val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PROFILE, null)
