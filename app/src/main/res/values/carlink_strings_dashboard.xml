@@ -30,9 +30,10 @@
     <string name="carlink_home_connecting_title">Starting %1$s</string>
     <string name="carlink_home_connecting_body">Keep %1$s unlocked. This usually takes a few seconds.</string>
     <string name="carlink_home_cancel">Cancel</string>
-    <string name="carlink_home_step_found">Found</string>
-    <string name="carlink_home_step_identified">Identified</string>
-    <string name="carlink_home_step_linked">Linked</string>
+    <!-- The attempt's steps (LinkState.step 1-4): waiting for the phone, the phone answered, Wi-Fi link, picture. -->
+    <string name="carlink_home_step_reaching">Reaching phone</string>
+    <string name="carlink_home_step_answered">Phone answered</string>
+    <string name="carlink_home_step_linking">Linking</string>
     <string name="carlink_home_step_picture">Picture</string>
     <!-- Under the progress line when the step names do not fit: "Step 2 of 4 · Identified". -->
     <string name="carlink_home_step_of">Step %1$d of %2$d · %3$s</string>
@@ -103,6 +104,11 @@
     <string name="carlink_home_connecting_android_wireless">Waiting for %1$s to start Android Auto. If nothing happens in a few seconds, turn the phone\u2019s Bluetooth off and on.</string>
     <string name="carlink_home_connecting_connect_bluetooth">Connect %1$s in Bluetooth. Android Auto starts by itself as soon as it\u2019s connected.</string>
     <string name="carlink_home_bluetooth_settings">Bluetooth settings</string>
+    <!-- A wireless attempt the phone has not answered for 10 s (connection detail "phone_not_answering"). -->
+    <string name="carlink_home_eyebrow_not_answering">No answer</string>
+    <string name="carlink_home_not_answering_title">Your phone isn’t answering</string>
+    <string name="carlink_home_not_answering_body_iphone">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen.</string>
+    <string name="carlink_home_not_answering_body_android">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen. Android Auto starts by itself once it connects.</string>
     <!-- Connection v2: pre-flight problems and precise failures. -->
     <string name="carlink_home_error_bt_off_title">Bluetooth is off</string>
     <string name="carlink_home_error_bt_off_body">Wireless connections start over Bluetooth. Turn it on, or plug your phone in with a cable.</string>

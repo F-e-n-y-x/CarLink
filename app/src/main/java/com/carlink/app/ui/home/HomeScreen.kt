@@ -106,10 +106,22 @@ import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.WidthClass
 
 /** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
-internal enum class HomeMode { PERMISSION, BLUETOOTH_OFF, READY_EMPTY, READY_PHONE, CONNECTING, CONNECTED, FAILED }
+internal enum class HomeMode {
+    PERMISSION, BLUETOOTH_OFF, READY_EMPTY, READY_PHONE, CONNECTING,
+    /** A wireless attempt the phone has not answered for a while: calm, caution, nothing animates. */
+    NOT_ANSWERING,
+    CONNECTED, FAILED,
+}
+
+/**
+ * The session's detail while a wireless attempt has had no answer from the phone for 10 s.
+ * Mirrors `com.carlink.app.connection.DETAIL_PHONE_NOT_ANSWERING`; the UI only reads the value.
+ */
+internal const val DETAIL_PHONE_NOT_ANSWERING = "phone_not_answering"
 
 internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = when {
     home.link.stage == LinkStage.CONNECTED -> HomeMode.CONNECTED
+    home.link.stage == LinkStage.WAITING && home.link.detail == DETAIL_PHONE_NOT_ANSWERING -> HomeMode.NOT_ANSWERING
     home.link.stage == LinkStage.WAITING || home.link.stage == LinkStage.CONNECTING -> HomeMode.CONNECTING
     home.link.stage == LinkStage.FAILED -> HomeMode.FAILED
     permissionsNeeded -> HomeMode.PERMISSION
@@ -198,7 +210,7 @@ private fun modeColor(mode: HomeMode): Color = when (mode) {
     HomeMode.CONNECTED -> CarLinkTokens.colors.success
     HomeMode.CONNECTING, HomeMode.READY_PHONE -> MaterialTheme.colorScheme.primary
     HomeMode.FAILED -> MaterialTheme.colorScheme.error
-    HomeMode.PERMISSION, HomeMode.BLUETOOTH_OFF -> CarLinkTokens.colors.warning
+    HomeMode.PERMISSION, HomeMode.BLUETOOTH_OFF, HomeMode.NOT_ANSWERING -> CarLinkTokens.colors.warning
     HomeMode.READY_EMPTY -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
@@ -302,8 +314,8 @@ private fun activeStep(link: LinkState): Int = when {
 
 @Composable
 private fun stepNames() = listOf(
-    stringResource(R.string.carlink_home_step_found), stringResource(R.string.carlink_home_step_identified),
-    stringResource(R.string.carlink_home_step_linked), stringResource(R.string.carlink_home_step_picture),
+    stringResource(R.string.carlink_home_step_reaching), stringResource(R.string.carlink_home_step_answered),
+    stringResource(R.string.carlink_home_step_linking), stringResource(R.string.carlink_home_step_picture),
 )
 
 /** The link dial with the state's glyph and reading in its core. */
@@ -315,6 +327,8 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
     val color = modeColor(mode)
     val reading = when (mode) {
         HomeMode.CONNECTING -> DialReading(color, segments = 4, active = activeStep(link))
+        // Held at the first step: its slot is marked, but nothing charges while the phone is silent.
+        HomeMode.NOT_ANSWERING -> DialReading(color, segments = 4, active = 0, still = true)
         HomeMode.CONNECTED -> DialReading(color, progress = 1f)
         HomeMode.FAILED -> DialReading(color, progress = 1f, dimmed = true)
         HomeMode.READY_PHONE -> DialReading(color, armed = true)
@@ -340,8 +354,12 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                         HomeMode.READY_EMPTY, HomeMode.PERMISSION -> CarLinkMark(Modifier.size(glyph))
                         HomeMode.BLUETOOTH_OFF -> Icon(painterResource(R.drawable.carlink_ic_bluetooth_disabled), null,
                             Modifier.size(glyph), tint = colors.warning)
-                        HomeMode.READY_PHONE, HomeMode.CONNECTING -> Icon(painterResource(phoneIcon(kind)), null,
-                            Modifier.size(glyph), tint = if (state == HomeMode.CONNECTING) scheme.primary else scheme.onSurface)
+                        HomeMode.READY_PHONE, HomeMode.CONNECTING, HomeMode.NOT_ANSWERING -> Icon(painterResource(phoneIcon(kind)),
+                            null, Modifier.size(glyph), tint = when (state) {
+                                HomeMode.CONNECTING -> scheme.primary
+                                HomeMode.NOT_ANSWERING -> colors.warning
+                                else -> scheme.onSurface
+                            })
                         HomeMode.CONNECTED -> {
                             val elapsed by rememberElapsedMillis(ui.home.connectedSince)
                             Icon(painterResource(R.drawable.carlink_ic_check_circle_filled), null, Modifier.size(glyph * 0.55f),
@@ -357,9 +375,11 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                     if (showEngine) {
                         Text(engine!!, style = caption, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
                     }
-                    if (state == HomeMode.CONNECTING) {
-                        Text(stepNames()[activeStep(link)].uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall,
-                            color = scheme.primary, textAlign = TextAlign.Center, maxLines = 1)
+                    if (state == HomeMode.CONNECTING || state == HomeMode.NOT_ANSWERING) {
+                        val step = if (state == HomeMode.NOT_ANSWERING) 0 else activeStep(link)
+                        Text(stepNames()[step].uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall,
+                            color = if (state == HomeMode.NOT_ANSWERING) colors.warning else scheme.primary,
+                            textAlign = TextAlign.Center, maxLines = 2)
                     }
                 }
             }
@@ -404,6 +424,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     val eyebrow = when (mode) {
         HomeMode.PERMISSION -> R.string.carlink_home_eyebrow_setup
         HomeMode.CONNECTING -> R.string.carlink_home_eyebrow_connecting
+        HomeMode.NOT_ANSWERING -> R.string.carlink_home_eyebrow_not_answering
         HomeMode.CONNECTED -> R.string.carlink_home_eyebrow_connected
         HomeMode.FAILED, HomeMode.BLUETOOTH_OFF -> R.string.carlink_home_eyebrow_problem
         else -> R.string.carlink_home_eyebrow_ready
@@ -426,6 +447,9 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 !sessionPhoneConnected(ui) -> stringResource(R.string.carlink_home_connecting_connect_bluetooth, phoneName)
                 else -> stringResource(R.string.carlink_home_connecting_android_wireless, phoneName)
             }
+        HomeMode.NOT_ANSWERING -> stringResource(R.string.carlink_home_not_answering_title) to stringResource(
+            if (link.engine == Engine.ANDROID_AUTO) R.string.carlink_home_not_answering_body_android
+            else R.string.carlink_home_not_answering_body_iphone, phoneName)
         HomeMode.CONNECTED -> {
             val elapsed by rememberElapsedMillis(ui.home.connectedSince)
             stringResource(R.string.carlink_home_connected_title, engine) to
@@ -447,9 +471,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
         color = scheme.onSurfaceVariant, textAlign = align)
 
-    if (mode == HomeMode.CONNECTING && steps) {
+    if ((mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING) && steps) {
         Spacer(Modifier.height(sectionGap))
-        ProgressLine(stepNames(), activeStep(link), failed = false, modifier = Modifier.widthIn(max = 720.dp))
+        val holding = mode == HomeMode.NOT_ANSWERING
+        ProgressLine(stepNames(), if (holding) 0 else activeStep(link), failed = false, still = holding,
+            modifier = Modifier.widthIn(max = 720.dp))
     }
 
     Spacer(Modifier.height(sectionGap))
@@ -471,6 +497,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                     IonButton(stringResource(R.string.carlink_home_bluetooth_settings), actions::openBluetoothSettings,
                         icon = R.drawable.carlink_ic_bluetooth)
                 }
+                GlassButton(stringResource(R.string.carlink_home_cancel), actions::disconnect, icon = R.drawable.carlink_ic_close)
+            }
+            HomeMode.NOT_ANSWERING -> {
+                // The session is still running: Try again restarts it, Cancel ends it.
+                IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
                 GlassButton(stringResource(R.string.carlink_home_cancel), actions::disconnect, icon = R.drawable.carlink_ic_close)
             }
             HomeMode.CONNECTED -> {

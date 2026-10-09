@@ -18,6 +18,7 @@ import com.carlink.app.ui.diagnostics.DiagnosticsUi
 import com.carlink.app.ui.diagnostics.previewChecks
 import com.carlink.app.ui.diagnostics.previewLink
 import com.carlink.app.ui.diagnostics.previewLog
+import com.carlink.app.ui.home.DETAIL_PHONE_NOT_ANSWERING
 import com.carlink.app.ui.home.HomeContent
 import com.carlink.app.ui.home.NetworkSheet
 import com.carlink.app.ui.home.PhonesSheet
@@ -80,6 +81,11 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("connecting-android-auto-wireless-waiting") {
         HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, Transport.WIRELESS, pixel.name, 1, 5,
             "Waiting for the phone"), phones = listOf(pixel, iphone)), actions)
+    },
+    // Wireless, and the iPhone has not answered for 10 s: calm caution, held at the first step.
+    home("connecting-not-answering") {
+        HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 1, 4,
+            DETAIL_PHONE_NOT_ANSWERING)), actions)
     },
     home("connected-carplay") {
         val since = remember { SystemClock.elapsedRealtime() - 754_000 }

@@ -374,12 +374,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPhone(kind: Pho
 
 /** Steps of an attempt on one line (Found · Identified · Linked · Picture), active step pulsing. */
 @Composable
-fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Modifier = Modifier) {
+fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Modifier = Modifier, still: Boolean = false) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
     val style = MaterialTheme.typography.labelMedium
     val measurer = rememberTextMeasurer()
-    val pulse = if (LocalReduceMotion.current || failed) 1f else rememberInfiniteTransition(label = "pulse").animateFloat(
+    val pulse = if (LocalReduceMotion.current || failed || still) 1f else rememberInfiniteTransition(label = "pulse").animateFloat(
         0.45f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), label = "pulse").value
     val gap = 12.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -395,7 +395,7 @@ fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Mo
                     val color = when {
                         failed && current -> scheme.error
                         done -> colors.success
-                        current -> scheme.primary
+                        current -> if (still) colors.warning else scheme.primary
                         // outlineVariant is a hairline color and vanishes on the light canvas; the track needs more.
                         else -> scheme.outline.copy(alpha = 0.45f)
                     }

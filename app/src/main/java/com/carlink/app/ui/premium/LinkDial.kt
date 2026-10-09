@@ -44,6 +44,7 @@ import kotlin.math.sin
  * @property segments the steps of an attempt drawn as separate arcs; [active] is the step in progress.
  * @property armed a quiet full ring: a phone is known and the link is ready to start.
  * @property dimmed a failed attempt: the lit part is drawn at reduced strength.
+ * @property still a held attempt: the active step's slot is marked but nothing charges.
  */
 data class DialReading(
     val color: Color,
@@ -52,6 +53,8 @@ data class DialReading(
     val active: Int = -1,
     val armed: Boolean = false,
     val dimmed: Boolean = false,
+    /** The attempt is held: the [active] step's slot is marked but does not charge. */
+    val still: Boolean = false,
 )
 
 /** The gauge opens at the bottom, like a cluster dial: it starts at 7:30 and sweeps 270° clockwise. */
@@ -77,6 +80,7 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
     // The step in progress charges its slot over and over; a still image shows it half charged.
     val pulse = when {
         reading.segments == 0 -> 1f
+        reading.still -> 0f
         reduceMotion -> 0.55f
         else -> rememberInfiniteTransition(label = "charge").animateFloat(0.06f, 1f,
             infiniteRepeatable(tween(1600, easing = CarMotion.Standard), RepeatMode.Restart), label = "charge").value
