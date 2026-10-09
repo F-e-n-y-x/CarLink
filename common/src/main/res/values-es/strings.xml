@@ -28,7 +28,7 @@
     <string name="marker_up">Arriba</string>
     <string name="marker_down">Abajo</string>
     <string name="marker_centre_default">Centro · predeterminado</string>
-    <string name="hotspot_mode_manual_desc">Usa el punto de acceso propio del coche. Selecciona 5 GHz en la configuración del coche si está disponible.</string>
+    <string name="hotspot_mode_manual_desc">Usa el punto de acceso del coche para CarPlay inalámbrico. No necesitas conectarte a él manualmente desde el iPhone; DiPlay envía los datos por Bluetooth. Selecciona 5 GHz en los ajustes del coche si está disponible.</string>
     <string name="hotspot_mode_p2p_desc">Configuración alternativa. Requiere el interruptor Wi‑Fi del coche; en 2,4 GHz la conexión puede trabarse.</string>
     <string name="hotspot_details_off">El punto de acceso está apagado · Actívalo en la configuración del coche.</string>
     <string name="hotspot_details_saved">Datos guardados · Comprueba que el punto de acceso del coche esté activado antes de conectarte.</string>
@@ -381,6 +381,7 @@
     <string name="use_software_hevc_decoder">Usar decodificador por software HEVC</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Usar enrutamiento por uso/tipo de contenido en lugar del tipo de flujo</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Usa tu último tipo de conexión y el iPhone seleccionado.</string>
+    <string name="vpn_authorization_unavailable">Esta unidad no puede abrir la autorización de VPN. Vuelve a DiPlay para revisar los permisos de conexión o usa la conexión inalámbrica.</string>
     <string name="vpn_consent_was_denied">Se denegó el consentimiento de VPN</string>
     <string name="waiting_for_iphone_over_usb">Esperando iPhone por USB</string>
     <string name="waiting_for_mfi_coprocessor">Esperando al coprocesador MFi</string>

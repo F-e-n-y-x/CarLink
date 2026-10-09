@@ -28,7 +28,7 @@
     <string name="marker_up">أعلى</string>
     <string name="marker_down">أسفل</string>
     <string name="marker_centre_default">الوسط · الافتراضي</string>
-    <string name="hotspot_mode_manual_desc">استخدم نقطة اتصال السيارة نفسها. اختر 5 GHz في إعدادات السيارة إن توفر.</string>
+    <string name="hotspot_mode_manual_desc">استخدم نقطة اتصال السيارة لـ CarPlay اللاسلكي. لا تحتاج إلى الاتصال بها يدويًا من iPhone؛ يرسل DiPlay بيانات نقطة الاتصال عبر Bluetooth. اختر 5 GHz في إعدادات السيارة إن توفر.</string>
     <string name="hotspot_mode_p2p_desc">إعداد بديل. يتطلب تشغيل مفتاح واي فاي السيارة؛ وقد يتقطّع الاتصال على 2.4 GHz.</string>
     <string name="hotspot_details_off">نقطة الاتصال مُغلقة · شغّلها في إعدادات السيارة.</string>
     <string name="hotspot_details_saved">تم حفظ البيانات · تأكد من تشغيل نقطة اتصال السيارة قبل الاتصال.</string>
@@ -381,6 +381,7 @@
     <string name="use_software_hevc_decoder">استخدام مفكّك HEVC البرمجي</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">استخدام توجيه نوع المحتوى/الاستخدام بدلاً من نوع البث</string>
     <string name="use_your_last_connection_type_and_selected_iphone">استخدم نوع اتصالك الأخير وiPhone المحدد.</string>
+    <string name="vpn_authorization_unavailable">لا يمكن لوحدة السيارة فتح شاشة تفويض VPN. ارجع إلى DiPlay للتحقق من أذونات الاتصال أو استخدم الاتصال اللاسلكي.</string>
     <string name="vpn_consent_was_denied">رُفضت موافقة VPN</string>
     <string name="waiting_for_iphone_over_usb">بانتظار iPhone عبر USB</string>
     <string name="waiting_for_mfi_coprocessor">بانتظار معالج MFi المساعد</string>
