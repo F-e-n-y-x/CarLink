@@ -1,17 +1,11 @@
 package com.carlink.app.connection
 
 import android.content.Context
-import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.TextView
-import com.carlink.app.R
-import com.carlink.app.core.Transport
-import com.shilapi.xcertplay.AirPlayPersistence
+import android.widget.ProgressBar
 import com.shilapi.xcertplay.CarPlayHostIntegration
-import com.shilapi.xcertplay.orchestration.CarPlayStatus
-import com.shilapi.xcertplay.orchestration.CarPlayStatusBus
 
 /**
  * The view CarPlay's projection window shows until the first frame, in place of DiPlay's own
@@ -19,10 +13,11 @@ import com.shilapi.xcertplay.orchestration.CarPlayStatusBus
  * DiPlay shows it full-bleed (it handles the window insets itself), hides it while CarPlay is on
  * screen and shows it again when the session drops back to waiting.
  *
- * CarLink's screens supply the real content with [register], typically a ComposeView: the host
- * window is a ComponentActivity, so lifecycle and saved-state owners are present. The content can
- * follow the session through `CarPlayStatusBus`, [HostStates] and CarLink's own session state,
- * and act with `CarPlayHostIntegration.retryNow()`, `stopSession()` and `homeIntent()`.
+ * The host supplies the real content ([CarLinkConfig.waitingView], or [register]), typically a
+ * ComposeView: the host window is a ComponentActivity, so lifecycle and saved-state owners are
+ * present. The content can follow the session through `CarPlayStatusBus`, [HostStates] and the
+ * session state, and act with `CarPlayHostIntegration.retryNow()`, `stopSession()` and
+ * `homeIntent()`.
  */
 object CarPlayWaitingView {
     @Volatile
@@ -37,40 +32,15 @@ object CarPlayWaitingView {
         CarPlayHostIntegration.waitingView = { context -> (factory ?: ::placeholder)(context) }
     }
 
-    /** A minimal stand-in until CarLink's own content is registered: the stage in plain words. */
+    /**
+     * A neutral stand-in when the host supplies no content: a progress indicator on a dark
+     * background. It carries no text, so the backend ships no user-facing copy of its own.
+     */
     fun placeholder(context: Context): View {
-        val text = TextView(context).apply {
-            gravity = Gravity.CENTER
-            textSize = 24f
-            setTextColor(Color.WHITE)
-            text = context.getString(R.string.carlink_carplay_waiting_phone)
-        }
-        val root = object : FrameLayout(context) {
-            private val listener: (CarPlayStatus?) -> Unit = { status -> post { show(status) } }
-
-            private fun show(status: CarPlayStatus?) {
-                val transport = if (AirPlayPersistence.loadWirelessEnabled(context)) Transport.WIRELESS else Transport.USB
-                val stage = status?.let { CarPlayEventMapping.stageOf(it, transport) } ?: return
-                text.setText(when (stage) {
-                    ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> R.string.carlink_carplay_waiting_phone
-                    ProgressStage.HANDSHAKE -> R.string.carlink_carplay_waiting_handshake
-                    ProgressStage.JOINING_WIFI -> R.string.carlink_carplay_waiting_wifi
-                    ProgressStage.STARTING_PROJECTION -> R.string.carlink_carplay_waiting_starting
-                })
-            }
-
-            override fun onAttachedToWindow() {
-                super.onAttachedToWindow()
-                CarPlayStatusBus.addListener(listener)
-            }
-
-            override fun onDetachedFromWindow() {
-                CarPlayStatusBus.removeListener(listener)
-                super.onDetachedFromWindow()
-            }
-        }
+        val root = FrameLayout(context)
         root.setBackgroundColor(0xFF0C1016.toInt())
-        root.addView(text, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        root.addView(ProgressBar(context).apply { isIndeterminate = true },
+            FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         return root
     }
 }

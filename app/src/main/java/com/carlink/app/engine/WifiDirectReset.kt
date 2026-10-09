@@ -9,7 +9,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /** Removes the current Wi-Fi Direct group, if any, and waits (bounded) for the result. */
-internal object WifiDirectReset {
+object WifiDirectReset {
     private const val TAG = "CarLink-P2P"
 
     @SuppressLint("MissingPermission") // Nearby devices / location are granted from Home's permission card.

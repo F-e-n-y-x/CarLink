@@ -7,6 +7,7 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.carlink.app.core.Engine
 import com.carlink.app.core.PhoneKind
+import com.carlink.app.detect.HeadUnitDetector
 import com.carlink.app.detect.KnownPhones
 import com.carlink.app.detect.PhoneClassifier
 import com.carlink.app.diagnostics.EventLog
@@ -15,7 +16,6 @@ import com.carlink.app.settings.CarLinkPreferences
 import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.settings.WirelessPath
-import com.carlink.app.ui.theme.UiProfileDetector
 
 /**
  * [SessionManager.Environment] on a real device. [enginePreflight] adds each engine's own checks
@@ -50,7 +50,7 @@ class DeviceEnvironment(
             engine = request.engine,
             settings = settings,
             wifi = WifiEnvironmentReader.read(app, settings),
-            headUnit = UiProfileDetector.looksLikeCarDisplay(app),
+            headUnit = HeadUnitDetector.looksLikeCarDisplay(app),
             lastWorking = request.phoneAddress?.let { paths.lastWorking(request.engine, it) },
         ))
     }
@@ -88,7 +88,7 @@ class DeviceEnvironment(
     override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean =
         request.phoneAddress?.let { BluetoothWarmup.start(app, it, done) } ?: false
 
-    override fun returnHome() = com.carlink.app.entry.HomeLauncher.open(app, com.carlink.app.entry.HomeLauncher.Reason.UNPLUGGED)
+    override fun returnHome() = CarLinkCore.config.host.openHome(app, CarLinkHost.OpenReason.UNPLUGGED)
 
     override fun log(message: String) = EventLog.add("CarLink", message)
 

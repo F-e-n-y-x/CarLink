@@ -10,26 +10,21 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.carlink.app.R
+import com.carlink.app.connection.CarLinkHost
+import com.carlink.app.connection.CarLinkHost.OpenReason
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.ui.HomeActivity
 
 /**
- * Brings CarLink's Home to the front from the background. Android 10+ blocks background
- * activity starts unless the app may draw over other apps (both engines ask for it); without
- * it, a full-screen notification opens Home instead, as DiAuto's auto-start receivers do.
+ * CarLink's [CarLinkHost]: brings Home to the front from the background. Android 10+ blocks
+ * background activity starts unless the app may draw over other apps (both engines ask for it);
+ * without it, a full-screen notification opens Home instead, as DiAuto's auto-start receivers do.
  */
-object HomeLauncher {
-    enum class Reason {
-        BOOT,
-        PHONE,
-        /** A USB session's phone was unplugged: Home replaces the dead projection; no notification. */
-        UNPLUGGED,
-    }
-
-    fun open(context: Context, reason: Reason, address: String? = null, kind: PhoneKind? = null, name: String? = null) {
+object HomeLauncher : CarLinkHost {
+    override fun openHome(context: Context, reason: OpenReason, address: String?, kind: PhoneKind?, name: String?) {
         val intent = HomeActivity.intent(context).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            if (reason == Reason.PHONE && kind != null) {
+            if (reason == OpenReason.PHONE && kind != null) {
                 putExtra(HomeActivity.EXTRA_AUTO_PHONE_ADDRESS, address)
                 putExtra(HomeActivity.EXTRA_AUTO_PHONE_KIND, kind.name)
                 putExtra(HomeActivity.EXTRA_AUTO_PHONE_NAME, name)
@@ -41,7 +36,7 @@ object HomeLauncher {
                 .onSuccess { return }
                 .onFailure { Log.w(TAG, "Direct launch failed: ${it.javaClass.simpleName}") }
         }
-        if (reason == Reason.UNPLUGGED) return
+        if (reason == OpenReason.UNPLUGGED) return
         notify(context, intent, name)
     }
 

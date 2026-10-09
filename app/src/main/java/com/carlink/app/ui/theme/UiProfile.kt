@@ -1,13 +1,7 @@
 package com.carlink.app.ui.theme
 
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.pm.PackageManager
-import android.content.res.Configuration
-import android.os.BatteryManager
-import android.os.Build
-import java.util.Locale
+import com.carlink.app.detect.HeadUnitDetector
 
 /**
  * Which sizing CarLink uses. The same layouts serve both; only the tokens change.
@@ -23,31 +17,12 @@ enum class UiProfile { CAR, HANDHELD }
 enum class UiProfileMode { AUTO, CAR, HANDHELD }
 
 object UiProfileDetector {
-    /**
-     * A car display when Android says so (car UI mode, Automotive), when the hardware is BYD's,
-     * or when the device has neither a battery nor a phone radio: head units are powered by the
-     * car, while phones and tablets (Wi-Fi tablets included) have a battery.
-     */
+    /** Automatic picks [UiProfile.CAR] on a car display ([HeadUnitDetector], shared with the connection backend). */
     fun detect(context: Context, mode: UiProfileMode): UiProfile = when (mode) {
         UiProfileMode.CAR -> UiProfile.CAR
         UiProfileMode.HANDHELD -> UiProfile.HANDHELD
         UiProfileMode.AUTO -> if (looksLikeCarDisplay(context)) UiProfile.CAR else UiProfile.HANDHELD
     }
 
-    fun looksLikeCarDisplay(context: Context): Boolean {
-        val uiModeType = context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
-        if (uiModeType == Configuration.UI_MODE_TYPE_CAR) return true
-        val pm = context.packageManager
-        if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return true
-        val vendor = "${Build.MANUFACTURER} ${Build.BRAND}".lowercase(Locale.ROOT)
-        if ("byd" in vendor) return true
-        return !pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) && !hasBattery(context)
-    }
-
-    private fun hasBattery(context: Context): Boolean {
-        val status = runCatching {
-            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        }.getOrNull() ?: return true
-        return status.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true)
-    }
+    fun looksLikeCarDisplay(context: Context): Boolean = HeadUnitDetector.looksLikeCarDisplay(context)
 }

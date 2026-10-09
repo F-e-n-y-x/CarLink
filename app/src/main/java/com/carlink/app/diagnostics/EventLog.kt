@@ -37,7 +37,8 @@ object EventLog {
 
     fun add(tag: String, message: String) = add(tag, message, System.currentTimeMillis())
 
-    internal fun add(tag: String, message: String, timeMillis: Long) {
+    /** [add] with an explicit time (tests, imported entries). */
+    fun add(tag: String, message: String, timeMillis: Long) {
         val entry = Entry(timeMillis, tag, LogMasking.mask(message))
         file?.let { target ->
             writer.execute {
@@ -54,7 +55,7 @@ object EventLog {
         }
     }
 
-    internal fun clear() = synchronized(lock) {
+    fun clear() = synchronized(lock) {
         buffer.clear()
         _entries.value = emptyList()
     }

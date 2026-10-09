@@ -240,7 +240,7 @@ internal fun layoutLabel(mode: UiProfileMode): String = stringResource(
     },
 )
 
-/** CarLink's own interface scales (CarLinkPreferences.INTERFACE_SCALES) and their names. */
+/** CarLink's own interface scales (UiPreferences.INTERFACE_SCALES) and their names. */
 internal val carLinkScales = listOf(0.9f, 1f, 1.15f, 1.3f)
 
 internal fun nearestScale(scale: Float): Float = carLinkScales.minBy { abs(it - scale) }

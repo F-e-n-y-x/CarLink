@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.carlink.app.R
 import com.carlink.app.core.Engine
 import com.carlink.app.core.Transport
 import com.carlink.app.settings.VehicleProfile
@@ -140,14 +139,14 @@ class CarPlayAdapter internal constructor(
         private const val TAG = "CarLink-CarPlay"
 
         /**
-         * Installs CarLink's DiPlay hooks; call once from `CarLinkApplication.onCreate` in the main
+         * Installs CarLink's DiPlay hooks; call once from [CarLinkCore.install] in the main
          * process, before any CarPlay session: the car's name for the iPhone (iAP2 and Bonjour,
          * DIPLAY.md §3.5, §12), the vehicle profile's BYD gate (§12), the debug-log setting kept
          * across bootstraps (F6), CarLink's waiting view (F2) and the host-state fan-out.
          */
         fun install(context: Context, profile: VehicleProfile) {
             val app = context.applicationContext
-            CarPlayHostIntegration.accessoryName = app.getString(R.string.app_name)
+            CarPlayHostIntegration.accessoryName = CarLinkCore.config.accessoryName
             CarPlayHostIntegration.resetDebugLogsOnBootstrap = false
             // One Wi-Fi Direct identity per install: the iPhone rejoins a network it saved.
             CarPlayHostIntegration.wifiP2pStableIdentity = true

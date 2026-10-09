@@ -30,7 +30,7 @@ import com.carlink.app.connection.SessionState
 import com.carlink.app.core.Engine
 import com.carlink.app.detect.PairedPhone
 import com.carlink.app.detect.PhonesRepository
-import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.app.ui.UiPreferences
 import com.carlink.app.settings.ConnectionMethod
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.ui.HomeActivity
@@ -105,7 +105,7 @@ object SwitcherController {
 
     private val windowContext: Context by lazy { createWindowContext() }
     private val windowManager: WindowManager by lazy { windowContext.getSystemService(WindowManager::class.java) }
-    private val preferences by lazy { CarLinkPreferences(app) }
+    private val preferences by lazy { UiPreferences(app) }
 
     private val fade = Runnable { bubble?.animate()?.alpha(IDLE_ALPHA)?.setDuration(350)?.start() }
 

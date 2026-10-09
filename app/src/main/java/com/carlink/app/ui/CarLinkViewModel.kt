@@ -105,6 +105,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private val app = application
     private val session = Connection.get(app)
     private val preferences = CarLinkPreferences(app)
+    private val uiPreferences = UiPreferences(app)
     private val phonesRepository = PhonesRepository(app)
 
     /** A second USB phone waiting for the driver's "Switch to …?" answer. */
@@ -161,15 +162,15 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
      * knows a phone (an update from before the setup existed) counts as set up.
      */
     fun setupNeeded(): Boolean {
-        if (preferences.setupDone) return false
+        if (uiPreferences.setupDone) return false
         val knowsPhone = com.carlink.app.connection.DeviceEnvironment.lastPhoneAddress(app) != null ||
             home.value.phones.any { it.kind != PhoneKind.UNKNOWN } || session.health.value.isNotEmpty()
-        if (knowsPhone) preferences.setupDone = true
+        if (knowsPhone) uiPreferences.setupDone = true
         return !knowsPhone
     }
 
     /** The setup was finished or skipped; it is not shown at launch again (Settings can re-run it). */
-    fun finishSetup() { preferences.setupDone = true }
+    fun finishSetup() { uiPreferences.setupDone = true }
 
     private val _display = MutableStateFlow(readDisplay())
     val display: StateFlow<DisplayPrefs> = _display.asStateFlow()
@@ -348,17 +349,17 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     // ---- Preferences -------------------------------------------------------------------
 
-    fun setThemeMode(mode: ThemeMode) { preferences.themeMode = mode; _display.value = readDisplay() }
-    fun setUiProfileMode(mode: UiProfileMode) { preferences.uiProfileMode = mode; _display.value = readDisplay() }
-    fun setInterfaceScale(scale: Float) { preferences.interfaceScale = scale; _display.value = readDisplay() }
-    fun setRenderingMode(mode: RenderingMode) { preferences.renderingMode = mode; _display.value = readDisplay() }
+    fun setThemeMode(mode: ThemeMode) { uiPreferences.themeMode = mode; _display.value = readDisplay() }
+    fun setUiProfileMode(mode: UiProfileMode) { uiPreferences.uiProfileMode = mode; _display.value = readDisplay() }
+    fun setInterfaceScale(scale: Float) { uiPreferences.interfaceScale = scale; _display.value = readDisplay() }
+    fun setRenderingMode(mode: RenderingMode) { uiPreferences.renderingMode = mode; _display.value = readDisplay() }
 
     fun setAutoConnectUsb(on: Boolean) { preferences.autoConnectUsb = on; _connection.value = readConnection() }
     fun setAutoConnectBluetooth(on: Boolean) { preferences.autoConnectBluetooth = on; _connection.value = readConnection() }
     fun setStartOnBoot(on: Boolean) { preferences.startOnBoot = on; _connection.value = readConnection() }
     fun resumeAutoConnect() { preferences.autoConnectPaused = false; _connection.value = readConnection() }
     fun setFloatingSwitcher(on: Boolean) {
-        preferences.floatingSwitcher = on
+        uiPreferences.floatingSwitcher = on
         _connection.value = readConnection()
         com.carlink.app.switcher.SwitcherController.onSettingChanged()
     }
@@ -391,11 +392,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             ?: known.firstOrNull()
     }
 
-    private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale,
-        preferences.renderingMode, RenderingPolicy.autoIsLite(app))
+    private fun readDisplay() = DisplayPrefs(uiPreferences.themeMode, uiPreferences.uiProfileMode, uiPreferences.interfaceScale,
+        uiPreferences.renderingMode, RenderingPolicy.autoIsLite(app))
 
     // The short pause after a Disconnect is silent: Home shows its normal ready state, no "Resume".
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
-        floatingSwitcher = preferences.floatingSwitcher)
+        floatingSwitcher = uiPreferences.floatingSwitcher)
 }

@@ -2,8 +2,6 @@ package com.carlink.app.settings
 
 import android.app.Application
 import android.content.Context
-import com.carlink.app.ui.theme.ThemeMode
-import com.carlink.app.ui.theme.UiProfileMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -79,10 +77,6 @@ class SettingsStoresTest {
         assertTrue(prefs.autoConnectBluetooth)
         assertFalse(prefs.startOnBoot)
         assertFalse(prefs.autoConnectPaused)
-        assertEquals(ThemeMode.FOLLOW_SYSTEM, prefs.themeMode)
-        assertEquals(UiProfileMode.AUTO, prefs.uiProfileMode)
-        assertEquals(1f, prefs.interfaceScale)
-        assertTrue(prefs.interfaceScale in CarLinkPreferences.INTERFACE_SCALES)
     }
 
     @Test fun carLinkPreferencesPersistAcrossInstances() {
@@ -91,25 +85,12 @@ class SettingsStoresTest {
             autoConnectBluetooth = false
             startOnBoot = true
             autoConnectPaused = true
-            themeMode = ThemeMode.entries.last()
-            uiProfileMode = UiProfileMode.entries.last()
-            interfaceScale = 1.3f
         }
         CarLinkPreferences(app).apply {
             assertFalse(autoConnectUsb)
             assertFalse(autoConnectBluetooth)
             assertTrue(startOnBoot)
             assertTrue(autoConnectPaused)
-            assertEquals(ThemeMode.entries.last(), themeMode)
-            assertEquals(UiProfileMode.entries.last(), uiProfileMode)
-            assertEquals(1.3f, interfaceScale)
         }
-    }
-
-    @Test fun unknownThemeNameFallsBackToFollowSystem() {
-        app.getSharedPreferences("carlink", Context.MODE_PRIVATE).edit()
-            .putString("theme_mode", "SEPIA").putString("ui_profile_mode", "WATCH").commit()
-        assertEquals(ThemeMode.FOLLOW_SYSTEM, CarLinkPreferences(app).themeMode)
-        assertEquals(UiProfileMode.AUTO, CarLinkPreferences(app).uiProfileMode)
     }
 }

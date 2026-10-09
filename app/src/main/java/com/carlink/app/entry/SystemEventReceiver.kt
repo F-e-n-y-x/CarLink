@@ -18,19 +18,21 @@ import androidx.core.content.ContextCompat
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.detect.KnownPhones
 import com.carlink.app.detect.PhoneClassifier
+import com.carlink.app.connection.CarLinkCore
+import com.carlink.app.connection.CarLinkHost
 import com.carlink.app.connection.Connection
 import com.carlink.app.settings.CarLinkPreferences
 
 /**
  * CarLink's boot and Bluetooth entry points (each engine's own receivers are removed from the
- * merged manifest). A phone is classified here; the engine is started by HomeActivity in the
+ * merged manifest). A phone is classified here; the engine is started by the host's main screen in the
  * foreground, which Android allows on every version, rather than from this background receiver.
  */
 class SystemEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, ACTION_QUICKBOOT ->
-                if (CarLinkPreferences(context).startOnBoot) HomeLauncher.open(context, HomeLauncher.Reason.BOOT)
+                if (CarLinkPreferences(context).startOnBoot) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
             BluetoothDevice.ACTION_ACL_CONNECTED -> onPhoneLink(context, intent, sdpDone = false)
             // Only delivered here on Android 7.x: since 8.0 an implicit ACTION_UUID never reaches
             // a manifest receiver, so the SDP answer is awaited at runtime (awaitSdp).
@@ -83,7 +85,7 @@ class SystemEventReceiver : BroadcastReceiver() {
             Log.i(TAG, "Bluetooth $kind link debounced")
             return
         }
-        HomeLauncher.open(context, HomeLauncher.Reason.PHONE, address, kind, runCatching { device.name }.getOrNull())
+        CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.PHONE, address, kind, runCatching { device.name }.getOrNull())
     }
 
     /**

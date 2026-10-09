@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.carlink.app.R
 import com.carlink.app.core.Engine
 import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettings
@@ -123,11 +122,11 @@ object Connection {
             Engine.CARPLAY -> {
                 val fineLocation = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 CarPlaySettingsPolicy.apply(app, CarPlaySettingsPolicy.map(settings, plan.path, profile, fineLocation,
-                    brandName = app.getString(R.string.app_name), picture = picture))
+                    brandName = CarLinkCore.config.accessoryName, picture = picture))
             }
             Engine.ANDROID_AUTO -> {
                 val values = AaSessionSettings.values(settings, plan.transport, plan.path, profile,
-                    carName = app.getString(R.string.app_name), panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
+                    carName = CarLinkCore.config.accessoryName, panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
                     picture = picture)
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
