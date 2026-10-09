@@ -641,6 +641,7 @@ class AndroidMediaSink(
         operatingRate = videoOperatingRate(type, statsLabel, mainVideoFrameRate),
         vendorLowLatency = vendorLowLatencyDecoder,
         dedicatedOutputThread = vendorLowLatencyDecoder,
+        framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
     ).also { if (startImmediately) it.start() }
 
     @Synchronized
@@ -737,9 +738,16 @@ internal data class DecoderAttempt(val codecName: String?, val tuned: Boolean, v
 /**
  * Configure attempts in order. Some vendor decoders (e.g. MediaTek c2.mtk.avc.decoder) reject the tuned
  * parameters with BAD_VALUE, so a minimal format and then software follow. An [operatingRate] is tried
- * first on its own, so a decoder that refuses it keeps the tuned format it gets without one.
+ * first on its own, so a decoder that refuses it keeps the tuned format it gets without one. A
+ * [lowLatencyDecoder] gets its tuned attempts before the default decoder's.
  */
-internal fun videoDecoderAttempts(operatingRate: Int, softwareDecoder: String?): List<DecoderAttempt> = listOfNotNull(
+internal fun videoDecoderAttempts(
+    operatingRate: Int,
+    softwareDecoder: String?,
+    lowLatencyDecoder: String? = null,
+): List<DecoderAttempt> = listOfNotNull(
+    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 } },
+    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true) },
     DecoderAttempt(codecName = null, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 },
     DecoderAttempt(codecName = null, tuned = true),
     DecoderAttempt(codecName = null, tuned = false),
@@ -764,6 +772,29 @@ internal fun vendorLowLatencyKeys(codecName: String): List<String> =
         listOf("vendor.qti-ext-dec-low-latency.enable", "vendor.qti-ext-dec-picture-order.enable")
     } else emptyList()
 
+/** One regular decoder of the stream's type, as [lowLatencyDecoderName] sees it. */
+internal data class DecoderCandidate(val name: String, val hardware: Boolean, val alias: Boolean, val lowLatency: Boolean)
+
+/**
+ * The decoder the main screen tries first with smooth video: the first hardware decoder (not an alias) that
+ * advertises the low-latency feature, whose tuned format then asks for low latency. On my Tang this is
+ * c2.qti.avc.decoder.low_latency; the default c2.qti.avc.decoder does not advertise the feature.
+ */
+internal fun lowLatencyDecoderName(candidates: List<DecoderCandidate>): String? =
+    candidates.firstOrNull { it.lowLatency && it.hardware && !it.alias }?.name
+
+/** The low-latency decoder to try at the next configure: none once another decoder ([used]) worked after it. */
+internal fun nextLowLatencyDecoder(requested: String?, used: DecoderAttempt?): String? =
+    if (requested != null && used != null && used.codecName != requested) null else requested
+
+/**
+ * Qualcomm's decoder parameter for output in decoding order. Without it my Tang's decoders released a frame
+ * only once one or two later frames had been queued. Decoding order is the display order only for a stream
+ * without reordered (B) frames; the iPhone's CarPlay H.264 had none. It is set only for the main screen's H.264
+ * with smooth video, and only on a decoder that lists the parameter.
+ */
+internal const val PICTURE_ORDER_PARAMETER = "vendor.qti-ext-dec-picture-order.enable"
+
 /** Serial MediaCodec video decoder: one worker owns configure and frame feeding. */
 private class VideoDecoder(
     streamType: Int,
@@ -785,6 +816,11 @@ private class VideoDecoder(
      * next comes back from its queue or from feeding: a frame is shown as soon as it is decoded.
      */
     dedicatedOutputThread: Boolean = false,
+    /**
+     * The main screen with smooth video: for H.264, try a low-latency decoder first ([lowLatencyDecoderName]) and
+     * ask decoders that list it for [PICTURE_ORDER_PARAMETER], so each frame leaves the decoder as soon as it can.
+     */
+    private val framesAtOnce: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -817,6 +853,11 @@ private class VideoDecoder(
     private var configuredRate = 0
     // Whether the vendor low-latency parameters were set on the codec being configured.
     private var configuredVendorLowLatency = false
+    // Likewise the low-latency decoder, not tried again once another decoder had to take over; and what the
+    // codec that tryConfigure started last was given.
+    private var lowLatencyDecoderRefused = false
+    private var startedLowLatency = false
+    private var startedPictureOrder = false
     private var submittedFrameLogged = false
     private var duplicateConfigLogged = false
     private var failureReports = 0
@@ -1047,16 +1088,22 @@ private class VideoDecoder(
             )
         }
         val requestedRate = operatingRate
+        val atOnce = framesAtOnce && codec == VideoCodec.H264
+        val requestedLowLatency = if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
         var next: MediaCodec? = null
         var used: DecoderAttempt? = null
-        for (attempt in videoDecoderAttempts(requestedRate, softwareDecoderName(mime))) {
-            next = tryConfigure(mime, csd, surface, attempt)
+        for (attempt in videoDecoderAttempts(requestedRate, softwareDecoderName(mime), requestedLowLatency)) {
+            next = tryConfigure(mime, csd, surface, attempt, atOnce)
             if (next != null) { used = attempt; break }
         }
         if (next == null) {
             report("decoder configuration failed mime=$mime size=${width}x$height")
         }
         if (nextOperatingRate(requestedRate, used) != requestedRate) dropOperatingRate("refused at configure")
+        if (nextLowLatencyDecoder(requestedLowLatency, used) != requestedLowLatency) {
+            report("low-latency decoder $requestedLowLatency dropped: refused at configure")
+            lowLatencyDecoderRefused = true
+        }
         renderedFrameLogged = false
         submittedFrameLogged = false
         synchronized(outputLock) {
@@ -1068,7 +1115,8 @@ private class VideoDecoder(
             val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
             val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
             val output = if (outputThread != null) " outputThread=true" else ""
-            report("decoder=${next.name} mime=$mime size=${width}x$height$rate$lowLatency$output")
+            val atOnceReport = if (atOnce) " lowLatency=$startedLowLatency pictureOrder=$startedPictureOrder" else ""
+            report("decoder=${next.name} mime=$mime size=${width}x$height$rate$lowLatency$output$atOnceReport")
             Log.i(
                 TAG,
                 "video decoder configured name=${next.name} mime=$mime size=${width}x$height",
@@ -1096,21 +1144,26 @@ private class VideoDecoder(
         csd: List<ByteArray>,
         surface: Surface,
         attempt: DecoderAttempt,
+        /** Ask for [PICTURE_ORDER_PARAMETER] when the decoder lists it ([framesAtOnce], H.264). */
+        atOnce: Boolean = false,
     ): MediaCodec? {
         var candidate: MediaCodec? = null
         return try {
             val format = buildFormat(mime, csd, attempt)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
-            if (attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")) {
-                format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
-            }
+            val lowLatency = attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")
+            if (lowLatency) format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
             val vendorKeys = if (attempt.tuned && vendorLowLatency) vendorLowLatencyKeys(codec.name.orEmpty()) else emptyList()
             vendorKeys.forEach { format.setInteger(it, 1) }
             configuredVendorLowLatency = vendorKeys.isNotEmpty()
+            val pictureOrder = attempt.tuned && atOnce && listsPictureOrder(codec)
+            if (pictureOrder) format.setInteger(PICTURE_ORDER_PARAMETER, 1)
             codec.configure(format, surface, null, 0)
             codec.start()
+            startedLowLatency = lowLatency
+            startedPictureOrder = pictureOrder
             codec
         } catch (error: Exception) {
             runCatching { candidate?.release() }
@@ -1124,6 +1177,28 @@ private class VideoDecoder(
             null
         }
     }
+
+    /** Android 11 added the low-latency feature; aliases and software-only flags exist from Android 10. */
+    private fun findLowLatencyDecoder(mime: String): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return runCatching {
+            lowLatencyDecoderName(MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+                .filter { !it.isEncoder && mime in it.supportedTypes }
+                .map { info ->
+                    DecoderCandidate(
+                        name = info.name,
+                        hardware = info.isHardwareAccelerated,
+                        alias = info.isAlias,
+                        lowLatency = info.getCapabilitiesForType(mime).isFeatureSupported("low-latency"),
+                    )
+                })
+        }.getOrNull()
+    }
+
+    /** Android 12 lets a codec list its vendor parameters. */
+    private fun listsPictureOrder(codec: MediaCodec): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            runCatching { PICTURE_ORDER_PARAMETER in codec.supportedVendorParameters }.getOrDefault(false)
 
     private fun softwareDecoderName(mime: String): String? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
