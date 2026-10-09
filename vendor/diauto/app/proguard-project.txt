@@ -43,3 +43,20 @@
 -keep public class * implements com.bumptech.glide.module.GlideModule
 -keep class * extends com.bumptech.glide.module.AppGlideModule { <init>(...); }
 -keep public enum com.bumptech.glide.load.ImageHeaderParser$** { **[] $VALUES; public *; }
+
+# --- CarLink: rules for R8 in CarLink's release build ---
+# HotspotManager calls dexmaker's TypeId.get(String) and TypeId.get(Class) through
+# getDeclaredMethod (legacy tethering callback, Android 7-10).
+-keepclassmembers class com.android.dx.TypeId {
+    public static *** get(...);
+}
+# The Shizuku user service: Shizuku's server instantiates it by class name in its own process.
+-keep class com.andrerinas.openheadunit.utils.SUExecutor$ShizukuImpl$PrivilegedService {
+    <init>(...);
+}
+# BydCarServerTransport reads this Parcelable from a BYD provider's Bundle: the platform finds it
+# by class name and reads CREATOR reflectively; the app never constructs it itself.
+-keep class com.byd.spi.ipc.cursor.BinderCursor$BinderParcelable {
+    public static final android.os.Parcelable$Creator CREATOR;
+    public final android.os.IBinder binder;
+}

@@ -1,0 +1,34 @@
+# CarLink release R8 rules (phase 1: shrink + optimize, no renaming).
+# design/RESEARCH_2026-10_R8_PLATFORM.md has the plan; docs/LOW_END_PERFORMANCE.md the numbers.
+# R8 writes the merged configuration it ran with to
+# app/build/outputs/mapping/release/configuration.txt (AGP's -printconfiguration).
+#
+# Rules for engine classes live in the engines' consumer files (vendor/diplay/shared,
+# vendor/diauto/app), so a launcher reusing :carlink-core gets them too. CarLink's own code needs
+# no member keeps: its manifest components are kept by AAPT2, its enums are looked up with direct
+# valueOf/entries calls, and none of it is reached by reflection or JNI.
+
+# No renaming: DiPlay's diagnostics (P2pConfigBuildDiagnostics, MediaFailureSummary) filter stack
+# frames by package name, and logs shared from the tablet must stay readable without a mapping.
+# Phase 2 revisits this with a mapping.txt kept per release.
+-dontobfuscate
+
+# Readable stack traces in carlink.log, diplay.log and DiAuto's journal.
+-keepattributes SourceFile,LineNumberTable
+# Class.getSimpleName() of nested classes (stage and failure names in the diagnostics) and
+# generic signatures. In R8 full mode these survive only on classes matched by a keep rule,
+# which the class-identity rules below provide for the app's and engines' classes.
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
+
+# Class identity: names must stay true, not only unrenamed. Without these rules R8's horizontal
+# class merging folds classes into unrelated ones even with -dontobfuscate (first R8 build:
+# com.carlink.core.connection.ConnectionProfiles and DiPlay's LiveVideoMeter merged into
+# androidx.lifecycle.ViewModelLazy; CarLink composables' static methods moved into
+# kotlin.ExceptionsKt), so stack frames, javaClass.name/simpleName in the diagnostics and DiPlay's
+# package-filtered frames would name the wrong class. These rules keep no class and no member:
+# allowshrinking lets unused classes go, and members are still shrunk, inlined and optimized; only
+# merging and class inlining of these classes stop. Cost: +0.6 % dex (LOW_END_PERFORMANCE.md).
+-keep,allowshrinking,allowobfuscation,allowaccessmodification class com.carlink.**
+-keep,allowshrinking,allowobfuscation,allowaccessmodification class com.shilapi.**
+-keep,allowshrinking,allowobfuscation,allowaccessmodification class com.andrerinas.**
+-keep,allowshrinking,allowobfuscation,allowaccessmodification class com.byd.spi.**

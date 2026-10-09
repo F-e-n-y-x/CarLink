@@ -90,10 +90,11 @@ android {
         }
         release {
             ndk { abiFilters += if (releaseEmulatorAbi) armAbis + "x86_64" else armAbis }
-            // Both engines rely on reflection into framework and BYD classes; DiPlay ships
-            // unshrunk for the same reason.
+            // R8 shrinks and optimizes code and resources, without renaming (-dontobfuscate):
+            // app rules in src/main/keepRules/carlink.keep, engine rules in the engines'
+            // consumer files (design/RESEARCH_2026-10_R8_PLATFORM.md, phase 1).
             optimization {
-                enable = false
+                enable = true
             }
             signingConfig = signingConfigs.getByName("release")
         }
