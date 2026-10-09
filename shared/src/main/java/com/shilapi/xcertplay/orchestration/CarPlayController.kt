@@ -2214,7 +2214,9 @@ class CarPlayController(
         closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get()
 
     // Kept across reconnects within this controller: resuming between attempts would start a scan.
-    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(this) {
+    // close() sets [closed] under this lock, so a lease is either taken first and released by
+    // close, or never taken.
+    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(wirelessResourceLock) {
         if (closed || !WifiScanPause.eligible(backend)) return@synchronized
         (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
     }
