@@ -35,7 +35,9 @@ stops or watches a session goes through it. Main thread. Also on `Connection`:
   in later does not wait for a cold process start.
 - `onHomeShown(context)`: the host's main screen came to the front; starts the last-used phone
   wirelessly when the rules allow (see `SessionManager.onHomeShown`).
-- `vehicleProfile(context)` / `setVehicleProfile(context, profile)`.
+- `vehicleProfile(context)` / `setVehicleProfile(context, profile)`. Setting a different profile
+  re-installs the CarPlay hooks (`CarPlayAdapter.install` is safe to call again), so it applies
+  from the next connection without an app restart.
 - `effectiveSettings(settings, wifi)`: the settings with the car's own hotspot filled in where
   the firmware lets it be read.
 
@@ -60,7 +62,10 @@ State, both `StateFlow`s on the main thread:
 (`Notice(kind, stage, message, action)`) says why a phase takes long: `PHONE_NOT_ANSWERING`
 (the phone has been silent for `AdaptiveDeadlines.HINT_MILLIS`, USB included), `SLOW` (a later
 phase is past that), or `RECOVERING` (the stall watchdog applied `action`). `toLinkState()` puts
-the message in `LinkState.detail` (and `DETAIL_PHONE_NOT_ANSWERING` for a silent phone).
+the message in `LinkState.detail` (and `DETAIL_PHONE_NOT_ANSWERING` for a silent phone) and the
+notice as `LinkState.notice` (`core.LinkNotice`: kind, `LinkRecovery` such as `FRESH_WIFI_DIRECT`
+or `TRY_CAR_HOTSPOT` with the path now tried, and a retry's `LinkProblem`), which a host words for
+the driver; `detail` is log wording and CarLink's screens do not show it.
 
 ### The connection intelligence (host-independent)
 
@@ -127,8 +132,9 @@ First-time pairing in the receiver's own terms: `PairingSession(context).start()
 screen is shown, `close()` when it leaves; `state: StateFlow<PairingSession.State>` (`Waiting(carName)`,
 `Pairing(phoneName)`, `Paired(address, phoneName, kind)`, `BluetoothOff`);
 `PairingSession.discoverableIntent()` asks the system to make the display visible for 300 s. The
-phone always starts the pairing (a tablet cannot start the car-kit role). CarLink's own UI does
-not use it yet: Home's "Pair a phone" opens the system Bluetooth settings.
+phone always starts the pairing (a tablet cannot start the car-kit role). CarLink's first-time
+setup (`ui/setup`) drives it: discoverable on entering the pairing step, the name shown large,
+and `connect(...)` as soon as a `Paired` phone's kind is known.
 
 ### `DevicePreflight`
 
