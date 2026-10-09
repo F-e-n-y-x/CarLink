@@ -41,11 +41,19 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * Android 10+ creates a temporary group. Android 9's public overload can create or reuse a
  * persistent system profile; [close] removes the active group without deleting saved profiles.
+ *
+ * CarLink: with [stableIdentity], Android 10+ asks for the same name and passphrase every session
+ * as a persistent group, and reads a live group under that pair instead of replacing it.
  */
 class WifiP2pGroupManager(
     context: Context,
     private val diagnostic: (String) -> Unit = {},
     private val preferredChannel: Int = WifiP2pChannels.AUTO,
+    // CarLink: one name and passphrase per install, asked for as a persistent group on API 29+
+    // (P2pStableIdentity.kt). False keeps upstream's new random pair every session.
+    private val stableIdentity: Boolean = false,
+    /** CarLink: the car's name the stable group name ends with. */
+    private val carName: String? = null,
 ) : WirelessHotspotManager {
     init {
         require(WifiP2pChannels.isValid(preferredChannel)) { "Unsupported Wi-Fi Direct channel: $preferredChannel" }
@@ -82,6 +90,8 @@ class WifiP2pGroupManager(
     private var startAttempt: StartAttempt? = null
     @Volatile private var observedCreatedName: String? = null
     @Volatile private var requestedName: String? = null
+    // CarLink: the stable identity this bring-up asked for, if any (P2pStableIdentity.kt).
+    @Volatile private var stableSsid: String? = null
 
     override fun connectionDiagnosticSnapshot(): String {
         val current = synchronized(stateLock) { if (closed) null else channel }
@@ -164,11 +174,15 @@ class WifiP2pGroupManager(
             }
             startAttempt = attempt
         }
+        newestStart = java.lang.ref.WeakReference(this) // CarLink
 
         val thread = HandlerThread("xcertplay-wifi-p2p").apply { start() }
         attempt.thread = thread
         val deadlineNanos = deadlineAfter(timeoutMillis)
-        val credentials = randomCredentials()
+        // CarLink: the stable pair when the setting is on (API 29+), else upstream's random pair.
+        val identity = chooseIdentity(legacyChannels)
+        val credentials = identity.identity?.let { Credentials(it.ssid, it.passphrase) } ?: randomCredentials()
+        stableSsid = identity.identity?.ssid
 
         try {
             val station = readStation()
@@ -207,7 +221,30 @@ class WifiP2pGroupManager(
             // Preferences disappear on reinstall, but the scoped namespace survives.
             val existing = requestGroupInfo(attempt, p2pChannel, REQUEST_POLL_NANOS, requireResponse = true)
             diagnostic("Wi-Fi P2P existingGroup=${existing != null}")
-            if (existing != null) {
+            // CarLink: a group already up under the stable pair, on the channel this bring-up would
+            // ask for first, is read as it stands: removing and re-creating it re-addresses the
+            // network the iPhone saved (P2pStableIdentityPolicy.readsLiveGroup).
+            val firstRequest = P2pStartupRecovery.plan(stationFrequency, preferred?.request, preferredChannel,
+                bandRequests = !legacyChannels).first()
+            val readLive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && existing != null &&
+                P2pStableIdentityPolicy.readsLiveGroup(
+                    identity.identity, existing.isGroupOwner, existing.networkName,
+                    runCatching { existing.passphrase }.getOrNull(), existing.frequency,
+                ) { P2pStableIdentityPolicy.fitsFirstRequest(firstRequest, it) }
+            if (existing != null && identity.identity != null) {
+                diagnostic("Wi-Fi P2P stable identity liveGroup=${if (readLive) "read" else "not_read"}")
+            }
+            if (readLive) {
+                if (!ownership.edit().putString("owned_ssid", credentials.ssid).commit()) {
+                    throw IOException("Could not record Wi-Fi P2P group ownership")
+                }
+                requestedName = credentials.ssid
+                synchronized(stateLock) {
+                    ensureStartActiveLocked(attempt)
+                    // Ours from here: close() and a failed start remove it like a created group.
+                    attempt.createSucceeded = true
+                }
+            } else if (existing != null) {
                 if (!P2pOwnership.canReclaim(existing.isGroupOwner, existing.networkName,
                         ownership.getString("owned_ssid", null), ssidPrefix)) {
                     throw P2pResetRequiredException()
@@ -221,7 +258,7 @@ class WifiP2pGroupManager(
                 }
             }
 
-            val creation = P2pStartupRecovery.create(
+            val creation = if (readLive) firstRequest else P2pStartupRecovery.create( // CarLink: readLive
                 stationFrequency = stationFrequency,
                 preferred = preferred?.request,
                 preferredChannel = preferredChannel,
@@ -251,6 +288,16 @@ class WifiP2pGroupManager(
                                 P2pCreationMode.BAND_5_GHZ -> builder.setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_5GHZ)
                                 P2pCreationMode.BAND_2_GHZ -> builder.setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
                                 else -> builder.setGroupOperatingFrequency(requireNotNull(selection.frequencyMHz))
+                            }
+                            // CarLink: a persistent group keeps the stable pair in the supplicant's
+                            // saved groups (one entry per name). A random pair stays temporary, or
+                            // every session would leave a saved group behind.
+                            if (identity.identity != null) {
+                                try {
+                                    builder.enablePersistentMode(true)
+                                } catch (missing: NoSuchMethodError) {
+                                    diagnostic("Wi-Fi P2P stable identity persistent=unavailable")
+                                }
                             }
                             builder.build()
                         }
@@ -288,8 +335,13 @@ class WifiP2pGroupManager(
                     }
                 },
             )
+            // CarLink: the system-default fallback names the group itself, so no stable pair is in use.
+            val stableInUse = identity.identity != null && (readLive || creation.mode != P2pCreationMode.SYSTEM_DEFAULT)
+            if (!stableInUse) stableSsid = null
+            val identityDetail = identityDetail(identity, stableInUse, readLive)
+            diagnostic("Wi-Fi P2P stable identity $identityDetail reason=${identity.reason}")
             val group = if (legacyChannels) {
-                awaitUsableGroupLegacy(attempt, p2pChannel, creation, deadlineNanos, timeoutMillis)
+                awaitUsableGroupLegacy(attempt, p2pChannel, creation, deadlineNanos, timeoutMillis, identityDetail)
             } else {
                 awaitUsableGroup(
                     attempt = attempt,
@@ -297,6 +349,7 @@ class WifiP2pGroupManager(
                     credentials = if (creation.mode == P2pCreationMode.SYSTEM_DEFAULT) null else credentials,
                     deadlineNanos = deadlineNanos,
                     timeoutMillis = timeoutMillis,
+                    identityDetail = identityDetail,
                 )
             }
             if (!ownership.edit().putString("owned_ssid", group.ssid).commit()) {
@@ -326,7 +379,8 @@ class WifiP2pGroupManager(
                 created = true
                 startAttempt = null
                 // Manual experiments must not replace the proven automatic configuration.
-                pendingSuccess = if (!legacyChannels && preferredChannel == WifiP2pChannels.AUTO) {
+                // CarLink: a group read as it stood (readLive) proves no creation request.
+                pendingSuccess = if (!legacyChannels && !readLive && preferredChannel == WifiP2pChannels.AUTO) {
                     {
                         configurationMemory.remember(creation, requireNotNull(group.frequencyMHz), stationFrequency)
                     }
@@ -342,6 +396,12 @@ class WifiP2pGroupManager(
 
     override fun onCarPlayConfirmed() = synchronized(stateLock) {
         if (closed || !created || carPlayConfirmed) return@synchronized
+        // CarLink: the iPhone has now joined the stable network, so it is saved on the iPhone.
+        stableSsid?.let { name ->
+            if (name == observedCreatedName && ownership.getString(KEY_STABLE_JOINED, null) != name) {
+                runCatching { ownership.edit().putString(KEY_STABLE_JOINED, name).apply() }
+            }
+        }
         val save = pendingSuccess ?: return@synchronized
         // Storage failure must not interrupt a working CarPlay session.
         carPlayConfirmed = true
@@ -541,6 +601,7 @@ class WifiP2pGroupManager(
         credentials: Credentials?,
         deadlineNanos: Long,
         timeoutMillis: Long,
+        identityDetail: String? = null, // CarLink
     ): WirelessHotspotInfo {
         var lastReason = "group information was not available"
         while (true) {
@@ -610,6 +671,7 @@ class WifiP2pGroupManager(
                 hostAddress = hostAddress,
                 bandLabel = band,
                 backend = WirelessHotspotBackend.WIFI_P2P,
+                identityDetail = identityDetail, // CarLink
             )
         }
     }
@@ -620,6 +682,7 @@ class WifiP2pGroupManager(
         creation: P2pCreationRequest,
         deadlineNanos: Long,
         timeoutMillis: Long,
+        identityDetail: String? = null, // CarLink
     ): WirelessHotspotInfo {
         var lastReason = "group information was not available"
         while (true) {
@@ -677,6 +740,7 @@ class WifiP2pGroupManager(
                 bandLabel = if (requestedChannel == UNKNOWN_CHANNEL) "Auto"
                     else WifiP2pLegacyChannels.bandLabelFor(requestedChannel),
                 backend = WirelessHotspotBackend.WIFI_P2P,
+                identityDetail = identityDetail, // CarLink
             )
         }
     }
@@ -844,6 +908,41 @@ class WifiP2pGroupManager(
         }
     }
 
+    // CarLink: reads (and on first use stores) the stable pair. Storage trouble never blocks a
+    // session: it falls back to upstream's random pair for this bring-up.
+    private fun chooseIdentity(legacyChannels: Boolean): P2pStableIdentityPolicy.Choice = try {
+        val stored = ownership.getString(KEY_STABLE_SSID, null)?.let { ssid ->
+            ownership.getString(KEY_STABLE_PASSPHRASE, null)?.let { P2pIdentity(ssid, it) }
+        }
+        val choice = P2pStableIdentityPolicy.decide(
+            enabled = stableIdentity,
+            sdkInt = if (legacyChannels) Build.VERSION_CODES.P else Build.VERSION.SDK_INT,
+            stored = stored,
+            prefix = ssidPrefix,
+            carName = carName,
+            newPassphrase = { randomToken(16) },
+        )
+        val toStore = choice.toStore
+        if (toStore != null && !ownership.edit()
+                .putString(KEY_STABLE_SSID, toStore.ssid)
+                .putString(KEY_STABLE_PASSPHRASE, toStore.passphrase)
+                .remove(KEY_STABLE_JOINED)
+                .commit()) {
+            diagnostic("Wi-Fi P2P stable identity unavailable reason=storage_failed")
+            P2pStableIdentityPolicy.Choice(null, P2pIdentityOutcome.OFF, null, "storage_failed")
+        } else choice
+    } catch (failure: RuntimeException) {
+        diagnostic("Wi-Fi P2P stable identity unavailable failureClass=${failure.javaClass.simpleName}")
+        P2pStableIdentityPolicy.Choice(null, P2pIdentityOutcome.OFF, null, "storage_failed")
+    }
+
+    /** CarLink: `identity=kept|new|off|system known=yes|no group=created|read`, no name or passphrase. */
+    private fun identityDetail(choice: P2pStableIdentityPolicy.Choice, inUse: Boolean, readLive: Boolean): String {
+        val outcome = if (choice.identity != null && !inUse) P2pIdentityOutcome.SYSTEM else choice.outcome
+        val known = inUse && runCatching { ownership.getString(KEY_STABLE_JOINED, null) }.getOrNull() == choice.identity?.ssid
+        return "identity=${outcome.label} known=${if (known) "yes" else "no"} group=${if (readLive) "read" else "created"}"
+    }
+
     private fun randomCredentials(): Credentials = Credentials(
         ssid = "$ssidPrefix${randomToken(4)}",
         passphrase = randomToken(16),
@@ -901,6 +1000,14 @@ class WifiP2pGroupManager(
     private fun removeGroup(channel: WifiP2pManager.Channel, waitForCallback: Boolean,
         expectedName: String? = observedCreatedName ?: requestedName) {
         val latch = CountDownLatch(1)
+        // CarLink: with the stable identity every session's group has the same name, so the name no
+        // longer tells an older session's cleanup from the group a newer manager now owns.
+        val stable = stableSsid
+        val newest = newestStart?.get()
+        if (stable != null && expectedName == stable && newest != null && newest !== this) {
+            diagnostic("Wi-Fi P2P cleanup skipped=newer_session_owns_group")
+            return
+        }
         try {
             p2pManager.requestGroupInfo(channel) { current ->
                 if (current == null) {
@@ -996,5 +1103,12 @@ class WifiP2pGroupManager(
         val REQUEST_POLL_NANOS: Long = TimeUnit.MILLISECONDS.toNanos(500)
         const val TOKEN_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+        // CarLink: the stable identity (P2pStableIdentity.kt), in this manager's ownership prefs.
+        const val KEY_STABLE_SSID = "stable_ssid"
+        const val KEY_STABLE_PASSPHRASE = "stable_passphrase"
+        /** The stable name a session reached CarPlay on: the iPhone has saved that network. */
+        const val KEY_STABLE_JOINED = "stable_joined_ssid"
+        /** CarLink: the manager that started last in this process; see removeGroup. */
+        @Volatile var newestStart: java.lang.ref.WeakReference<WifiP2pGroupManager>? = null
     }
 }

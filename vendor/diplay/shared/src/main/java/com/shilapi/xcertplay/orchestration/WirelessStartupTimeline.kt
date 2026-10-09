@@ -85,5 +85,17 @@ class WirelessStartupTimeline(
         @Volatile
         @JvmStatic
         var milestoneListener: ((Phase) -> Unit)? = null
+
+        /**
+         * CarLink: six hex digits of SHA-256 of [address] (a BSSID), so logs show whether it changed
+         * between sessions without the address itself; `unknown` when Android hides it.
+         */
+        @JvmStatic
+        fun shortHash(address: String?): String {
+            val value = address?.trim()?.lowercase()
+            if (value.isNullOrEmpty() || value == "02:00:00:00:00:00") return "unknown"
+            return java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+                .take(3).joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        }
     }
 }

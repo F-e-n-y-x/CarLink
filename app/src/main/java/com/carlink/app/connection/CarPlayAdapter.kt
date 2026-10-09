@@ -149,6 +149,8 @@ class CarPlayAdapter internal constructor(
             val app = context.applicationContext
             CarPlayHostIntegration.accessoryName = app.getString(R.string.app_name)
             CarPlayHostIntegration.resetDebugLogsOnBootstrap = false
+            // One Wi-Fi Direct identity per install: the iPhone rejoins a network it saved.
+            CarPlayHostIntegration.wifiP2pStableIdentity = true
             // The IPv6-first experiment remembered IPv6 on the test tablet; forget it once so the
             // proven IPv4 path is used again (WirelessAddressFamilyPlan.ipv6Guess is off).
             val marks = app.getSharedPreferences("carlink_migrations", Context.MODE_PRIVATE)

@@ -178,6 +178,8 @@ class CarPlayHostActivity : ComponentActivity() {
         transport = if (wirelessEnabled) CarPlayTransport.WIRELESS else CarPlayTransport.WIRED,
         wirelessHotspotMode = wirelessHotspotMode,
         wifiP2pPreferredChannel = AirPlayPersistence.loadWifiP2pPreferredChannel(this),
+        wifiP2pStableIdentity = CarPlayHostIntegration.wifiP2pStableIdentity // CarLink
+            ?: AirPlayPersistence.loadWifiP2pStableIdentity(this),
         manualHotspotSsid = manualHotspotSsid,
         manualHotspotPassphrase = manualHotspotPassphrase,
         manualHotspotBand = manualHotspotBand,

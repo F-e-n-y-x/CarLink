@@ -166,6 +166,15 @@ object CarPlayHostIntegration {
     @JvmStatic
     var accessoryName: String = "DiPlay"
 
+    /**
+     * Wireless CarPlay over Wi-Fi Direct asks for one name and passphrase per install, as a
+     * persistent group, so the iPhone rejoins a network it saved (network/P2pStableIdentity.kt).
+     * Null uses DiPlay's setting (`AirPlayPersistence.loadWifiP2pStableIdentity`, on by default).
+     */
+    @Volatile
+    @JvmStatic
+    var wifiP2pStableIdentity: Boolean? = null
+
     /** False keeps the CarPlay debug-log setting across bootstraps (DiPlay turns it off; F6). */
     @Volatile
     @JvmStatic

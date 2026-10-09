@@ -51,6 +51,7 @@ object AirPlayPersistence {
     private const val KEY_WIRELESS_ENABLED = "wireless_enabled"
     private const val KEY_WIRELESS_HOTSPOT_MODE = "wireless_hotspot_mode"
     private const val KEY_WIFI_P2P_PREFERRED_CHANNEL = "wifi_p2p_preferred_channel"
+    private const val KEY_WIFI_P2P_STABLE_IDENTITY = "wifi_p2p_stable_identity" // CarLink
     private const val KEY_MANUAL_HOTSPOT_SSID = "manual_hotspot_ssid"
     private const val KEY_MANUAL_HOTSPOT_PASSPHRASE = "manual_hotspot_passphrase"
     private const val KEY_MANUAL_HOTSPOT_BAND = "manual_hotspot_band"
@@ -330,6 +331,17 @@ object AirPlayPersistence {
         require(WifiP2pChannels.isValid(channel))
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_WIFI_P2P_PREFERRED_CHANNEL, channel).apply()
+    }
+
+    // CarLink: one Wi-Fi Direct name and passphrase per install, so the iPhone rejoins a network it
+    // saved (network/P2pStableIdentity.kt). On by default; off restores upstream's new pair per session.
+    fun loadWifiP2pStableIdentity(context: Context): Boolean = runCatching {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_WIFI_P2P_STABLE_IDENTITY, true)
+    }.getOrDefault(true)
+
+    fun saveWifiP2pStableIdentity(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_WIFI_P2P_STABLE_IDENTITY, enabled).apply()
     }
 
     fun loadExistingWifiSsid(context: Context): String =

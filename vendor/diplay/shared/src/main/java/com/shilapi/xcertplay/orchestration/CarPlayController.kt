@@ -1238,7 +1238,8 @@ class CarPlayController(
             val preferredFamily = familyChoice.preferredFamily
             startedHotspot?.observeClients { count -> // CarLink
                 if (count > 0 && !isStaleWirelessRun(generation)) {
-                    wirelessTimeline.mark(WirelessStartupTimeline.Phase.PEER_ASSOCIATED, "clients=$count")
+                    wirelessTimeline.mark(WirelessStartupTimeline.Phase.PEER_ASSOCIATED,
+                        listOfNotNull("clients=$count", hotspotInfo.identityDetail).joinToString(" "))
                 }
             }
             val addressRecovery = HotspotAddressRecovery(
@@ -1307,7 +1308,10 @@ class CarPlayController(
             wirelessTimeline.mark( // CarLink
                 WirelessStartupTimeline.Phase.HOTSPOT_READY,
                 "backend=${hotspotInfo.backend.name} family=$publishedFamily guess=${familyChoice.guessed} " +
-                    "firstTcpMs=${watchdog.timeoutMillis} alternate=${wirelessAlternateAddress != null}",
+                    "firstTcpMs=${watchdog.timeoutMillis} alternate=${wirelessAlternateAddress != null}" +
+                    // CarLink: whether the Wi-Fi Direct identity was reused, and a short hash of the
+                    // group owner's address, to compare join times and see whether the BSSID changed.
+                    (hotspotInfo.identityDetail?.let { " $it bssid=${WirelessStartupTimeline.shortHash(hotspotInfo.bssid)}" } ?: ""),
             )
             onStatus(
                 CarPlayStatus.HotspotReady(
@@ -2298,7 +2302,8 @@ class CarPlayController(
         }
         val manager: WirelessHotspotManager = when (hotspotMode) {
             WirelessHotspotMode.WIFI_P2P -> WifiP2pGroupManager(appContext, ::debugLog,
-                preferredChannel = config.wifiP2pPreferredChannel)
+                preferredChannel = config.wifiP2pPreferredChannel,
+                stableIdentity = config.wifiP2pStableIdentity, carName = config.label) // CarLink
             WirelessHotspotMode.LOCAL_ONLY_HOTSPOT -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 LocalOnlyHotspotManager(appContext, ::debugLog)
             } else {

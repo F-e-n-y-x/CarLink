@@ -14,7 +14,9 @@ internal object P2pOwnership {
     fun canReclaim(isOwner: Boolean, ssid: String?, recorded: String?, prefix: String): Boolean =
         isOwner && !ssid.isNullOrBlank() &&
             (ssid == recorded || (ssid.startsWith(prefix) &&
-                ssid.removePrefix(prefix).matches(Regex("[A-Za-z0-9]{4}"))))
+                ssid.removePrefix(prefix).matches(Regex("[A-Za-z0-9]{4}"))) ||
+                // CarLink: the stable identity ends with the car's name instead (P2pStableIdentity.kt).
+                P2pStableIdentityPolicy.isNamespaceName(ssid, prefix))
 }
 
 class P2pResetRequiredException : IOException("An existing Wi-Fi Direct connection needs a reset")

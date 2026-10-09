@@ -396,6 +396,114 @@ class WifiP2pGroupManagerTest {
         assertEquals(0, radio.removals)
     }
 
+    // CarLink: the stable Wi-Fi Direct identity (network/P2pStableIdentity.kt).
+
+    private fun stable(logs: MutableList<String> = mutableListOf()) =
+        WifiP2pGroupManager(context, logs::add, stableIdentity = true, carName = "CarLink")
+
+    private fun persistent(config: WifiP2pConfig?) =
+        ReflectionHelpers.getField<Int>(config!!, "netId") == WifiP2pGroup.NETWORK_ID_PERSISTENT
+
+    @Test fun stableIdentityAsksForTheSamePersistentPairEverySession() {
+        val logs = mutableListOf<String>()
+        val first = stable(logs).use { manager -> background { manager.start(5000) } }
+        val second = stable(logs).use { manager -> background { manager.start(5000) } }
+        assertEquals(first.ssid, second.ssid)
+        assertEquals(first.passphrase, second.passphrase)
+        assertTrue(first.ssid.matches(Regex("^DIRECT-dp[0-9a-f]{12}-CarLink$")))
+        assertEquals(2, radio.requests.size)
+        assertTrue(radio.requests.all(::persistent))
+        assertEquals(listOf(first.ssid, first.ssid), radio.requests.map { it!!.networkName })
+        assertEquals("identity=new known=no group=created", first.identityDetail)
+        assertEquals("identity=kept known=no group=created", second.identityDetail)
+        assertEquals(2, radio.removals)
+        assertFalse(logs.any { it.contains(first.ssid) || it.contains(first.passphrase) })
+    }
+
+    @Test fun stableIdentityIsKnownOnceASessionReachedCarPlayOnIt() {
+        stable().use { manager -> background { manager.start(5000) }; manager.onCarPlayConfirmed() }
+        val next = stable().use { manager -> background { manager.start(5000) } }
+        assertEquals("identity=kept known=yes group=created", next.identityDetail)
+    }
+
+    @Test fun renamedCarDrawsANewPairTogether() {
+        val first = stable().use { manager -> background { manager.start(5000) } }
+        val renamed = WifiP2pGroupManager(context, stableIdentity = true, carName = "Tang EV").use { manager ->
+            background { manager.start(5000) }
+        }
+        assertTrue(renamed.ssid.endsWith("-TangEV"))
+        assertNotEquals(first.passphrase, renamed.passphrase)
+        assertTrue(renamed.identityDetail!!.startsWith("identity=new"))
+    }
+
+    @Test fun liveGroupUnderTheStablePairIsReadInsteadOfReplaced() {
+        // A session that never closed (process death): its group is still up.
+        val first = background { stable().start(5000) }
+        val logs = mutableListOf<String>()
+        val manager = stable(logs)
+        val second = background { manager.start(5000) }
+        assertEquals(first.ssid, second.ssid)
+        assertEquals(1, radio.requests.size)
+        assertEquals(0, radio.removals)
+        assertEquals("identity=kept known=no group=read", second.identityDetail)
+        assertTrue(logs.any { it.contains("stable identity liveGroup=read") })
+        background { manager.close() }
+        assertEquals(1, radio.removals)
+    }
+
+    @Test fun liveGroupOnAChannelThePlanWouldNotPickIsReplaced() {
+        background { stable().start(5000) } // aligned with the 5180 MHz station
+        val info = context.getSystemService(WifiManager::class.java).connectionInfo
+        shadowOf(info).setFrequency(2437)
+        val logs = mutableListOf<String>()
+        stable(logs).use { manager ->
+            val next = background { manager.start(5000) }
+            assertEquals(2437, next.frequencyMHz)
+            assertEquals("identity=kept known=no group=created", next.identityDetail)
+        }
+        assertTrue(logs.any { it.contains("stable identity liveGroup=not_read") })
+        assertEquals(listOf(5180, 2437), radio.requests.map { it?.groupOwnerBand })
+        assertEquals(2, radio.removals)
+    }
+
+    @Test fun staleCloseCannotRemoveTheSameNamedGroupOfANewerSession() {
+        val old = stable()
+        background { old.start(5000) }
+        radio.group = null // the framework lost the old group
+        val current = stable()
+        background { current.start(5000) }
+        val group = radio.group
+        background { old.close() }
+        assertSame(group, radio.group)
+        assertEquals(0, radio.removals)
+        background { current.close() }
+        assertEquals(1, radio.removals)
+    }
+
+    @Test fun anotherAppsGroupStillNeedsAResetWithTheStableIdentity() {
+        radio.group = radio.makeGroup(null)
+        stable().use { manager -> assertTrue(failure { manager.start(3000) } is P2pResetRequiredException) }
+        assertTrue(radio.requests.isEmpty())
+        assertEquals(0, radio.removals)
+    }
+
+    @Test fun systemDefaultFallbackReportsASystemNamedGroup() {
+        radio.rejectCustom = true
+        stable().use { manager ->
+            val info = background { manager.start(6000) }
+            assertEquals("DIRECT-system-test", info.ssid)
+            assertEquals("identity=system known=no group=created", info.identityDetail)
+        }
+    }
+
+    @Test fun settingOffKeepsUpstreamsTemporaryRandomPair() {
+        val first = WifiP2pGroupManager(context, stableIdentity = false).use { background { it.start(5000) } }
+        val second = WifiP2pGroupManager(context, stableIdentity = false).use { background { it.start(5000) } }
+        assertNotEquals(first.ssid, second.ssid)
+        assertFalse(radio.requests.any(::persistent))
+        assertEquals("identity=off known=no group=created", first.identityDetail)
+    }
+
     private fun failure(block: () -> Any): Throwable {
         try { background(block); fail("Expected failure") }
         catch (failure: ExecutionException) { return failure.cause!! }

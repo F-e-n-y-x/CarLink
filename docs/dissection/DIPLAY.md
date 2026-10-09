@@ -292,6 +292,7 @@ The default mode is `MANUAL`, meaning car hotspot (`AirPlayPersistence.kt:306-31
   - Since IPv4-first: no first TCP (#464, #467; fix in open PR #474).
   - Head-unit reboots on Wuling (#457, #471).
   - Recovery: `wifiResetRequired`, then "Reset CarPlay Wi-Fi" removes the group (`DiPlayActivity.kt:4474-4500`).
+- **CarLink: one identity per install.** Upstream draws a new `DIRECT-dp<hash>-xxxx` name and passphrase every session. CarLink asks for `DIRECT-dp<hash>-<car>` with a stored passphrase as a persistent group (API 29+), and reads a live group under that pair instead of rebuilding it (`network/P2pStableIdentity.kt`; docs/VENDOR_CHANGES.md). `WIRELESS_TIMING hotspot-ready … identity=kept|new|off|system known=yes|no group=created|read bssid=<hash>`.
 - **iPhone side:** the iPhone leaves its Wi-Fi and has **no Internet** (#189).
 
 **Car hotspot (`MANUAL`, `network/ManualHotspotManager.kt`)**
