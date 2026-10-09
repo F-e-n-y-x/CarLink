@@ -28,7 +28,7 @@
     <string name="marker_up">أعلى</string>
     <string name="marker_down">أسفل</string>
     <string name="marker_centre_default">الوسط · الافتراضي</string>
-    <string name="hotspot_mode_manual_desc">استخدم نقطة اتصال السيارة نفسها. اختر 5 GHz في إعدادات السيارة إن توفر.</string>
+    <string name="hotspot_mode_manual_desc">استخدم نقطة اتصال السيارة لـ CarPlay اللاسلكي. لا تحتاج إلى الاتصال بها يدويًا من iPhone؛ يرسل DiPlay بيانات نقطة الاتصال عبر Bluetooth. اختر 5 GHz في إعدادات السيارة إن توفر.</string>
     <string name="hotspot_mode_p2p_desc">إعداد بديل. يتطلب تشغيل مفتاح واي فاي السيارة؛ وقد يتقطّع الاتصال على 2.4 GHz.</string>
     <string name="hotspot_details_off">نقطة الاتصال مُغلقة · شغّلها في إعدادات السيارة.</string>
     <string name="hotspot_details_saved">تم حفظ البيانات · تأكد من تشغيل نقطة اتصال السيارة قبل الاتصال.</string>

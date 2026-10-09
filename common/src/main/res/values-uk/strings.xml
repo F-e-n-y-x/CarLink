@@ -29,7 +29,7 @@
     <string name="marker_up">Угору</string>
     <string name="marker_down">Униз</string>
     <string name="marker_centre_default">По центру · типово</string>
-    <string name="hotspot_mode_manual_desc">Використовувати власну точку доступу автомобіля. Якщо доступно, виберіть 5 ГГц у налаштуваннях автомобіля.</string>
+    <string name="hotspot_mode_manual_desc">Використовуйте точку доступу автомобіля для бездротового CarPlay. Підключатися до неї вручну на iPhone не потрібно: DiPlay передає дані точки доступу через Bluetooth. Якщо доступно, виберіть 5 ГГц у налаштуваннях автомобіля.</string>
     <string name="hotspot_mode_p2p_desc">Альтернативний спосіб. Потрібен увімкнений Wi-Fi автомобіля; на частоті 2,4 ГГц можливі затримки.</string>
     <string name="hotspot_details_off">Точку доступу вимкнено · Увімкніть її в налаштуваннях автомобіля.</string>
     <string name="hotspot_details_saved">Дані збережено · Перед підключенням перевірте, чи ввімкнено точку доступу автомобіля.</string>

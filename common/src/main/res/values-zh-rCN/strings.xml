@@ -28,7 +28,7 @@
     <string name="marker_up">上</string>
     <string name="marker_down">下</string>
     <string name="marker_centre_default">居中 · 默认</string>
-    <string name="hotspot_mode_manual_desc">使用车辆自带热点。若车机支持，请在车机设置中选择 5 GHz。</string>
+    <string name="hotspot_mode_manual_desc">使用车载热点连接无线 CarPlay。无需在 iPhone 上手动加入热点；DiPlay 会通过蓝牙发送热点信息。如有 5 GHz，请在车机设置中选择。</string>
     <string name="hotspot_mode_p2p_desc">备选方案。需要打开车机 Wi-Fi 开关；2.4 GHz 连接可能会卡顿。</string>
     <string name="hotspot_details_off">热点已关闭 · 请在车机设置中开启。</string>
     <string name="hotspot_details_saved">详情已保存 · 连接前请确认车载热点已开启。</string>

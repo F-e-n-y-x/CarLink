@@ -28,7 +28,7 @@
     <string name="marker_up">Arriba</string>
     <string name="marker_down">Abajo</string>
     <string name="marker_centre_default">Centro · predeterminado</string>
-    <string name="hotspot_mode_manual_desc">Usa el punto de acceso propio del coche. Selecciona 5 GHz en la configuración del coche si está disponible.</string>
+    <string name="hotspot_mode_manual_desc">Usa el punto de acceso del coche para CarPlay inalámbrico. No necesitas conectarte a él manualmente desde el iPhone; DiPlay envía los datos por Bluetooth. Selecciona 5 GHz en los ajustes del coche si está disponible.</string>
     <string name="hotspot_mode_p2p_desc">Configuración alternativa. Requiere el interruptor Wi‑Fi del coche; en 2,4 GHz la conexión puede trabarse.</string>
     <string name="hotspot_details_off">El punto de acceso está apagado · Actívalo en la configuración del coche.</string>
     <string name="hotspot_details_saved">Datos guardados · Comprueba que el punto de acceso del coche esté activado antes de conectarte.</string>

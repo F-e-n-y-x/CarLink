@@ -28,7 +28,7 @@
     <string name="marker_up">Up</string>
     <string name="marker_down">Down</string>
     <string name="marker_centre_default">Centre · default</string>
-    <string name="hotspot_mode_manual_desc">Use the car’s own hotspot. Select 5 GHz in car settings if available.</string>
+    <string name="hotspot_mode_manual_desc">Use the car’s hotspot for wireless CarPlay. You do not need to join it manually on your iPhone; DiPlay sends the hotspot details over Bluetooth. Select 5 GHz in car settings if available.</string>
     <string name="hotspot_mode_p2p_desc">Alternative setup. Requires the car’s Wi-Fi switch on; a 2.4 GHz connection may stutter.</string>
     <string name="hotspot_details_off">Hotspot is off · Turn it on in car settings.</string>
     <string name="hotspot_details_saved">Details saved · Check that the car hotspot is on before connecting.</string>

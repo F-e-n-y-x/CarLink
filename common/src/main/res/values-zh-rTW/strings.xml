@@ -27,7 +27,7 @@
     <string name="marker_up">上</string>
     <string name="marker_down">下</string>
     <string name="marker_centre_default">置中 · 預設</string>
-    <string name="hotspot_mode_manual_desc">使用車機內建的熱點。若車機支援，請在車機設定中選擇 5 GHz。</string>
+    <string name="hotspot_mode_manual_desc">使用車載熱點連線無線 CarPlay。無需在 iPhone 上手動加入熱點；DiPlay 會透過藍牙傳送熱點資訊。如有 5 GHz，請在車機設定中選擇。</string>
     <string name="hotspot_mode_p2p_desc">替代方案。需要開啟車機 Wi-Fi 開關；2.4 GHz 連線可能會卡頓。</string>
     <string name="hotspot_details_off">熱點已關閉 · 請在車機設定中開啟。</string>
     <string name="hotspot_details_saved">詳細資訊已儲存 · 連線前請確認車載熱點已開啟。</string>
