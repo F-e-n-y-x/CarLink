@@ -272,4 +272,15 @@ class SessionManagerTest {
         m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
         assertEquals("paused by the driver", 1, starts.size)
     }
+
+    @Test fun unpluggingAUsbPhoneNeverStartsTheLastWirelessPhone() {
+        val m = manager()
+        m.onUsbPhone(PhoneKind.ANDROID, "S25", null); idle()
+        androidAuto.emit(AdapterEvent.Connected); idle()
+        m.onUsbDetached()
+        advance(SessionManager.USB_GONE_CONNECTED_GRACE_MILLIS + 1)
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(listOf("ANDROID_AUTO start USB null"), starts)
+        assertTrue(env.autoConnectPaused)
+    }
 }

@@ -162,6 +162,9 @@ class SessionManager(
         if (current.request.transport != Transport.USB) return@Runnable
         if (environment.usbPhonePresent(current.request.engine)) return@Runnable
         note("USB phone for ${current.request.engine} unplugged; ending the session")
+        // Unplugging is the driver stopping: no automatic start right after (it started the
+        // last wireless phone instead on the tablet, 2026-10-09).
+        environment.autoConnectPaused = true
         stop()
         environment.returnHome()
     }
@@ -258,6 +261,8 @@ class SessionManager(
             !environment.autoConnectBluetooth || environment.autoConnectPaused -> return
             _state.value !is SessionState.Idle -> return
             now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS -> return
+            // Home coming back because a session just ended is not "the car started".
+            now - lastSessionEndedAt < HOME_AUTO_START_COOLDOWN_MILLIS -> return
             else -> {
                 lastHomeAutoStart = now
                 note("Home shown: connecting the last phone ($engine)")
@@ -267,6 +272,7 @@ class SessionManager(
     }
 
     private var lastHomeAutoStart = -HOME_AUTO_START_COOLDOWN_MILLIS
+    private var lastSessionEndedAt = -HOME_AUTO_START_COOLDOWN_MILLIS
 
     /** The driver asked for this phone. Clears the pause and replaces any running session. */
     fun connect(address: String?, kind: PhoneKind, phoneName: String?, transport: Transport = Transport.WIRELESS) {
@@ -300,6 +306,7 @@ class SessionManager(
 
     /** Stops whatever runs and goes idle. */
     fun stop() {
+        if (_state.value.isActive) lastSessionEndedAt = SystemClock.uptimeMillis()
         token++
         main.removeCallbacks(notAnswering)
         main.removeCallbacks(usbGoneCheck)
