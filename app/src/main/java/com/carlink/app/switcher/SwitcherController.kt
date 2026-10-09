@@ -169,6 +169,9 @@ object SwitcherController {
         }
     }
 
+    /** The last show decision and its inputs, logged on change so a hidden bubble can be explained. */
+    private var lastDecision: String? = null
+
     private fun canDrawOverlays() = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(app)
 
     private fun evaluate() {
@@ -177,6 +180,14 @@ object SwitcherController {
         else removePrompt()
         val show = SwitcherRules.shouldShow(session, front.projections, front.carLinkScreenInFront,
             canDrawOverlays(), preferences.floatingSwitcher, promptShowing = prompt != null)
+        val inputs = "show=$show phase=${(session as? com.carlink.app.connection.SessionState.Active)?.phase?.javaClass?.simpleName} " +
+            "projections=${front.projections} carLinkInFront=${front.carLinkScreenInFront} overlay=${canDrawOverlays()} " +
+            "enabled=${preferences.floatingSwitcher} prompt=${prompt != null}"
+        if (inputs != lastDecision) {
+            lastDecision = inputs
+            Log.i(TAG, inputs)
+            com.carlink.app.diagnostics.EventLog.add("Switcher", inputs)
+        }
         if (switching) {
             // "Switching…" stays until its linger ends, unless CarLink's own screen took over.
             if (front.carLinkScreenInFront || !canDrawOverlays()) finishSwitch()
