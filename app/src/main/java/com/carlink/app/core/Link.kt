@@ -57,6 +57,21 @@ enum class LinkProblem {
     CAR_HOTSPOT_DETAILS_MISSING,
     CAR_HOTSPOT_OFF,
     SAME_WIFI_DETAILS_MISSING,
+    // Pre-flight (connection v2): each has a one-tap fix.
+    BLUETOOTH_OFF,
+    PHONE_NOT_PAIRED,
+    WIFI_OFF,
+    LOCATION_OFF,
+    PERMISSIONS,
+    OVERLAY,
+    VPN_CONSENT,
+    // Session failures (connection v2), precise enough to say what to do.
+    PHONE_REFUSED_WIFI,
+    PHONE_NEVER_REACHED_CAR,
+    LINK_TOO_WEAK,
+    PHONE_DID_NOT_ANSWER,
+    BLUETOOTH,
+    USB,
     ENGINE,
 }
 

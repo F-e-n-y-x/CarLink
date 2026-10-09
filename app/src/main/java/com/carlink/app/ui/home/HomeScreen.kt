@@ -145,6 +145,8 @@ internal interface HomeActions {
     fun resumeAutoConnect() {}
     fun saveSameWifi(ssid: String, password: String) {}
     fun setConnectionMethod(method: ConnectionMethod) {}
+    /** The one-tap fix for [problem]: turn a radio on, open a permission screen, switch path. */
+    fun fix(problem: LinkProblem) {}
     fun navigate(route: Route) {}
 }
 
@@ -168,6 +170,8 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
             override fun setConnectionMethod(method: ConnectionMethod) = vm.updateSettings { it.copy(connectionMethod = method) }
+            override fun fix(problem: LinkProblem) =
+                if (problem == LinkProblem.PERMISSIONS) requestPermissions() else vm.fix(problem)
             override fun navigate(route: Route) = navigate(route)
         }
     }
@@ -452,6 +456,19 @@ private fun failureCopy(link: LinkState): Pair<String, String> = when (link.prob
         stringResource(R.string.carlink_home_error_hotspot_off_body)
     LinkProblem.SAME_WIFI_DETAILS_MISSING -> stringResource(R.string.carlink_home_error_wifi_details_title) to
         stringResource(R.string.carlink_home_error_wifi_details_body)
+    LinkProblem.BLUETOOTH_OFF -> stringResource(R.string.carlink_home_error_bt_off_title) to stringResource(R.string.carlink_home_error_bt_off_body)
+    LinkProblem.PHONE_NOT_PAIRED -> stringResource(R.string.carlink_home_error_not_paired_title) to stringResource(R.string.carlink_home_error_not_paired_body)
+    LinkProblem.WIFI_OFF -> stringResource(R.string.carlink_home_error_wifi_off_title) to stringResource(R.string.carlink_home_error_wifi_off_body)
+    LinkProblem.LOCATION_OFF -> stringResource(R.string.carlink_home_error_location_off_title) to stringResource(R.string.carlink_home_error_location_off_body)
+    LinkProblem.PERMISSIONS -> stringResource(R.string.carlink_home_error_permissions_title) to stringResource(R.string.carlink_home_error_permissions_body)
+    LinkProblem.OVERLAY -> stringResource(R.string.carlink_home_error_overlay_title) to stringResource(R.string.carlink_home_error_overlay_body)
+    LinkProblem.VPN_CONSENT -> stringResource(R.string.carlink_home_error_vpn_title) to stringResource(R.string.carlink_home_error_vpn_body)
+    LinkProblem.PHONE_REFUSED_WIFI -> stringResource(R.string.carlink_home_error_refused_title) to stringResource(R.string.carlink_home_error_refused_body)
+    LinkProblem.PHONE_NEVER_REACHED_CAR -> stringResource(R.string.carlink_home_error_unreached_title) to stringResource(R.string.carlink_home_error_unreached_body)
+    LinkProblem.LINK_TOO_WEAK -> stringResource(R.string.carlink_home_error_weak_title) to stringResource(R.string.carlink_home_error_weak_body)
+    LinkProblem.PHONE_DID_NOT_ANSWER -> stringResource(R.string.carlink_home_error_no_answer_title) to stringResource(R.string.carlink_home_error_no_answer_body)
+    LinkProblem.BLUETOOTH -> stringResource(R.string.carlink_home_error_bluetooth_title) to stringResource(R.string.carlink_home_error_bluetooth_body)
+    LinkProblem.USB -> stringResource(R.string.carlink_home_error_usb_title) to stringResource(R.string.carlink_home_error_usb_body)
     LinkProblem.ENGINE, null -> stringResource(R.string.carlink_home_error_engine_title) to
         stringResource(R.string.carlink_home_error_engine_body, link.engine?.let { engineName(it) } ?: "")
 }
@@ -465,6 +482,18 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> IonButton(
             stringResource(R.string.carlink_home_open_settings), { actions.navigate(Route.SETTINGS) }, icon = R.drawable.carlink_ic_settings)
+        LinkProblem.BLUETOOTH_OFF, LinkProblem.WIFI_OFF -> IonButton(stringResource(R.string.carlink_home_fix_turn_on),
+            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_check)
+        LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT -> IonButton(stringResource(R.string.carlink_home_fix_allow),
+            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_check)
+        LinkProblem.LOCATION_OFF -> IonButton(stringResource(R.string.carlink_home_fix_open_settings),
+            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_settings)
+        LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::openBluetoothSettings,
+            icon = R.drawable.carlink_ic_bluetooth)
+        LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
+            IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_p2p)
+            GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry)
+        }
         else -> {
             IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
             GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) })

@@ -10,7 +10,7 @@ import android.os.Bundle
 import android.util.Log
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.connection.Connection
 
 /**
  * CarLink's only USB_DEVICE_ATTACHED handler (both engines' filters are removed from the merged
@@ -43,7 +43,7 @@ class UsbRouterActivity : Activity() {
         val name = runCatching { device.productName }.getOrNull()
         // The attach intent carries the UsbDevice: DiPlay reads it for a wired iPhone, and the
         // Android Auto engine switches that exact phone to accessory mode.
-        EngineCoordinator.get(this).onUsbPhone(kind, name, attachIntent = intent)
+        Connection.get(this).onUsbPhone(kind, name, intent)
     }
 
     companion object {

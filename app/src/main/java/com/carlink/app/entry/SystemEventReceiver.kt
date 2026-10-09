@@ -18,7 +18,7 @@ import androidx.core.content.ContextCompat
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.detect.KnownPhones
 import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.connection.Connection
 import com.carlink.app.settings.CarLinkPreferences
 
 /**
@@ -74,7 +74,7 @@ class SystemEventReceiver : BroadcastReceiver() {
         val address = device.address
         // The phone of a running session reconnects its Bluetooth profiles (wireless CarPlay
         // and Android Auto use Bluetooth themselves); bringing Home forward would cover the picture.
-        val running = EngineCoordinator.get(context).state.value
+        val running = Connection.get(context).state.value
         if (running.isActive) {
             Log.i(TAG, "Bluetooth $kind link during a ${running.engine} session; Home stays in the background")
             return

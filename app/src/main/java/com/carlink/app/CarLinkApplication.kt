@@ -8,8 +8,6 @@ import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.utils.Settings
 import com.carlink.app.engine.AndroidAutoProtocol
-import com.carlink.app.engine.AndroidAutoStateReporter
-import com.carlink.app.engine.AndroidAutoWifiFallback
 import com.carlink.app.ui.HomeActivity
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostIntegration
@@ -33,14 +31,14 @@ class CarLinkApplication : App() {
         super.onCreate()
         if (isAndroidAutoProcess) {
             nameCarForPhone()
-            AndroidAutoStateReporter.start(this)
-            HostIntegration.onPhoneWifiJoinFailed = { context -> AndroidAutoWifiFallback.onJoinFailed(context) }
-            // v2 (connection/aa): no sticky or self-restarting engine (DA§10.6.1), no BYD window
-            // claim off a BYD (DA§12 #8), engine events and states to the main process. v1 keeps
-            // working: it never listens for the v2 broadcasts.
+            // No sticky or self-restarting engine (DA§10.6.1), no BYD window claim off a BYD
+            // (DA§12 #8), engine events and states to the main process.
             com.carlink.app.connection.aa.AaEngineHooks.install(this)
         } else {
             nameCarForIphone()
+            // The car's name, the vehicle profile's BYD gate, CarLink's waiting view (DIPLAY.md §12, F2).
+            com.carlink.app.connection.CarPlayAdapter.install(this, com.carlink.app.connection.Connection.vehicleProfile(this))
+            com.carlink.app.ui.home.CarPlayWaitingContent.register()
             com.carlink.app.entry.UsbWatcher.get(this).start()
         }
     }

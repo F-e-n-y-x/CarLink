@@ -10,7 +10,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.detect.PhoneClassifier
-import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.connection.Connection
 
 /**
  * Finds phones on USB while CarLink is open, without relying on the system's attach dispatch.
@@ -33,7 +33,7 @@ class UsbWatcher private constructor(context: Context) {
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> route(device)
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                     handled -= device.deviceName
-                    EngineCoordinator.get(app).onUsbDetached()
+                    Connection.get(app).onUsbDetached()
                 }
             }
         }
@@ -77,7 +77,7 @@ class UsbWatcher private constructor(context: Context) {
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
         val attach = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
-        EngineCoordinator.get(app).onUsbPhone(kind, runCatching { device.productName }.getOrNull(), attach)
+        Connection.get(app).onUsbPhone(kind, runCatching { device.productName }.getOrNull(), attach)
     }
 
     companion object {

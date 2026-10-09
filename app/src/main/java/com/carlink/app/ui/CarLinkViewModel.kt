@@ -15,7 +15,12 @@ import com.carlink.app.core.Transport
 import com.carlink.app.detect.BluetoothAvailability
 import com.carlink.app.detect.PairedPhone
 import com.carlink.app.detect.PhonesRepository
-import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.connection.Connection
+import com.carlink.app.connection.DevicePreflight
+import com.carlink.app.connection.SessionState
+import com.carlink.app.connection.WirelessPolicy
+import com.carlink.app.connection.toLinkState
+import kotlinx.coroutines.flow.map
 import com.carlink.app.settings.CarLinkPreferences
 import com.carlink.app.settings.ConnectionMethod
 import com.carlink.app.settings.EngineSettingsApplier
@@ -78,11 +83,12 @@ data class HomeState(
  */
 class CarLinkViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application
-    private val coordinator = EngineCoordinator.get(app)
+    private val session = Connection.get(app)
     private val preferences = CarLinkPreferences(app)
     private val phonesRepository = PhonesRepository(app)
 
-    val link: StateFlow<LinkState> = coordinator.state
+    val link: StateFlow<LinkState> = session.state.map { it.toLinkState() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState())
 
     private val _connectedSince = MutableStateFlow<Long?>(null)
     /** When the current attempt started (for the Connecting timer), or null. */
@@ -90,7 +96,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val attemptStartedAt: StateFlow<Long?> = _attemptStartedAt.asStateFlow()
 
     val home: StateFlow<HomeState> = combine(
-        coordinator.state, phonesRepository.phones, phonesRepository.availability, _connectedSince,
+        link, phonesRepository.phones, phonesRepository.availability, _connectedSince,
     ) { link, phones, bluetooth, since ->
         HomeState(link, phones, bluetooth, defaultPhone(phones), since)
     }.stateIn(viewModelScope, SharingStarted.Eagerly,
@@ -117,7 +123,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     init {
         phonesRepository.start()
         viewModelScope.launch {
-            coordinator.state.collect { state ->
+            link.collect { state ->
                 when (state.stage) {
                     LinkStage.CONNECTED -> if (_connectedSince.value == null) _connectedSince.value = SystemClock.elapsedRealtime()
                     LinkStage.WAITING, LinkStage.CONNECTING ->
@@ -142,26 +148,28 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun connect(phone: PairedPhone) {
         _connection.value = _connection.value.copy(autoConnectPaused = false)
         _attemptStartedAt.value = SystemClock.elapsedRealtime()
-        coordinator.connectPhone(phone.address, phone.kind, phone.name, Transport.WIRELESS)
+        session.connect(phone.address, phone.kind, phone.name, Transport.WIRELESS)
     }
 
     /**
      * The driver chose another phone while one is projecting: end that session and start this
      * one. Unlike [disconnect], this does not pause automatic connection.
      */
-    fun switchTo(phone: PairedPhone) {
-        coordinator.stopAll()
-        connect(phone)
-    }
+    fun switchTo(phone: PairedPhone) = connect(phone)
 
     /** Wired start for a phone that is already plugged in but was not started automatically. */
     fun connectUsb(kind: PhoneKind) {
         _attemptStartedAt.value = SystemClock.elapsedRealtime()
-        coordinator.connectPhone(null, kind, null, Transport.USB)
+        session.connect(null, kind, null, Transport.USB)
     }
 
     /** Retry the last attempt with the same phone and transport. */
     fun retry() {
+        val current = session.state.value
+        if (current is SessionState.Blocked || current is SessionState.Failed) {
+            _attemptStartedAt.value = SystemClock.elapsedRealtime()
+            return session.retry()
+        }
         val state = link.value
         val phone = home.value.phones.firstOrNull { it.name == state.phoneName } ?: home.value.defaultPhone
         when {
@@ -173,7 +181,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     /** Cancel an attempt or end a session; pauses automatic starts (DESIGN_SPEC §6.2.1). */
     fun disconnect() {
-        coordinator.disconnect()
+        session.disconnect()
         _connection.value = readConnection()
     }
 
@@ -201,7 +209,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         val effective = if (!settings.carHotspot.isValid() && wifi.systemHotspot != null) {
             settings.copy(carHotspot = wifi.systemHotspot)
         } else settings
-        val path = WirelessPathSelector.select(engine, effective, wifi)
+        val path = WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, effective, wifi,
+            headUnit = com.carlink.app.ui.theme.UiProfileDetector.looksLikeCarDisplay(app))).first()
         val saved = settings.homeWifi
         _network.value = NetworkPreview(
             path = path,
@@ -225,23 +234,35 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         if (next == _unified.value) return
         _unified.value = next
         unifiedStore.save(next)
-        coordinator.applySettings()
+        // Engines read their settings at the start of each session (SessionManager writes them).
         refreshNetwork()
     }
 
     /** Runtime permissions CarLink asks for in one go (Bluetooth, Wi-Fi, location, microphone, notifications). */
-    fun missingPermissions(): List<String> = buildList {
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            add(android.Manifest.permission.BLUETOOTH_CONNECT)
-            add(android.Manifest.permission.BLUETOOTH_SCAN)
+    fun missingPermissions(): List<String> = DevicePreflight.requiredPermissions()
+        .filter { app.checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
+
+    /**
+     * The one-tap fix for a problem Home shows. Radios and system switches can only be offered by
+     * Android's own panels; the driver then taps Try again (or the session retries on its own).
+     */
+    fun fix(problem: com.carlink.app.core.LinkProblem) {
+        val intent = when (problem) {
+            com.carlink.app.core.LinkProblem.BLUETOOTH_OFF -> Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            com.carlink.app.core.LinkProblem.WIFI_OFF -> Intent(if (android.os.Build.VERSION.SDK_INT >= 29)
+                android.provider.Settings.Panel.ACTION_WIFI else android.provider.Settings.ACTION_WIFI_SETTINGS)
+            com.carlink.app.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            com.carlink.app.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:${app.packageName}"))
+            com.carlink.app.core.LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(app) ?: return retry()
+            com.carlink.app.core.LinkProblem.PHONE_REFUSED_WIFI, com.carlink.app.core.LinkProblem.PHONE_NEVER_REACHED_CAR -> {
+                updateSettings { it.copy(connectionMethod = com.carlink.app.settings.ConnectionMethod.WIFI_DIRECT) }
+                return retry()
+            }
+            else -> return
         }
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
-            add(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-        add(android.Manifest.permission.ACCESS_FINE_LOCATION)
-        add(android.Manifest.permission.RECORD_AUDIO)
-    }.filter { app.checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
+        runCatching { app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
 
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = phonesRepository.setKind(phone.address, kind)
 

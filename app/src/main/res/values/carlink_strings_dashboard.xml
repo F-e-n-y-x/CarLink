@@ -103,4 +103,35 @@
     <string name="carlink_home_connecting_android_wireless">Waiting for %1$s to start Android Auto. If nothing happens in a few seconds, turn the phone\u2019s Bluetooth off and on.</string>
     <string name="carlink_home_connecting_connect_bluetooth">Connect %1$s in Bluetooth. Android Auto starts by itself as soon as it\u2019s connected.</string>
     <string name="carlink_home_bluetooth_settings">Bluetooth settings</string>
+    <!-- Connection v2: pre-flight problems and precise failures. -->
+    <string name="carlink_home_error_bt_off_title">Bluetooth is off</string>
+    <string name="carlink_home_error_bt_off_body">Wireless connections start over Bluetooth. Turn it on, or plug your phone in with a cable.</string>
+    <string name="carlink_home_error_not_paired_title">This phone isn’t paired</string>
+    <string name="carlink_home_error_not_paired_body">On your phone, open Bluetooth and pair with this screen, then try again.</string>
+    <string name="carlink_home_error_wifi_off_title">Wi-Fi is off</string>
+    <string name="carlink_home_error_wifi_off_body">The picture travels over Wi-Fi. Turn Wi-Fi on here; it doesn’t need to be connected to a network.</string>
+    <string name="carlink_home_error_location_off_title">Location is off</string>
+    <string name="carlink_home_error_location_off_body">Android needs Location switched on to set up the wireless link.</string>
+    <string name="carlink_home_error_permissions_title">Permissions needed</string>
+    <string name="carlink_home_error_permissions_body">CarLink needs Nearby devices, Location and Microphone to connect your phone.</string>
+    <string name="carlink_home_error_overlay_title">Allow CarLink to open over other apps</string>
+    <string name="carlink_home_error_overlay_body">So CarPlay or Android Auto can appear as soon as your phone connects.</string>
+    <string name="carlink_home_error_vpn_title">Allow the CarPlay connection</string>
+    <string name="carlink_home_error_vpn_body">Wired CarPlay runs over a private link. Android asks once to allow it.</string>
+    <string name="carlink_home_error_refused_title">Your phone couldn’t join the Wi-Fi</string>
+    <string name="carlink_home_error_refused_body">Check the Wi-Fi password in Settings, or switch the connection type to Wi-Fi Direct.</string>
+    <string name="carlink_home_error_unreached_title">Your iPhone couldn’t reach this screen</string>
+    <string name="carlink_home_error_unreached_body">Your network blocks the link CarPlay needs. Choose Wi-Fi Direct, or plug in with a cable.</string>
+    <string name="carlink_home_error_weak_title">The wireless link was too weak</string>
+    <string name="carlink_home_error_weak_body">Keep your phone close to the screen and try again, or plug in with a cable.</string>
+    <string name="carlink_home_error_no_answer_title">Your phone didn’t answer</string>
+    <string name="carlink_home_error_no_answer_body">Unlock your phone, make sure its Bluetooth is on and connected to this screen, then try again.</string>
+    <string name="carlink_home_error_bluetooth_title">Bluetooth connection failed</string>
+    <string name="carlink_home_error_bluetooth_body">On your phone, turn Bluetooth off and on, then try again. If it keeps failing, forget this screen and pair again.</string>
+    <string name="carlink_home_error_usb_title">USB connection failed</string>
+    <string name="carlink_home_error_usb_body">Unlock your phone and accept its prompt. Try another cable if it keeps failing.</string>
+    <string name="carlink_home_fix_turn_on">Turn on</string>
+    <string name="carlink_home_fix_allow">Allow</string>
+    <string name="carlink_home_fix_open_settings">Open settings</string>
+    <string name="carlink_home_fix_use_direct">Use Wi-Fi Direct</string>
 </resources>

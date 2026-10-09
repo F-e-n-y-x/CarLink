@@ -11,7 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.core.PhoneKind
-import com.carlink.app.engine.EngineCoordinator
+import com.carlink.app.connection.Connection
 import com.carlink.app.entry.UsbWatcher
 import com.carlink.app.ui.theme.CarLinkTheme
 import com.carlink.app.ui.theme.UiProfileDetector
@@ -60,7 +60,7 @@ class HomeActivity : ComponentActivity() {
     private fun consumeRecovery(intent: Intent) {
         if (intent.getStringExtra("page") != "wireless-recovery") return
         intent.removeExtra("page")
-        EngineCoordinator.get(this).stopAll()
+        Connection.get(this).stop()
         val app = applicationContext
         Thread({ com.carlink.app.engine.WifiDirectReset.removeGroup(app) }, "carlink-wifi-recovery").start()
     }
@@ -71,7 +71,7 @@ class HomeActivity : ComponentActivity() {
         val address = intent.getStringExtra(EXTRA_AUTO_PHONE_ADDRESS) ?: return
         val name = intent.getStringExtra(EXTRA_AUTO_PHONE_NAME)
         intent.removeExtra(EXTRA_AUTO_PHONE_KIND)
-        EngineCoordinator.get(this).onBluetoothPhone(address, kind, name)
+        Connection.get(this).onBluetoothPhone(address, kind, name)
     }
 
     companion object {
