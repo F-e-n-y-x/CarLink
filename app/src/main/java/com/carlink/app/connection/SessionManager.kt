@@ -114,6 +114,8 @@ class SessionManager(
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
         fun rememberPhone(phoneAddress: String, kind: PhoneKind)
         fun usbPhonePresent(engine: Engine): Boolean
+        /** The phone of a USB session was unplugged: bring CarLink's Home back in front. */
+        fun returnHome()
         /** Called when an engine becomes engaged or none is (DiAuto's key receivers follow this). */
         fun onEngaged(engine: Engine?)
         fun log(message: String)
@@ -153,6 +155,7 @@ class SessionManager(
         if (environment.usbPhonePresent(current.request.engine)) return@Runnable
         note("USB phone for ${current.request.engine} unplugged; ending the session")
         stop()
+        environment.returnHome()
     }
 
     init {
@@ -216,7 +219,10 @@ class SessionManager(
         val current = _state.value as? SessionState.Active ?: return
         if (current.request.transport != Transport.USB) return
         main.removeCallbacks(usbGoneCheck)
-        main.postDelayed(usbGoneCheck, USB_GONE_GRACE_MILLIS)
+        // While connecting, the engines re-enumerate the phone on purpose; once projecting they do
+        // not, so an unplug then returns to Home almost at once (user request, 2026-10-09).
+        val grace = if (current.phase == SessionState.Phase.Connected) USB_GONE_CONNECTED_GRACE_MILLIS else USB_GONE_GRACE_MILLIS
+        main.postDelayed(usbGoneCheck, grace)
     }
 
     /** A paired phone's Bluetooth link came up. Never interrupts a running session. */
@@ -327,6 +333,9 @@ class SessionManager(
             }
             is AdapterEvent.Ended -> {
                 note("${plan.engine} session ended${if (event.byUser) " by the driver" else ""}")
+                if (!event.byUser && request.transport == Transport.USB && !environment.usbPhonePresent(plan.engine)) {
+                    environment.returnHome()
+                }
                 if (event.byUser) {
                     environment.autoConnectPaused = true
                     markDriverStop(current)
@@ -384,6 +393,9 @@ class SessionManager(
 
         /** Longer than CarPlay's configuration switch and Android Auto's accessory switch. */
         const val USB_GONE_GRACE_MILLIS = 6_000L
+
+        /** After the picture is up: long enough for a cable wiggle, short enough to feel instant. */
+        const val USB_GONE_CONNECTED_GRACE_MILLIS = 1_200L
 
         /** How long USB attaches after the driver's Disconnect count as re-enumeration. */
         const val REENUMERATION_WINDOW_MILLIS = 10_000L

@@ -85,6 +85,8 @@ class DeviceEnvironment(
         }
     }
 
+    override fun returnHome() = com.carlink.app.entry.HomeLauncher.open(app, com.carlink.app.entry.HomeLauncher.Reason.UNPLUGGED)
+
     override fun log(message: String) = EventLog.add("CarLink", message)
 
     companion object {

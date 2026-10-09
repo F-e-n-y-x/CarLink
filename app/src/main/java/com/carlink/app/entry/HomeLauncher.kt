@@ -19,7 +19,12 @@ import com.carlink.app.ui.HomeActivity
  * it, a full-screen notification opens Home instead, as DiAuto's auto-start receivers do.
  */
 object HomeLauncher {
-    enum class Reason { BOOT, PHONE }
+    enum class Reason {
+        BOOT,
+        PHONE,
+        /** A USB session's phone was unplugged: Home replaces the dead projection; no notification. */
+        UNPLUGGED,
+    }
 
     fun open(context: Context, reason: Reason, address: String? = null, kind: PhoneKind? = null, name: String? = null) {
         val intent = HomeActivity.intent(context).apply {
@@ -36,6 +41,7 @@ object HomeLauncher {
                 .onSuccess { return }
                 .onFailure { Log.w(TAG, "Direct launch failed: ${it.javaClass.simpleName}") }
         }
+        if (reason == Reason.UNPLUGGED) return
         notify(context, intent, name)
     }
 

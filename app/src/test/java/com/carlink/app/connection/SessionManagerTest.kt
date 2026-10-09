@@ -74,6 +74,7 @@ class SessionManagerTest {
         override fun rememberPhone(phoneAddress: String, kind: PhoneKind) {}
         override fun usbPhonePresent(engine: Engine) = usbPresent
         override fun onEngaged(engine: Engine?) { engaged += engine }
+        override fun returnHome() { log += "home" }
         override fun log(message: String) {}
     }
 
@@ -200,7 +201,7 @@ class SessionManagerTest {
         m.onUsbDetached()
         advance(SessionManager.USB_GONE_GRACE_MILLIS + 1)
         assertEquals(SessionState.Idle, m.state.value)
-        assertTrue(log.last() == "ANDROID_AUTO stop")
+        assertEquals(listOf("ANDROID_AUTO stop", "home"), log.takeLast(2))
     }
 
     @Test fun usbSessionSurvivesAReenumerationDetach() {
@@ -247,5 +248,15 @@ class SessionManagerTest {
         m.disconnect(); idle()
         m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
         assertEquals(listOf("ANDROID_AUTO start WIRELESS WIFI_DIRECT", "CARPLAY start USB null"), starts)
+    }
+
+    @Test fun unpluggingAConnectedUsbPhoneReturnsHomeQuickly() {
+        val m = manager()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        carPlay.emit(AdapterEvent.Connected); idle()
+        m.onUsbDetached()
+        advance(SessionManager.USB_GONE_CONNECTED_GRACE_MILLIS + 1)
+        assertEquals(SessionState.Idle, m.state.value)
+        assertEquals("home", log.last())
     }
 }
