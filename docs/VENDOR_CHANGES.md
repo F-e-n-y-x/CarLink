@@ -4,7 +4,7 @@ CarLink imports both engines with `git subtree`, keeping their history:
 
 | Path | Upstream | Engine |
 |---|---|---|
-| `vendor/diplay` | https://github.com/shihabal3amri/DiPlay (fork: F-e-n-y-x/DiPlay) | CarPlay, main process |
+| `vendor/diplay` | https://github.com/shihabal3amri/DiPlay (fork: F-e-n-y-x/DiPlay); upstream main 292b2dd (2026-10-09) | CarPlay, main process |
 | `vendor/diauto` | https://github.com/shihabal3amri/DiAuto (fork: F-e-n-y-x/DiAuto) | Android Auto, `:aa` process |
 
 Update an engine with:
