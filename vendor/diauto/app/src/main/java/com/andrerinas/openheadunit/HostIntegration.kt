@@ -57,15 +57,6 @@ object HostIntegration {
     @JvmStatic
     var exitMenuHomeLabel: String? = null
 
-    /**
-     * Called (on an engine thread) each time a phone reports it could not join the access point it
-     * was handed (Native AA over a hotspot). Lets a host switch to another wireless path instead of
-     * re-offering the same network. Null keeps the engine's own retry.
-     */
-    @Volatile
-    @JvmStatic
-    var onPhoneWifiJoinFailed: ((context: Context) -> Unit)? = null
-
     // CarLink: process lifecycle. Standalone DiAuto keeps both true: it owns the device and wants
     // its engine back after a low-memory kill or a task swipe. A host that drives the engine itself
     // sets both false, so no engine runs that the host did not start and cannot see.

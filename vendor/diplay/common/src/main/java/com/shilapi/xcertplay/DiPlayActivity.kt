@@ -351,7 +351,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
             handler.post { connect(true) }
         }
-        consumeCarLinkConnectIntent(intent)?.let { wireless -> handler.post { connect(wireless) } }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (page != "home") navigateBack()
@@ -379,17 +378,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             }
             handler.post { connect(true) }
         }
-        consumeCarLinkConnectIntent(intent)?.let { wireless -> handler.post { connect(wireless) } }
-    }
-    /**
-     * CarLink: its dispatcher detected an iPhone and asks for CarPlay over [EXTRA_CARLINK_CONNECT]
-     * ("wired" or "wireless"). Runs the same checks as the Connect buttons; null when not asked.
-     */
-    private fun consumeCarLinkConnectIntent(intent: Intent): Boolean? {
-        val transport = intent.getStringExtra(EXTRA_CARLINK_CONNECT) ?: return null
-        intent.removeExtra(EXTRA_CARLINK_CONNECT)
-        if (CarPlayBackgroundSession.hasSession()) { openProjection(); return null }
-        return transport == "wireless"
     }
     private fun consumeBluetoothAutoConnectIntent(intent: Intent): Boolean {
         val requested = intent.getBooleanExtra(PhoneBluetoothReceiver.EXTRA_AUTO_CONNECT, false)
@@ -5243,9 +5231,6 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val FOCUS_RING get() = palette.focusRing
 
     companion object {
-        /** CarLink: "wired" or "wireless"; see [consumeCarLinkConnectIntent]. */
-        const val EXTRA_CARLINK_CONNECT = "com.carlink.app.extra.CARPLAY_CONNECT"
-
         internal fun isLauncherIntent(intent: Intent): Boolean =
             intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER) &&
                 !intent.hasExtra("page")
