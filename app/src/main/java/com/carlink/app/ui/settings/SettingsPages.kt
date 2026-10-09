@@ -191,6 +191,12 @@ private fun CarEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
             stringResource(if (right) R.string.carlink_settings_drive_right else R.string.carlink_settings_drive_left),
             { openSheet(SheetKey.of(EssentialSheet.DRIVING_SIDE)) },
             description = stringResource(R.string.carlink_settings_driving_side_detail), icon = R.drawable.carlink_ic_directions_car)
+        GroupDivider()
+        ChoiceRow(stringResource(R.string.carlink_settings_car_brand), vehicleLabel(ui.vehicle),
+            { openSheet(SheetKey.of(EssentialSheet.CAR_BRAND)) },
+            description = stringResource(R.string.carlink_settings_car_brand_detail) + "\n" +
+                stringResource(R.string.carlink_settings_car_detected, vehicleLabel(ui.detectedVehicle)),
+            icon = R.drawable.carlink_ic_directions_car_filled, tags = { NextConnectionTag() })
     }
 }
 
@@ -229,6 +235,7 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_help)) }) {
         LinkRow(stringResource(R.string.carlink_settings_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
             stringResource(R.string.carlink_settings_diagnostics_detail), R.drawable.carlink_ic_monitor_heart)
+
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_about)) }) {
         val remaining = LAB_TAPS - versionTaps

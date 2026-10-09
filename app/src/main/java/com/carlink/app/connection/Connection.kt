@@ -67,8 +67,18 @@ object Connection {
         return stored?.let { runCatching { VehicleProfile.valueOf(it) }.getOrNull() } ?: VehicleProfile.detect(context)
     }
 
+    /**
+     * Stores the driver's car brand. Android Auto reads it at each session start; CarPlay's hooks
+     * read it at app start, so they are installed again here ([CarPlayAdapter.install] only sets
+     * DiPlay's host fields, so a second call is safe). The driver is told it applies from the next
+     * connection: Android Auto's session keeps its profile, and DiPlay reads the BYD switch each
+     * time it uses a BYD feature, so a running CarPlay session is consistent only after a reconnect.
+     */
     fun setVehicleProfile(context: Context, profile: VehicleProfile) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_PROFILE, profile.name).apply()
+        val app = context.applicationContext
+        val previous = vehicleProfile(app)
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_PROFILE, profile.name).apply()
+        if (profile != previous) CarPlayAdapter.install(app, profile)
     }
 
     private fun create(app: Context): SessionManager {

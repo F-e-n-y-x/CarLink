@@ -17,6 +17,7 @@ import com.carlink.app.settings.Picture
 import com.carlink.app.settings.SettingsCategory
 import com.carlink.app.settings.Tier
 import com.carlink.app.settings.UnifiedSettings
+import com.carlink.app.settings.VehicleProfile
 import com.carlink.app.ui.ConnectionPrefs
 import com.carlink.app.ui.DisplayPrefs
 import com.carlink.app.ui.Route
@@ -46,6 +47,9 @@ data class SettingsUi(
     val advancedValues: Map<String, String>?,
     /** Android lets CarLink draw over other apps (the floating switcher needs it). */
     val overlayAllowed: Boolean = true,
+    /** Settings › Car › Car brand: the driver's choice, and what this screen looks like. */
+    val vehicle: VehicleProfile = VehicleProfile.GENERIC,
+    val detectedVehicle: VehicleProfile = VehicleProfile.GENERIC,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -67,6 +71,8 @@ interface SettingsActions {
     fun setAdvanced(setting: AdvancedSetting, value: String) {}
     fun openBluetoothSettings() {}
     fun openAppSettings() {}
+    /** Stores the car brand (applies from the next connection). */
+    fun setVehicleProfile(profile: VehicleProfile) {}
     fun navigate(route: Route) {}
 }
 
@@ -123,7 +129,7 @@ internal val SettingsCategory.selectedIcon: Int
 /** The bottom sheets Settings opens; saved by [key] so a rotation keeps the sheet open. */
 internal enum class EssentialSheet {
     CONNECTION_METHOD, CAR_HOTSPOT, SAME_WIFI, PICTURE, INTERFACE_SIZE, DAY_NIGHT, NIGHT_START, NIGHT_END,
-    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING,
+    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING, CAR_BRAND,
 }
 
 internal object SheetKey {
@@ -157,6 +163,14 @@ internal fun connectionMethodLabel(method: ConnectionMethod): String = stringRes
         ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi
         ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot
         ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct
+    },
+)
+
+@Composable
+internal fun vehicleLabel(profile: VehicleProfile): String = stringResource(
+    when (profile) {
+        VehicleProfile.GENERIC -> R.string.carlink_settings_car_generic
+        VehicleProfile.BYD_DILINK -> R.string.carlink_settings_car_byd
     },
 )
 

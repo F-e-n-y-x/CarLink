@@ -226,7 +226,33 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
             },
             ui.display.renderingMode, onSelect = { actions.setRenderingMode(it); onDismiss() }, onDismiss = onDismiss,
         )
+        EssentialSheet.CAR_BRAND -> SettingsSheet(onDismiss) {
+            SheetTitle(stringResource(R.string.carlink_settings_car_brand), stringResource(R.string.carlink_settings_car_brand_sheet_body),
+                nextConnection = true)
+            CarBrandChoice(ui.vehicle, ui.detectedVehicle, onSelect = { actions.setVehicleProfile(it); onDismiss() })
+        }
     }
+}
+
+/**
+ * Generic or BYD (DiLink) as two large tiles that say what each turns on, and what this screen
+ * was detected as. Settings › Car › Car brand and the setup's car step.
+ */
+@Composable
+internal fun CarBrandChoice(selected: com.carlink.app.settings.VehicleProfile, detected: com.carlink.app.settings.VehicleProfile,
+                            onSelect: (com.carlink.app.settings.VehicleProfile) -> Unit) {
+    PresetGrid(
+        listOf(
+            Preset(com.carlink.app.settings.VehicleProfile.GENERIC, vehicleLabel(com.carlink.app.settings.VehicleProfile.GENERIC),
+                stringResource(R.string.carlink_settings_car_generic_detail), R.drawable.carlink_ic_devices),
+            Preset(com.carlink.app.settings.VehicleProfile.BYD_DILINK, vehicleLabel(com.carlink.app.settings.VehicleProfile.BYD_DILINK),
+                stringResource(R.string.carlink_settings_car_byd_detail), R.drawable.carlink_ic_directions_car),
+        ),
+        selected, onSelect,
+    )
+    Spacer(Modifier.height(CarLinkTokens.dimens.gutter))
+    Tag(stringResource(R.string.carlink_settings_car_detected, vehicleLabel(detected)), MaterialTheme.colorScheme.onSurfaceVariant,
+        R.drawable.carlink_ic_search)
 }
 
 @Composable

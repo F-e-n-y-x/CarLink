@@ -48,6 +48,8 @@ fun settingsPreviewUi(
     display = DisplayPrefs(ThemeMode.FOLLOW_SYSTEM, UiProfileMode.AUTO, 1f),
     joinedWifi = "Garage Wi-Fi",
     isByd = byd,
+    vehicle = if (byd) com.carlink.app.settings.VehicleProfile.BYD_DILINK else com.carlink.app.settings.VehicleProfile.GENERIC,
+    detectedVehicle = com.carlink.app.settings.VehicleProfile.GENERIC,
     versionName = "1.0.0",
     advancedValues = if (loading) null else previewEngineValues,
 )

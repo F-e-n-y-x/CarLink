@@ -78,6 +78,12 @@ data class NetworkPreview(
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
 )
 
+/** The car-brand setting: the driver's choice (or the detected one until they choose) and what was detected. */
+data class VehicleChoice(
+    val profile: com.carlink.app.settings.VehicleProfile,
+    val detected: com.carlink.app.settings.VehicleProfile,
+)
+
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
 data class HomeState(
     val link: LinkState,
@@ -136,6 +142,19 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val usual: StateFlow<com.carlink.app.ui.home.PhoneUsual?> = combine(session.health, home) { health, home ->
         com.carlink.app.ui.home.usualFor(home.defaultPhone, health)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val _vehicle = MutableStateFlow(readVehicle())
+    /** Settings › Car › Car brand, and the setup's car step. */
+    val vehicle: StateFlow<VehicleChoice> = _vehicle.asStateFlow()
+
+    /** Stores the car brand; it applies from the next connection (the CarPlay hooks are re-installed at once). */
+    fun setVehicleProfile(profile: com.carlink.app.settings.VehicleProfile) {
+        Connection.setVehicleProfile(app, profile)
+        _vehicle.value = readVehicle()
+    }
+
+    private fun readVehicle() = VehicleChoice(Connection.vehicleProfile(app),
+        com.carlink.app.settings.VehicleProfile.detect(app))
 
     private val _display = MutableStateFlow(readDisplay())
     val display: StateFlow<DisplayPrefs> = _display.asStateFlow()

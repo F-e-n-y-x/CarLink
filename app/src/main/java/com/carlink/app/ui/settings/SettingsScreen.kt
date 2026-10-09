@@ -86,6 +86,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val connection by vm.connection.collectAsStateWithLifecycle()
     val display by vm.display.collectAsStateWithLifecycle()
     val network by vm.network.collectAsStateWithLifecycle()
+    val vehicle by vm.vehicle.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val access = remember { EngineAccess(context.applicationContext) }
     val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
@@ -123,6 +124,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setRenderingMode(mode: com.carlink.app.ui.theme.RenderingMode) = vm.setRenderingMode(mode)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun openAppSettings() = vm.openAppSettings()
+            override fun setVehicleProfile(profile: com.carlink.app.settings.VehicleProfile) = vm.setVehicleProfile(profile)
             override fun navigate(route: Route) = goTo(route)
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
@@ -143,10 +145,13 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val ui = SettingsUi(
         unified = unified, connection = connection, display = display,
         joinedWifi = network?.joinedSsid,
-        isByd = remember { isBydHeadUnit() },
+        // The BYD-only rows follow the car brand the driver chose (or the detected one).
+        isByd = vehicle.profile == com.carlink.app.settings.VehicleProfile.BYD_DILINK,
         versionName = AppInfo.versionName,
         advancedValues = engineValues.value,
         overlayAllowed = overlayAllowed,
+        vehicle = vehicle.profile,
+        detectedVehicle = vehicle.detected,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }
@@ -174,8 +179,6 @@ internal fun writeEngineValue(access: EngineAccess, setting: AdvancedSetting, va
     }
 }
 
-/** BYD head units get the HUD and instrument-cluster directions switch. */
-internal fun isBydHeadUnit(): Boolean = "byd" in "${Build.MANUFACTURER} ${Build.BRAND}".lowercase(Locale.ROOT)
 
 /**
  * Stateless Settings, used by the screen, previews and the screenshot gallery.

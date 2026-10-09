@@ -234,6 +234,14 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(lab = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.GENERAL)
     },
+    // Settings › Car with the car brand row (Generic chosen, Generic detected).
+    GalleryEntry("settings", "car-brand") {
+        SettingsContent(settingsPreviewUi(byd = false), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR)
+    },
+    GalleryEntry("settings", "sheet-car-brand", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(byd = false), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR,
+            initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
+    },
     GalleryEntry("settings", "navigation") {
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.NAVIGATION)
     },
