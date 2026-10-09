@@ -54,9 +54,13 @@ object CarPlayEventMapping {
         // Wireless: binding the AirPlay listener before the phone is called. Wired: the NCM link.
         CarPlayStatus.AttachingNetwork ->
             if (transport == Transport.WIRELESS) ProgressStage.WAITING_FOR_PHONE else ProgressStage.STARTING_PROJECTION
-        CarPlayStatus.ConnectingBluetooth, CarPlayStatus.SelectingConfiguration, CarPlayStatus.WaitingForReenumeration,
+        // Only the phone's own answer moves the bar (user, 2026-10-09: "is the progress fake?"):
+        // dialling the iPhone over Bluetooth is still waiting for it; RunningWireless means its
+        // iAP2 channel answered. Wired: the iPhone is on the cable and switching configuration.
+        CarPlayStatus.ConnectingBluetooth -> ProgressStage.WAITING_FOR_PHONE
+        CarPlayStatus.SelectingConfiguration, CarPlayStatus.WaitingForReenumeration,
         CarPlayStatus.OpeningDataPaths, CarPlayStatus.Pairing, CarPlayStatus.ConnectingControl -> ProgressStage.HANDSHAKE
-        CarPlayStatus.RunningWireless -> ProgressStage.JOINING_WIFI
+        CarPlayStatus.RunningWireless -> ProgressStage.HANDSHAKE
         // Not Connected yet: DiPlay notes "session establishment alone also occurs on black-screen
         // failures; only a rendered frame proves projection is usable" (CarPlayController.kt
         // ~1655), and RunningControl starts the wired control loop before AirPlay (~2024).

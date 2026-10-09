@@ -14,19 +14,24 @@ fun SessionState.toLinkState(): LinkState = when (this) {
     is SessionState.Active -> when (val p = phase) {
         SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS)
         is SessionState.Phase.Progress -> LinkState(
-            if (p.stage == ProgressStage.WAITING_FOR_PHONE) LinkStage.WAITING else LinkStage.CONNECTING,
-            request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS)
+            if (p.stage == ProgressStage.WAITING_FOR_PHONE || p.stage == ProgressStage.PHONE_NOT_ANSWERING) LinkStage.WAITING
+            else LinkStage.CONNECTING,
+            request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
+            detail = if (p.stage == ProgressStage.PHONE_NOT_ANSWERING) DETAIL_PHONE_NOT_ANSWERING else null)
         is SessionState.Phase.Retrying -> LinkState(LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
             2, STEPS, detail = "retrying")
         SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.transport, request.phoneName, STEPS, STEPS)
     }
 }
 
+/** [LinkState.detail] while a wireless phone has not answered for a while; Home explains what to check. */
+const val DETAIL_PHONE_NOT_ANSWERING = "phone_not_answering"
+
 /** Home's timeline: waiting, handshake, joining Wi-Fi, starting the picture. */
 private const val STEPS = 4
 
 private fun stepOf(stage: ProgressStage) = when (stage) {
-    ProgressStage.WAITING_FOR_PHONE -> 1
+    ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> 1
     ProgressStage.HANDSHAKE -> 2
     ProgressStage.JOINING_WIFI -> 3
     ProgressStage.STARTING_PROJECTION -> 4

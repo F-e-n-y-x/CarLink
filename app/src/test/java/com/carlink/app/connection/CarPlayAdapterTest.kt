@@ -88,7 +88,7 @@ class CarPlayAdapterTest {
 
     @Test fun nullStatusKeepsTheSession() {
         adapter.start(wirelessPlan) { events += it }
-        hooks.status(CarPlayStatus.ConnectingBluetooth)
+        hooks.status(CarPlayStatus.RunningWireless)
         hooks.status(null) // DiPlay's internal restart (F13)
         idle()
         assertEquals(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE), events.last())

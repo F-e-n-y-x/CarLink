@@ -52,7 +52,7 @@ object CarPlayWaitingView {
                 val transport = if (AirPlayPersistence.loadWirelessEnabled(context)) Transport.WIRELESS else Transport.USB
                 val stage = status?.let { CarPlayEventMapping.stageOf(it, transport) } ?: return
                 text.setText(when (stage) {
-                    ProgressStage.WAITING_FOR_PHONE -> R.string.carlink_carplay_waiting_phone
+                    ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> R.string.carlink_carplay_waiting_phone
                     ProgressStage.HANDSHAKE -> R.string.carlink_carplay_waiting_handshake
                     ProgressStage.JOINING_WIFI -> R.string.carlink_carplay_waiting_wifi
                     ProgressStage.STARTING_PROJECTION -> R.string.carlink_carplay_waiting_starting

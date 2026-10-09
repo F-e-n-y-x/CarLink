@@ -4608,6 +4608,12 @@ class CarPlayHostActivity : ComponentActivity() {
         startCarPlay(size)
     }
 
+    /** CarLink: an RFCOMM dial to the iPhone that got no answer (see [reconnectAfterLoss]). */
+    private fun isBluetoothDialFailure(reason: String): Boolean =
+        reason.contains("socket might closed", ignoreCase = true) ||
+            reason.contains("RFCOMM", ignoreCase = true) ||
+            reason.contains("Bluetooth connect", ignoreCase = true)
+
     private fun reconnectAfterLoss(
         reason: String,
         startupFailure: WirelessStartupFailure? = null,
@@ -4636,6 +4642,11 @@ class CarPlayHostActivity : ComponentActivity() {
             startupDelay
         } else if (reason.contains("AirPlay iAP tunnel", ignoreCase = true)) {
             IAP_TUNNEL_RECONNECT_DELAY_MILLIS
+        } else if (isBluetoothDialFailure(reason) && reconnectAttempts < BLUETOOTH_QUICK_RETRIES) {
+            // CarLink: the iPhone not answering the RFCOMM dial ("read failed, socket might
+            // closed or timeout") costs ~5 s per try and often succeeds on the next one; the
+            // doubling backoff turned four misses into ~55 s on the user's tablet (2026-10-09).
+            BLUETOOTH_RETRY_DELAY_MILLIS
         } else {
             (RECONNECT_DELAY_MILLIS * (1L shl reconnectAttempts.coerceAtMost(4))).coerceAtMost(30_000L)
         }
@@ -5222,6 +5233,9 @@ class CarPlayHostActivity : ComponentActivity() {
         const val DISPLAY_CHANGE_DEBOUNCE_MILLIS = 500L
         const val CONFIGURATION_POLL_INTERVAL_MILLIS = 2_000L
         const val RECONNECT_DELAY_MILLIS = 2_000L
+        // CarLink: quick retries for an unanswered Bluetooth dial (isBluetoothDialFailure).
+        const val BLUETOOTH_RETRY_DELAY_MILLIS = 1_500L
+        const val BLUETOOTH_QUICK_RETRIES = 8
         const val IAP_TUNNEL_RECONNECT_DELAY_MILLIS = 15_000L
         const val CONTROLLER_CLOSE_TIMEOUT_MILLIS = 4_000L
         const val AUDIO_CAPTURE_MARKER = "audio-capture.enabled"

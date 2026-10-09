@@ -149,6 +149,14 @@ class SessionManager(
         driverStoppedAt = SystemClock.uptimeMillis()
     }
 
+    private val notAnswering = Runnable {
+        val current = _state.value as? SessionState.Active ?: return@Runnable
+        val phase = current.phase as? SessionState.Phase.Progress ?: return@Runnable
+        if (phase.stage != ProgressStage.WAITING_FOR_PHONE) return@Runnable
+        note("${current.request.engine}: the phone has not answered for ${NOT_ANSWERING_MILLIS / 1000} s")
+        _state.value = current.copy(phase = phase.copy(stage = ProgressStage.PHONE_NOT_ANSWERING))
+    }
+
     private val usbGoneCheck = Runnable {
         val current = _state.value as? SessionState.Active ?: return@Runnable
         if (current.request.transport != Transport.USB) return@Runnable
@@ -266,6 +274,7 @@ class SessionManager(
     /** Stops whatever runs and goes idle. */
     fun stop() {
         token++
+        main.removeCallbacks(notAnswering)
         main.removeCallbacks(usbGoneCheck)
         val engine = running
         _state.value = SessionState.Idle
@@ -317,8 +326,14 @@ class SessionManager(
         val current = _state.value as? SessionState.Active ?: return
         val request = current.request
         when (event) {
-            is AdapterEvent.Progress ->
+            is AdapterEvent.Progress -> {
                 _state.value = current.copy(phase = SessionState.Phase.Progress(event.step, event.stepCount, event.stage))
+                // A wireless phone that never answers: say so instead of a bar that looks busy.
+                main.removeCallbacks(notAnswering)
+                if (event.stage == ProgressStage.WAITING_FOR_PHONE && request.transport == Transport.WIRELESS) {
+                    main.postDelayed(notAnswering, NOT_ANSWERING_MILLIS)
+                }
+            }
             is AdapterEvent.Retrying ->
                 _state.value = current.copy(phase = SessionState.Phase.Retrying(event.attempt, event.reason))
             AdapterEvent.Connected -> {
@@ -392,7 +407,10 @@ class SessionManager(
         private const val TAG = "CarLink-Session"
 
         /** Longer than CarPlay's configuration switch and Android Auto's accessory switch. */
-        const val USB_GONE_GRACE_MILLIS = 6_000L
+        const val USB_GONE_GRACE_MILLIS = 3_500L
+
+        /** How long a wireless phone may stay silent before Home says it is not answering. */
+        const val NOT_ANSWERING_MILLIS = 10_000L
 
         /** After the picture is up: long enough for a cable wiggle, short enough to feel instant. */
         const val USB_GONE_CONNECTED_GRACE_MILLIS = 1_200L

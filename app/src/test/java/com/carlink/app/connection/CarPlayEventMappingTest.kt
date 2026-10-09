@@ -23,8 +23,8 @@ class CarPlayEventMappingTest {
         hotspot to ProgressStage.WAITING_FOR_PHONE,
         CarPlayStatus.WaitingForPairedIphone to ProgressStage.WAITING_FOR_PHONE,
         CarPlayStatus.AttachingNetwork to ProgressStage.WAITING_FOR_PHONE,
-        CarPlayStatus.ConnectingBluetooth to ProgressStage.HANDSHAKE,
-        CarPlayStatus.RunningWireless to ProgressStage.JOINING_WIFI,
+        CarPlayStatus.ConnectingBluetooth to ProgressStage.WAITING_FOR_PHONE, // dialling is not an answer
+        CarPlayStatus.RunningWireless to ProgressStage.HANDSHAKE, // the iPhone answered over Bluetooth
         CarPlayStatus.WirelessActive to ProgressStage.STARTING_PROJECTION,
         CarPlayStatus.WirelessActiveFallback to ProgressStage.STARTING_PROJECTION,
         CarPlayStatus.ControlEnded to null,
@@ -59,8 +59,9 @@ class CarPlayEventMappingTest {
         val wireless = CarPlaySessionTracker(Transport.WIRELESS)
         assertEquals(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE), wireless.started())
         assertEquals(emptyList<AdapterEvent>(), wireless.onStatus(CarPlayStatus.StartingHotspot)) // same stage
-        assertEquals(listOf(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)), wireless.onStatus(CarPlayStatus.ConnectingBluetooth))
-        assertEquals(listOf(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI)), wireless.onStatus(CarPlayStatus.RunningWireless))
+        // Dialling the iPhone over Bluetooth is still waiting: only its answer moves the bar.
+        assertEquals(emptyList<AdapterEvent>(), wireless.onStatus(CarPlayStatus.ConnectingBluetooth))
+        assertEquals(listOf(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)), wireless.onStatus(CarPlayStatus.RunningWireless))
         assertEquals(listOf(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)), wireless.onStatus(CarPlayStatus.WirelessActive))
 
         val usb = CarPlaySessionTracker(Transport.USB)

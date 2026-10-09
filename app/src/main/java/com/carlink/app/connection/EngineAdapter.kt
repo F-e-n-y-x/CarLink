@@ -78,6 +78,8 @@ enum class ProgressStage {
     JOINING_WIFI,
     /** Network link up; projection protocol and video starting. */
     STARTING_PROJECTION,
+    /** Still [WAITING_FOR_PHONE] after [SessionManager.NOT_ANSWERING_MILLIS]: tell the driver what to check. */
+    PHONE_NOT_ANSWERING,
 }
 
 /**
