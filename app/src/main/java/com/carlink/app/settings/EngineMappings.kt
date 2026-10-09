@@ -24,6 +24,11 @@ data class WifiEnvironment(
     val androidAutoRefusedJoined: Boolean = false,
     /** The car's own hotspot name and password, read from the system where the firmware allows it. */
     val systemHotspot: WifiDetails? = null,
+    /**
+     * Another access point of [joinedSsid] on a different band (e.g. the router's 2.4 GHz side
+     * while the car is on 5 GHz), or null. See [EngineMappings.androidAuto].
+     */
+    val otherBandBssid: String? = null,
 )
 
 /**
@@ -180,7 +185,12 @@ object EngineMappings {
                 put("hotspot-interface", wifi.joinedInterface)
                 put("hotspot-ssid", settings.homeWifi.ssid)
                 put("hotspot-password", settings.homeWifi.password)
-                put("static-bssid", wifi.joinedBssid)
+                // Android Auto joins the network it is handed as a local-only link, which Android
+                // never uses for internet; on many phones it also drops the phone's own connection
+                // to the router, so the phone falls back to mobile data. Phones with Wi-Fi STA+STA
+                // concurrency (Android 12+) can keep that connection when the local-only link is on
+                // the router's other band, so that access point is handed over when there is one.
+                put("static-bssid", wifi.otherBandBssid ?: wifi.joinedBssid)
                 put("auto-enable-hotspot", false)
             }
             // No session path (a settings change): leave the wireless route of a running session alone.

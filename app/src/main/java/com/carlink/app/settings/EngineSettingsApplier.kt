@@ -27,6 +27,8 @@ import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
  */
 object EngineSettingsApplier {
     private const val TAG = "CarLink-Settings"
+    /** Weakest other-band access point still handed to an Android Auto phone (dBm). */
+    private const val MIN_OTHER_BAND_RSSI = -67
 
     /** Applies everything that does not depend on the session's wireless path. */
     fun applyAll(context: Context, settings: UnifiedSettings) {
@@ -46,7 +48,7 @@ object EngineSettingsApplier {
             "wifiNetworks=${wifi.joinedNetworks} ssidReadable=${wifi.joinedSsid != null} " +
             "sameWifiSaved=${settings.homeWifi.isValid()} passwordSaved=${settings.homeWifi.password.isNotEmpty()} " +
             "open=${wifi.joinedOpen} aaRefused=${wifi.androidAutoRefusedJoined} hotspotOn=${wifi.carHotspotOn} " +
-            "systemHotspot=${wifi.systemHotspot != null}")
+            "systemHotspot=${wifi.systemHotspot != null} otherBand=${wifi.otherBandBssid != null}")
         if (engine == Engine.CARPLAY && settings.homeWifi.isValid() && wifi.joinedNetworks == 1 && wifi.joinedSsid == null) {
             // Android hides the joined network's name without location access (and with location
             // switched off), so Same Wi-Fi cannot be confirmed and the next path is used instead.
@@ -141,7 +143,31 @@ object EngineSettingsApplier {
             androidAutoRefusedJoined = joined != null && settings != null &&
                 WirelessRefusals(context).isRefused(joined, settings.homeWifi.password),
             systemHotspot = if (hotspotOn == true) systemHotspot(context) else null,
+            otherBandBssid = if (wifiNetworks == 1 && joined != null && bssid != null) {
+                otherBandBssid(context, joined, bssid, info?.frequency ?: 0)
+            } else null,
         )
+    }
+
+    /** The strongest access point of [ssid] on another band than [frequency], from the last scan (needs location). */
+    @Suppress("DEPRECATION") // ScanResult.SSID is the API-25-compatible name.
+    private fun otherBandBssid(context: Context, ssid: String, bssid: String, frequency: Int): String? {
+        val results = runCatching {
+            context.applicationContext.getSystemService(WifiManager::class.java)?.scanResults
+        }.getOrNull().orEmpty()
+        return results.asSequence()
+            .filter { it.SSID == ssid && !it.BSSID.equals(bssid, ignoreCase = true) && band(it.frequency) != band(frequency) }
+            // Weak links stutter: only an access point the car hears well enough for video.
+            .filter { it.level >= MIN_OTHER_BAND_RSSI }
+            .maxByOrNull { it.level }
+            ?.BSSID?.uppercase()
+    }
+
+    private fun band(frequency: Int): Int = when {
+        frequency in 2400..2500 -> 2
+        frequency in 4900..5900 -> 5
+        frequency >= 5925 -> 6
+        else -> 0
     }
 
     /** The hotspot's own name and password; most phones and tablets refuse this, many head units allow it. */
