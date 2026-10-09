@@ -141,8 +141,8 @@ object AirPlayInfoPlist {
         val opus = 0x70000000
         val aacLc = if (is48) 0x800000 else 0x400000
         val pcmInput = if (microphone) pcmMono else null
-        // Offering Opus the device cannot encode makes the iPhone choose it and the uplink stays
-        // silent, so a unit without an Opus encoder advertises PCM alone and is heard.
+        // Retain Opus whenever platform or bundled software encoding is usable. PCM-only wireless
+        // negotiation is not a universal fallback; a missing MediaCodec encoder is insufficient.
         val wirelessInput = if (microphone) (if (microphoneOpus) pcmMono or opus else pcmMono) else null
 
         return listOf(

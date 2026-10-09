@@ -32,6 +32,14 @@ internal class MicrophoneUplink(
     private val echoCancellerFactory: (Int, Int, Int) -> CallEchoCanceller? = { frame, rate, tail ->
         SpeexEchoCanceller.create(frame, rate, tail)
     },
+    private val opusEncoderFactory: (Int) -> MicrophoneOpusEncoder? = { bitrate ->
+        MicrophoneOpusEncoders.create(
+            bitrate = bitrate,
+            software = { value ->
+                SoftwareOpusEncoder(value, onError = { message, error -> Log.w(TAG, message, error) })
+            },
+        )
+    },
 ) : Closeable {
     private val running = AtomicBoolean(false)
     private val stats = MicrophoneCaptureStats(config, report = { message ->
@@ -71,12 +79,7 @@ internal class MicrophoneUplink(
             else -> MediaRecorder.AudioSource.MIC
         }
         val nextEncoder = if (config.codec == AudioCodecKind.OPUS) {
-            MicrophoneOpusEncoders.create(
-                bitrate = config.bitrate ?: 48_000,
-                software = { bitrate ->
-                    SoftwareOpusEncoder(bitrate, onError = { message, error -> Log.w(TAG, message, error) })
-                },
-            )
+            opusEncoderFactory(config.bitrate ?: 48_000)
         } else {
             null
         }
@@ -90,7 +93,7 @@ internal class MicrophoneUplink(
             val message = "Microphone: encoder type=${config.audioType} codec=OPUS " +
                 "implementation=${nextEncoder.implementation}"
             Log.i(TAG, message)
-            onDiagnostic(message)
+            runCatching { onDiagnostic(message) }
         }
         val bufferSize = maxOf(minBuffer * 2, config.frameBytes * 4)
         // Some head units throw on VOICE_RECOGNITION at build(); VOICE_COMMUNICATION works there.

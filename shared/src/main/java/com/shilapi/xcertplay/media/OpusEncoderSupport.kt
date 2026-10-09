@@ -6,20 +6,33 @@ import android.media.MediaFormat
 /**
  * Whether this head unit can encode Opus for the CarPlay microphone uplink.
  *
- * Android has guaranteed an Opus *decoder* since API 21 but only guarantees an Opus *encoder*
- * from API 29, so an Android 8 or 9 unit plays CarPlay audio yet cannot send the microphone as
- * Opus. The accessory advertises its input formats in the info plist, long before any stream is
- * set up, so the answer has to come from the codec list rather than from a failed encoder.
+ * The platform codec list alone is not the capability: the bundled software encoder also works on
+ * head units without a platform Opus encoder. Probe it before advertising the microphone formats,
+ * without opening the microphone or changing the audio mode.
  */
 object OpusEncoderSupport {
-    /** Treats an unreadable codec list as no encoder: PCM uplink works everywhere, Opus does not. */
-    fun isAvailable(): Boolean = try {
+    fun isAvailable(): Boolean = isAvailable(
+        platformAvailable = ::platformAvailable,
+        software = { SoftwareOpusEncoder(bitrate = 48_000) },
+    )
+
+    internal fun isAvailable(
+        platformAvailable: () -> Boolean,
+        software: () -> MicrophoneOpusEncoder,
+    ): Boolean {
+        if (runCatching(platformAvailable).getOrDefault(false)) return true
+        return runCatching {
+            software().use { encoder ->
+                encoder.available && encoder.encode(ByteArray(SoftwareOpusEncoder.FRAME_BYTES))
+                    .any { it.isNotEmpty() }
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun platformAvailable(): Boolean =
         MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
             info.isEncoder && info.supportedTypes.any {
                 it.equals(MediaFormat.MIMETYPE_AUDIO_OPUS, ignoreCase = true)
             }
         }
-    } catch (error: Exception) {
-        false
-    }
 }

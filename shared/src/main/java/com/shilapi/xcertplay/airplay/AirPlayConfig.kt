@@ -66,9 +66,9 @@ data class AirPlayConfig(
     val disableAudioOutput: Boolean = false,
     val microphone: Boolean = false,
     /**
-     * Whether to offer Opus alongside PCM for the microphone. False on a head unit with no
-     * Opus encoder (see [com.shilapi.xcertplay.media.OpusEncoderSupport]), which makes the
-     * iPhone pick the PCM uplink the accessory can actually send.
+     * Whether to offer Opus alongside PCM for the microphone. Both platform and bundled software
+     * encoding count toward [com.shilapi.xcertplay.media.OpusEncoderSupport]; an older Android
+     * version or absent MediaCodec encoder alone must not remove the wireless Opus formats.
      */
     val microphoneOpus: Boolean = true,
     val manufacturer: String = "xcertplay",
