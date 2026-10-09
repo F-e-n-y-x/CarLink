@@ -4,6 +4,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AmbientMusicActivityPolicyTest {
+    @Test fun onlyMusicStreamsOwnTheLampEvenWhenGuidanceUsesTheMediaBus() {
+        assertTrue(AmbientMusicActivityPolicy.acceptsAudio("media", 102))
+        assertTrue(AmbientMusicActivityPolicy.acceptsAudio("", 102))
+        for (type in listOf("compatibility", "default", "alert", "telephony", "speechRecognition")) {
+            assertFalse(type, AmbientMusicActivityPolicy.acceptsAudio(type, 102))
+        }
+        assertFalse(AmbientMusicActivityPolicy.acceptsAudio("", 101))
+    }
+
     @Test fun masterOffRestoresOemRegardlessOfBrightnessOrPlayback() {
         assertEquals(AmbientMusicTarget.RESTORE_OEM,
             AmbientMusicActivityPolicy.target(false, true, 0, false, false))

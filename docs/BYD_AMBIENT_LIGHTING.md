@@ -10,6 +10,8 @@ Only head units exposing the expected BYD interior-lamp API and valid color, bri
 
 The media channel supplies energy from successful PCM writes. Only level and frame metadata are retained, not recorded audio. AudioTrack playback position ties the analysis to played audio. Navigation and call channels do not supply the light envelope. Phone playback ownership prevents stale callbacks from a replaced CarPlay session from resuming the lights.
 
+The opt-in card is in Settings → Advanced and is marked experimental. Changes apply live after saving; Cancel leaves the saved configuration unchanged.
+
 Available modes are sound energy, beat, estimated BPM, bass priority and smart follow. BPM is an estimate from recent onsets, not track metadata. Selected OEM color numbers form the palette. Brightness transition speed affects brightness smoothing; color beat detection keeps its standard cadence. The configured brightness is a ceiling. Setting 0 means raw OEM level 1, the lowest supported level, not confirmed physical power off.
 
 With control enabled, paused or disconnected playback holds all zones at the lowest level. During playback, disabling music following uses a fixed color and brightness. Disabling ambient control attempts to restore the pre-control front/rear colors, brightness and area. Changing the configuration takes effect only after Save; Cancel does not apply the draft.
@@ -35,4 +37,4 @@ The patch contains source and focused tests only. No local diagnostic logs, vehi
 ./gradlew --offline :shared:compileDebugKotlin :common:compileDebugKotlin
 ```
 
-Before a release, check the default-off UI, both languages, failed authorization without new prompts, unsupported lamp states, Save/Cancel, music pause/resume, disconnect/reconnect, disabling control with unequal front/rear states, rapid setting changes and the complete normal vehicle workload while parked. Public build checks use no private authentication inputs.
+Before a release, check the default-off UI, all supported locales, failed authorization without new prompts, unsupported lamp states, Save/Cancel, music pause/resume, disconnect/reconnect, disabling control with unequal front/rear states, rapid setting changes and the complete normal vehicle workload while parked. Public build checks use no private authentication inputs.

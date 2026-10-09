@@ -6,6 +6,16 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 class AmbientMusicPaletteBassTest {
+    @Test fun analysisLeavesSuccessfulPcmBytesUnchangedAndHonorsTheirSlice() {
+        val pcm = tone(100.0)
+        val original = pcm.copyOf()
+        assertTrue(AmbientMusicEnvelope.pcmRms(pcm, 200, 4096) > 0.0)
+        assertTrue(AmbientMusicBassAnalyzer(48_000, 2).rms(pcm, 200, 4096) > 0.0)
+        assertArrayEquals(original, pcm)
+        assertEquals(0.0, AmbientMusicEnvelope.pcmRms(pcm, pcm.size - 1, 4), 0.0)
+        assertEquals(0.0, AmbientMusicBassAnalyzer(48_000, 2).rms(pcm, pcm.size - 1, 4), 0.0)
+    }
+
     private fun tone(hertz: Double): ByteArray {
         val bytes = ByteArray(48_000 * 4)
         for (frame in 0 until 48_000) {

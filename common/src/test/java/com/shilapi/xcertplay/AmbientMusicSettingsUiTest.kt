@@ -22,12 +22,12 @@ import org.robolectric.util.ReflectionHelpers
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [29], qualifiers = "en", manifest = Config.NONE)
+@Config(sdk = [25, 29], qualifiers = "en", manifest = Config.NONE)
 class AmbientMusicSettingsUiTest {
     private lateinit var activity: DiPlayActivity
 
     @Before fun setUp() {
-        RuntimeEnvironment.getApplication().getSharedPreferences("ambient_music", 0).edit().clear().commit()
+        RuntimeEnvironment.getApplication().getSharedPreferences("settings_ambient_music", 0).edit().clear().commit()
         activity = Robolectric.buildActivity(DiPlayActivity::class.java).get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
     }
@@ -51,7 +51,7 @@ class AmbientMusicSettingsUiTest {
         assertEquals(1, checks)
         assertFalse(AmbientMusicSettings.load(activity).enabled)
         assertTrue(dialog.isShowing)
-        assertEquals(activity.getString(R.string.ambient_unavailable), ShadowToast.getTextOfLatestToast())
+        assertEquals(activity.getString(R.string.settings_ambient_unavailable), ShadowToast.getTextOfLatestToast())
         assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled)
     }
 
@@ -77,7 +77,7 @@ class AmbientMusicSettingsUiTest {
     }
 
     private fun enableSwitch(dialog: AlertDialog): Switch = descendants(dialog.window!!.decorView)
-        .filterIsInstance<Switch>().single { it.contentDescription == activity.getString(R.string.ambient_enable) }
+        .filterIsInstance<Switch>().single { it.contentDescription == activity.getString(R.string.settings_ambient_enable) }
 
     private fun descendants(view: View): List<View> = buildList {
         add(view)
