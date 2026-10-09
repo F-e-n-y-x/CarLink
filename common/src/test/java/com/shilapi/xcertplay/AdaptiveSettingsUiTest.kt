@@ -85,7 +85,7 @@ class AdaptiveSettingsUiTest {
         val button = descendants(screen.window.decorView).single {
             it.contentDescription == switchToLight
         }
-        assertEquals(Math.round(48 * screen.resources.displayMetrics.density), button.layoutParams.width)
+        assertEquals(Math.round(52 * screen.resources.displayMetrics.density), button.layoutParams.width)
         assertTrue(button.requestFocus())
 
         button.performClick()
@@ -468,7 +468,7 @@ class AdaptiveSettingsUiTest {
                 candidate.contentDescription == screen.getString(
                     R.string.settings_open_category,
                     screen.getString(R.string.settings_advanced),
-                ) && descendants(candidate).filterIsInstance<ImageView>().count() == 2
+                ) && descendants(candidate).filterIsInstance<TextView>().count() == 2
             }
             .performClick()
 
@@ -742,24 +742,34 @@ class AdaptiveSettingsUiTest {
             top + selected.height <= currentRail.scrollY + currentRail.height)
         assertEquals("Category scrolling remains independent", 0,
             ReflectionHelpers.getField<ScrollView>(screen, "rootScroll").scrollY)
+        val railContent = currentRail.getChildAt(0) as ViewGroup
+        val railPanel = railContent.getChildAt(0)
+        currentRail.scrollTo(0, railContent.height)
+        val panelBottom = railContent.top + railPanel.bottom - currentRail.scrollY
+        assertEquals("Bottom spacing is reachable inside the scroll content",
+            Math.round(12 * density), currentRail.height - panelBottom)
     }
 
-    @Test fun overviewUtilitiesAreOneGroupedCardWithSectionSpacing() {
+    @Test fun overviewUtilitiesFollowAboutAsSeparateCategoryCards() {
         val screen = openSettings()
-        fun utilityRow(category: Int) = descendants(screen.window.decorView).single { candidate ->
+        fun categoryCard(category: Int) = descendants(screen.window.decorView).single { candidate ->
             candidate.contentDescription == screen.getString(
                 R.string.settings_open_category,
                 screen.getString(category),
-            ) && descendants(candidate).filterIsInstance<ImageView>().count() == 2
+            ) && descendants(candidate).filterIsInstance<TextView>().count() == 2
         }
-
-        val diagnostics = utilityRow(R.string.diagnostics)
-        val advanced = utilityRow(R.string.settings_advanced)
+        val about = categoryCard(R.string.about)
+        val diagnostics = categoryCard(R.string.diagnostics)
+        val advanced = categoryCard(R.string.settings_advanced)
+        assertSame(about.parent, diagnostics.parent)
         assertSame(diagnostics.parent, advanced.parent)
-        val card = diagnostics.parent as View
-        assertEquals(Math.round(18 * screen.resources.displayMetrics.density), (card.layoutParams as LinearLayout.LayoutParams).bottomMargin)
+        val categories = about.parent as LinearLayout
+        assertEquals(categories.indexOfChild(about) + 1, categories.indexOfChild(diagnostics))
+        assertEquals(categories.indexOfChild(diagnostics) + 1, categories.indexOfChild(advanced))
+        val gap = Math.round(16 * screen.resources.displayMetrics.density)
+        assertEquals(gap, (diagnostics.layoutParams as LinearLayout.LayoutParams).bottomMargin)
+        assertEquals(gap, (advanced.layoutParams as LinearLayout.LayoutParams).bottomMargin)
     }
-
     private fun installBydSettingsPackage() {
         shadowOf(context.packageManager).installPackage(PackageInfo().apply {
             packageName = "com.byd.carsettings"

@@ -76,7 +76,7 @@
     <string name="status_failed">失敗：%1$s</string>
     <string name="msg_car_hotspot_off">車機熱點「%1$s」尚未開啟。請在車機設定中開啟後再連線。</string>
     <string name="home_public_preview">公開預覽\u0020·\u0020%1$s</string>
-    <string name="choose_iphone_prefix">選擇 iPhone · </string>
+    <string name="choose_iphone_prefix">選擇 iPhone ·\u0020</string>
     <string name="audio_saved_value">已儲存：%1$d</string>
     <string name="about_public_preview_prefix">公開預覽\u0020·\u0020%1$s</string>
     <string name="msg_car_hotspot_connect">DiPlay 透過車機熱點「%1$s」連線。請在車機設定中開啟熱點後再連線。</string>
