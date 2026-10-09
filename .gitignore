@@ -43,3 +43,4 @@ release-signing.properties
 # Claude Code agent worktrees and local state
 /.claude/worktrees/
 /.claude/settings.local.json
+/.claude/device-logs/
