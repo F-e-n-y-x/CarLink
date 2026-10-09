@@ -305,7 +305,8 @@ class TelephonyMicrophoneTest {
             assertEquals(false, fake.platformAecEnabledAtProcessing)
             val effects = ShadowAudioEffect.getAudioEffects()
             assertFalse(effects.single { it is AcousticEchoCanceler }.enabled)
-            assertTrue(effects.single { it.javaClass.simpleName == "NoiseSuppressor" }.enabled)
+            // Speex denoises after cancellation, so platform NS must not alter the signal first.
+            assertFalse(effects.single { it.javaClass.simpleName == "NoiseSuppressor" }.enabled)
             effects.forEach { assertEquals(recorder.get()!!.audioSessionId, Shadow.extract<ShadowAudioEffect>(it).audioSession) }
         } finally { uplink.close() }
         assertTrue(fake.closed)
