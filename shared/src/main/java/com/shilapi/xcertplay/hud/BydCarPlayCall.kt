@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.shilapi.xcertplay.compat.Base64Compat
 import com.shilapi.xcertplay.iap2.body.Iap2BodyReader
 import com.shilapi.xcertplay.iap2.wire.Iap2Frame
 import java.lang.reflect.InvocationTargetException
@@ -103,13 +104,16 @@ class CarPlayCallState(private val clock: () -> Long = System::currentTimeMillis
  * Optional, needs ADB over network: shows CarPlay calls on the dashboard and the windshield HUD the way
  * BYD's own CarPlay app does (com.byd.carplay.ui, BinderCarplayServer.CarplayNotifyInstrumentCallState):
  * the instrument's call state, caller and call time, the car's call state (which also turns the fan
- * down) and the audio system's CarPlay call status. Apps cannot write these, autoservice accepts the
+ * down). The audio system's CarPlay call status is only reset to idle, never set in a call (see
+ * [BydCarPlayCallTool]). Apps cannot write these, autoservice accepts the
  * adb shell, so DiPlay runs [BydCarPlayCallTool] from its APK under the shell. While a call lasts a
  * small watcher under the shell sends the call time every second and ends the call on the car if
  * DiPlay goes away mid-call.
  */
 object BydCarPlayCall {
     private const val TAG = "DiPlay-BYD-Call"
+    @Volatile internal var watcherReadyMillis = 8_000L
+    private const val WATCHER_PROBE_INTERVAL_MILLIS = 250L
 
     private val shell = BydAdbShell(TAG)
     private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "diplay-carplay-call").apply { isDaemon = true } }
@@ -123,9 +127,20 @@ object BydCarPlayCall {
     private var retry: ScheduledFuture<*>? = null // one bounded retry for an unchanged call
     private var retryCard: CarPlayCallCard? = null
     private var retryUsed = false
+    @Volatile private var sessionActive = false
 
     fun attach(appContext: Context) {
         context = appContext.applicationContext
+    }
+
+    /**
+     * A CarPlay session started: start the call watcher now, before any call, so the first call
+     * reaches the car within a second instead of after the watcher's multi-second start.
+     */
+    fun sessionStarted() {
+        sessionActive = true
+        val app = context ?: return
+        writer.execute { arm(app) }
     }
 
     /** The current call, followed even while the setting is off so the wheel's call keys can act on it. */
@@ -138,21 +153,50 @@ object BydCarPlayCall {
         }
         Log.i(TAG, "CarPlay call ${card?.phase ?: "ended"}")
         val app = context ?: return
-        if (BydOutputSettings.carPlayCalls(app)) writer.execute { apply(app, card) }
+        if (BydOutputSettings.carPlayCalls(app)) writer.execute { apply(app, card); if (card == null) arm(app) }
     }
 
     /** The setting changed: show the current call now, or end the one DiPlay showed. */
     fun settingChanged(enabled: Boolean) {
         val app = context ?: return
         val card = if (enabled) current() else null
-        writer.execute { resetRetry(card); apply(app, card) }
+        writer.execute {
+            resetRetry(card)
+            apply(app, card)
+            if (enabled) arm(app) else disarm(app)
+        }
     }
 
     /** The session ended: forget the calls and end the one DiPlay showed. */
     fun end() {
+        sessionActive = false
         synchronized(state) { state.clear() }
         val app = context ?: return
-        writer.execute { resetRetry(null); apply(app, null) }
+        writer.execute { resetRetry(null); apply(app, null); disarm(app) }
+    }
+
+    /**
+     * Prepares a token and starts its watcher with no call on the car. A prepared token never writes
+     * to the car, and its watcher retires it silently if DiPlay dies; [apply] reuses it for the next call.
+     */
+    private fun arm(app: Context) {
+        if (!sessionActive || !BydOutputSettings.carPlayCalls(app) || current() != null) return
+        if (watcherToken != null || cleanupPending) return
+        val token = CarPlayCallWatchOwnership.newToken(app.packageName)
+        watcherToken = token
+        prepared = true
+        if (run(app, "prepare - $token ${android.os.Process.myPid()}") && ensureWatcher(app, token)) {
+            Log.i(TAG, "call watcher armed")
+            return
+        }
+        if (run(app, "cancel - $token")) clearLocalOwnership() else cleanupPending = true
+    }
+
+    /** Releases an armed token that never showed a call; [apply] leaves those alone when nothing is shown. */
+    private fun disarm(app: Context) {
+        val token = watcherToken ?: return
+        if (!prepared || shown != null) return
+        if (run(app, "cancel - $token")) clearLocalOwnership() else cleanupPending = true
     }
 
     private fun resetRetry(card: CarPlayCallCard?) {
@@ -255,12 +299,19 @@ object BydCarPlayCall {
         watcherRunning = false
         val apk = app.applicationInfo.sourceDir
         val tool = "CLASSPATH=$apk app_process /system/bin ${BydCarPlayCallTool::class.java.name} watch $token ${app.packageName} $appPid"
-        // nohup's parent reply/exit status says nothing about child initialization.
-        shell.run(app, "nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
-        repeat(3) { attempt ->
+        // adbd's legacy shell: stream kills its process group when the command returns, which
+        // takes a plain nohup child with it before it initializes; setsid moves it out of that
+        // group. The parent reply/exit status says nothing about child initialization.
+        shell.run(app, "setsid nohup sh -c '$tool' >/dev/null 2>&1 </dev/null &")
+        // The child is a fresh app_process that initializes BYD's vehicle API before it reports ready;
+        // on DiLink 3 that took up to several seconds while CarPlay streamed, longer than three probes.
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(watcherReadyMillis)
+        while (true) {
             if (probe(app, token, appPid)) { watcherRunning = true; return true }
-            if (attempt < 2) Thread.sleep(100)
+            if (System.nanoTime() >= deadline) break
+            Thread.sleep(WATCHER_PROBE_INTERVAL_MILLIS)
         }
+        Log.w(TAG, "call watcher not ready after $watcherReadyMillis ms")
         return false
     }
 
@@ -305,7 +356,6 @@ object BydCarPlayCallTool {
     private const val BT_RINGING = 2
     private const val BT_ACTIVE = 3
     private const val BT_IDLE = 5
-    private const val AUDIO_IN_CALL = 0
     private const val AUDIO_IDLE = 1
     private const val MAX_WATCH_MILLIS = 6L * 60 * 60 * 1000
 
@@ -361,9 +411,10 @@ object BydCarPlayCallTool {
             else -> throw IllegalArgumentException("unknown phase $phase")
         }
         val name = encodedName?.takeIf { it != "-" }
-            ?.let { String(java.util.Base64.getDecoder().decode(it), Charsets.UTF_8) }.orEmpty()
+            ?.let { String(Base64Compat.decode(it), Charsets.UTF_8) }.orEmpty()
+        // No AUDIO_CARPLAY_CALL_STATUS in-call write: it switches the amplifier to the stock CarPlay call
+        // channel, while BYD's AudioService reclassifies DiPlay's voice stream as music, so callers go silent.
         val writes = listOf(
-            CarPlayCallWrite("audio", AUDIO_IN_CALL, AUDIO_IDLE),
             CarPlayCallWrite("car", 1, 0),
             CarPlayCallWrite("bt", bt, BT_IDLE),
             CarPlayCallWrite("state", INSTRUMENT_IN_CALL, INSTRUMENT_ENDED),
