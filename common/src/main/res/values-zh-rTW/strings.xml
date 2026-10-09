@@ -578,10 +578,10 @@
     <string name="adb_cluster_routing">正在透過ADB啟動儀表地圖…</string>
     <string name="adb_cluster_routed">儀表視窗已移動，等待 iPhone 地圖</string>
     <string name="adb_cluster_route_failed">儀表啟動失敗，請匯出診斷。</string>
-    <string name="open_diplay_settings_hint">在 CarPlay 中用 %1$d 指向下滑動，以開啟 DiPlay 設定。</string>
+    <string name="open_diplay_settings_hint">在 CarPlay 中用 %1$d 指向下滑動，以開啟快捷選單。</string>
     <string name="carplay_controls">CarPlay 操作</string>
-    <string name="settings_gesture_fingers">開啟設定 · %1$d 指向下滑動（點選切換）</string>
-    <string name="settings_gesture_fingers_label">開啟設定 · 向下滑動手指數</string>
+    <string name="settings_gesture_fingers">快捷選單 · %1$d 指向下滑動（點選切換）</string>
+    <string name="settings_gesture_fingers_label">快捷選單 · 向下滑動手指數</string>
     <string name="settings_gesture_fingers_option">%1$d 指</string>
     <string name="settings_gesture_fingers_hint">選擇車機尚未使用的手指數。比亞迪的三指向下滑動會開啟空調面板，建議改用 2 指。</string>
     <string name="auto_car_hotspot_title">自動開啟熱點</string>
@@ -753,4 +753,7 @@
     <string name="settings_discard_pending_title">要放棄變更嗎？</string>
     <string name="settings_discard_pending_message">你剛變更的解析度、幀率、連線以及其餘設定尚未儲存。「儲存並重新連線」會套用它們。</string>
     <string name="settings_discard_pending_confirm">放棄</string>
+    <string name="settings_gesture_disabled">關閉</string>
+    <string name="settings_gesture_disabled_hint">已關閉向下滑動開啟快捷選單的手勢。</string>
+    <string name="settings_gesture_disabled_action">快捷選單 · 關閉向下滑動（點選切換）</string>
 </resources>

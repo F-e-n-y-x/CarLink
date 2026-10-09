@@ -551,10 +551,10 @@
     <string name="turn_card_distance_m">%1$d م</string>
     <string name="turn_card_distance_km">%1$.1f كم</string>
     <string name="turn_card_exit">مخرج %1$d</string>
-    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح إعدادات DiPlay.</string>
+    <string name="open_diplay_settings_hint">في CarPlay، اسحب لأسفل بـ %1$d أصابع لفتح القائمة السريعة.</string>
     <string name="carplay_controls">تحكم CarPlay</string>
-    <string name="settings_gesture_fingers">فتح الإعدادات · سحب بـ %1$d أصابع (انقر للتبديل)</string>
-    <string name="settings_gesture_fingers_label">فتح الإعدادات · عدد أصابع السحب لأسفل</string>
+    <string name="settings_gesture_fingers">القائمة السريعة · سحب بـ %1$d أصابع (انقر للتبديل)</string>
+    <string name="settings_gesture_fingers_label">القائمة السريعة · عدد أصابع السحب لأسفل</string>
     <string name="settings_gesture_fingers_option">%1$d أصابع</string>
     <string name="settings_gesture_fingers_hint">اختر عددًا من الأصابع لا يستخدمه جهاز السيارة. تأخذ وحدة BYD السحب لأسفل بثلاثة أصابع للوحة التكييف.</string>
     <string name="auto_car_hotspot_title">تشغيل نقطة اتصال السيارة تلقائيًا</string>
@@ -693,4 +693,7 @@
     <string name="settings_discard_pending_title">تجاهل التغييرات؟</string>
     <string name="settings_discard_pending_message">لم يتم بعد حفظ الدقة ومعدل الإطارات والاتصال وباقي الإعدادات التي غيرتها. حفظ وإعادة الاتصال يطبقها.</string>
     <string name="settings_discard_pending_confirm">تجاهل</string>
+    <string name="settings_gesture_disabled">إيقاف</string>
+    <string name="settings_gesture_disabled_hint">تم تعطيل اختصار السحب لأسفل.</string>
+    <string name="settings_gesture_disabled_action">القائمة السريعة · السحب معطّل (انقر للتبديل)</string>
 </resources>

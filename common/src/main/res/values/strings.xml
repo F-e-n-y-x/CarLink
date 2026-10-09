@@ -632,10 +632,10 @@
     <string name="adb_cluster_routing">Launching cluster map through ADB…</string>
     <string name="adb_cluster_routed">Cluster task routed; waiting for iPhone map</string>
     <string name="adb_cluster_route_failed">Cluster launch failed; export diagnostics.</string>
-    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open DiPlay settings.</string>
+    <string name="open_diplay_settings_hint">In CarPlay, swipe down with %1$d fingers to open the quick menu.</string>
     <string name="carplay_controls">CarPlay controls</string>
-    <string name="settings_gesture_fingers">Open settings · swipe with %1$d fingers (tap to change)</string>
-    <string name="settings_gesture_fingers_label">Open settings · swipe-down fingers</string>
+    <string name="settings_gesture_fingers">Quick menu · swipe with %1$d fingers (tap to change)</string>
+    <string name="settings_gesture_fingers_label">Quick menu · swipe-down fingers</string>
     <string name="settings_gesture_fingers_option">%1$d fingers</string>
     <string name="settings_gesture_fingers_hint">Pick a finger count your head unit does not already use. BYD takes three-finger swipe-down for its air-conditioning panel.</string>
     <string name="auto_car_hotspot_title">Automatically turn on the car hotspot</string>
@@ -790,4 +790,7 @@
     <string name="settings_discard_pending_title">Discard your changes?</string>
     <string name="settings_discard_pending_message">Resolution, frame rate, connection and the other settings you just changed are not saved yet. Save and reconnect applies them.</string>
     <string name="settings_discard_pending_confirm">Discard</string>
+    <string name="settings_gesture_disabled">Off</string>
+    <string name="settings_gesture_disabled_hint">Swipe-down shortcut is disabled.</string>
+    <string name="settings_gesture_disabled_action">Quick menu · swipe disabled (tap to change)</string>
 </resources>
