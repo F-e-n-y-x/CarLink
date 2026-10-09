@@ -27,7 +27,7 @@
     <string name="marker_up">上</string>
     <string name="marker_down">下</string>
     <string name="marker_centre_default">置中 · 預設</string>
-    <string name="hotspot_mode_manual_desc">使用車機內建的熱點。若車機支援，請在車機設定中選擇 5 GHz。</string>
+    <string name="hotspot_mode_manual_desc">使用車載熱點連線無線 CarPlay。無需在 iPhone 上手動加入熱點；DiPlay 會透過藍牙傳送熱點資訊。如有 5 GHz，請在車機設定中選擇。</string>
     <string name="hotspot_mode_p2p_desc">替代方案。需要開啟車機 Wi-Fi 開關；2.4 GHz 連線可能會卡頓。</string>
     <string name="hotspot_details_off">熱點已關閉 · 請在車機設定中開啟。</string>
     <string name="hotspot_details_saved">詳細資訊已儲存 · 連線前請確認車載熱點已開啟。</string>
@@ -392,6 +392,7 @@
     <string name="use_software_hevc_decoder">使用 HEVC 軟體解碼器</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">使用 usage / content-type 路由取代串流類型</string>
     <string name="use_your_last_connection_type_and_selected_iphone">使用上次的連線方式和已選擇的 iPhone。</string>
+    <string name="vpn_authorization_unavailable">此車機無法開啟 VPN 授權畫面。請返回 DiPlay 檢查連線權限，或使用無線連線。</string>
     <string name="vpn_consent_was_denied">VPN 授權遭拒</string>
     <string name="waiting_for_iphone_over_usb">正在等待透過 USB 連線的 iPhone</string>
     <string name="waiting_for_mfi_coprocessor">正在等待 MFi 協同處理器</string>

@@ -29,7 +29,7 @@
     <string name="marker_up">Угору</string>
     <string name="marker_down">Униз</string>
     <string name="marker_centre_default">По центру · типово</string>
-    <string name="hotspot_mode_manual_desc">Використовувати власну точку доступу автомобіля. Якщо доступно, виберіть 5 ГГц у налаштуваннях автомобіля.</string>
+    <string name="hotspot_mode_manual_desc">Використовуйте точку доступу автомобіля для бездротового CarPlay. Підключатися до неї вручну на iPhone не потрібно: DiPlay передає дані точки доступу через Bluetooth. Якщо доступно, виберіть 5 ГГц у налаштуваннях автомобіля.</string>
     <string name="hotspot_mode_p2p_desc">Альтернативний спосіб. Потрібен увімкнений Wi-Fi автомобіля; на частоті 2,4 ГГц можливі затримки.</string>
     <string name="hotspot_details_off">Точку доступу вимкнено · Увімкніть її в налаштуваннях автомобіля.</string>
     <string name="hotspot_details_saved">Дані збережено · Перед підключенням перевірте, чи ввімкнено точку доступу автомобіля.</string>
@@ -392,6 +392,7 @@
     <string name="use_software_hevc_decoder">Використовувати програмний декодер HEVC</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Спрямовувати за призначенням і типом вмісту замість типу потоку</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Використовувати останній спосіб підключення та вибраний iPhone.</string>
+    <string name="vpn_authorization_unavailable">Головний пристрій не може відкрити дозвіл VPN. Поверніться до DiPlay, щоб перевірити дозволи на підключення, або скористайтеся бездротовим підключенням.</string>
     <string name="vpn_consent_was_denied">У дозволі на VPN відмовлено</string>
     <string name="waiting_for_iphone_over_usb">Очікування iPhone через USB</string>
     <string name="waiting_for_mfi_coprocessor">Очікування співпроцесора MFi</string>
