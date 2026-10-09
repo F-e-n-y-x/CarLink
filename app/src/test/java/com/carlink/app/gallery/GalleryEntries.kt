@@ -101,6 +101,18 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-iphone-unreached") {
         HomeContent(ui(link = failed(LinkProblem.PHONE_NEVER_REACHED_CAR), network = sameWifi), actions)
     },
+    home("connected-carplay-usb") {
+        val since = remember { SystemClock.elapsedRealtime() - 1_394_000 }
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTED, Engine.CARPLAY, Transport.USB, "iPhone", 6, 6),
+            phones = emptyList(), connectedSince = since), actions)
+    },
+    home("sheet-phones-usb", opensWindow = true) {
+        val ui = ui(link = LinkState(LinkStage.CONNECTED, Engine.CARPLAY, Transport.USB, iphone.name, 6, 6),
+            phones = listOf(iphone, pixel, unknown), connectedSince = remember { SystemClock.elapsedRealtime() - 60_000 })
+            .let { it.copy(home = it.home.copy(usbKinds = setOf(com.carlink.app.core.PhoneKind.IPHONE))) }
+        HomeContent(ui, actions)
+        PhonesSheet(ui, actions, onDismiss = {})
+    },
     home("connected-android-auto-usb") {
         val since = remember { SystemClock.elapsedRealtime() - 3_725_000 }
         HomeContent(ui(link = LinkState(LinkStage.CONNECTED, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 6, 6),

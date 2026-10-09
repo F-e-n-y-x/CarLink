@@ -20,6 +20,25 @@ differs from the research, the reason is given. Screens: `docs/screenshots/*/*_t
 | **Nothing clipped or cut short** (`HomeStage`): the richest arrangement that fits wins. Status falls back panel → strip → none, and copy falls back regular → dense. The dial takes the room that is left (up to 560dp car / 520dp handheld) and steps aside below 300dp / 176dp. When the dial is gone, the copy shows the step line itself. The stage scrolls only at extreme font scales. | FitColumn's rule, kept from v1. |
 | **"Your phone isn't answering"** (wireless, no answer for 10 s): Caution, what to check on the phone, Try again and Cancel. | Home must stop looking busy when nothing is happening. The CarPlay waiting window renders the same `HomeContent`, so it shows this too. |
 
+## Cable or wireless, everywhere
+
+The user asked that the app always tell cable (USB) connections apart from wireless ones
+(Bluetooth + Wi-Fi). The rule is the same on every surface, with a glyph and short words: a USB
+plug with "Cable" / "USB", or the wireless path's glyph with "Wireless · Wi-Fi Direct"
+(`premium/Transport.kt`).
+
+- **Home**: while connecting or connected, a transport badge sits under the headline ("Connecting
+  by cable", "Connected wirelessly · Same Wi-Fi"). The connected dial repeats it in its core, under
+  the engine name. In a USB session the Network cell says "USB cable" and the Phone cell shows the
+  session's phone name: a USB session has no Bluetooth address, which used to leave "No phone yet".
+- **Phones sheet and switcher list**: each phone says how it can connect now: "Plugged in (USB)"
+  when a phone of its kind is attached by USB, otherwise "Wireless". The current session's phone
+  shows "Connected · Cable" or "Connected · Wireless · …". A wired session's own phone is not also
+  counted as "plugged in" for other phones of its kind.
+- **Switcher header**: the transport is a badge instead of a "· USB" suffix.
+- **CarPlay's waiting window** builds its phone from the session's name when the address is null,
+  so wired CarPlay shows the phone and "USB cable" too.
+
 ## Large-handheld scale: app-wide, not Home-only
 
 The research (§4) scaled only Home's stage by `min(long/1100dp, short/690dp)`, clamped to 1–1.35×,

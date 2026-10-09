@@ -269,6 +269,7 @@ object SwitcherController {
             phoneName = active.request.phoneName, engine = active.request.engine, transport = active.request.transport,
             path = active.path, connectedSince = connectedSince,
             otherPhones = candidates(active),
+            usbKinds = com.carlink.app.ui.premium.usbPhoneKinds(app),
             method = UnifiedSettingsStore(app).load().connectionMethod,
             edge = bubble?.let { if (it.params.x + geometry.bubble / 2 < geometry.screenWidth / 2) Edge.LEFT else Edge.RIGHT }
                 ?: Edge.RIGHT,
@@ -309,7 +310,7 @@ object SwitcherController {
         if (switching) return
         panelUi = ui.copy(phoneName = active.request.phoneName, engine = active.request.engine,
             transport = active.request.transport, path = active.path, connectedSince = connectedSince,
-            otherPhones = candidates(active))
+            otherPhones = candidates(active), usbKinds = com.carlink.app.ui.premium.usbPhoneKinds(app))
     }
 
     private fun onBack() {

@@ -77,6 +77,8 @@ data class HomeState(
     val defaultPhone: PairedPhone?,
     /** elapsedRealtime when the current session reached CONNECTED, or null. */
     val connectedSince: Long?,
+    /** UI only: the kinds of phone plugged in by USB right now, for "Plugged in (USB)" labels. */
+    val usbKinds: Set<PhoneKind> = emptySet(),
 )
 
 /**
@@ -102,10 +104,18 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private val _attemptStartedAt = MutableStateFlow<Long?>(null)
     val attemptStartedAt: StateFlow<Long?> = _attemptStartedAt.asStateFlow()
 
+    /** UI only: which kinds of phone are plugged in by USB, refreshed on attach and detach. */
+    private val _usbKinds = MutableStateFlow(com.carlink.app.ui.premium.usbPhoneKinds(app))
+    private val usbReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent) {
+            _usbKinds.value = com.carlink.app.ui.premium.usbPhoneKinds(app)
+        }
+    }
+
     val home: StateFlow<HomeState> = combine(
-        link, phonesRepository.phones, phonesRepository.availability, _connectedSince,
-    ) { link, phones, bluetooth, since ->
-        HomeState(link, phones, bluetooth, defaultPhone(phones), since)
+        link, phonesRepository.phones, phonesRepository.availability, _connectedSince, _usbKinds,
+    ) { link, phones, bluetooth, since, usb ->
+        HomeState(link, phones, bluetooth, defaultPhone(phones), since, usb)
     }.stateIn(viewModelScope, SharingStarted.Eagerly,
         HomeState(LinkState.Idle, emptyList(), BluetoothAvailability.READY, null, null))
 
@@ -129,6 +139,12 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         phonesRepository.start()
+        runCatching {
+            androidx.core.content.ContextCompat.registerReceiver(app, usbReceiver, android.content.IntentFilter().apply {
+                addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
+            }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
         viewModelScope.launch {
             link.collect { state ->
                 when (state.stage) {
@@ -147,6 +163,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         phonesRepository.stop()
+        runCatching { app.unregisterReceiver(usbReceiver) }
     }
 
     // ---- Connection intents -------------------------------------------------------------

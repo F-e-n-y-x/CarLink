@@ -50,9 +50,11 @@ object CarPlayWaitingContent {
                 val link = state.toLinkState()
                 // The session's own phone and path, so the status row matches Home's.
                 val active = state as? SessionState.Active
-                val phone = active?.request?.phoneAddress?.let {
-                    PairedPhone(it, active.request.phoneName ?: "iPhone", PhoneKind.IPHONE, connected = true)
-                }
+                // USB sessions have no Bluetooth address; their phone still has a name.
+                val phone = active?.request?.let { request ->
+                    val name = request.phoneName ?: return@let null
+                    PairedPhone(request.phoneAddress ?: "", name, PhoneKind.IPHONE, connected = request.phoneAddress != null)
+                } ?: active?.request?.phoneAddress?.let { PairedPhone(it, "iPhone", PhoneKind.IPHONE, connected = true) }
                 HomeContent(
                     HomeUi(
                         home = HomeState(link, listOfNotNull(phone), BluetoothAvailability.READY, phone, null),

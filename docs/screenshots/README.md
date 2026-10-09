@@ -4,7 +4,7 @@ An index of every CarLink screen state, rendered by
 `app/src/test/java/com/carlink/app/gallery/ScreenshotGallery.kt` (Robolectric, native graphics)
 from each screen's stateless content (`HomeContent`, `SettingsContent`, `DiagnosticsContent`,
 `AboutContent`) with fake state. Nothing here comes from a real phone or head unit. Files are named
-`<area>/<area>_<state>_<config>_<theme>.png`; 346 images in total.
+`<area>/<area>_<state>_<config>_<theme>.png`; 382 images in total.
 
 ## Regenerate
 
@@ -27,6 +27,7 @@ half charged; nothing animates).
 | Config | Profile | Panel | CarLink canvas | Themes |
 |---|---|---|---|---|
 | `tablet` | Phone/tablet | The user's Redmi Pad Pro: 2560×1600px at 280dpi (1463×914dp) | ≈1108×692dp (large-handheld scale 1.32×) | dark, light |
+| `tablet` | Phone/tablet | The user's Redmi Pad Pro: 2560×1600px at 280dpi (1463×914dp) | ≈1108×692dp (large-handheld scale 1.32×) | dark, light |
 | `car-landscape` | Car | 2160×1215px (1440×810dp at 240dpi) | 1440×810dp | dark, light |
 | `car-1080p` | Car | 1920×1080px reporting 240dpi | 1440×810dp | dark |
 | `car-split-third` | Car | 640×1080px window on a 1920×1080px panel (BYD ⅓ split) | 480×810dp | dark |
@@ -40,7 +41,7 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 
 ## Screens
 
-### Home — `home/` (158 images)
+### Home — `home/` (177 images)
 
 | State | tablet dark | tablet light | car-landscape dark | car-landscape light | car-1080p dark | car-split-third dark | phone-portrait dark | phone-portrait light | phone-landscape dark | tablet-portrait dark |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -60,6 +61,8 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 | `failed-iphone-unreached` — Failed: the iPhone could not reach the screen over the network (Use Wi-Fi Direct / Try again) | [png](home/home_failed-iphone-unreached_tablet_dark.png) | [png](home/home_failed-iphone-unreached_tablet_light.png) | [png](home/home_failed-iphone-unreached_car-landscape_dark.png) | [png](home/home_failed-iphone-unreached_car-landscape_light.png) | [png](home/home_failed-iphone-unreached_car-1080p_dark.png) | [png](home/home_failed-iphone-unreached_car-split-third_dark.png) | [png](home/home_failed-iphone-unreached_phone-portrait_dark.png) | [png](home/home_failed-iphone-unreached_phone-portrait_light.png) | [png](home/home_failed-iphone-unreached_phone-landscape_dark.png) | [png](home/home_failed-iphone-unreached_tablet-portrait_dark.png) |
 | `connected-android-auto-usb` — Android Auto connected over USB, after an hour | [png](home/home_connected-android-auto-usb_tablet_dark.png) | [png](home/home_connected-android-auto-usb_tablet_light.png) | [png](home/home_connected-android-auto-usb_car-landscape_dark.png) | [png](home/home_connected-android-auto-usb_car-landscape_light.png) | [png](home/home_connected-android-auto-usb_car-1080p_dark.png) | [png](home/home_connected-android-auto-usb_car-split-third_dark.png) | [png](home/home_connected-android-auto-usb_phone-portrait_dark.png) | [png](home/home_connected-android-auto-usb_phone-portrait_light.png) | [png](home/home_connected-android-auto-usb_phone-landscape_dark.png) | [png](home/home_connected-android-auto-usb_tablet-portrait_dark.png) |
 | `sheet-network` — Connection type sheet, opened from the Network status cell | [png](home/home_sheet-network_tablet_dark.png) | [png](home/home_sheet-network_tablet_light.png) | [png](home/home_sheet-network_car-landscape_dark.png) | [png](home/home_sheet-network_car-landscape_light.png) | [png](home/home_sheet-network_car-1080p_dark.png) | — | [png](home/home_sheet-network_phone-portrait_dark.png) | [png](home/home_sheet-network_phone-portrait_light.png) | [png](home/home_sheet-network_phone-landscape_dark.png) | [png](home/home_sheet-network_tablet-portrait_dark.png) |
+| `connected-carplay-usb` — CarPlay connected by cable: transport badge, dial "Cable", USB cable and the session phone in the status bar | [png](home/home_connected-carplay-usb_tablet_dark.png) | [png](home/home_connected-carplay-usb_tablet_light.png) | [png](home/home_connected-carplay-usb_car-landscape_dark.png) | [png](home/home_connected-carplay-usb_car-landscape_light.png) | [png](home/home_connected-carplay-usb_car-1080p_dark.png) | [png](home/home_connected-carplay-usb_car-split-third_dark.png) | [png](home/home_connected-carplay-usb_phone-portrait_dark.png) | [png](home/home_connected-carplay-usb_phone-portrait_light.png) | [png](home/home_connected-carplay-usb_phone-landscape_dark.png) | [png](home/home_connected-carplay-usb_tablet-portrait_dark.png) |
+| `sheet-phones-usb` — Phones sheet during a wired session: Connected · Cable, Plugged in (USB), Wireless | [png](home/home_sheet-phones-usb_tablet_dark.png) | [png](home/home_sheet-phones-usb_tablet_light.png) | [png](home/home_sheet-phones-usb_car-landscape_dark.png) | [png](home/home_sheet-phones-usb_car-landscape_light.png) | [png](home/home_sheet-phones-usb_car-1080p_dark.png) | — | [png](home/home_sheet-phones-usb_phone-portrait_dark.png) | [png](home/home_sheet-phones-usb_phone-portrait_light.png) | [png](home/home_sheet-phones-usb_phone-landscape_dark.png) | [png](home/home_sheet-phones-usb_tablet-portrait_dark.png) |
 
 ### Settings — `settings/` (124 images)
 
@@ -93,15 +96,16 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 | `main` — Engines, device, licences, source QR codes, trademarks | [png](about/about_main_tablet_dark.png) | [png](about/about_main_tablet_light.png) | [png](about/about_main_car-landscape_dark.png) | [png](about/about_main_car-landscape_light.png) | [png](about/about_main_car-1080p_dark.png) | [png](about/about_main_car-split-third_dark.png) | [png](about/about_main_phone-portrait_dark.png) | [png](about/about_main_phone-portrait_light.png) | [png](about/about_main_phone-landscape_dark.png) | [png](about/about_main_tablet-portrait_dark.png) |
 | `sheet-licenses` — Open-source licences sheet | [png](about/about_sheet-licenses_tablet_dark.png) | [png](about/about_sheet-licenses_tablet_light.png) | [png](about/about_sheet-licenses_car-landscape_dark.png) | [png](about/about_sheet-licenses_car-landscape_light.png) | [png](about/about_sheet-licenses_car-1080p_dark.png) | — | [png](about/about_sheet-licenses_phone-portrait_dark.png) | [png](about/about_sheet-licenses_phone-portrait_light.png) | [png](about/about_sheet-licenses_phone-landscape_dark.png) | [png](about/about_sheet-licenses_tablet-portrait_dark.png) |
 
-### Switcher — `switcher/` (25 images)
+### Switcher — `switcher/` (42 images)
 
-| State | car-landscape dark | car-landscape light | tablet-portrait dark | tablet-landscape dark | tablet-landscape light |
-|---|---|---|---|---|---|
-| `bubble` — bubble | [png](switcher/switcher_bubble_car-landscape_dark.png) | [png](switcher/switcher_bubble_car-landscape_light.png) | [png](switcher/switcher_bubble_tablet-portrait_dark.png) | [png](switcher/switcher_bubble_tablet-landscape_dark.png) | [png](switcher/switcher_bubble_tablet-landscape_light.png) |
-| `panel` — panel | [png](switcher/switcher_panel_car-landscape_dark.png) | [png](switcher/switcher_panel_car-landscape_light.png) | [png](switcher/switcher_panel_tablet-portrait_dark.png) | [png](switcher/switcher_panel_tablet-landscape_dark.png) | [png](switcher/switcher_panel_tablet-landscape_light.png) |
-| `panel-left-connection-type` — panel-left-connection-type | [png](switcher/switcher_panel-left-connection-type_car-landscape_dark.png) | [png](switcher/switcher_panel-left-connection-type_car-landscape_light.png) | [png](switcher/switcher_panel-left-connection-type_tablet-portrait_dark.png) | [png](switcher/switcher_panel-left-connection-type_tablet-landscape_dark.png) | [png](switcher/switcher_panel-left-connection-type_tablet-landscape_light.png) |
-| `panel-switching` — panel-switching | [png](switcher/switcher_panel-switching_car-landscape_dark.png) | [png](switcher/switcher_panel-switching_car-landscape_light.png) | [png](switcher/switcher_panel-switching_tablet-portrait_dark.png) | [png](switcher/switcher_panel-switching_tablet-landscape_dark.png) | [png](switcher/switcher_panel-switching_tablet-landscape_light.png) |
-| `switch-prompt` — switch-prompt | [png](switcher/switcher_switch-prompt_car-landscape_dark.png) | [png](switcher/switcher_switch-prompt_car-landscape_light.png) | [png](switcher/switcher_switch-prompt_tablet-portrait_dark.png) | [png](switcher/switcher_switch-prompt_tablet-landscape_dark.png) | [png](switcher/switcher_switch-prompt_tablet-landscape_light.png) |
+| State | tablet dark | tablet light | car-landscape dark | car-landscape light | tablet-portrait dark | tablet-landscape dark | tablet-landscape light |
+|---|---|---|---|---|---|---|---|
+| `bubble` — The floating switcher bubble over the projection | [png](switcher/switcher_bubble_tablet_dark.png) | [png](switcher/switcher_bubble_tablet_light.png) | [png](switcher/switcher_bubble_car-landscape_dark.png) | [png](switcher/switcher_bubble_car-landscape_light.png) | [png](switcher/switcher_bubble_tablet-portrait_dark.png) | [png](switcher/switcher_bubble_tablet-landscape_dark.png) | [png](switcher/switcher_bubble_tablet-landscape_light.png) |
+| `panel` — Switcher panel over a wireless CarPlay session (Wireless · Wi-Fi Direct badge) | [png](switcher/switcher_panel_tablet_dark.png) | [png](switcher/switcher_panel_tablet_light.png) | [png](switcher/switcher_panel_car-landscape_dark.png) | [png](switcher/switcher_panel_car-landscape_light.png) | [png](switcher/switcher_panel_tablet-portrait_dark.png) | [png](switcher/switcher_panel_tablet-landscape_dark.png) | [png](switcher/switcher_panel_tablet-landscape_light.png) |
+| `panel-left-connection-type` — Switcher docked left, Connection type page | [png](switcher/switcher_panel-left-connection-type_tablet_dark.png) | [png](switcher/switcher_panel-left-connection-type_tablet_light.png) | [png](switcher/switcher_panel-left-connection-type_car-landscape_dark.png) | [png](switcher/switcher_panel-left-connection-type_car-landscape_light.png) | [png](switcher/switcher_panel-left-connection-type_tablet-portrait_dark.png) | [png](switcher/switcher_panel-left-connection-type_tablet-landscape_dark.png) | [png](switcher/switcher_panel-left-connection-type_tablet-landscape_light.png) |
+| `panel-switching` — Switcher while switching to another phone | [png](switcher/switcher_panel-switching_tablet_dark.png) | [png](switcher/switcher_panel-switching_tablet_light.png) | [png](switcher/switcher_panel-switching_car-landscape_dark.png) | [png](switcher/switcher_panel-switching_car-landscape_light.png) | [png](switcher/switcher_panel-switching_tablet-portrait_dark.png) | [png](switcher/switcher_panel-switching_tablet-landscape_dark.png) | [png](switcher/switcher_panel-switching_tablet-landscape_light.png) |
+| `switch-prompt` — "Switch to …?" prompt for a second USB phone | [png](switcher/switcher_switch-prompt_tablet_dark.png) | [png](switcher/switcher_switch-prompt_tablet_light.png) | [png](switcher/switcher_switch-prompt_car-landscape_dark.png) | [png](switcher/switcher_switch-prompt_car-landscape_light.png) | [png](switcher/switcher_switch-prompt_tablet-portrait_dark.png) | [png](switcher/switcher_switch-prompt_tablet-landscape_dark.png) | [png](switcher/switcher_switch-prompt_tablet-landscape_light.png) |
+| `panel-usb` — Switcher during a wired CarPlay session, with an Android phone plugged in | [png](switcher/switcher_panel-usb_tablet_dark.png) | [png](switcher/switcher_panel-usb_tablet_light.png) | [png](switcher/switcher_panel-usb_car-landscape_dark.png) | [png](switcher/switcher_panel-usb_car-landscape_light.png) | [png](switcher/switcher_panel-usb_tablet-portrait_dark.png) | [png](switcher/switcher_panel-usb_tablet-landscape_dark.png) | [png](switcher/switcher_panel-usb_tablet-landscape_light.png) |
 
 ## Add a screen or state
 

@@ -94,6 +94,8 @@ data class SwitcherUi(
     val connectedSince: Long?,
     /** Paired phones of a known kind other than the one projecting. */
     val otherPhones: List<PairedPhone>,
+    /** UI only: the kinds of phone plugged in by USB, for "Plugged in (USB)" labels. */
+    val usbKinds: Set<PhoneKind> = emptySet(),
     /** Address of the phone being switched to, while the switch starts. */
     val switchingTo: String? = null,
     /** The driver's connection type; used from the next connection. */
@@ -190,19 +192,27 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
     val scheme = MaterialTheme.colorScheme
     val colors = CarLinkTokens.colors
     val switching = ui.switchingTo != null
+    // A wired session's own phone is the plugged-in one of its kind; other phones of that kind are not.
+    val pluggedOthers = if (ui.transport == Transport.USB) ui.usbKinds - (if (ui.engine == Engine.CARPLAY) PhoneKind.IPHONE
+        else PhoneKind.ANDROID) else ui.usbKinds
 
     // Header: who projects, how, and for how long.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        GlyphDisc(if (ui.engine == Engine.CARPLAY) R.drawable.carlink_ic_phone_iphone else R.drawable.carlink_ic_android,
-            colors.success, dimens.avatarRow)
+        com.carlink.app.ui.premium.IconTile(if (ui.engine == Engine.CARPLAY) R.drawable.carlink_ic_phone_iphone
+            else R.drawable.carlink_ic_android, tint = colors.success, size = dimens.avatarRow)
         Spacer(Modifier.width(dimens.gutter))
         Column(Modifier.weight(1f)) {
             Text(isolate(ui.phoneName ?: engineName(ui.engine)), style = MaterialTheme.typography.titleLarge,
                 color = scheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.semantics { heading() })
-            Text("${engineName(ui.engine)} · ${pathLabel(ui.transport, ui.path)}", style = MaterialTheme.typography.bodyMedium,
+            Text(engineName(ui.engine), style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
+            // Cable or wireless as a badge: a plug with "Cable", or the path's glyph with "Wireless · Wi-Fi Direct".
+            com.carlink.app.ui.premium.TransportBadge(com.carlink.app.ui.premium.transportIcon(ui.transport, ui.path),
+                com.carlink.app.ui.premium.transportLabel(ui.transport, ui.path), tint = colors.success,
+                style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(if (CarLinkTokens.profile == UiProfile.CAR) 12.dp else 8.dp).clip(CircleShape).background(colors.success))
                 Spacer(Modifier.width(8.dp))
@@ -231,7 +241,7 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
         Column(verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
             ui.otherPhones.forEach { phone ->
                 PhoneRow(phone, switchingThis = ui.switchingTo == phone.address, enabled = !switching,
-                    onClick = { actions.switchTo(phone) })
+                    plugged = phone.kind in pluggedOthers, onClick = { actions.switchTo(phone) })
             }
         }
     }
@@ -278,7 +288,7 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
 }
 
 @Composable
-private fun PhoneRow(phone: PairedPhone, switchingThis: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun PhoneRow(phone: PairedPhone, switchingThis: Boolean, enabled: Boolean, plugged: Boolean, onClick: () -> Unit) {
     val dimens = CarLinkTokens.dimens
     val scheme = MaterialTheme.colorScheme
     val switchingText = stringResource(R.string.carlink_switcher_switching)
@@ -290,7 +300,8 @@ private fun PhoneRow(phone: PairedPhone, switchingThis: Boolean, enabled: Boolea
         contentPadding = PaddingValues(horizontal = dimens.gutter, vertical = 12.dp),
     ) {
         Row(Modifier.defaultMinSize(minHeight = dimens.minTouch), verticalAlignment = Alignment.CenterVertically) {
-            PhoneAvatar(phone.kind, dimens.avatarRow, active = switchingThis)
+            com.carlink.app.ui.premium.IconTile(com.carlink.app.ui.components.phoneIcon(phone.kind),
+                tint = if (switchingThis) scheme.primary else null, size = dimens.avatarRow)
             Spacer(Modifier.width(dimens.gutter))
             Column(Modifier.weight(1f)) {
                 Text(isolate(phone.name), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface,
@@ -298,6 +309,12 @@ private fun PhoneRow(phone: PairedPhone, switchingThis: Boolean, enabled: Boolea
                 Text(if (switchingThis) switchingText else phone.kind.engine?.let { engineName(it) }.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (switchingThis) scheme.primary else scheme.onSurfaceVariant, maxLines = 1)
+                if (!switchingThis) {
+                    com.carlink.app.ui.premium.TransportInline(
+                        if (plugged) R.drawable.carlink_ic_usb else com.carlink.app.ui.premium.transportIcon(Transport.WIRELESS),
+                        stringResource(if (plugged) R.string.carlink_transport_plugged_in else R.string.carlink_transport_wireless),
+                        if (plugged) scheme.primary else scheme.onSurfaceVariant)
+                }
             }
             Spacer(Modifier.width(12.dp))
             if (switchingThis && !LocalReduceMotion.current) {
@@ -358,17 +375,6 @@ private fun methodDetail(method: ConnectionMethod): Int = when (method) {
     ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot_detail
     ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct_detail
 }
-
-@Composable
-private fun pathLabel(transport: Transport, path: WirelessPath?): String = stringResource(
-    when {
-        transport == Transport.USB -> R.string.carlink_transport_usb
-        path == WirelessPath.SAME_WIFI -> R.string.carlink_settings_method_same_wifi
-        path == WirelessPath.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot
-        path == WirelessPath.WIFI_DIRECT -> R.string.carlink_settings_method_direct
-        else -> R.string.carlink_transport_wireless
-    },
-)
 
 /** The phones the panel offers: paired, of a known kind, and not the one projecting. */
 fun switchCandidates(phones: List<PairedPhone>, currentAddress: String?, currentName: String?): List<PairedPhone> =

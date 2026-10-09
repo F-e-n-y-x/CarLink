@@ -31,7 +31,7 @@ import com.carlink.app.ui.switcher.SwitcherOverlay
 import com.carlink.app.ui.switcher.SwitcherPage
 import com.carlink.app.ui.switcher.SwitcherUi
 
-private val switcherConfigs = setOf("car-landscape", "tablet-landscape", "tablet-portrait")
+private val switcherConfigs = setOf("car-landscape", "tablet", "tablet-landscape", "tablet-portrait")
 
 private object GallerySwitcherActions : SwitcherActions
 
@@ -56,6 +56,15 @@ internal fun switcherEntries(): List<GalleryEntry> = with(HomeFakes) {
         entry("panel") {
             val since = remember { SystemClock.elapsedRealtime() - 754_000 }
             FakeProjection { SwitcherOverlay(ui(since = since), GallerySwitcherActions) }
+        },
+        // A wired CarPlay session, with an Android phone plugged in as well.
+        entry("panel-usb") {
+            val since = remember { SystemClock.elapsedRealtime() - 1_394_000 }
+            FakeProjection {
+                SwitcherOverlay(ui(since = since).copy(phoneName = "iPhone", transport = Transport.USB, path = null,
+                    usbKinds = setOf(com.carlink.app.core.PhoneKind.IPHONE, com.carlink.app.core.PhoneKind.ANDROID)),
+                    GallerySwitcherActions)
+            }
         },
         entry("panel-left-connection-type") {
             val since = remember { SystemClock.elapsedRealtime() - 754_000 }

@@ -62,9 +62,19 @@ internal class StatusTaps(val onBluetooth: () -> Unit, val onNetwork: () -> Unit
 internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<StatusItem> {
     val colors = CarLinkTokens.colors
     val bt = ui.home.bluetooth
-    val path = if (mode == HomeMode.CONNECTED && ui.home.link.transport == Transport.USB) null else ui.network?.path
+    val link = ui.home.link
+    // A session in progress or running: its own transport and phone, not the idle defaults.
+    val inSession = mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING || mode == HomeMode.CONNECTED
+    val path = if (inSession && link.transport == Transport.USB) null else ui.network?.path
     val phones = ui.home.phones
     val phone = ui.home.defaultPhone
+    // USB sessions have no Bluetooth address, so the paired list may not hold the phone; its name still does.
+    val sessionPhone = link.phoneName?.takeIf { inSession }
+    val sessionKind = when (link.engine) {
+        com.carlink.app.core.Engine.CARPLAY -> com.carlink.app.core.PhoneKind.IPHONE
+        com.carlink.app.core.Engine.ANDROID_AUTO -> com.carlink.app.core.PhoneKind.ANDROID
+        null -> com.carlink.app.core.PhoneKind.UNKNOWN
+    }
     return listOf(
         StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {
             BluetoothAvailability.READY -> R.string.carlink_home_bt_chip_on
@@ -78,19 +88,24 @@ internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<Sta
                 ?: stringResource(R.string.carlink_home_net_same_wifi)
             WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
             WirelessPath.WIFI_DIRECT -> stringResource(R.string.carlink_home_net_direct)
-            null -> stringResource(R.string.carlink_home_path_usb)
+            null -> stringResource(R.string.carlink_transport_usb_cable)
         }, when (path) {
             WirelessPath.SAME_WIFI -> R.drawable.carlink_ic_wifi
             WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
             WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
             null -> R.drawable.carlink_ic_usb
         }, if (path == WirelessPath.SAME_WIFI) colors.success else null, taps.onNetwork),
-        StatusItem(stringResource(R.string.carlink_home_chip_phone),
-            phone?.name?.let(::isolate)
-                ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
-                else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
-            phone?.let { phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
-            if (phone?.connected == true) colors.success else null, taps.onPhones),
+        if (sessionPhone != null) {
+            StatusItem(stringResource(R.string.carlink_home_chip_phone), isolate(sessionPhone), phoneIcon(sessionKind),
+                if (mode == HomeMode.CONNECTED) colors.success else null, taps.onPhones)
+        } else {
+            StatusItem(stringResource(R.string.carlink_home_chip_phone),
+                phone?.name?.let(::isolate)
+                    ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
+                    else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
+                phone?.let { phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
+                if (phone?.connected == true) colors.success else null, taps.onPhones)
+        },
     )
 }
 

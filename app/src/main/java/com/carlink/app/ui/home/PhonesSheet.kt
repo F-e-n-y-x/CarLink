@@ -88,10 +88,29 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                             Text(isolate(phone.name), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                             val type = phone.kind.engine?.let { engineName(it) } ?: stringResource(R.string.carlink_home_kind_title)
-                            val presence = stringResource(if (phone.connected) R.string.carlink_home_phone_connected
-                                else R.string.carlink_home_phone_not_nearby)
-                            Text("$type · $presence", style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onSurfaceVariant, maxLines = 2)
+                            Text(type, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant, maxLines = 2)
+                            // How this phone can connect now: the running session's transport, plugged in, or wireless.
+                            val link = ui.home.link
+                            val current = link.isActive && link.phoneName == phone.name && link.transport != null
+                            // A wired session's own phone is the plugged-in one of its kind.
+                            val sessionKind = when (link.engine) {
+                                com.carlink.app.core.Engine.CARPLAY -> PhoneKind.IPHONE
+                                com.carlink.app.core.Engine.ANDROID_AUTO -> PhoneKind.ANDROID
+                                null -> null
+                            }
+                            val plugged = phone.kind in ui.home.usbKinds &&
+                                !(link.isActive && link.transport == com.carlink.app.core.Transport.USB && phone.kind == sessionKind)
+                            val (icon, text) = when {
+                                current -> com.carlink.app.ui.premium.transportIcon(link.transport, ui.network?.path) to
+                                    stringResource(R.string.carlink_transport_with_path, stringResource(R.string.carlink_home_eyebrow_connected),
+                                        com.carlink.app.ui.premium.transportLabel(link.transport!!, ui.network?.path))
+                                plugged -> R.drawable.carlink_ic_usb to stringResource(R.string.carlink_transport_plugged_in)
+                                else -> com.carlink.app.ui.premium.transportIcon(com.carlink.app.core.Transport.WIRELESS) to
+                                    stringResource(R.string.carlink_transport_wireless)
+                            }
+                            Spacer(Modifier.height(2.dp))
+                            com.carlink.app.ui.premium.TransportInline(icon, text,
+                                if (current) colors.success else if (plugged) scheme.primary else scheme.onSurfaceVariant)
                         }
                         Spacer(Modifier.width(12.dp))
                         Icon(painterResource(R.drawable.carlink_ic_chevron_right), null, Modifier.size(dimens.iconTertiary),

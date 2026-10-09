@@ -15,6 +15,15 @@
     <string name="carlink_engine_android_auto">Android Auto</string>
     <string name="carlink_transport_usb">USB</string>
     <string name="carlink_transport_wireless">Wireless</string>
+    <!-- How a phone reaches the screen: by cable (USB) or wirelessly (Bluetooth + Wi-Fi). -->
+    <string name="carlink_transport_cable">Cable</string>
+    <string name="carlink_transport_usb_cable">USB cable</string>
+    <string name="carlink_transport_plugged_in">Plugged in (USB)</string>
+    <string name="carlink_transport_with_path">%1$s · %2$s</string>
+    <string name="carlink_transport_connected_cable">Connected by cable</string>
+    <string name="carlink_transport_connected_wireless">Connected wirelessly</string>
+    <string name="carlink_transport_connecting_cable">Connecting by cable</string>
+    <string name="carlink_transport_connecting_wireless">Connecting wirelessly</string>
     <string name="carlink_state_on">On</string>
     <string name="carlink_state_off">Off</string>
     <string name="carlink_state_selected">Selected</string>

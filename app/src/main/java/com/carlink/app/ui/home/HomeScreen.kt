@@ -370,6 +370,18 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                     if (showEngine) {
                         Text(engine!!, style = caption, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
                     }
+                    if (state == HomeMode.CONNECTED && link.transport != null && !small) {
+                        // The instrument also says how the phone is linked: a plug or a wireless glyph.
+                        val usb = link.transport == Transport.USB
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(painterResource(com.carlink.app.ui.premium.transportIcon(link.transport, ui.network?.path)), null,
+                                Modifier.size(side * 0.08f), tint = colors.success)
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(if (usb) R.string.carlink_transport_cable else R.string.carlink_transport_wireless)
+                                .uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall, color = colors.success,
+                                maxLines = 1)
+                        }
+                    }
                     if (state == HomeMode.CONNECTING || state == HomeMode.NOT_ANSWERING) {
                         val step = if (state == HomeMode.NOT_ANSWERING) 0 else activeStep(link)
                         Text(stepNames()[step].uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall,
@@ -460,6 +472,25 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     }
     Text(title, style = titleStyle.copy(lineBreak = LineBreak.Heading), color = scheme.onSurface, textAlign = align,
         modifier = Modifier.semantics { heading(); liveRegion = LiveRegionMode.Polite })
+    if ((mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING || mode == HomeMode.CONNECTED) && link.transport != null) {
+        // Cable or wireless, in words and a glyph, right under the headline.
+        Spacer(Modifier.height(if (car) 18.dp else 12.dp))
+        val usb = link.transport == Transport.USB
+        val connected = mode == HomeMode.CONNECTED
+        val lead = stringResource(when {
+            usb && connected -> R.string.carlink_transport_connected_cable
+            usb -> R.string.carlink_transport_connecting_cable
+            connected -> R.string.carlink_transport_connected_wireless
+            else -> R.string.carlink_transport_connecting_wireless
+        })
+        val path = ui.network?.path.takeIf { !usb }
+        com.carlink.app.ui.premium.TransportBadge(
+            com.carlink.app.ui.premium.transportIcon(link.transport, path),
+            if (path != null) stringResource(R.string.carlink_transport_with_path, lead,
+                com.carlink.app.ui.premium.wirelessPathName(path)) else lead,
+            tint = if (connected) colors.success else modeColor(mode),
+        )
+    }
     Spacer(Modifier.height(if (car) 16.dp else 10.dp))
     // A reading measure of about 60 characters, so lines do not run across the whole stage.
     Text(body, Modifier.widthIn(max = if (car) 760.dp else 520.dp),
