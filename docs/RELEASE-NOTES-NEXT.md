@@ -30,6 +30,10 @@ Changes through DiPlay 0.2.15 are documented in [0.2.15 release notes](RELEASE-N
 - Add an Off option for the CarPlay swipe-down quick-menu gesture (#487).
 - Show the reconnect bar when Auto yield changes (#482).
 - Refine Settings spacing, alignment and the in-session menu width; Diagnostics and Advanced appear as Overview category rows (#486).
+- Settings search is an inline box in the header: matches drop down as you type, Enter opens the top match, and Back clears an open search (#450).
+- Declare automatic UI and map appearance for each display when CarPlay connects, before the runtime day/night updates. The contributor's original version was tested on a 2023 Tang DM-i; this port awaits in-car acceptance (#346).
+- Keep short delayed video bursts instead of rebuilding the decoder after 250 ms: a backlog that keeps growing recovers after a short grace period, and one 1.5 s behind recovers at once. Decoded audio buffers are released before writing them. Pending wider in-car acceptance (#347).
+- The side panel has three sizes set by dragging its edge, closes when dragged past five sixths of the screen, and opens from a pull tab on CarPlay's passenger edge; taps, scrolls and long presses on the tab still reach CarPlay. On Android 12 and later it blurs while resizing, and on BYD it shows tyre pressure and temperature through read-only ADB (#480).
 
 ## Navigation and cluster
 
@@ -38,7 +42,9 @@ Changes through DiPlay 0.2.15 are documented in [0.2.15 release notes](RELEASE-N
 - Send the DiLink 3 simple-navigation arrival time in AMap's form so the cluster shows the whole time. Not yet confirmed in a car (#458).
 - Add an experimental Platform 21 instrument task route for the 2023 Tang DM-i, off by default (#348).
 - Add experimental wheel-key volume for spoken navigation guidance, off by default (#344).
+- The custom turn card has its own small-window size, position, opacity and day/night choice, with a placement sketch. A full-screen card position the driver already set keeps applying in the small window until the small-window card is adjusted (#493).
 
 ## Vehicle
 
 - Add an optional delayed pause of the car Bluetooth during CarPlay (needs ADB, off by default). While it is paused, CarPlay calls use the cabin speaker and microphone. Bluetooth turns back on when CarPlay ends or disconnects, when DiPlay reopens after an interruption, and before the next wireless handshake. Pending in-car acceptance (#307).
+- Add experimental music-following ambient lighting for compatible BYD interior lamps (needs ADB, off by default). Turning it off restores the lamp settings it changed. Pending in-car acceptance (#345).

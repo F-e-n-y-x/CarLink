@@ -371,7 +371,7 @@
     <string name="settings_advanced_caution_title">Change with care</string>
     <string name="settings_advanced_caution_description">These features can depend on vehicle firmware, ADB access, or experimental CarPlay behavior. Everyday settings are organized in the categories above.</string>
     <string name="settings_search">Search</string>
-    <string name="settings_search_hint">Setting name, for example frame rate</string>
+    <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No setting matches. Try another word.</string>
     <string name="settings_open_category">Open %1$s settings</string>
     <string name="settings_ready_connected">CarPlay is active. Changes that need a reconnect will say so.</string>
@@ -758,6 +758,41 @@
     <string name="car_button_description">CarPlay shows this icon and name in its app list. Tap it to return to the car\'s own screen. Changes apply the next time CarPlay connects.</string>
     <string name="car_button_saved_next_connection">Saved. CarPlay shows the new icon and name the next time it connects.</string>
     <string name="this_head_unit_has_no_image_picker">This head unit has no image picker.</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="settings_ambient_title">Ambient lighting (experimental)</string>
+    <string name="settings_ambient_configuration">Ambient light settings</string>
+    <string name="settings_ambient_static">Fixed</string>
+    <string name="settings_ambient_energy">Sound energy</string>
+    <string name="settings_ambient_beat">Beat</string>
+    <string name="settings_ambient_tempo">Estimated BPM</string>
+    <string name="settings_ambient_bass">Bass priority</string>
+    <string name="settings_ambient_smart">Smart follow</string>
+    <string name="settings_ambient_slow">Smooth</string>
+    <string name="settings_ambient_standard">Standard</string>
+    <string name="settings_ambient_fast">Fast</string>
+    <string name="settings_ambient_enabled">On</string>
+    <string name="settings_ambient_disabled">Off</string>
+    <string name="settings_ambient_summary">%1$s · %2$s · %3$s · %4$d colors · brightness %5$d</string>
+    <string name="settings_ambient_enable">Enable ambient light control</string>
+    <string name="settings_ambient_enable_description">Turning this off attempts to restore the original lamp colors, brightness and area. Existing ADB authorization is required.</string>
+    <string name="settings_ambient_music">Follow music</string>
+    <string name="settings_ambient_music_description">When playing, follow the music or use fixed colors and brightness if disabled. Pausing or disconnecting holds all zones at the lowest level in either mode. Changes apply after saving.</string>
+    <string name="settings_ambient_color_mode">Color changes</string>
+    <string name="settings_ambient_speed">Brightness transition speed</string>
+    <string name="settings_ambient_palette">OEM color numbers (multiple selections)</string>
+    <string name="settings_ambient_palette_summary">Colors · %1$d selected</string>
+    <string name="settings_ambient_select_all">Select all</string>
+    <string name="settings_ambient_select_one">Select at least one color</string>
+    <string name="settings_ambient_brightness">Maximum brightness</string>
+    <string name="settings_ambient_minimum">0 (lowest level)</string>
+    <string name="settings_ambient_area">Area</string>
+    <string name="settings_ambient_front">Front</string>
+    <string name="settings_ambient_rear">Rear</string>
+    <string name="settings_ambient_all">All</string>
+    <string name="settings_ambient_parked_notice">Configure while parked. Experimental support for selected BYD lamp interfaces; compatibility is not guaranteed for every model or firmware. Level 0 means the lowest OEM level, not power off.</string>
+    <string name="settings_ambient_checking">Checking…</string>
+    <string name="settings_ambient_unavailable">Read-only check failed: existing ADB authorization or a supported lamp interface is unavailable. No light settings were saved. Configure access separately while parked; this feature does not enable ADB or request authorization.</string>
     <string name="settings_interface_size">Interface size</string>
     <string name="settings_interface_size_auto">Automatic</string>
     <string name="settings_interface_size_hint">Size of text and controls on DiPlay\'s own screens. Automatic enlarges them on large screens with a low density. CarPlay is not affected.</string>
@@ -807,4 +842,12 @@
     <string name="bt_suspend_delay_option">%1$d s after connecting</string>
     <string name="bt_suspend_during_carplay">Pause car Bluetooth during CarPlay · needs ADB</string>
     <string name="bt_suspend_during_carplay_description">The phone keeps its hands-free link to the car, so a call rings on both the car Bluetooth phone and CarPlay. While CarPlay runs, pause the car Bluetooth over ADB so calls ring on CarPlay only; with Bluetooth off, CarPlay calls play on the cabin speaker and microphone instead of the phone SCO. Bluetooth turns back on when CarPlay ends and before the next wireless handshake. Pairing is never touched. Changes apply on the next connection.</string>
+    <string name="cluster_small_window_card_theme">Small-window turn card theme</string>
+    <string name="cluster_small_window_card_theme_follow">Follow the turn card theme</string>
+    <string name="cluster_small_window_card_size">Small-window turn card · size</string>
+    <string name="cluster_small_window_card_horizontal">Small-window turn card · left/right</string>
+    <string name="cluster_small_window_card_vertical">Small-window turn card · up/down</string>
+    <string name="cluster_small_window_card_opacity">Small-window turn card · opacity</string>
+    <string name="turn_card_theme_day">Always day</string>
+    <string name="turn_card_theme_night">Always night</string>
 </resources>

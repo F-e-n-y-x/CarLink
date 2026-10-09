@@ -766,4 +766,47 @@
     <string name="settings_gesture_disabled">關閉</string>
     <string name="settings_gesture_disabled_hint">已關閉向下滑動開啟快捷選單的手勢。</string>
     <string name="settings_gesture_disabled_action">快捷選單 · 關閉向下滑動（點選切換）</string>
+    <string name="cluster_small_window_card_theme">小螢幕轉向卡主題</string>
+    <string name="cluster_small_window_card_theme_follow">跟隨轉向卡主題</string>
+    <string name="cluster_small_window_card_size">小螢幕轉向卡 · 大小</string>
+    <string name="cluster_small_window_card_horizontal">小螢幕轉向卡 · 左右</string>
+    <string name="cluster_small_window_card_vertical">小螢幕轉向卡 · 上下</string>
+    <string name="cluster_small_window_card_opacity">小屏轉向卡 · 透明度</string>
+    <string name="turn_card_theme_day">始終白天</string>
+    <string name="turn_card_theme_night">始終夜間</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="settings_ambient_title">氛圍燈（實驗性）</string>
+    <string name="settings_ambient_configuration">氛圍燈設定</string>
+    <string name="settings_ambient_static">固定</string>
+    <string name="settings_ambient_energy">聲音能量</string>
+    <string name="settings_ambient_beat">節拍</string>
+    <string name="settings_ambient_tempo">估算 BPM</string>
+    <string name="settings_ambient_bass">低音優先</string>
+    <string name="settings_ambient_smart">智慧跟隨</string>
+    <string name="settings_ambient_slow">平滑</string>
+    <string name="settings_ambient_standard">標準</string>
+    <string name="settings_ambient_fast">快速</string>
+    <string name="settings_ambient_enabled">開啟</string>
+    <string name="settings_ambient_disabled">關閉</string>
+    <string name="settings_ambient_summary">%1$s · %2$s · %3$s · %4$d 色 · 亮度 %5$d</string>
+    <string name="settings_ambient_enable">啟用氛圍燈控制</string>
+    <string name="settings_ambient_enable_description">關閉後會嘗試還原原始燈光顏色、亮度及區域。需要既有的 ADB 授權。</string>
+    <string name="settings_ambient_music">跟隨音樂</string>
+    <string name="settings_ambient_music_description">播放時跟隨音樂；關閉跟隨後使用固定顏色及亮度。暫停或斷線時，所有區域維持最低亮度。儲存後生效。</string>
+    <string name="settings_ambient_color_mode">顏色變化</string>
+    <string name="settings_ambient_speed">亮度過渡速度</string>
+    <string name="settings_ambient_palette">原廠色號（可複選）</string>
+    <string name="settings_ambient_palette_summary">顏色 · 已選 %1$d 個</string>
+    <string name="settings_ambient_select_all">全選</string>
+    <string name="settings_ambient_select_one">請至少選擇一個顏色</string>
+    <string name="settings_ambient_brightness">最高亮度</string>
+    <string name="settings_ambient_minimum">0（最低檔）</string>
+    <string name="settings_ambient_area">區域</string>
+    <string name="settings_ambient_front">前排</string>
+    <string name="settings_ambient_rear">後排</string>
+    <string name="settings_ambient_all">全部</string>
+    <string name="settings_ambient_parked_notice">請停車後設定。實驗性支援部分 BYD 燈光介面，無法保證每種車型及韌體相容。0 表示原廠最低檔，不代表關燈。</string>
+    <string name="settings_ambient_checking">檢查中…</string>
+    <string name="settings_ambient_unavailable">唯讀檢查失敗：缺少既有 ADB 授權或支援的燈光介面。未儲存燈光設定。請停車後另行設定存取；本功能不啟用 ADB，也不請求授權。</string>
 </resources>

@@ -215,6 +215,7 @@ class AndroidMediaSink(
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
     private val appContext = context?.applicationContext
+    private val ambientSinkToken = AmbientMusicController.openSink(appContext)
     private val audioManager = appContext?.getSystemService(AudioManager::class.java)
     private val audioFocusCoordinator = AudioFocusCoordinator(
         appContext,
@@ -587,6 +588,7 @@ class AndroidMediaSink(
     }
 
     fun close() {
+        AmbientMusicController.closeSink(ambientSinkToken)
         synchronized(videoOwnershipLock) {
             videoClosed = true
             videoDecoders.entries.toList().forEach { (type, decoder) -> retire(type, decoder) }
@@ -670,6 +672,7 @@ class AndroidMediaSink(
             navigationStreamType,
             mediaBufferMillis,
             onAudioDiagnostic,
+            ambientSinkToken,
             speakerphoneCall = format.audioType == "telephony" &&
                 appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
             echoReference = echoReference,
@@ -868,6 +871,7 @@ private class VideoDecoder(
     private var duplicateConfigLogged = false
     private var failureReports = 0
     private val referenceChain = VideoReferenceChain()
+    private val backlogRecovery = VideoBacklogRecovery()
     private var lastKeyFrameRequestNs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
     private val stats = VideoStats(statsLabel ?: if (streamType == MAIN_SCREEN_TYPE) "" else " stream=$streamType")
@@ -968,10 +972,14 @@ private class VideoDecoder(
                     when (job) {
                         is VideoJob.Config -> configureDecoder(job)
                         is VideoJob.Frame -> {
-                            if (System.nanoTime() - job.receivedNs > MAX_FRAME_AGE_NS) {
-                                queue.discardFrames()
-                                recover("video backlog exceeded 250 ms")
-                            } else feed(job.nalus, localTimeOf(job))
+                            val backlog = queue.backlogAfterCurrent()
+                            val overloaded = !referenceChain.needsKeyFrame && backlogRecovery.observe(
+                                System.nanoTime(), job.receivedNs,
+                                backlog.pendingFrames, backlog.newestPendingReceivedNs,
+                            )
+                            if (overloaded) {
+                                recover("video backlog kept growing or exceeded hard limit")
+                            } else feed(job.nalus, job.receivedNs, localTimeOf(job))
                         }
                         is VideoJob.SurfaceChanged -> changeSurface(job.surface)
                         is VideoJob.DetachSurface -> detach(job.request)
@@ -1019,6 +1027,7 @@ private class VideoDecoder(
             dropOperatingRate("codec failed before its first frame")
         }
         releaseDecoder()
+        queue.discardCurrentChain()
         referenceChain.reset()
         requestKeyFrameIfDue()
     }
@@ -1103,6 +1112,7 @@ private class VideoDecoder(
             if (next != null) { used = attempt; break }
         }
         if (next == null) {
+            queue.discardCurrentChain()
             report("decoder configuration failed mime=$mime size=${width}x$height")
         }
         if (nextOperatingRate(requestedRate, used) != requestedRate) dropOperatingRate("refused at configure")
@@ -1154,10 +1164,17 @@ private class VideoDecoder(
         atOnce: Boolean = false,
     ): MediaCodec? {
         var candidate: MediaCodec? = null
+        var codecName = attempt.codecName ?: "default"
+        var phase = "create"
+        var phaseStartNs = System.nanoTime()
+        val startedNs = phaseStartNs
         return try {
             val format = buildFormat(mime, csd, attempt)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
+            codecName = runCatching { codec.name }.getOrDefault(codecName)
+            phase = "configure"
+            phaseStartNs = System.nanoTime()
             val lowLatency = attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
                 codec.codecInfo.getCapabilitiesForType(mime).isFeatureSupported("low-latency")
             if (lowLatency) format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
@@ -1167,16 +1184,22 @@ private class VideoDecoder(
             val pictureOrder = attempt.tuned && atOnce && listsPictureOrder(codec)
             if (pictureOrder) format.setInteger(PICTURE_ORDER_PARAMETER, 1)
             codec.configure(format, surface, null, 0)
+            phase = "start"
+            phaseStartNs = System.nanoTime()
             codec.start()
             startedLowLatency = lowLatency
             startedPictureOrder = pictureOrder
             codec
         } catch (error: Exception) {
-            runCatching { candidate?.release() }
+            val phaseMs = (System.nanoTime() - phaseStartNs) / 1_000_000
+            val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
+            runCatching { candidate?.release() }.onFailure {
+                Log.w(TAG, "video decoder candidate release failed name=$codecName", it)
+            }
             reportFailure("stage=configure tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} mime=$mime", error)
             Log.w(
                 TAG,
-                "video decoder configure failed name=${attempt.codecName ?: "default"} " +
+                "video decoder configure failed name=$codecName phase=$phase phaseMs=$phaseMs elapsedMs=$elapsedMs " +
                     "tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} mime=$mime size=${width}x$height",
                 error,
             )
@@ -1278,6 +1301,7 @@ private class VideoDecoder(
         outputSurface = surface
         if (surface == null) {
             releaseDecoder()
+            queue.discardCurrentChain()
             Log.i(TAG, "video decoder detached from surface")
             return
         }
@@ -1292,10 +1316,12 @@ private class VideoDecoder(
             }
         }
         releaseDecoder()
+        queue.discardCurrentChain()
+        referenceChain.reset()
         lastConfig?.let(::configureDecoder)
     }
 
-    private fun feed(nalus: ByteArray, presentNs: Long = 0L) {
+    private fun feed(nalus: ByteArray, receivedNs: Long, presentNs: Long = 0L) {
         val annexB = MediaCodecSupport.toAnnexB(nalus)
         val config = lastConfig ?: return
         if (outputSurface == null) return
@@ -1306,6 +1332,15 @@ private class VideoDecoder(
         }
         if (decoder == null) configureDecoder(config)
         val codec = decoder ?: return
+        // A slow rebuild must not immediately restart on its obsolete triggering IDR.
+        if (referenceChain.needsKeyFrame && VideoRecoveryFrameAge.isObsolete(
+                System.nanoTime(), receivedNs, queue.backlogAfterCurrent(),
+            )) {
+            queue.discardCurrentChain()
+            backlogRecovery.reset()
+            requestKeyFrameIfDue()
+            return
+        }
         if (!submittedFrameLogged) {
             submittedFrameLogged = true
             Log.i(
@@ -1359,6 +1394,7 @@ private class VideoDecoder(
         report("recovery: $reason; waiting for keyframe")
         // Recreate with codec-specific data: flush can discard CSD before the first output.
         releaseDecoder()
+        queue.discardCurrentChain()
         referenceChain.reset()
         requestKeyFrameIfDue()
     }
@@ -1460,6 +1496,7 @@ private class VideoDecoder(
 
     // Worker only; [outputLock] orders it against the output thread.
     private fun releaseDecoder() {
+        backlogRecovery.reset()
         val codec: MediaCodec?
         synchronized(outputLock) {
             codec = decoder
@@ -1514,7 +1551,6 @@ private class VideoDecoder(
         const val OUTPUT_IDLE_WAIT_MS = 10L
         const val OUTPUT_EXIT_WAIT_MS = 500L
         const val INPUT_TIMEOUT_US = 10_000L
-        const val MAX_FRAME_AGE_NS = 250_000_000L
         // A paced frame more than this ahead is treated as a bad mapping and shown at once.
         const val MAX_PACING_AHEAD_NS = 1_000_000_000L
         // Longer input gaps are a still screen, not decoding work.
@@ -1526,6 +1562,15 @@ private class VideoDecoder(
         const val PAUSE_HELD_FRAMES = 3
         val START_CODE = byteArrayOf(0x00, 0x00, 0x00, 0x01)
     }
+}
+
+/** Use the existing hard backlog age only when a newer frame remains in this control segment. */
+internal object VideoRecoveryFrameAge {
+    fun isObsolete(nowNs: Long, receivedNs: Long, backlog: VideoDecodeQueue.Backlog): Boolean =
+        nowNs >= receivedNs && nowNs - receivedNs >= 1_500_000_000L &&
+            backlog.pendingFrames > 0 && backlog.newestPendingReceivedNs?.let {
+                it <= nowNs && it - receivedNs >= 100_000_000L
+            } == true
 }
 
 private fun MediaFormat.intOrNull(key: String): Int? =
@@ -1550,6 +1595,7 @@ private class AudioRenderer(
     private val navigationStreamType: Int,
     private val mediaBufferMillis: Int,
     private val report: (String) -> Unit,
+    private val ambientSinkToken: Long,
     private val speakerphoneCall: Boolean = false,
     /** Receives the played call audio so the call microphone can cancel its echo. */
     private val echoReference: EchoReference? = null,
@@ -1590,6 +1636,10 @@ private class AudioRenderer(
     private val maxArrivalGapMs = AtomicLong()
     private val frameBytes = if (format.channels >= 2) 4 else 2
     private var totalWrittenFrames = 0L
+    private val ambientMedia = AmbientMusicActivityPolicy.acceptsAudio(format.audioType, format.payloadType)
+    private val ambientEnvelope = AmbientMusicEnvelope()
+    private val ambientBass = AmbientMusicBassAnalyzer(format.sampleRate, pcmChannels)
+    private var ambientRendererToken = 0L
     private var writtenFramesThisWindow = 0L
     private var writeErrorsThisWindow = 0
     private var lastWriteErrorCode: Int? = null
@@ -1633,6 +1683,7 @@ private class AudioRenderer(
     }
 
     override fun close() {
+        AmbientMusicController.closeRenderer(ambientRendererToken)
         running = false
         NavigationPlayback.close(navigationPlaybackToken)
         thread.interrupt()
@@ -1785,6 +1836,11 @@ private class AudioRenderer(
             )
         }
         track = built
+        if (ambientMedia) {
+            ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) {
+                built.playbackHeadPosition to (running && built.playState == AudioTrack.PLAYSTATE_PLAYING)
+            }
+        }
         diagnosticStage = "track-attributes"
         trackAttributes = audioTrackAttributesForFocus(built, attributes)
         diagnosticStage = "track-capacity"
@@ -2068,17 +2124,22 @@ private class AudioRenderer(
                             )
                         }
                     }
-                    if (size > 0) {
-                        val output = codec.getOutputBuffer(index)
-                        if (output != null) {
-                            if (size > pcm.size) pcm = ByteArray(size)
-                            output.position(info.offset)
-                            output.limit(info.offset + size)
-                            output.get(pcm, 0, size)
-                            writePcm(pcm, 0, size)
+                    var copied = false
+                    try {
+                        if (size > 0) {
+                            val output = codec.getOutputBuffer(index)
+                            if (output != null) {
+                                if (size > pcm.size) pcm = ByteArray(size)
+                                output.position(info.offset)
+                                output.limit(info.offset + size)
+                                output.get(pcm, 0, size)
+                                copied = true
+                            }
                         }
+                    } finally {
+                        codec.releaseOutputBuffer(index, false)
                     }
-                    codec.releaseOutputBuffer(index, false)
+                    if (copied) writePcm(pcm, 0, size)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
@@ -2122,8 +2183,13 @@ private class AudioRenderer(
                 break
             }
             if (count < writeLength) partialWritesThisWindow++
-            written += count
             val framesWritten = count / frameBytes
+            if (ambientMedia && AmbientMusicController.wantsPcm(ambientRendererToken)) {
+                ambientEnvelope.append(totalWrittenFrames, framesWritten.toLong(),
+                    AmbientMusicEnvelope.pcmRms(data, offset + written, count),
+                    ambientBass.rms(data, offset + written, count))
+            }
+            written += count
             totalWrittenFrames += framesWritten
             writtenFramesThisWindow += framesWritten
             bufferProgress.written(count)
@@ -2272,6 +2338,7 @@ private class AudioRenderer(
     @Synchronized
     private fun release() {
         NavigationPlayback.close(navigationPlaybackToken)
+        AmbientMusicController.closeRenderer(ambientRendererToken)
         abandonAudioFocus()
         val codec = codec
         this.codec = null

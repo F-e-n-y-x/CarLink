@@ -36,6 +36,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import androidx.core.widget.doAfterTextChanged
 import androidx.core.view.doOnLayout
 import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
@@ -55,6 +56,10 @@ import com.shilapi.xcertplay.hud.BydVehicleField
 import com.shilapi.xcertplay.hud.BydVehicleFieldStore
 import com.shilapi.xcertplay.hud.BydVehicleProbeOutcome
 import com.shilapi.xcertplay.host.R
+import com.shilapi.xcertplay.media.AmbientColorMode
+import com.shilapi.xcertplay.media.AmbientColorSpeed
+import com.shilapi.xcertplay.media.AmbientMusicController
+import com.shilapi.xcertplay.media.AmbientMusicSettings
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotTethering
 import com.shilapi.xcertplay.network.WifiP2pChannels
@@ -92,6 +97,7 @@ internal enum class SettingsSection {
     DISPLAY_AND_PERFORMANCE,
     EXPERIMENTAL_DISPLAY,
     ADVANCED_MEDIA,
+    AMBIENT_LIGHTING,
     CAR_BUTTON,
     AUDIO_ROUTING,
     NAVIGATION_WHEEL,
@@ -127,6 +133,7 @@ internal object SettingsInformationArchitecture {
             SettingsSection.EXPERIMENTAL_DISPLAY,
             SettingsSection.ADVANCED_MEDIA,
             SettingsSection.NAVIGATION_WHEEL,
+            SettingsSection.AMBIENT_LIGHTING,
         ),
     )
 }
@@ -145,6 +152,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private val windowLearningPresses = WheelKeyPresses()
     private val endWindowLearning = Runnable { cancelKeyLearning() }
     private var page = "home"
+    internal var ambientSupportCheck: (Context) -> java.util.concurrent.CompletableFuture<Boolean> = AmbientMusicController::checkSupport
     private var settingsCategory = SettingsCategory.OVERVIEW
     private var connectionSettingsReturnCategory: SettingsCategory? = null
     private var setupStep = SetupGuide.STEP_CAR
@@ -177,6 +185,12 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private var reconnectBar: View? = null
     private var readinessCard: LinearLayout? = null
     private var searchIndexSink: MutableList<String>? = null
+    private var settingsSearchBox: EditText? = null
+    private var settingsSearchPopup: PopupWindow? = null
+    private var settingsSearchIndex: List<SettingsSearchResult>? = null
+    private var settingsSearchQuery = ""
+    private var settingsSearchIndexing = false
+    private var settingsSearchRestoreFocus = false
     private var renderedReadiness: SettingsReadiness? = null
     private var renderedPage: String? = null
     private var renderedSettingsCategory: SettingsCategory? = null
@@ -481,6 +495,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     override fun onDestroy() {
+        settingsSearchPopup?.dismiss()
         appearanceObserverRemoval?.invoke()
         appearanceObserverRemoval = null
         handler.removeCallbacks(appearancePoll)
@@ -589,6 +604,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val restoreRailFocus = keepRailPosition &&
             (pendingRailFocus || settingsRailScroll?.hasFocus() == true)
         settingsRailScroll = null
+        // The results hang off the old header; the new header reopens them if the search continues.
+        settingsSearchPopup?.dismiss()
+        settingsSearchPopup = null
+        settingsSearchBox = null
+        if (page != "settings") clearSettingsSearchState()
         status = null; connectButton = null; disconnectButton = null; lastRunning = null; carButtonCard = null
         reconnectBar = null
         readinessCard = null
@@ -714,6 +734,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun navigateBack() {
+        // Back closes an open search first, like a system search bar.
+        if (page == "settings" && settingsSearchQuery.isNotEmpty()) {
+            closeSettingsSearch()
+            return
+        }
         val returnCategory = connectionSettingsReturnCategory
         when {
             page == "about" -> {
@@ -754,12 +779,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         addView(label(getString(R.string.settings), if (compact) 20 else 26, TEXT, true,
             centreGlyphs = true).apply {
             setPadding(dp(12), 0, dp(12), 0)
-        }, LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f))
-        addView(appearanceButton(), LinearLayout.LayoutParams(dp(if (compact) 44 else 52), dp(if (compact) 44 else 52)).apply {
+        }, LinearLayout.LayoutParams(-2, if (compact) dp(44) else dp(52)))
+        addView(settingsSearchField(compact), LinearLayout.LayoutParams(0, if (compact) dp(44) else dp(52), 1f).apply {
             marginEnd = dp(if (compact) 8 else 12)
         })
-        addView(headerButton(getString(R.string.settings_search), R.drawable.ic_dp_search, compact) { showSettingsSearch() },
-            LinearLayout.LayoutParams(-2, if (compact) dp(44) else dp(52)))
+        addView(appearanceButton(), LinearLayout.LayoutParams(dp(if (compact) 44 else 52), dp(if (compact) 44 else 52)))
     }
 
     private fun appearanceButton(): ImageButton = iconButton(
@@ -1040,7 +1064,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             quick.addView(settingsSectionHeading(R.string.settings_quick_settings))
             quick.addView(quickSettingsCard())
             columns.addView(quick, LinearLayout.LayoutParams(0, -2, 1f))
-            content.addView(columns, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) })
+            content.addView(columns, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(SETTINGS_BLOCK_GAP_DP) })
         } else {
             content.addView(settingsSectionHeading(R.string.settings_your_setup))
             destinations.forEach { item ->
@@ -1258,6 +1282,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     }
 
     private fun openSearchResult(result: SettingsSearchResult) {
+        setSearchKeyboard(settingsSearchBox, false)
+        clearSettingsSearchState()
         openSettingsCategory(result.category)
         val scroll = rootScroll ?: return
         val match = descendants(scroll).filterIsInstance<TextView>().firstOrNull {
@@ -1280,50 +1306,162 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         if (view is ViewGroup) for (i in 0 until view.childCount) yieldAll(descendants(view.getChildAt(i)))
     }
 
-    private fun showSettingsSearch() {
-        val index = buildSettingsSearchIndex()
-        val dialogContext = appDialogContext()
-        val input = EditText(dialogContext).apply {
-            setSingleLine()
-            hint = getString(R.string.settings_search_hint)
-            // Landscape head units would otherwise cover the results with a full-screen editor.
-            imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI or
-                android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+    /**
+     * The settings header search box; matches drop down under it as the driver types.
+     * The index is built on the first keystroke. Building re-renders the page, so the
+     * replacement box takes over the query, focus and keyboard.
+     */
+    private fun settingsSearchField(compact: Boolean): EditText = EditText(this).apply {
+        settingsSearchBox = this
+        setSingleLine()
+        hint = getString(R.string.settings_search_hint)
+        contentDescription = getString(R.string.settings_search)
+        textSize = if (compact) 16f else 18f
+        setTextColor(TEXT)
+        setHintTextColor(MUTED)
+        background = rounded(BUTTON, BORDER)
+        foreground = focusRing()
+        setPadding(dp(16), 0, dp(16), 0)
+        compoundDrawablePadding = dp(10)
+        setCompoundDrawablesRelativeWithIntrinsicBounds(
+            getDrawable(R.drawable.ic_dp_search)?.mutate()?.apply { setTint(MUTED) }, null, null, null)
+        inputType = android.text.InputType.TYPE_CLASS_TEXT
+        // Landscape head units would otherwise cover the results with a full-screen editor.
+        imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI or
+            android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+        // Touch focus waits for a tap, so opening settings never focuses the box or raises the keyboard.
+        isFocusableInTouchMode = settingsSearchRestoreFocus
+        setText(settingsSearchQuery)
+        setSelection(text.length)
+        setOnClickListener {
+            if (!isFocusableInTouchMode) {
+                isFocusableInTouchMode = true
+                requestFocus()
+                setSearchKeyboard(this, true)
+            }
+            showSettingsSearchResults()
         }
-        val results = mutableListOf<SettingsSearchResult>()
-        val adapter = android.widget.ArrayAdapter<String>(dialogContext, android.R.layout.simple_list_item_1)
-        val list = android.widget.ListView(dialogContext).apply { this.adapter = adapter }
-        val empty = label(getString(R.string.settings_search_empty), 15, MUTED).apply {
-            setPadding(dp(8), dp(12), dp(8), dp(12)); visibility = View.GONE
+        setOnFocusChangeListener { _, focused -> if (focused) showSettingsSearchResults() }
+        setOnEditorActionListener { _, actionId, event ->
+            val search = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                event?.keyCode == KeyEvent.KEYCODE_ENTER
+            if (!search) return@setOnEditorActionListener false
+            if (event == null || event.action == KeyEvent.ACTION_DOWN) settingsSearchResults().firstOrNull()?.let(::openSearchResult)
+            true
         }
-        fun update() {
-            results.clear(); results += searchSettings(index, input.text.toString())
-            adapter.clear()
-            adapter.addAll(results.map { "${it.title} — ${settingsCategoryTitle(it.category)}" })
-            empty.visibility = if (results.isEmpty() && input.text.isNotBlank()) View.VISIBLE else View.GONE
+        doAfterTextChanged { onSettingsSearchChanged(this) }
+        if (settingsSearchRestoreFocus) {
+            settingsSearchRestoreFocus = false
+            post {
+                if (settingsSearchBox !== this) return@post
+                requestFocus()
+                setSearchKeyboard(this, true)
+                showSettingsSearchResults()
+            }
         }
-        input.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) = update()
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
-        })
-        val body = column().apply {
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(input)
-            addView(empty)
-            // Short screens keep the results above the keyboard.
-            addView(list, LinearLayout.LayoutParams(-1, dp(if (resources.configuration.screenHeightDp < 600) 160 else 320)))
+    }
+
+    private fun onSettingsSearchChanged(box: EditText) {
+        if (box !== settingsSearchBox) return
+        settingsSearchQuery = box.text.toString()
+        if (settingsSearchQuery.isEmpty()) {
+            // Rebuilt for the next search, so it follows settings that changed meanwhile.
+            settingsSearchIndex = null
+            settingsSearchPopup?.dismiss()
+            return
         }
-        val dialog = appDialogBuilder()
-            .setTitle(getString(R.string.settings_search))
-            .setView(body)
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-        list.setOnItemClickListener { _, _, position, _ ->
-            dialog.dismiss()
-            openSearchResult(results[position])
+        if (settingsSearchIndex != null) {
+            showSettingsSearchResults()
+            return
         }
-        input.requestFocus()
+        if (settingsSearchIndexing) return
+        settingsSearchIndexing = true
+        // Not from inside the text watcher: indexing replaces this box.
+        handler.post {
+            settingsSearchIndexing = false
+            if (page != "settings" || settingsSearchQuery.isEmpty() || settingsSearchIndex != null) return@post
+            settingsSearchRestoreFocus = true
+            settingsSearchIndex = buildSettingsSearchIndex()
+        }
+    }
+
+    private fun settingsSearchResults(): List<SettingsSearchResult> =
+        settingsSearchIndex?.let { searchSettings(it, settingsSearchQuery) }.orEmpty()
+
+    private fun showSettingsSearchResults() {
+        val box = settingsSearchBox ?: return
+        if (settingsSearchIndex == null || settingsSearchQuery.isBlank() || !box.isAttachedToWindow) {
+            settingsSearchPopup?.dismiss()
+            return
+        }
+        val results = settingsSearchResults()
+        val list = column().apply { setPadding(dp(8), dp(8), dp(8), dp(8)) }
+        if (results.isEmpty()) {
+            list.addView(label(getString(R.string.settings_search_empty), 15, MUTED).apply {
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+            })
+        }
+        results.forEach { list.addView(settingsSearchRow(it)) }
+        val width = box.width.coerceAtLeast(dp(320))
+        // Short screens keep the results above the keyboard.
+        val maxHeight = dp(if (resources.configuration.screenHeightDp < 600) 180 else 360)
+        val existing = settingsSearchPopup?.takeIf { it.isShowing }
+        val scroll = (existing?.contentView as? ScrollView) ?: ScrollView(this)
+        scroll.removeAllViews()
+        scroll.addView(list)
+        scroll.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST))
+        val height = scroll.measuredHeight.coerceIn(1, maxHeight)
+        if (existing != null) {
+            existing.update(box, 0, dp(6), width, height)
+            return
+        }
+        settingsSearchPopup = PopupWindow(scroll, width, height, false).apply {
+            setBackgroundDrawable(rounded(SURFACE, BORDER))
+            elevation = dp(8).toFloat()
+            // Tapping elsewhere closes the list and keeps the query; tapping the box reopens it.
+            isOutsideTouchable = true
+            inputMethodMode = PopupWindow.INPUT_METHOD_NEEDED
+            showAsDropDown(box, 0, dp(6), Gravity.END)
+        }
+    }
+
+    private fun settingsSearchRow(result: SettingsSearchResult): View = column().apply {
+        val category = settingsCategoryTitle(result.category)
+        isClickable = true
+        isFocusable = true
+        contentDescription = "${result.title}, $category"
+        foreground = android.graphics.drawable.LayerDrawable(arrayOf(
+            android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE), null, null), focusRing(12)))
+        minimumHeight = dp(56)
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(12), dp(8), dp(12), dp(8))
+        addView(label(result.title, 17, TEXT, true))
+        addView(label(category, 13, MUTED))
+        setOnClickListener { openSearchResult(result) }
+    }
+
+    private fun closeSettingsSearch() {
+        val box = settingsSearchBox
+        setSearchKeyboard(box, false)
+        clearSettingsSearchState()
+        box?.setText("")
+        box?.clearFocus()
+        box?.isFocusableInTouchMode = false
+    }
+
+    private fun clearSettingsSearchState() {
+        settingsSearchQuery = ""
+        settingsSearchIndex = null
+        settingsSearchRestoreFocus = false
+        settingsSearchPopup?.dismiss()
+    }
+
+    private fun setSearchKeyboard(view: View?, show: Boolean) {
+        view ?: return
+        val keyboard = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        if (show) keyboard.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        else keyboard.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun advancedSettings(content: LinearLayout) {
@@ -1650,6 +1788,11 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
             getString(R.string.settings_navigation_wheel_volume), R.drawable.ic_dp_audio) { card ->
             navigationWheelControls(card)
         }
+        filteredSection(content, SettingsSection.AMBIENT_LIGHTING, getString(R.string.settings_ambient_title)) { card ->
+            card.addView(button(ambientConfigurationLabel(AmbientMusicSettings.load(this)), false) {
+                showAmbientConfiguration()
+            }, matchButton(0, 60))
+        }
         filteredSection(content, SettingsSection.LOCATION,
             getString(R.string.location), R.drawable.ic_dp_navigation) { card ->
             toggle(card, getString(R.string.report_location_to_iphone),
@@ -1901,6 +2044,43 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                                 ) { it -> overlayOffsetLabel(it, getString(R.string.marker_up), getString(R.string.marker_down), 45) }
                                     .also { it.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowMarkerYPercent(this, v) } }
                                     .also { it.onCommit = { markReconnectNeeded() } })
+                                if (AirPlayPersistence.loadClusterContent(this) ==
+                                    com.shilapi.xcertplay.airplay.CarPlayClusterDisplay.Content.MAP_WITH_CUSTOM_CARD) {
+                                    choice(card, getString(R.string.cluster_small_window_card_theme), listOf(
+                                        getString(R.string.cluster_small_window_card_theme_follow),
+                                        getString(R.string.turn_card_theme_day),
+                                        getString(R.string.turn_card_theme_night),
+                                    ), AirPlayPersistence.loadClusterSmallWindowCardTheme(this), reconnects = false) {
+                                        AirPlayPersistence.saveClusterSmallWindowCardTheme(this, it)
+                                    }
+                                    val smallWindowPlacementPreview = ClusterCardPlacementPreview(this, ClusterCardPlacementPreview.Mode.SMALL).also {
+                                        card.addView(it, LinearLayout.LayoutParams(-1, dp(240)))
+                                    }
+                                    card.addView(overlaySliderRow(
+                                        getString(R.string.cluster_small_window_card_size),
+                                        ClusterTurnCardOverlay.sizePercents,
+                                        AirPlayPersistence.loadClusterSmallWindowCardSizePercent(this),
+                                    ) { it -> getString(R.string.turn_card_overlay_size_option, it) }
+                                        .also { it2 -> it2.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowCardSizePercent(this, v); smallWindowPlacementPreview.invalidate() } })
+                                    card.addView(overlaySliderRow(
+                                        getString(R.string.cluster_small_window_card_horizontal),
+                                        ClusterTurnCardOverlay.smallWindowXPercents,
+                                        AirPlayPersistence.loadClusterSmallWindowCardXPercent(this),
+                                    ) { it -> overlayOffsetLabel(it, getString(R.string.marker_left), getString(R.string.marker_right), 80) }
+                                        .also { it2 -> it2.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowCardXPercent(this, v); smallWindowPlacementPreview.invalidate() } })
+                                    card.addView(overlaySliderRow(
+                                        getString(R.string.cluster_small_window_card_vertical),
+                                        ClusterTurnCardOverlay.smallWindowYPercents,
+                                        AirPlayPersistence.loadClusterSmallWindowCardYPercent(this),
+                                    ) { it -> overlayOffsetLabel(it, getString(R.string.marker_up), getString(R.string.marker_down), 25) }
+                                        .also { it2 -> it2.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowCardYPercent(this, v); smallWindowPlacementPreview.invalidate() } })
+                                    card.addView(overlaySliderRow(
+                                        getString(R.string.cluster_small_window_card_opacity),
+                                        ClusterTurnCardOverlay.opacityPercents,
+                                        AirPlayPersistence.loadClusterSmallWindowCardOpacityPercent(this),
+                                    ) { it -> getString(R.string.turn_card_overlay_opacity_option, it) }
+                                        .also { it2 -> it2.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowCardOpacityPercent(this, v) } })
+                                }
                                 card.addView(label(getString(R.string.cluster_small_window_hint), 14, MUTED).apply { setPadding(0, dp(10), 0, 0) })
                             }
                         }
@@ -4934,6 +5114,98 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         parent.addView(result.rowView)
         return result.switch
     }
+    private fun ambientConfigurationLabel(value: AmbientMusicSettings.Values): String {
+        val mode = if (!value.music) getString(R.string.settings_ambient_static) else when (value.colorMode) {
+            AmbientColorMode.ENERGY -> getString(R.string.settings_ambient_energy)
+            AmbientColorMode.BEAT -> getString(R.string.settings_ambient_beat)
+            AmbientColorMode.TEMPO -> getString(R.string.settings_ambient_tempo)
+            AmbientColorMode.BASS -> getString(R.string.settings_ambient_bass)
+            AmbientColorMode.SMART -> getString(R.string.settings_ambient_smart)
+        }
+        val speed = when (value.speed) { AmbientColorSpeed.SLOW -> getString(R.string.settings_ambient_slow); AmbientColorSpeed.STANDARD -> getString(R.string.settings_ambient_standard); AmbientColorSpeed.FAST -> getString(R.string.settings_ambient_fast) }
+        return getString(R.string.settings_ambient_configuration) + " · " + getString(R.string.settings_ambient_summary, getString(if (value.enabled) R.string.settings_ambient_enabled else R.string.settings_ambient_disabled), mode, speed, value.selectedColors.size, value.brightness)
+    }
+
+    private fun showAmbientConfiguration() {
+        var draft = AmbientMusicSettings.load(this)
+        val body = column().apply { setPadding(dp(24), dp(12), dp(24), dp(12)) }
+        body.addView(label(getString(R.string.settings_ambient_parked_notice), 14, MUTED))
+        toggle(body, getString(R.string.settings_ambient_enable), getString(R.string.settings_ambient_enable_description), draft.enabled) {
+            draft = draft.copy(enabled = it)
+        }
+        toggle(body, getString(R.string.settings_ambient_music), getString(R.string.settings_ambient_music_description), draft.music) {
+            draft = draft.copy(music = it)
+        }
+        choice(body, getString(R.string.settings_ambient_color_mode), listOf(getString(R.string.settings_ambient_energy), getString(R.string.settings_ambient_beat), getString(R.string.settings_ambient_tempo), getString(R.string.settings_ambient_bass), getString(R.string.settings_ambient_smart)), draft.colorMode.ordinal, reconnects = false) {
+            draft = draft.copy(colorMode = AmbientColorMode.entries[it])
+        }
+        choice(body, getString(R.string.settings_ambient_speed), listOf(getString(R.string.settings_ambient_slow), getString(R.string.settings_ambient_standard), getString(R.string.settings_ambient_fast)), draft.speed.ordinal, reconnects = false) {
+            draft = draft.copy(speed = AmbientColorSpeed.entries[it])
+        }
+        val paletteButton = button(getString(R.string.settings_ambient_palette_summary, draft.selectedColors.size), false) {}
+        paletteButton.setOnClickListener {
+            val checked = BooleanArray(31) { it + 1 in draft.selectedColors }
+            val paletteDialog = AlertDialog.Builder(this).setTitle(getString(R.string.settings_ambient_palette))
+                .setMultiChoiceItems((1..31).map { it.toString() }.toTypedArray(), checked) { _, index, selected -> checked[index] = selected }
+                .setNeutralButton(getString(R.string.settings_ambient_select_all), null)
+                .setPositiveButton(getString(R.string.save), null)
+                .setNegativeButton(getString(R.string.cancel), null).create()
+            paletteDialog.setOnShowListener {
+                paletteDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    checked.fill(true)
+                    for (index in checked.indices) paletteDialog.listView.setItemChecked(index, true)
+                }
+                paletteDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val selected = checked.indices.filter { checked[it] }.map { it + 1 }
+                    if (selected.isEmpty()) toast(getString(R.string.settings_ambient_select_one))
+                    else {
+                        draft = draft.copy(selectedColors = selected, color = selected.first())
+                        paletteButton.text = getString(R.string.settings_ambient_palette_summary, selected.size)
+                        paletteDialog.dismiss()
+                    }
+                }
+            }
+            paletteDialog.show()
+        }
+        body.addView(paletteButton, matchButton(0, 60)); body.addView(space(12))
+        choice(body, getString(R.string.settings_ambient_brightness), (0..6).map { if (it == 0) getString(R.string.settings_ambient_minimum) else it.toString() }, draft.brightness, reconnects = false) {
+            draft = draft.copy(brightness = it)
+        }
+        choice(body, getString(R.string.settings_ambient_area), listOf(getString(R.string.settings_ambient_front), getString(R.string.settings_ambient_rear), getString(R.string.settings_ambient_all)), draft.area - 1, reconnects = false) {
+            draft = draft.copy(area = it + 1)
+        }
+        val dialog = AlertDialog.Builder(this).setTitle(getString(R.string.settings_ambient_configuration))
+            .setView(ScrollView(this).apply { addView(body) })
+            .setPositiveButton(getString(R.string.save), null)
+            .setNegativeButton(getString(R.string.cancel), null).create()
+        dialog.setOnShowListener {
+            val save = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            save.setOnClickListener {
+                val selected = draft.copy(colorCycle = draft.music)
+                fun commit() {
+                    AmbientMusicSettings.save(this, selected)
+                    dialog.dismiss()
+                    render()
+                }
+                if (!selected.enabled) commit()
+                else {
+                    save.isEnabled = false
+                    save.text = getString(R.string.settings_ambient_checking)
+                    ambientSupportCheck(applicationContext).whenComplete { supported, _ ->
+                        runOnUiThread {
+                            if (!dialog.isShowing || isFinishing || isDestroyed) return@runOnUiThread
+                            save.isEnabled = true
+                            save.text = getString(R.string.save)
+                            if (supported == true) commit()
+                            else toast(getString(R.string.settings_ambient_unavailable))
+                        }
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
+
     // [announcesReconnect] labels a choice whose [save] reconnects by itself.
     private fun choice(parent: LinearLayout, title: String, options: List<String>, current: Int, reconnects: Boolean = true,
         announcesReconnect: Boolean = reconnects, enabled: Boolean = true, save: (Int) -> Unit) {

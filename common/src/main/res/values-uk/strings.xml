@@ -718,4 +718,47 @@
     <string name="bt_suspend_delay_option">%1$d с після підключення</string>
     <string name="bt_suspend_during_carplay">Призупинити Bluetooth авто під час CarPlay · потрібен ADB</string>
     <string name="bt_suspend_during_carplay_description">Телефон тримає hands-free звʼязок з авто, тому вхідний дзвінок звучить і в телефоні авто, і в CarPlay. Після ввімкнення: Bluetooth авто призупиняється через ADB на час сеансу CarPlay — дзвінки йдуть лише в CarPlay; поки Bluetooth вимкнено, дзвінки CarPlay йдуть через динамік і мікрофон авто. Вмикається назад після сеансу і перед наступним бездротовим зʼєднанням. Пара не змінюється. Застосується з наступного підключення.</string>
+    <string name="cluster_small_window_card_theme">Тема картки в малому вікні</string>
+    <string name="cluster_small_window_card_theme_follow">Слідувати темі картки</string>
+    <string name="cluster_small_window_card_size">Картка в малому вікні · розмір</string>
+    <string name="cluster_small_window_card_horizontal">Картка в малому вікні · ліворуч / праворуч</string>
+    <string name="cluster_small_window_card_vertical">Картка в малому вікні · вгору / вниз</string>
+    <string name="cluster_small_window_card_opacity">Картка маневру в міні-вікні · прозорість</string>
+    <string name="turn_card_theme_day">Завжди день</string>
+    <string name="turn_card_theme_night">Завжди ніч</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="settings_ambient_title">Атмосферне підсвічування (експериментально)</string>
+    <string name="settings_ambient_configuration">Налаштування підсвічування</string>
+    <string name="settings_ambient_static">Постійний</string>
+    <string name="settings_ambient_energy">Енергія звуку</string>
+    <string name="settings_ambient_beat">Ритм</string>
+    <string name="settings_ambient_tempo">Оцінка BPM</string>
+    <string name="settings_ambient_bass">Пріоритет басів</string>
+    <string name="settings_ambient_smart">Розумне слідування</string>
+    <string name="settings_ambient_slow">Плавно</string>
+    <string name="settings_ambient_standard">Стандартно</string>
+    <string name="settings_ambient_fast">Швидко</string>
+    <string name="settings_ambient_enabled">Увімк.</string>
+    <string name="settings_ambient_disabled">Вимк.</string>
+    <string name="settings_ambient_summary">%1$s · %2$s · %3$s · %4$d кольорів · яскравість %5$d</string>
+    <string name="settings_ambient_enable">Керувати підсвічуванням</string>
+    <string name="settings_ambient_enable_description">Після вимкнення виконується спроба відновити початкові кольори, яскравість і зону. Потрібна наявна авторизація ADB.</string>
+    <string name="settings_ambient_music">Слідувати музиці</string>
+    <string name="settings_ambient_music_description">Під час відтворення слідує музиці або використовує постійні кольори та яскравість. При паузі чи відключенні всі зони утримуються на мінімальному рівні. Зміни застосовуються після збереження.</string>
+    <string name="settings_ambient_color_mode">Зміна кольору</string>
+    <string name="settings_ambient_speed">Швидкість зміни яскравості</string>
+    <string name="settings_ambient_palette">Номери кольорів OEM (кілька варіантів)</string>
+    <string name="settings_ambient_palette_summary">Кольори · вибрано %1$d</string>
+    <string name="settings_ambient_select_all">Вибрати всі</string>
+    <string name="settings_ambient_select_one">Виберіть хоча б один колір</string>
+    <string name="settings_ambient_brightness">Максимальна яскравість</string>
+    <string name="settings_ambient_minimum">0 (мінімальний рівень)</string>
+    <string name="settings_ambient_area">Зона</string>
+    <string name="settings_ambient_front">Передня</string>
+    <string name="settings_ambient_rear">Задня</string>
+    <string name="settings_ambient_all">Усі</string>
+    <string name="settings_ambient_parked_notice">Налаштовуйте на стоянці. Експериментальна підтримка деяких інтерфейсів BYD; сумісність залежить від моделі та прошивки. Рівень 0 означає мінімум OEM, а не вимкнення.</string>
+    <string name="settings_ambient_checking">Перевірка…</string>
+    <string name="settings_ambient_unavailable">Перевірку без запису не пройдено: немає наявної авторизації ADB або відповідного інтерфейсу. Налаштування не збережено. Налаштуйте доступ окремо на стоянці; функція не вмикає ADB і не запитує авторизацію.</string>
 </resources>

@@ -706,4 +706,47 @@
     <string name="bt_suspend_delay_option">%1$d s tras conectar</string>
     <string name="bt_suspend_during_carplay">Pausar el Bluetooth del coche con CarPlay · requiere ADB</string>
     <string name="bt_suspend_during_carplay_description">El teléfono mantiene el manos libres del coche, por lo que una llamada suena en el teléfono Bluetooth del coche y en CarPlay a la vez. Al activarlo: se pausa el Bluetooth del coche por ADB durante la sesión de CarPlay y las llamadas suenan solo en CarPlay; con el Bluetooth apagado, las llamadas de CarPlay salen por el altavoz y el micrófono del coche. Se reactiva al terminar y antes del próximo enlace inalámbrico. El emparejamiento no se toca. Surte efecto en la próxima conexión.</string>
+    <string name="cluster_small_window_card_theme">Tema de la tarjeta en ventana pequeña</string>
+    <string name="cluster_small_window_card_theme_follow">Seguir el tema de la tarjeta</string>
+    <string name="cluster_small_window_card_size">Tarjeta en ventana pequeña · tamaño</string>
+    <string name="cluster_small_window_card_horizontal">Tarjeta en ventana pequeña · izquierda / derecha</string>
+    <string name="cluster_small_window_card_vertical">Tarjeta en ventana pequeña · arriba / abajo</string>
+    <string name="cluster_small_window_card_opacity">Tarjeta de giro en miniatura · opacidad</string>
+    <string name="turn_card_theme_day">Siempre día</string>
+    <string name="turn_card_theme_night">Siempre noche</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="settings_ambient_title">Iluminación ambiental (experimental)</string>
+    <string name="settings_ambient_configuration">Ajustes de iluminación ambiental</string>
+    <string name="settings_ambient_static">Fijo</string>
+    <string name="settings_ambient_energy">Energía del sonido</string>
+    <string name="settings_ambient_beat">Ritmo</string>
+    <string name="settings_ambient_tempo">BPM estimados</string>
+    <string name="settings_ambient_bass">Prioridad de graves</string>
+    <string name="settings_ambient_smart">Seguimiento inteligente</string>
+    <string name="settings_ambient_slow">Suave</string>
+    <string name="settings_ambient_standard">Estándar</string>
+    <string name="settings_ambient_fast">Rápido</string>
+    <string name="settings_ambient_enabled">Activado</string>
+    <string name="settings_ambient_disabled">Desactivado</string>
+    <string name="settings_ambient_summary">%1$s · %2$s · %3$s · %4$d colores · brillo %5$d</string>
+    <string name="settings_ambient_enable">Activar control de iluminación ambiental</string>
+    <string name="settings_ambient_enable_description">Al desactivarlo se intenta restaurar los colores, el brillo y la zona originales. Requiere autorización ADB existente.</string>
+    <string name="settings_ambient_music">Seguir la música</string>
+    <string name="settings_ambient_music_description">Durante la reproducción, sigue la música o usa colores y brillo fijos si se desactiva. Al pausar o desconectar, todas las zonas quedan al nivel mínimo. Los cambios se aplican al guardar.</string>
+    <string name="settings_ambient_color_mode">Cambios de color</string>
+    <string name="settings_ambient_speed">Velocidad de transición del brillo</string>
+    <string name="settings_ambient_palette">Números de color OEM (selección múltiple)</string>
+    <string name="settings_ambient_palette_summary">Colores · %1$d seleccionados</string>
+    <string name="settings_ambient_select_all">Seleccionar todos</string>
+    <string name="settings_ambient_select_one">Selecciona al menos un color</string>
+    <string name="settings_ambient_brightness">Brillo máximo</string>
+    <string name="settings_ambient_minimum">0 (nivel mínimo)</string>
+    <string name="settings_ambient_area">Zona</string>
+    <string name="settings_ambient_front">Delantera</string>
+    <string name="settings_ambient_rear">Trasera</string>
+    <string name="settings_ambient_all">Todas</string>
+    <string name="settings_ambient_parked_notice">Configura con el vehículo estacionado. Compatibilidad experimental con algunas interfaces BYD; puede variar según modelo y firmware. El nivel 0 es el mínimo OEM, no apagado.</string>
+    <string name="settings_ambient_checking">Comprobando…</string>
+    <string name="settings_ambient_unavailable">La comprobación de solo lectura falló: falta autorización ADB existente o una interfaz compatible. No se guardaron ajustes. Configura el acceso por separado con el vehículo estacionado; esta función no activa ADB ni solicita autorización.</string>
 </resources>
