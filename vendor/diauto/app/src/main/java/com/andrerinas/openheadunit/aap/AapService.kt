@@ -775,6 +775,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
         // Decided here as well as inside initWifiMode() so a paused start skips the wait-for-WiFi
         // machinery entirely rather than setting it up and being turned away at the end of it.
+        WirelessTiming.begin("service-created") // CarLink
         if (applyBootLoopGuard()) {
             AppLog.w("AapService: Wireless bring-up paused by the boot-loop guard. USB and the rest of the app are unaffected.")
         } else {
@@ -1707,6 +1708,7 @@ class AapService : Service(), UsbReceiver.Listener {
                         "evidence=${com.andrerinas.openheadunit.utils.BluetoothHelper.externalBtEvidence}")
                 }
                 if (!blockedByExternalBt) {
+                    WirelessTiming.mark(WirelessTimeline.Phase.WIFI_INIT, "transport=${nativeTransport()}") // CarLink
                     if (nativeTransport() == NativeTransport.LOCAL_HOTSPOT) {
                         localHotspotCredentialsProvider?.start()
                     } else if (nativeTransport() == NativeTransport.HOTSPOT) {
@@ -1932,12 +1934,14 @@ class AapService : Service(), UsbReceiver.Listener {
         when (intent?.action) {
             ACTION_START_SELF_MODE       -> startSelfMode()
             ACTION_START_WIRELESS        -> {
+                WirelessTiming.begin("start-wireless", WirelessTiming.SAME_BRING_UP_MILLIS) // CarLink
                 // Asked for from the UI, so the user is present: release the boot-loop pause
                 // rather than silently ignoring them.
                 Settings.clearBootLoopState(this)
                 initWifiMode()
             }
             ACTION_START_WIRELESS_SCAN   -> {
+                WirelessTiming.begin("start-wireless-scan", WirelessTiming.SAME_BRING_UP_MILLIS) // CarLink
                 val settings = App.provide(this).settings
                 val mode = settings.wifiConnectionMode
                 val strategy = settings.helperConnectionStrategy
@@ -1967,6 +1971,7 @@ class AapService : Service(), UsbReceiver.Listener {
             ACTION_NATIVE_AA_POKE        -> {
                 val mac = intent?.getStringExtra(EXTRA_MAC)
                 if (mac != null) {
+                    WirelessTiming.begin("poke", WirelessTiming.SAME_BRING_UP_MILLIS) // CarLink
                     AppLog.i("AapService: Received manual Native-AA poke request for $mac")
                     // [FIX] Reset exit flags so the subsequent connection is accepted
                     userExitedAA = false
@@ -2462,6 +2467,7 @@ class AapService : Service(), UsbReceiver.Listener {
             return
         }
         AppLog.i("AapService: Received WiFi credentials from manager (SSID=$ssid, IP=$ip). Updating and Triggering Poke.")
+        WirelessTiming.mark(WirelessTimeline.Phase.CREDENTIALS) // CarLink
         nativeAaHandshakeManager?.updateWifiCredentials(ssid, psk, ip, bssid)
         if (commManager.isConnected ||
             commManager.connectionState.value is CommManager.ConnectionState.Connecting) {
@@ -3287,6 +3293,7 @@ class AapService : Service(), UsbReceiver.Listener {
                         AppLog.d("WirelessServer: Waiting for TCP connection on port 5288...")
                         val clientSocket = serverSocket?.accept() ?: break
                         AppLog.i("WirelessServer: Incoming connection detected from ${clientSocket.inetAddress}")
+                        WirelessTiming.mark(WirelessTimeline.Phase.TCP_ACCEPTED) // CarLink
                         serviceScope.launch {
                             if (commManager.isConnected) {
                                 AppLog.w("WirelessServer: Already connected, dropping client from ${clientSocket.inetAddress}")

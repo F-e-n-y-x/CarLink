@@ -642,7 +642,9 @@ class NativeAaHandshakeManager(
                 try {
                     socket = device.createRfcommSocketToServiceRecord(uuid)
                     AppLog.i("NativeAA: Calling socket.connect() for ${device.name} via $profile ($uuid)...")
+                    com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.POKE_START, "profile=$profile credentials=${credentials != null}") // CarLink
                     socket.connect()
+                    com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.POKE_CONNECTED, "profile=$profile") // CarLink
                     // Named, not just the UUID: which record we ended up on is the first thing to
                     // check when a reporter's calls come out of the phone instead of the car.
                     AppLog.i("NativeAA: Successfully poked ${device.name} via $profile. Holding ${holdMs}ms...")
@@ -702,16 +704,25 @@ class NativeAaHandshakeManager(
         // a local called credentials would shadow it with a Triple that is never null.
         val snapshot = credentials
         val pokeKey = Triple(snapshot?.ssid ?: "", snapshot?.ip ?: "", snapshot?.bssid ?: "")
-        if (pokeJob?.isActive == true && pokeKey == lastPokeTriggerCredentials) {
-            AppLog.d("NativeAA: triggerPoke() called again with unchanged credentials while a poke is already running - not restarting it.")
+        // CarLink (upstream b5617bd5): credentials arriving under a loop that started without them
+        // no longer restart it; the loop re-reads them every pass.
+        if (!PokeLoopPolicy.shouldRestartLoop(pokeJob?.isActive == true, lastPokeTriggerCredentials, pokeKey)) {
+            AppLog.d("NativeAA: a wake poke is already running for these credentials - not restarting it.")
+            lastPokeTriggerCredentials = pokeKey
             return
         }
         lastPokeTriggerCredentials = pokeKey
 
         pokeJob?.cancel()
         pokeJob = scope.launch(Dispatchers.IO + CoroutineName("NativeAa-Wakeup")) {
-            AppLog.d("NativeAA: triggerPoke() delay starting (2s)...")
-            delay(2000) // Small safety delay before connecting
+            // CarLink (upstream b5617bd5): the listeners are what the woken phone dials back on, so
+            // wait for them rather than for a fixed two seconds that was only a guess at the same.
+            var waitedMs = 0L
+            while (!this@NativeAaHandshakeManager.isActive() && waitedMs < PokeLoopPolicy.LISTENERS_READY_WAIT_MS && isActive) {
+                delay(PokeLoopPolicy.LISTENERS_READY_POLL_MS)
+                waitedMs += PokeLoopPolicy.LISTENERS_READY_POLL_MS
+            }
+            AppLog.d("NativeAA: wake poke starting (listeners ready after ${waitedMs}ms).")
 
             while (isRunning && isActive) {
                 val settling = isHandoffSettling()
@@ -831,6 +842,9 @@ class NativeAaHandshakeManager(
             resetHandshakeBackoff()
             
             pokeJob?.cancel()
+            // CarLink (upstream PR #958): the manual job takes the loop's slot, so forget what the
+            // loop last poked for; the credential delivery then starts the retry loop in its place.
+            lastPokeTriggerCredentials = null
             pokeJob = scope.launch(Dispatchers.IO + CoroutineName("NativeAa-ManualWakeup")) {
                 // Pre-flight: Ensure WiFi credentials (SSID/IP) are ready before connecting RFCOMM to phone.
                 if (credentials == null) {
@@ -1025,6 +1039,7 @@ class NativeAaHandshakeManager(
                     WppAction.SendStartRequest -> {
                         AppLog.i("NativeAA: [TX] Sending WifiStartRequest (Type 1)")
                         sendWifiStartRequest(output, credIp, 5288)
+                        com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.WIFI_START_REQUEST) // CarLink
                         spokeToPhone = true
                     }
                     WppAction.SendInfoResponse -> {

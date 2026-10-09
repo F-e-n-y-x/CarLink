@@ -40,6 +40,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         private const val MAX_NATIVE_5GHZ_CREATE_RETRIES = 4
         private const val MAX_NATIVE_5GHZ_BAND_MISMATCH_RETRIES = 2
         private const val MAX_NATIVE_STANDARD_CREATE_RETRIES = 3
+        // CarLink: credential delivery polls the group interface every 250 ms for the same 15 s.
+        private const val CREDENTIAL_POLL_MS = 250L
+        private const val CREDENTIAL_WAIT_POLLS = 60
         private const val NATIVE_GROUP_MODE_UNKNOWN = "unknown"
         private const val NATIVE_GROUP_MODE_5GHZ_REQUESTED = "5GHz requested"
         private const val NATIVE_GROUP_MODE_24GHZ_FORCED = "2.4GHz forced (debug)"
@@ -66,6 +69,12 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     private val burstGapMs = 800L
     private val burstTriggerCount = 5
     @Volatile private var isGroupCreatingOrCreated = false
+    // CarLink: when a Native AA create was asked for and has not answered (0 = none); see
+    // NativeCreateWindow. Unlike isGroupCreatingOrCreated, no P2P broadcast clears it.
+    @Volatile private var nativeCreateRequestedAtMs = 0L
+    private fun nativeCreateInFlight() =
+        NativeCreateWindow.inFlight(nativeCreateRequestedAtMs, SystemClock.elapsedRealtime())
+    private val nativeRefreshRecheck = Runnable { refreshNativeAaCredentials() }
     // Guards against two concurrent checkGroupAndCreate() runs racing on the same teardown
     // (makeVisible() can be invoked twice back to back for one UI action). Cleared by a
     // bounded safety timeout in case a call site misses its own reset.
@@ -235,7 +244,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         val isConnectingOrConnected = commManager.isConnected ||
                             commManager.connectionState.value is com.andrerinas.openheadunit.connection.CommManager.ConnectionState.Connecting
 
-                        if (sessionOwnership.requested && !isConnected && !isConnectingOrConnected && !isGroupCreatingOrCreated) {
+                        if (sessionOwnership.requested && !isConnected && !isConnectingOrConnected && !isGroupCreatingOrCreated &&
+                            !nativeCreateInFlight()) { // CarLink: NativeCreateWindow
                             if (appSettings.wifiConnectionMode == 2 && appSettings.helperConnectionStrategy == 1) {
                                 AppLog.i("WifiDirectManager: P2P enabled, auto-starting WiFi Direct visibility")
                                 makeVisible()
@@ -251,6 +261,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         checkGroupAndCreateInFlight = false
                         isGroupOwner = false
                         isGroupCreatingOrCreated = false
+                        nativeCreateRequestedAtMs = 0L // CarLink
                         isConnected = false
                         isClientConnected = false
                         cancelNativeJoinWatchdog()
@@ -469,6 +480,11 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             val ssid = group.networkName
             val psk = group.passphrase ?: ""
             val isOwner = group.isGroupOwner
+            if (isOwner && isNativeAaMode()) {
+                // CarLink: the group answered, so a refresh may hand it out rather than wait.
+                nativeCreateRequestedAtMs = 0L
+                com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_INFO)
+            }
 
             // [FIX] Track whether a phone client has actually joined our group.
             // If we are the Group Owner and the client list is empty, no phone has connected yet.
@@ -479,6 +495,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 val hadClient = isClientConnected
                 isClientConnected = clients != null && clients.isNotEmpty()
                 if (isClientConnected) {
+                    com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.PHONE_JOINED, "clients=${clients?.size ?: 0}") // CarLink
                     // A phone joined — stop the native join watchdog and reset its budget.
                     cancelNativeJoinWatchdog()
                     nativeRecreateCount = 0
@@ -690,7 +707,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         // IPv6 can arrive after group info / IPv4. Wait within the existing
                         // bounded budget, without recreating an otherwise healthy group. Runs at
                         // least once, so a name found only now still gets its IPv6 read.
-                        while (retries < 15 && deliveryEpoch == credentialsEpoch) {
+                        while (retries < CREDENTIAL_WAIT_POLLS && deliveryEpoch == credentialsEpoch) { // CarLink: was 15 x 1 s
                             // group.interface is hidden on Android 11+, and when group info lands
                             // before the kernel assigns the GO address the lookup above found
                             // nothing. Without a name the IPv6 read below can never succeed, so
@@ -714,12 +731,16 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                                 }
                             }
                             if (P2pCredentialWaitPolicy.ready(
-                                    ipReady = ip != null, owner = isOwner, staticOverride = isBssidSet,
+                                    // CarLink (upstream b5617bd5): a group owner is 192.168.49.1 by
+                                    // platform, which the delivery below falls back to anyway.
+                                    ipReady = ip != null || isOwner, owner = isOwner, staticOverride = isBssidSet,
                                     fromCurrentInterface = fromInterface, maskedBssid = needsBssid(),
                                     elapsedMillis = android.os.SystemClock.elapsedRealtime() - resolutionStarted,
                                 )) break
-                            AppLog.d("WifiDirectManager: Waiting for IP/BSSID on interface ${groupIface ?: "any p2p"} (Attempt ${retries + 1}/15)...")
-                            Thread.sleep(1000)
+                            AppLog.d("WifiDirectManager: Waiting for IP/BSSID on interface ${groupIface ?: "any p2p"} (Attempt ${retries + 1}/$CREDENTIAL_WAIT_POLLS)...")
+                            // CarLink: the same 15 s budget in 250 ms steps; the interface's IPv6
+                            // (the BSSID source) usually appears well inside the first second.
+                            Thread.sleep(CREDENTIAL_POLL_MS)
                             ip = getWifiDirectIp(groupIface)
                             retries++
                         }
@@ -1122,8 +1143,19 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             } else {
                 mgr.requestGroupInfo(ch) { group ->
                     if (!supersededByStop(gen, "credential refresh result")) {
-                        if (group != null) onGroupInfoAvailable(group)
-                        else if (!isGroupCreatingOrCreated) startNativeAaQuietHost()
+                        // CarLink: a create still owed an answer is waited out, not doubled.
+                        val inFlight = nativeCreateInFlight()
+                        when (NativeCreateWindow.refresh(group != null, inFlight, isGroupCreatingOrCreated)) {
+                            NativeCreateWindow.RefreshAction.REDELIVER -> onGroupInfoAvailable(group)
+                            NativeCreateWindow.RefreshAction.CREATE -> startNativeAaQuietHost()
+                            NativeCreateWindow.RefreshAction.WAIT -> if (inFlight) {
+                                AppLog.i("WifiDirectManager: refresh: a group was asked for " +
+                                    "${SystemClock.elapsedRealtime() - nativeCreateRequestedAtMs}ms ago and has not answered yet; not creating another.")
+                                handler.removeCallbacks(nativeRefreshRecheck)
+                                postSessionDelayed(nativeRefreshRecheck, NativeCreateWindow.recheckDelayMs(
+                                    nativeCreateRequestedAtMs, SystemClock.elapsedRealtime()))
+                            }
+                        }
                     }
                 }
             }
@@ -1135,7 +1167,13 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         sessionOwnership.start()
         registerReceiverIfNeeded()
         if (!sessionOwnership.enabled || isGroupCreatingOrCreated) return
+        if (nativeCreateInFlight()) { // CarLink: see NativeCreateWindow
+            AppLog.i("WifiDirectManager: a Native AA group was asked for " +
+                "${SystemClock.elapsedRealtime() - nativeCreateRequestedAtMs}ms ago and has not answered; not starting another bring-up on top of it.")
+            return
+        }
         isGroupCreatingOrCreated = true
+        nativeCreateRequestedAtMs = SystemClock.elapsedRealtime() // CarLink
         var mgr = manager
         var ch = channel
 
@@ -1154,11 +1192,13 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 } else {
                     AppLog.e("WifiDirectManager: Re-init failed. Cannot start Quiet Host.")
                     isGroupCreatingOrCreated = false
+                    nativeCreateRequestedAtMs = 0L // CarLink
                     return
                 }
             } catch (e: Exception) {
                 AppLog.e("WifiDirectManager: Exception during re-init", e)
                 isGroupCreatingOrCreated = false
+                nativeCreateRequestedAtMs = 0L // CarLink
                 return
             }
         }
@@ -1176,12 +1216,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     com.andrerinas.openheadunit.HostIntegration.EngineEvent.WIFI_OFF)
                 // We return for now, the user must turn it on. In the future we could open settings.
                 isGroupCreatingOrCreated = false
+                nativeCreateRequestedAtMs = 0L // CarLink
                 return
             }
             // Wait a bit for WiFi to wake up
             postSessionDelayed({
                 if (isGroupCreatingOrCreated) {
                     isGroupCreatingOrCreated = false
+                    nativeCreateRequestedAtMs = 0L // CarLink: this is the same bring-up, retried
                     startNativeAaQuietHost()
                 }
             }, 2000L)
@@ -1282,6 +1324,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         val bandLabel = NativeGroupBandPolicy.label(band)
 
         AppLog.i("WifiDirectManager: Attempting createGroup for Native AA (Attempt $retryCount)...")
+        com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_CREATE, "attempt=$retryCount") // CarLink
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
@@ -1329,13 +1372,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     override fun onSuccess() {
                         if (!sessionOwnership.created(gen)) return
                         AppLog.i("WifiDirectManager: $bandLabel createGroup SUCCESS!")
+                        com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_CREATED, "band=$bandLabel") // CarLink
                         nativeGroupCreationMode =
                             if (force24) NATIVE_GROUP_MODE_24GHZ_FORCED else NATIVE_GROUP_MODE_5GHZ_REQUESTED
                         isGroupOwner = true
-                        postSessionDelayed({
-                            mgr.requestConnectionInfo(ch, this@WifiDirectManager)
-                            mgr.requestGroupInfo(ch, this@WifiDirectManager)
-                        }, 1000L)
+                        // CarLink (upstream b5617bd5): asked now rather than a second later; a group
+                        // that cannot answer yet is covered by onGroupInfoAvailable's 1 s retry.
+                        mgr.requestConnectionInfo(ch, this@WifiDirectManager)
+                        mgr.requestGroupInfo(ch, this@WifiDirectManager)
                     }
                     override fun onFailure(reason: Int) {
                         if (supersededByStop(gen, "native create result")) return
@@ -1418,6 +1462,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 if (!sessionOwnership.created(gen)) return
                 mgr.requestGroupInfo(ch, this@WifiDirectManager)
                 AppLog.i("WifiDirectManager: Standard createGroup SUCCESS!")
+                com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_CREATED, "mode=$groupMode") // CarLink
                 nativeGroupCreationMode = groupMode
                 // The platform chose the band here, so there is no mismatch to correct.
                 nativeRequestedBand = NativeGroupBandPolicy.Band.UNSPECIFIED
@@ -1459,6 +1504,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 } else {
                     AppLog.e("WifiDirectManager: createQuietGroup failed completely! Reason: $reasonStr")
                     isGroupCreatingOrCreated = false
+                    nativeCreateRequestedAtMs = 0L // CarLink
                 }
             }
         })
@@ -1507,6 +1553,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // be delivered for the new one.
         lastKnownBssid = null
         forgetPerGroupKeys() // CarLink: same SSID, new group
+        nativeCreateRequestedAtMs = SystemClock.elapsedRealtime() // CarLink: NativeCreateWindow
         // The group this replaces is gone; any credential delivery still waiting on it describes a
         // network that will not exist by the time it lands.
         credentialsEpoch++
@@ -1537,6 +1584,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         val ch = channel ?: return
         lastKnownBssid = null
         forgetPerGroupKeys() // CarLink: same SSID, new group
+        nativeCreateRequestedAtMs = SystemClock.elapsedRealtime() // CarLink: NativeCreateWindow
         // Let an in-progress credential wait pick up the fresh group's creds, not stale ones.
         credentialsEpoch++
         onNativeGroupInvalidated?.invoke()
@@ -1760,6 +1808,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         sessionOwnership.stop()
         credentialsEpoch++
         isGroupCreatingOrCreated = false
+        nativeCreateRequestedAtMs = 0L // CarLink
         handler.removeCallbacksAndMessages(null)
         // Both of these guard an operation that is finished the moment we stop, and both used to be
         // cleared only by a posted runnable that the line above just cancelled - so a stop() landing
