@@ -639,6 +639,17 @@ class AdaptiveSettingsUiTest {
         }
     }
 
+    @Test fun overviewLinksToEveryOtherCategory() {
+        val screen = openSettings()
+        (SettingsCategory.entries - SettingsCategory.OVERVIEW).forEach { category ->
+            val title = ReflectionHelpers.callInstanceMethod<String>(screen, "settingsCategoryTitle",
+                ReflectionHelpers.ClassParameter(SettingsCategory::class.java, category))
+            assertTrue(category.name, descendants(screen.window.decorView).any {
+                it.contentDescription == screen.getString(R.string.settings_open_category, title)
+            })
+        }
+    }
+
     @Test fun compactLanguageAndAboutDestinationsWork() {
         verifyLanguageAndAboutDestinations()
     }
