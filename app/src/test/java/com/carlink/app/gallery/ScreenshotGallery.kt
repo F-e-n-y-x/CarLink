@@ -46,6 +46,8 @@ data class GalleryConfig(
     val display: String,
     val splitWidthDp: Int? = null,
     val themes: List<ThemeMode> = listOf(ThemeMode.DARK),
+    /** Only entries that list this config by name render on it (see [GalleryEntry.configs]). */
+    val optIn: Boolean = false,
 )
 
 val galleryConfigs = listOf(
@@ -60,6 +62,9 @@ val galleryConfigs = listOf(
         themes = listOf(ThemeMode.DARK, ThemeMode.LIGHT)),
     GalleryConfig("phone-landscape", UiProfile.HANDHELD, "w860dp-h400dp-land-xxhdpi"),
     GalleryConfig("tablet-portrait", UiProfile.HANDHELD, "w800dp-h1280dp-port-hdpi"),
+    // The user's Redmi Pad Pro in landscape (2560×1600px, about 1458×911dp).
+    GalleryConfig("tablet-landscape", UiProfile.HANDHELD, "w1458dp-h911dp-land-hdpi",
+        themes = listOf(ThemeMode.DARK, ThemeMode.LIGHT), optIn = true),
 )
 
 /**
@@ -79,15 +84,19 @@ class ScreenshotGallery {
         assumeTrue("Set -Dcarlink.screenshots=true (./gradlew :app:recordScreenshots)",
             System.getProperty("carlink.screenshots") == "true")
         val out = File(repoRoot(), "docs/screenshots")
-        galleryEntries.map { it.area }.distinct().forEach { area ->
+        // -Pcarlink.gallery.areas=switcher,home re-records only those areas.
+        val areas = System.getProperty("carlink.gallery.areas")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }
+        val entries = galleryEntries.filter { areas == null || it.area in areas }
+        entries.map { it.area }.distinct().forEach { area ->
             File(out, area).listFiles { file -> file.extension == "png" }?.forEach { it.delete() }
         }
         val written = mutableListOf<String>()
         for (config in galleryConfigs) {
             RuntimeEnvironment.setQualifiers(config.display)
             for (theme in config.themes) {
-                for (entry in galleryEntries) {
+                for (entry in entries) {
                     if (entry.opensWindow && config.splitWidthDp != null) continue
+                    if (entry.configs?.contains(config.name) == false || (config.optIn && entry.configs == null)) continue
                     val bitmap = render(config, theme, entry)
                     val file = File(out, "${entry.area}/${entry.area}_${entry.name}_${config.name}_${theme.fileName}.png")
                     file.parentFile!!.mkdirs()

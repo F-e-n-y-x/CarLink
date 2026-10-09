@@ -31,6 +31,11 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_PAUSED, false)
         set(value) = prefs.edit().putBoolean(KEY_PAUSED, value).apply()
 
+    /** The floating switcher over CarPlay and Android Auto (needs "Display over other apps"). */
+    var floatingSwitcher: Boolean
+        get() = prefs.getBoolean(KEY_FLOATING_SWITCHER, true)
+        set(value) = prefs.edit().putBoolean(KEY_FLOATING_SWITCHER, value).apply()
+
     /** Follow the car/system day-night mode by default (DESIGN_SPEC §5.1). */
     var themeMode: ThemeMode
         get() = enumOr(prefs.getString(KEY_THEME, null), ThemeMode.FOLLOW_SYSTEM)
@@ -59,5 +64,6 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
         private const val KEY_PAUSED = "auto_connect_paused"
+        private const val KEY_FLOATING_SWITCHER = "floating_switcher"
     }
 }

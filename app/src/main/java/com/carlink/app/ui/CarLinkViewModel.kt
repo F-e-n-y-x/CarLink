@@ -52,6 +52,8 @@ data class ConnectionPrefs(
     val autoConnectBluetooth: Boolean,
     val startOnBoot: Boolean,
     val autoConnectPaused: Boolean,
+    /** The floating switcher over the projection (Settings › General). */
+    val floatingSwitcher: Boolean = true,
 )
 
 /** The wireless path the next session would use, for Home's Network chip. */
@@ -202,6 +204,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     /** Re-reads phones, permissions and the network path (Home calls this on resume). */
     fun refreshPhones() {
+        // The floating switcher may have changed the connection type or paused automatic starts
+        // while Home was in the background.
+        unifiedStore.load().let { if (it != _unified.value) _unified.value = it }
+        _connection.value = readConnection()
         phonesRepository.refresh()
         _permissionsNeeded.value = missingPermissions().isNotEmpty()
         refreshNetwork()
@@ -281,6 +287,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setAutoConnectBluetooth(on: Boolean) { preferences.autoConnectBluetooth = on; _connection.value = readConnection() }
     fun setStartOnBoot(on: Boolean) { preferences.startOnBoot = on; _connection.value = readConnection() }
     fun resumeAutoConnect() { preferences.autoConnectPaused = false; _connection.value = readConnection() }
+    fun setFloatingSwitcher(on: Boolean) {
+        preferences.floatingSwitcher = on
+        _connection.value = readConnection()
+        com.carlink.app.switcher.SwitcherController.onSettingChanged()
+    }
 
     // ---- Other screens -----------------------------------------------------------------
 
@@ -313,5 +324,6 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale)
 
     private fun readConnection() = ConnectionPrefs(
-        preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, preferences.autoConnectPaused)
+        preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, preferences.autoConnectPaused,
+        preferences.floatingSwitcher)
 }

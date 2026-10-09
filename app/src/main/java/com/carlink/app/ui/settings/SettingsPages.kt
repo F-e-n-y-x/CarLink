@@ -212,6 +212,16 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
             "${carLinkScaleLabel(d.interfaceScale)} · ${percentText(nearestScale(d.interfaceScale))}",
             { openSheet(SheetKey.of(EssentialSheet.CARLINK_SIZE)) },
             description = stringResource(R.string.carlink_settings_carlink_size_detail), icon = R.drawable.carlink_ic_text_fields)
+        GroupDivider()
+        SwitchRow(stringResource(R.string.carlink_settings_floating_switcher), ui.connection.floatingSwitcher,
+            actions::setFloatingSwitcher, description = stringResource(R.string.carlink_settings_floating_switcher_detail),
+            icon = R.drawable.carlink_ic_layers)
+        if (ui.connection.floatingSwitcher && !ui.overlayAllowed) {
+            GroupDivider()
+            LinkRow(stringResource(R.string.carlink_settings_floating_switcher_permission), actions::openOverlayPermission,
+                stringResource(R.string.carlink_settings_floating_switcher_permission_detail), R.drawable.carlink_ic_lock,
+                external = true)
+        }
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_help)) }) {
         LinkRow(stringResource(R.string.carlink_settings_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },

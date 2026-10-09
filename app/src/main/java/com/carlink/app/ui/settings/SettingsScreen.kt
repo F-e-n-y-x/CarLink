@@ -100,6 +100,13 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         engineValues.value = withContext(Dispatchers.IO) { readEngineValues(access) }
     }
 
+    // Re-read on every resume: the driver grants "Display over other apps" in Android's settings.
+    var overlayAllowed by remember { mutableStateOf(true) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        overlayAllowed = Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(context)
+        onPauseOrDispose { }
+    }
+
     val goTo = navigate
     val actions = remember(vm) {
         object : SettingsActions {
@@ -107,6 +114,8 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setAutoConnectBluetooth(on: Boolean) = vm.setAutoConnectBluetooth(on)
             override fun setAutoConnectUsb(on: Boolean) = vm.setAutoConnectUsb(on)
             override fun setStartOnBoot(on: Boolean) = vm.setStartOnBoot(on)
+            override fun setFloatingSwitcher(on: Boolean) = vm.setFloatingSwitcher(on)
+            override fun openOverlayPermission() = vm.fix(com.carlink.app.core.LinkProblem.OVERLAY)
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
             override fun setUiProfileMode(mode: UiProfileMode) = vm.setUiProfileMode(mode)
@@ -136,6 +145,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         isByd = remember { isBydHeadUnit() },
         versionName = AppInfo.versionName,
         advancedValues = engineValues.value,
+        overlayAllowed = overlayAllowed,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }

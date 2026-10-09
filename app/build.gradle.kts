@@ -139,6 +139,7 @@ val repoRootPath: String = rootDir.path
 tasks.withType<Test>().configureEach {
     systemProperty("carlink.repoRoot", repoRootPath)
     systemProperty("carlink.screenshots", recordingScreenshots.toString())
+    providers.gradleProperty("carlink.gallery.areas").orNull?.let { systemProperty("carlink.gallery.areas", it) }
     if (recordingScreenshots && name == "testDebugUnitTest") {
         filter.includeTestsMatching("com.carlink.app.gallery.*")
         outputs.upToDateWhen { false }

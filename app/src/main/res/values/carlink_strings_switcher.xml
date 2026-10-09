@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Floating switcher: the bubble over CarPlay / Android Auto and the panel it opens. -->
+    <string name="carlink_switcher_bubble">CarLink switcher</string>
+    <string name="carlink_switcher_bubble_action">Open phone switcher</string>
+    <!-- %1$s: time connected, e.g. 12:04 -->
+    <string name="carlink_switcher_connected_for">Connected · %1$s</string>
+    <string name="carlink_switcher_switch_title">Switch phone</string>
+    <string name="carlink_switcher_no_phones">No other paired phones</string>
+    <string name="carlink_switcher_no_phones_hint">Pair another phone in Bluetooth settings to switch to it here.</string>
+    <string name="carlink_switcher_switching">Switching…</string>
+    <string name="carlink_switcher_home">CarLink Home</string>
+    <string name="carlink_switcher_next_connection">The current session keeps its connection.</string>
+    <string name="carlink_switcher_close">Close</string>
+    <string name="carlink_switcher_back">Back</string>
+    <!-- The USB switch prompt's decline button ("Switch to <phone>?"). -->
+    <string name="carlink_switcher_not_now">Not now</string>
+    <!-- Name of a plugged-in phone that did not report one. -->
+    <string name="carlink_switcher_phone_fallback">the new phone</string>
+</resources>

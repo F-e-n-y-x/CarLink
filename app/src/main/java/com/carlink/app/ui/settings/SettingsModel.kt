@@ -44,6 +44,8 @@ data class SettingsUi(
      * "false" for switches, the option value for choices. Null while they load from the engines.
      */
     val advancedValues: Map<String, String>?,
+    /** Android lets CarLink draw over other apps (the floating switcher needs it). */
+    val overlayAllowed: Boolean = true,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -53,6 +55,9 @@ interface SettingsActions {
     fun setAutoConnectBluetooth(on: Boolean) {}
     fun setAutoConnectUsb(on: Boolean) {}
     fun setStartOnBoot(on: Boolean) {}
+    fun setFloatingSwitcher(on: Boolean) {}
+    /** Android's "Display over other apps" screen for CarLink. */
+    fun openOverlayPermission() {}
     fun resumeAutoConnect() {}
     fun setThemeMode(mode: ThemeMode) {}
     fun setUiProfileMode(mode: UiProfileMode) {}

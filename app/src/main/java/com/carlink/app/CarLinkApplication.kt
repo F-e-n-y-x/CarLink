@@ -34,6 +34,8 @@ class CarLinkApplication : App() {
             // No sticky or self-restarting engine (DA§10.6.1), no BYD window claim off a BYD
             // (DA§12 #8), engine events and states to the main process.
             com.carlink.app.connection.aa.AaEngineHooks.install(this)
+            // Tells the main process's floating switcher when the Android Auto picture is in front.
+            com.carlink.app.switcher.ProjectionVisibility.installInEngineProcess(this)
         } else {
             com.carlink.app.diagnostics.EventLog.attachFile(java.io.File(filesDir, "logs"))
             nameCarForIphone()
@@ -42,6 +44,8 @@ class CarLinkApplication : App() {
             com.carlink.app.ui.home.CarPlayWaitingContent.register()
             com.carlink.app.entry.UsbWatcher.get(this).start()
             com.carlink.app.connection.Connection.prewarm(this)
+            // The floating switcher over CarPlay / Android Auto (and the USB switch prompt).
+            com.carlink.app.switcher.SwitcherController.install(this)
         }
     }
 

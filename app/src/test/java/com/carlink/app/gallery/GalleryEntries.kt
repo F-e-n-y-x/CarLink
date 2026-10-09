@@ -41,6 +41,8 @@ class GalleryEntry(
     val area: String,
     val name: String,
     val opensWindow: Boolean = false,
+    /** Config names to render on; null means every config that is not opt-in. */
+    val configs: Set<String>? = null,
     val content: @Composable () -> Unit,
 )
 
@@ -48,7 +50,7 @@ class GalleryEntry(
  * Every registered screen state. To add a screen, append entries that call its stateless
  * content composable (the one its @Preview functions use) with preview fakes.
  */
-val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + diagnosticsEntries() + aboutEntries()).also { entries ->
+val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + diagnosticsEntries() + aboutEntries() + switcherEntries()).also { entries ->
         check(entries.map { it.area to it.name }.toSet().size == entries.size) {
             "Gallery entry names must be unique per area"
         }
@@ -57,7 +59,7 @@ val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + di
 private object GalleryDiagnosticsActions : DiagnosticsActions
 
 private fun home(name: String, opensWindow: Boolean = false, content: @Composable () -> Unit) =
-    GalleryEntry("home", name, opensWindow, content)
+    GalleryEntry("home", name, opensWindow, content = content)
 
 private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("permission") { HomeContent(ui(permissionsNeeded = true, phones = emptyList()), actions) },

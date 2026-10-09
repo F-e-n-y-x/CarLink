@@ -179,4 +179,8 @@
     <string name="carlink_settings_advanced_detail">Engine settings for experienced drivers. Changing a picture or size value here sets the matching setting above to Custom.</string>
     <string name="carlink_settings_lab">Lab</string>
     <string name="carlink_settings_lab_detail">Experimental and debug options. If a connection stops working, turn them off first.</string>
+    <string name="carlink_settings_floating_switcher">Floating switcher</string>
+    <string name="carlink_settings_floating_switcher_detail">A small button over CarPlay and Android Auto to switch phones, open CarLink or disconnect</string>
+    <string name="carlink_settings_floating_switcher_permission">Allow display over other apps</string>
+    <string name="carlink_settings_floating_switcher_permission_detail">Android needs this before CarLink can show the button</string>
 </resources>
