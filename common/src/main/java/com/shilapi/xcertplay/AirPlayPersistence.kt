@@ -904,12 +904,21 @@ object AirPlayPersistence {
         overlaySettingsListener?.invoke()
     }
 
-    /** Right of centre by default: the small navi window sits on the right half of the panel. */
-    fun loadClusterSmallWindowCardSizePercent(context: Context): Int = ClusterTurnCardOverlay.snap(
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_SIZE, 40),
-        ClusterTurnCardOverlay.sizePercents,
-    )
+    /**
+     * The custom turn card keeps a second rect for the small window: x/y/size, panel percents. Its
+     * defaults sit right of centre and smaller, where the small navi window is. Until the driver sets
+     * the small-window card, a full-screen card value the driver chose still applies, as it did before.
+     */
+    fun loadClusterSmallWindowCardSizePercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val size = when {
+            prefs.contains(KEY_CLUSTER_SMALL_WINDOW_CARD_SIZE) -> prefs.getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_SIZE, 40)
+            prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE_PERCENT) || prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_SIZE) ->
+                loadClusterTurnCardOverlaySizePercent(context)
+            else -> 40
+        }
+        return ClusterTurnCardOverlay.snap(size, ClusterTurnCardOverlay.sizePercents)
+    }
 
     fun saveClusterSmallWindowCardSizePercent(context: Context, percent: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -917,12 +926,16 @@ object AirPlayPersistence {
         overlaySettingsListener?.invoke()
     }
 
-    /** The custom turn card also keeps a second rect for the small window: x/y/size, panel percents. */
-    fun loadClusterSmallWindowCardXPercent(context: Context): Int = ClusterTurnCardOverlay.snap(
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_X, 80),
-        ClusterTurnCardOverlay.smallWindowXPercents,
-    )
+    fun loadClusterSmallWindowCardXPercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val x = when {
+            prefs.contains(KEY_CLUSTER_SMALL_WINDOW_CARD_X) -> prefs.getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_X, 80)
+            prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_X) || prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_POSITION) ->
+                loadClusterTurnCardOverlayXPercent(context)
+            else -> 80
+        }
+        return ClusterTurnCardOverlay.snap(x, ClusterTurnCardOverlay.smallWindowXPercents)
+    }
 
     fun saveClusterSmallWindowCardXPercent(context: Context, percent: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -930,11 +943,15 @@ object AirPlayPersistence {
         overlaySettingsListener?.invoke()
     }
 
-    fun loadClusterSmallWindowCardYPercent(context: Context): Int = ClusterTurnCardOverlay.snap(
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_Y, 25),
-        ClusterTurnCardOverlay.smallWindowYPercents,
-    )
+    fun loadClusterSmallWindowCardYPercent(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val y = when {
+            prefs.contains(KEY_CLUSTER_SMALL_WINDOW_CARD_Y) -> prefs.getInt(KEY_CLUSTER_SMALL_WINDOW_CARD_Y, 25)
+            prefs.contains(KEY_CLUSTER_TURN_CARD_OVERLAY_Y) -> loadClusterTurnCardOverlayYPercent(context)
+            else -> 25
+        }
+        return ClusterTurnCardOverlay.snap(y, ClusterTurnCardOverlay.smallWindowYPercents)
+    }
 
     fun saveClusterSmallWindowCardYPercent(context: Context, percent: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -967,8 +984,6 @@ object AirPlayPersistence {
             .putInt(KEY_CLUSTER_TURN_CARD_THEME, theme.coerceIn(0, 2)).apply()
         overlaySettingsListener?.invoke()
     }
-
-    /** The custom turn card also keeps a second rect for the small window: x/y/size, panel percents. */
 
     fun saveClusterTurnCardOpacityPercent(context: Context, percent: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
