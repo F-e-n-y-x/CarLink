@@ -4717,11 +4717,6 @@ class CarPlayHostActivity : ComponentActivity() {
         finishSettingsMenu("Settings saved", reconnect = true)
     }
 
-    /**
-     * [prompt] on an exit that does not announce a discard: the Back gesture and the link to the
-     * full settings screen. The close control says it discards, and a USB attachment is not the
-     * driver leaving, so both keep discarding without a question.
-     */
     private fun cancelSettingsEdits() {
         if (!menuOpen) return
         restoreSettingsBaseline()
@@ -4738,7 +4733,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun leaveSettingsMenu(onLeft: () -> Unit = {}) {
         if (!menuOpen) return
         if (menuSettingsSignature?.let { it != menuSettingsSignature() } == true) {
-            AlertDialog.Builder(this)
+            // Follow the menu's light or dark palette, like DiPlay's other dialogs.
+            AlertDialog.Builder(this, if (appNight) R.style.Theme_Xcertplay_Dialog_Dark else R.style.Theme_Xcertplay_Dialog_Light)
                 .setTitle(getString(R.string.settings_discard_pending_title))
                 .setMessage(getString(R.string.settings_discard_pending_message))
                 .setPositiveButton(getString(R.string.save_and_reconnect)) { _, _ -> saveSettingsAndReconnect() }
