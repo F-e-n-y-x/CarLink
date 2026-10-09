@@ -2,7 +2,6 @@
 <resources>
     <!-- Overrides both engines' app_name: the merged app is CarLink everywhere. -->
     <string name="app_name">CarLink</string>
-    <string name="app_name_debug">CarLink HUD Test</string>
 
     <string name="notification_channel_launch">Open CarLink</string>
     <string name="notification_phone_ready">%1$s is nearby. Tap to connect.</string>
