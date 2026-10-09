@@ -117,6 +117,11 @@ internal class AaCommandHandler(
                 emit(AaProtocol.KIND_START_REFUSED, "action=${AapService.ACTION_CHECK_USB}")
             }
             report()
+            // A phone left in accessory mode by an earlier session may never answer; say so in
+            // seconds instead of the generic USB timeout (71 s on the tablet, 2026-10-09).
+            if (device != null && !waitUntil(STALE_ACCESSORY_MILLIS) { engine.isBusy() }) {
+                emit(AaProtocol.KIND_AOA_STALE, "device=${engine.deviceName(device)}")
+            }
             return
         }
         if (!engine.isServiceRunning()) {
@@ -127,21 +132,55 @@ internal class AaCommandHandler(
             waitUntil(SERVICE_START_MILLIS) { engine.isServiceRunning() }
         }
         report()
-        if (engine.hasUsbPermission(device)) switchToAccessory(device) else engine.requestUsbPermission(device)
+        // Phones re-enumerate a few times right after plug-in (charging negotiation); act on the
+        // settled device, or the permission and the switch go to a handle that no longer exists.
+        val settled = settle(device)
+        if (engine.hasUsbPermission(settled)) switchToAccessory(settled) else engine.requestUsbPermission(settled)
+    }
+
+    /** The phone once it has stopped re-enumerating, up to [SETTLE_MAX_MILLIS]. */
+    private fun settle(device: UsbDevice): UsbDevice {
+        var current = engine.currentDevice(device) ?: device
+        var stableSince = engine.now()
+        val end = engine.now() + SETTLE_MAX_MILLIS
+        while (engine.now() < end && engine.now() - stableSince < SETTLE_STABLE_MILLIS) {
+            engine.sleep(POLL_MILLIS)
+            val now = engine.currentDevice(current) ?: continue
+            if (engine.deviceName(now) != engine.deviceName(current) || now.deviceName != current.deviceName) {
+                current = now
+                stableSince = engine.now()
+            }
+        }
+        return current
     }
 
     /** The answer to [AaEngineAccess.requestUsbPermission]. */
     fun onUsbPermission(device: UsbDevice?, granted: Boolean) {
         when {
             device == null -> emit(AaProtocol.KIND_USB_DEVICE_MISSING, null)
-            granted -> switchToAccessory(device)
+            granted -> switchToAccessory(engine.currentDevice(device) ?: device)
             else -> emit(EngineEvent.USB_PERMISSION_DENIED.name, "device=${engine.deviceName(device)}")
         }
     }
 
     private fun switchToAccessory(device: UsbDevice) {
-        val switched = engine.switchToAccessory(device)
+        if (engine.isAccessory(device)) {
+            engine.startService(AapService.ACTION_CHECK_USB)
+            return
+        }
+        var switched = engine.switchToAccessory(device)
         Log.i(TAG, "AOA switch result=$switched")
+        if (!switched) {
+            // Once more on the current handle: the phone may have re-enumerated meanwhile.
+            engine.sleep(RETRY_SWITCH_MILLIS)
+            val again = engine.currentDevice(device)
+            when {
+                again == null -> Unit
+                engine.isAccessory(again) -> { engine.startService(AapService.ACTION_CHECK_USB); return }
+                !engine.hasUsbPermission(again) -> { engine.requestUsbPermission(again); return }
+                else -> switched = engine.switchToAccessory(again).also { Log.i(TAG, "AOA switch retry result=$it") }
+            }
+        }
         if (!switched) emit(AaProtocol.KIND_AOA_SWITCH_FAILED, "device=${engine.deviceName(device)}")
     }
 
@@ -217,5 +256,9 @@ internal class AaCommandHandler(
         const val SERVICE_START_MILLIS = 3_000L
         const val GROUP_RELEASE_MILLIS = 4_000L
         const val POLL_MILLIS = 200L
+        const val SETTLE_STABLE_MILLIS = 600L
+        const val SETTLE_MAX_MILLIS = 2_000L
+        const val RETRY_SWITCH_MILLIS = 700L
+        const val STALE_ACCESSORY_MILLIS = 10_000L
     }
 }

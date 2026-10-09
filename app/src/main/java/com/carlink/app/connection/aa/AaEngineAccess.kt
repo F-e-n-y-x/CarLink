@@ -52,6 +52,12 @@ internal interface AaEngineAccess {
     fun requestUsbPermission(device: UsbDevice)
     fun switchToAccessory(device: UsbDevice): Boolean
     fun deviceName(device: UsbDevice): String
+    /**
+     * The same phone as it is attached right now. A phone re-enumerates (charging-mode changes,
+     * the accessory switch), and an old [UsbDevice] then no longer works (S25 on the tablet).
+     * Null when no phone from that maker is attached.
+     */
+    fun currentDevice(previous: UsbDevice): UsbDevice?
     fun sleep(millis: Long)
     fun now(): Long
 }
@@ -186,6 +192,13 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
     }
 
     override fun deviceName(device: UsbDevice): String = UsbDeviceCompat(device).uniqueName
+
+    override fun currentDevice(previous: UsbDevice): UsbDevice? {
+        val attached = app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty()
+        return attached.firstOrNull { it.deviceName == previous.deviceName }
+            ?: attached.firstOrNull { it.vendorId == previous.vendorId && it.productId == previous.productId }
+            ?: attached.firstOrNull { it.vendorId == previous.vendorId || UsbDeviceCompat.isInAccessoryMode(it) }
+    }
 
     override fun sleep(millis: Long) = Thread.sleep(millis)
 

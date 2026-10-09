@@ -153,6 +153,7 @@ internal class AaSessionTracker(
             EngineEvent.SESSION_ENDED.name -> endSession(d["userExit"] == "true", d["clean"] == "true", now)
             AaProtocol.KIND_START_REFUSED -> fail(FailureReason.ENGINE, "Android did not let the Android Auto service start")
             AaProtocol.KIND_AOA_SWITCH_FAILED -> fail(FailureReason.USB, "the phone did not switch to Android Auto over USB")
+            AaProtocol.KIND_AOA_STALE -> fail(FailureReason.USB, "unplug the phone and plug it in again")
             AaProtocol.KIND_USB_DEVICE_MISSING -> fail(FailureReason.USB, "the phone is no longer on USB")
             else -> emptyList()
         }

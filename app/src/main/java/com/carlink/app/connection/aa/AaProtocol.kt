@@ -53,6 +53,8 @@ internal object AaProtocol {
     const val KIND_USB_DEVICE_MISSING = "CARLINK_USB_DEVICE_MISSING"
     /** The phone did not take the Android Open Accessory switch. */
     const val KIND_AOA_SWITCH_FAILED = "CARLINK_AOA_SWITCH_FAILED"
+    /** The phone was already in accessory mode at plug-in but never started Android Auto: it needs a re-plug. */
+    const val KIND_AOA_STALE = "CARLINK_AOA_STALE"
     /** What the receiver did with a wireless start ([WirelessStartDecision] name in the detail). */
     const val KIND_START_DECISION = "CARLINK_START_DECISION"
 

@@ -67,6 +67,7 @@ class AaCommandHandlerTest {
         override fun requestUsbPermission(device: UsbDevice) { permissionRequested = true }
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
         override fun deviceName(device: UsbDevice) = "Pixel"
+        override fun currentDevice(previous: UsbDevice): UsbDevice? = previous
         override fun sleep(millis: Long) { clock += millis }
         override fun now() = clock
     }
