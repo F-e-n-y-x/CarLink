@@ -381,6 +381,7 @@
     <string name="use_software_hevc_decoder">استخدام مفكّك HEVC البرمجي</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">استخدام توجيه نوع المحتوى/الاستخدام بدلاً من نوع البث</string>
     <string name="use_your_last_connection_type_and_selected_iphone">استخدم نوع اتصالك الأخير وiPhone المحدد.</string>
+    <string name="vpn_authorization_unavailable">لا يمكن لوحدة السيارة فتح شاشة تفويض VPN. ارجع إلى DiPlay للتحقق من أذونات الاتصال أو استخدم الاتصال اللاسلكي.</string>
     <string name="vpn_consent_was_denied">رُفضت موافقة VPN</string>
     <string name="waiting_for_iphone_over_usb">بانتظار iPhone عبر USB</string>
     <string name="waiting_for_mfi_coprocessor">بانتظار معالج MFi المساعد</string>

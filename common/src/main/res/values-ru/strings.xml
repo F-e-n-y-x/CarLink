@@ -381,6 +381,7 @@
     <string name="use_software_hevc_decoder">Использовать программный декодер HEVC</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Маршрутизация по использованию/типу контента вместо типа потока</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Использовать последний способ подключения и выбранный iPhone.</string>
+    <string name="vpn_authorization_unavailable">Головное устройство не может открыть разрешение VPN. Вернитесь в DiPlay, чтобы проверить разрешения на подключение, или используйте беспроводное подключение.</string>
     <string name="vpn_consent_was_denied">Согласие на VPN отклонено</string>
     <string name="waiting_for_iphone_over_usb">Ожидание iPhone по USB</string>
     <string name="waiting_for_mfi_coprocessor">Ожидание сопроцессора MFi</string>

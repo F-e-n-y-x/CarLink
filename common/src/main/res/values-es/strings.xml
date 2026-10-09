@@ -381,6 +381,7 @@
     <string name="use_software_hevc_decoder">Usar decodificador por software HEVC</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Usar enrutamiento por uso/tipo de contenido en lugar del tipo de flujo</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Usa tu último tipo de conexión y el iPhone seleccionado.</string>
+    <string name="vpn_authorization_unavailable">Esta unidad no puede abrir la autorización de VPN. Vuelve a DiPlay para revisar los permisos de conexión o usa la conexión inalámbrica.</string>
     <string name="vpn_consent_was_denied">Se denegó el consentimiento de VPN</string>
     <string name="waiting_for_iphone_over_usb">Esperando iPhone por USB</string>
     <string name="waiting_for_mfi_coprocessor">Esperando al coprocesador MFi</string>

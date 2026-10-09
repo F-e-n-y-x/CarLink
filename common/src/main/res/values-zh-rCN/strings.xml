@@ -393,6 +393,7 @@
     <string name="use_software_hevc_decoder">使用 HEVC 软件解码器</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">使用 usage / content-type 路由代替流类型</string>
     <string name="use_your_last_connection_type_and_selected_iphone">使用上次的连接方式和已选 iPhone。</string>
+    <string name="vpn_authorization_unavailable">此车机无法打开 VPN 授权界面。请返回 DiPlay 检查连接权限，或使用无线连接。</string>
     <string name="vpn_consent_was_denied">VPN 授权被拒绝</string>
     <string name="waiting_for_iphone_over_usb">正在等待 USB 连接的 iPhone</string>
     <string name="waiting_for_mfi_coprocessor">正在等待 MFi 协处理器</string>

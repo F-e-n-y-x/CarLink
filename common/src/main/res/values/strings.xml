@@ -431,6 +431,7 @@
     <string name="use_software_hevc_decoder">Use software HEVC decoder</string>
     <string name="use_usage_content_type_routing_instead_of_stream_type">Use usage / content-type routing instead of stream type</string>
     <string name="use_your_last_connection_type_and_selected_iphone">Use your last connection type and selected iPhone.</string>
+    <string name="vpn_authorization_unavailable">This head unit cannot open VPN authorization. Return to DiPlay to check connection permissions or use wireless.</string>
     <string name="vpn_consent_was_denied">VPN consent was denied</string>
     <string name="waiting_for_iphone_over_usb">Waiting for iPhone over USB</string>
     <string name="waiting_for_mfi_coprocessor">Waiting for MFi coprocessor</string>
