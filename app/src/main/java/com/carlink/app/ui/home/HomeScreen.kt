@@ -180,8 +180,10 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
     pendingSwitch?.let { request ->
-        // TODO(overlay): once the floating prompt is merged, ask here only without the overlay permission.
-        SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
+        val context = androidx.compose.ui.platform.LocalContext.current
+        if (android.os.Build.VERSION.SDK_INT < 23 || !android.provider.Settings.canDrawOverlays(context)) {
+            SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
+        }
     }
 }
 
