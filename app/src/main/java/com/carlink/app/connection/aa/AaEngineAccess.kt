@@ -164,7 +164,18 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
             .putExtra(AaProtocol.EXTRA_USB_DEVICE, device)
         // Mutable: UsbManager adds EXTRA_PERMISSION_GRANTED. Explicit, so nothing else can fill it.
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
-        usb.requestPermission(device, PendingIntent.getBroadcast(app, USB_PERMISSION_REQUEST, reply, flags))
+        // After the accessory switch the phone is a new device. When CarLink is the default app for
+        // it, Android grants access on its own as it dispatches the attach, a moment later; asking
+        // at once raised the system prompt on every wired start (seen on the tablet, 2026-10-09).
+        Thread({
+            val deadline = android.os.SystemClock.uptimeMillis() + DEFAULT_GRANT_WAIT_MS
+            while (!usb.hasPermission(device) && android.os.SystemClock.uptimeMillis() < deadline) Thread.sleep(100)
+            if (usb.hasPermission(device)) {
+                app.sendBroadcast(Intent(reply).putExtra(UsbManager.EXTRA_PERMISSION_GRANTED, true))
+            } else {
+                usb.requestPermission(device, PendingIntent.getBroadcast(app, USB_PERMISSION_REQUEST, reply, flags))
+            }
+        }, "carlink-aa-usb-permission").start()
     }
 
     override fun switchToAccessory(device: UsbDevice): Boolean {
@@ -184,5 +195,6 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
         const val TAG = "CarLink-AA2"
         const val P2P_TIMEOUT_MILLIS = 3_000L
         const val USB_PERMISSION_REQUEST = 0x4141
+        const val DEFAULT_GRANT_WAIT_MS = 2_000L
     }
 }

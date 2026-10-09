@@ -30,6 +30,9 @@ object AaEngineHooks {
     @Volatile private var installed = false
 
     fun install(context: Context) {
+        // CarLink switches phones to Android Auto over USB itself (AaCommandHandler.startUsb);
+        // the engine's own delayed fallback switch raced it on the S25 (tablet, 2026-10-09).
+        HostIntegration.hostOwnsUsbSwitch = true
         if (installed) return
         installed = true
         val app = context.applicationContext

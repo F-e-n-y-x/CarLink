@@ -147,4 +147,13 @@ object HostIntegration {
             com.andrerinas.openheadunit.utils.AppLog.w("HostIntegration: onEngineEvent($kind) failed: ${e.message}")
         }
     }
+
+    /**
+     * CarLink: the host performs the USB accessory switch itself. When true, a phone attached in
+     * normal mode is left to the host instead of the engine's delayed fallback switch, which
+     * otherwise races the host's own switch on the same device. Default false (standalone).
+     */
+    @Volatile
+    @JvmStatic
+    var hostOwnsUsbSwitch: Boolean = false
 }

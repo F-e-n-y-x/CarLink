@@ -2066,6 +2066,8 @@ class AapService : Service(), UsbReceiver.Listener {
             AppLog.i("USB accessory device attached, connecting.")
             launchMainActivityIfNeeded("USB accessory attach")
             checkAlreadyConnectedUsb(force = true)
+        } else if (com.andrerinas.openheadunit.HostIntegration.hostOwnsUsbSwitch) { // CarLink
+            AppLog.i("Normal USB device attached; the host performs the accessory switch.")
         } else {
             // UsbAttachedActivity normally handles normal-mode devices via a manifest intent
             // filter. However, some headunits (especially Chinese MediaTek units) don't

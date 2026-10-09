@@ -1710,7 +1710,22 @@ class CarPlayController(
     }
 
     private fun requestIphonePermission(device: UsbDevice) {
-        mainHandler.post { doRequestIphonePermission(device) }
+        mainHandler.post { awaitDefaultGrantThenRequest(device, waitedMs = 0L) }
+    }
+
+    /**
+     * CarLink: after the CarPlay configuration switch the iPhone re-enumerates as a new device.
+     * When the driver made this app the default for the iPhone, Android grants access on its own
+     * as it dispatches the attach, about half a second later; asking at once raised the system
+     * permission prompt on every wired start. Wait briefly for that grant, then ask as before.
+     */
+    private fun awaitDefaultGrantThenRequest(device: UsbDevice, waitedMs: Long) {
+        if (closed) return
+        if (iphoneHost.hasPermission(device) || waitedMs >= DEFAULT_GRANT_WAIT_MS) {
+            doRequestIphonePermission(device)
+            return
+        }
+        mainHandler.postDelayed({ awaitDefaultGrantThenRequest(device, waitedMs + DEFAULT_GRANT_POLL_MS) }, DEFAULT_GRANT_POLL_MS)
     }
 
     private fun doRequestIphonePermission(device: UsbDevice) {
@@ -2651,6 +2666,9 @@ class CarPlayController(
     }
 
     companion object {
+        // CarLink: see awaitDefaultGrantThenRequest.
+        private const val DEFAULT_GRANT_WAIT_MS = 2_000L
+        private const val DEFAULT_GRANT_POLL_MS = 100L
         const val CONNECTION_DIAGNOSTIC_PREFIX = "CONNECTION_DIAGNOSTIC"
         // Indices in the telephony HID report (AirPlayHid.telephonyDescriptor).
         private const val TELEPHONY_HOOK_SWITCH = 1
