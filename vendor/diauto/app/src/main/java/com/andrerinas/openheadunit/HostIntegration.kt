@@ -65,4 +65,86 @@ object HostIntegration {
     @Volatile
     @JvmStatic
     var onPhoneWifiJoinFailed: ((context: Context) -> Unit)? = null
+
+    // CarLink: process lifecycle. Standalone DiAuto keeps both true: it owns the device and wants
+    // its engine back after a low-memory kill or a task swipe. A host that drives the engine itself
+    // sets both false, so no engine runs that the host did not start and cannot see.
+
+    /** True: AapService returns START_STICKY (Android restarts it with a null intent after a kill). */
+    @Volatile
+    @JvmStatic
+    var stickyService: Boolean = true
+
+    /** True: AapService restarts itself from onTaskRemoved when the app's task is swiped away. */
+    @Volatile
+    @JvmStatic
+    var restartOnTaskRemoved: Boolean = true
+
+    /**
+     * CarLink: true lets the projection claim the window area a BYD DiLink caption hides
+     * ([com.andrerinas.openheadunit.utils.BydFullscreen]). On other devices that area is a real
+     * system bar or cutout, so a host that knows it is not on a DiLink sets this false.
+     */
+    @Volatile
+    @JvmStatic
+    var claimHiddenBottomStrip: Boolean = true
+
+    /** CarLink: what [onEngineEvent] reports. Detail strings are `key=value` pairs joined by `;`. */
+    enum class EngineEvent {
+        /** The Wi-Fi radio is off, so the Wi-Fi Direct route cannot start (API 29+ cannot turn it on). */
+        WIFI_OFF,
+        /** Another app owns the Wi-Fi Direct group; the engine stood down. */
+        P2P_OWNED_BY_OTHER,
+        /** The Wi-Fi Direct group is on a channel most phones cannot join (DFS). Detail: `frequency=`. */
+        DFS_CHANNEL,
+        /** No usable BSSID when the credentials were due; the handshake aborted. Detail: `location=on|off`. */
+        BSSID_UNRESOLVED,
+        /** Bluetooth cannot serve the native route. Detail: `cause=permission|off`. */
+        BLUETOOTH_UNAVAILABLE,
+        /** The phone opened the Android Auto RFCOMM channel. Detail: `address=`. */
+        BT_CHANNEL_ACCEPTED,
+        /** The credentials (WifiInfoResponse, type 3) went out. Detail: `transport=`. */
+        CREDENTIALS_SENT,
+        /** The phone answers wake pokes but never opens the Android Auto channel. Detail: `pokes=`. */
+        POKE_ANSWERED_NO_ACCEPT,
+        /** Handshakes are no longer served after repeated silent ones. Detail: `failures=`. */
+        HANDSHAKE_BACKOFF,
+        /** A WifiStartResponse (7) or WifiConnectStatus (6) status. Detail: `type=;status=;stage=`. */
+        PHONE_WIFI_STATUS,
+        /** No TCP session within the settle window after the credentials. Detail: `seconds=`. */
+        SETTLE_TIMEOUT,
+        /** Several sessions in a row ended without one video frame. Detail: `sessions=`. */
+        STARVATION_ADVICE,
+        /** A Wi-Fi AAP session received nothing for the read timeout. Detail: `millis=`. */
+        LINK_READ_TIMEOUT,
+        /** Wireless bring-up refused by the boot-loop guard. */
+        BOOT_LOOP_PAUSE,
+        /** An external Bluetooth module makes the native route impossible. Detail: `evidence=`. */
+        EXTERNAL_BLUETOOTH,
+        /** USB permission was denied, or its request failed. Detail: `device=`. */
+        USB_PERMISSION_DENIED,
+        /** The first video frame of a session was rendered. */
+        FIRST_VIDEO_FRAME,
+        /** A session that had connected ended. Detail: `userExit=;clean=`. */
+        SESSION_ENDED,
+    }
+
+    /**
+     * CarLink: called (on any engine thread) when something a host should show or act on happens.
+     * The engine's own toasts and logs are unchanged. Null (standalone) does nothing.
+     */
+    @Volatile
+    @JvmStatic
+    var onEngineEvent: ((context: Context?, kind: EngineEvent, detail: String?) -> Unit)? = null
+
+    /** CarLink: fires [onEngineEvent]; a failing host hook never reaches the engine. */
+    @JvmStatic
+    fun engineEvent(context: Context?, kind: EngineEvent, detail: String? = null) {
+        val hook = onEngineEvent ?: return
+        try {
+            hook(context, kind, detail)
+        } catch (e: Exception) {
+            com.andrerinas.openheadunit.utils.AppLog.w("HostIntegration: onEngineEvent($kind) failed: ${e.message}")
+        }
+    }
 }

@@ -35,6 +35,10 @@ class CarLinkApplication : App() {
             nameCarForPhone()
             AndroidAutoStateReporter.start(this)
             HostIntegration.onPhoneWifiJoinFailed = { context -> AndroidAutoWifiFallback.onJoinFailed(context) }
+            // v2 (connection/aa): no sticky or self-restarting engine (DA§10.6.1), no BYD window
+            // claim off a BYD (DA§12 #8), engine events and states to the main process. v1 keeps
+            // working: it never listens for the v2 broadcasts.
+            com.carlink.app.connection.aa.AaEngineHooks.install(this)
         } else {
             nameCarForIphone()
             com.carlink.app.entry.UsbWatcher.get(this).start()

@@ -1156,6 +1156,10 @@ class AapService : Service(), UsbReceiver.Listener {
      * 4. Scheduling a reconnect attempt if applicable (see [scheduleReconnectIfNeeded])
      */
     private fun onDisconnected(state: CommManager.ConnectionState.Disconnected) {
+        // CarLink: user exit vs loss, for the host's status.
+        com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
+            com.andrerinas.openheadunit.HostIntegration.EngineEvent.SESSION_ENDED,
+            "userExit=${state.isUserExit};clean=${state.isClean}")
         com.andrerinas.openheadunit.hud.BydNavigationOutputs.stop()
         isSwitchingToAccessory.set(false)
         releaseWifiLock()
@@ -1620,6 +1624,7 @@ class AapService : Service(), UsbReceiver.Listener {
         // this only ever blocks a start nobody asked for.
         if (Settings.isWirelessPausedByBootLoop(this)) {
             AppLog.w("AapService: Wireless bring-up requested, but it is paused by the boot-loop guard. Open the app to re-enable it.")
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(this, com.andrerinas.openheadunit.HostIntegration.EngineEvent.BOOT_LOOP_PAUSE) // CarLink
             return
         }
 
@@ -1696,6 +1701,11 @@ class AapService : Service(), UsbReceiver.Listener {
                 if (externalBt != null) AppLog.e(externalBt)
                 val blockedByExternalBt =
                     externalBt != null && !NativeAaHandshakeManager.externalBtOverridden(this)
+                if (blockedByExternalBt) { // CarLink: tell the host why wireless never starts here
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.EXTERNAL_BLUETOOTH,
+                        "evidence=${com.andrerinas.openheadunit.utils.BluetoothHelper.externalBtEvidence}")
+                }
                 if (!blockedByExternalBt) {
                     if (nativeTransport() == NativeTransport.LOCAL_HOTSPOT) {
                         localHotspotCredentialsProvider?.start()
@@ -1772,6 +1782,12 @@ class AapService : Service(), UsbReceiver.Listener {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         com.andrerinas.openheadunit.hud.BydNavigationOutputs.stop()
+        // CarLink: a host that starts the engine itself does not want it resurrected here.
+        if (!com.andrerinas.openheadunit.HostIntegration.restartOnTaskRemoved) {
+            AppLog.i("AapService: onTaskRemoved — not restarting (the host owns the engine's lifecycle)")
+            super.onTaskRemoved(rootIntent)
+            return
+        }
         AppLog.i("AapService: onTaskRemoved — attempting restart")
         try {
             val restartIntent = Intent(this, AapService::class.java)
@@ -2031,7 +2047,8 @@ class AapService : Service(), UsbReceiver.Listener {
                 }
             }
         }
-        return START_STICKY
+        // CarLink: sticky only when the engine owns its own lifecycle (standalone).
+        return if (com.andrerinas.openheadunit.HostIntegration.stickyService) START_STICKY else START_NOT_STICKY
     }
 
     // -------------------------------------------------------------------------
@@ -2127,6 +2144,8 @@ class AapService : Service(), UsbReceiver.Listener {
             }
         } else {
             AppLog.w("USB permission denied for $deviceName")
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(this, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.USB_PERMISSION_DENIED, "device=$deviceName")
             ToastUtils.showToast(this, getString(R.string.usb_permission_denied), Toast.LENGTH_LONG)
         }
     }
@@ -2140,6 +2159,9 @@ class AapService : Service(), UsbReceiver.Listener {
             usbManager.requestPermission(device, permissionIntent)
         } catch (e: Exception) {
             AppLog.e("Failed to request USB permission: ${e.message}. This device might not support USB permission dialogs.", e)
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(this, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.USB_PERMISSION_DENIED,
+                "device=${UsbDeviceCompat(device).uniqueName};requestFailed=true")
             ToastUtils.showToast(this, getString(R.string.error_usb_permission_failed), Toast.LENGTH_LONG)
         }
     }

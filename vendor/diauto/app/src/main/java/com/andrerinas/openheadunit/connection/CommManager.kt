@@ -919,6 +919,8 @@ class CommManager(
             starvedSessionStreak, reachedHandshake, renderedAnyFrame
         )
         if (VideoStarvationPolicy.shouldAdvise(starvedSessionStreak)) {
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(null, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.STARVATION_ADVICE, "sessions=$starvedSessionStreak")
             AppLog.w(
                 "CommManager: $starvedSessionStreak sessions in a row ended without a single video " +
                     "frame arriving. The phone is connecting and then giving up on the video stream, " +

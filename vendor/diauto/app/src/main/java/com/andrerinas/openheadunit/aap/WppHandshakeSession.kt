@@ -35,7 +35,12 @@ enum class WppStage {
     AWAIT_INFO_REQUEST,
     /** Credentials delivered; the phone is associating, doing WPS and getting a DHCP lease. */
     SETTLING,
-    /** The phone's projection session landed. */
+    /**
+     * CarLink (open-headunit PR #1029): the session landed and the phone's channel stays open for
+     * it, answering its pings.
+     */
+    HOLDING,
+    /** The phone's projection session landed, or a held channel was released. */
     DONE,
     /** The exchange ended without a session. */
     FAILED
@@ -61,6 +66,10 @@ sealed class WppEvent {
     object TcpSessionUp : WppEvent()
     /** The settling window elapsed with no session. */
     object SettleTimeout : WppEvent()
+    /** CarLink (PR #1029): the phone closed the channel. Only acted on in [WppStage.HOLDING]. */
+    object PeerClosed : WppEvent()
+    /** CarLink (PR #1029): the projection session this channel was held for has ended. */
+    object SessionEnded : WppEvent()
 }
 
 /**
@@ -92,6 +101,8 @@ sealed class WppAction {
     ) : WppAction()
     /** Restart the wake poke. Only ever emitted once the phone has given up on this handoff. */
     object ResumePoke : WppAction()
+    /** CarLink (PR #1029): a held channel is over; close it. [peerClosed] is true when the phone ended it first. */
+    data class Release(val peerClosed: Boolean) : WppAction()
 }
 
 /**
@@ -119,8 +130,15 @@ sealed class WppAction {
  *
  * @param versionExchangeEnabled whether to open with [WppMessageType.VERSION_REQUEST]. False sends
  *   exactly what shipped before it existed.
+ * @param holdsChannel CarLink (open-headunit PR #1029): keep the channel after the session lands
+ *   instead of finishing. Android Auto 17.8 treats the RFCOMM channel as the phone's for the whole
+ *   session; when the head unit closes it, the phone restarts wireless setup and re-dials every 5 s
+ *   while any Bluetooth profile keeps the unit present (measured upstream: 1-13 fps against 27-30).
  */
-class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
+class WppHandshakeSession(
+    private val versionExchangeEnabled: Boolean,
+    private val holdsChannel: Boolean = false,
+) {
 
     companion object {
         /** How long to wait for the phone's version response before carrying on without it.
@@ -167,7 +185,7 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
         WppStage.AWAIT_INFO_REQUEST -> INFO_REQUEST_TIMEOUT_MS
         WppStage.SETTLING -> settleBudgetMs
         // AWAIT_CREDENTIALS is bounded by the caller's own credential wait, which ends in
-        // CredentialsReady or CredentialsUnavailable; NEW, DONE and FAILED never expire.
+        // CredentialsReady or CredentialsUnavailable; NEW, HOLDING, DONE and FAILED never expire.
         else -> null
     }
 
@@ -180,6 +198,7 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
      */
     fun on(event: WppEvent): List<WppAction> {
         if (isTerminal()) return emptyList()
+        if (stage == WppStage.HOLDING) return onHolding(event) // CarLink (PR #1029)
 
         if (event is WppEvent.MessageReceived) {
             messagesReceived++
@@ -195,8 +214,19 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
             WppStage.AWAIT_CREDENTIALS -> onAwaitCredentials(event)
             WppStage.AWAIT_INFO_REQUEST -> onAwaitInfoRequest(event)
             WppStage.SETTLING -> onSettling(event)
-            WppStage.DONE, WppStage.FAILED -> emptyList()
+            WppStage.HOLDING, WppStage.DONE, WppStage.FAILED -> emptyList()
         }
+    }
+
+    /** CarLink (PR #1029): pings are answered and nothing else is: credentials onto a live session drop it. */
+    private fun onHolding(event: WppEvent): List<WppAction> = when {
+        event is WppEvent.MessageReceived -> {
+            messagesReceived++
+            if (event.type == WppMessageType.PING_REQUEST) listOf(WppAction.SendPingResponse) else emptyList()
+        }
+        event is WppEvent.PeerClosed -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = true)) }
+        event is WppEvent.SessionEnded -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = false)) }
+        else -> emptyList()
     }
 
     private fun onNew(event: WppEvent): List<WppAction> = when (event) {
@@ -260,7 +290,7 @@ class WppHandshakeSession(private val versionExchangeEnabled: Boolean) {
 
     private fun onSettling(event: WppEvent): List<WppAction> = when {
         event is WppEvent.TcpSessionUp -> {
-            stage = WppStage.DONE
+            stage = if (holdsChannel) WppStage.HOLDING else WppStage.DONE // CarLink (PR #1029)
             listOf(WppAction.CompleteSuccess)
         }
         event is WppEvent.MessageReceived &&

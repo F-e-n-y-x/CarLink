@@ -355,6 +355,13 @@ class VideoDecoder(
     // it does, so reading that to ask "did this session ever show video" answers no for a session
     // that showed plenty. See CommManager.noteSessionEnded.
     @Volatile var framesRenderedThisSession: Long = 0L
+        set(value) {
+            // CarLink: the session's first rendered frame, for the host's "connected" status.
+            val first = field == 0L && value > 0L
+            field = value
+            if (first) com.andrerinas.openheadunit.HostIntegration.engineEvent(null,
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.FIRST_VIDEO_FRAME)
+        }
 
     // elapsedRealtime() of the last encoded video bytes received from the phone (input side),
     // as opposed to lastFrameRenderedMs (output side). Lets the projection watchdog tell a

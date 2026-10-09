@@ -1,0 +1,221 @@
+package com.carlink.app.connection.aa
+
+import android.hardware.usb.UsbDevice
+import android.util.Log
+import com.andrerinas.openheadunit.HostIntegration.EngineEvent
+import com.andrerinas.openheadunit.aap.AapService
+import com.carlink.app.settings.VehicleProfile
+
+/**
+ * What the ":aa" process remembers about the engine between commands: the wireless settings it was
+ * last armed with and whether it stood down for another Wi-Fi Direct owner since. Lost with the
+ * process, which reads as "unknown" (a forced re-arm), never as "fine".
+ */
+internal class AaEngineMonitor {
+    @Volatile var armedWith: WirelessConfig? = null
+        private set
+    @Volatile var p2pOwnedByOther = false
+        private set
+
+    fun onEngineEvent(kind: String) {
+        if (kind == EngineEvent.P2P_OWNED_BY_OTHER.name) p2pOwnedByOther = true
+    }
+
+    fun armed(config: WirelessConfig) {
+        armedWith = config
+        p2pOwnedByOther = false
+    }
+
+    fun reset() {
+        armedWith = null
+        p2pOwnedByOther = false
+    }
+
+    companion object {
+        /** The process-wide instance (one engine per ":aa" process). */
+        val shared = AaEngineMonitor()
+    }
+}
+
+/**
+ * The ":aa" side of a session: turns the adapter's commands into the AapService intents DiAuto's own
+ * entry points send (DA§7.1), on one background thread at a time ([AaCommandReceiver] serialises).
+ * Every wait is bounded. Pure over [AaEngineAccess], so it is unit tested without DiAuto.
+ */
+internal class AaCommandHandler(
+    private val engine: AaEngineAccess,
+    private val monitor: AaEngineMonitor,
+    /** Reports a receiver-side or engine event to the main process. */
+    private val emit: (kind: String, detail: String?) -> Unit,
+    /** Acknowledges a stop: token, AapService gone, CarLink's group gone (null: unreadable). */
+    private val ack: (token: Long, serviceStopped: Boolean, groupReleased: Boolean?) -> Unit,
+    /** Sends the current CommManager state to the main process. */
+    private val report: () -> Unit,
+) {
+    /**
+     * Wireless start (DA§11.2): host flags and poke targets for this session, then
+     * `ACTION_START_WIRELESS` followed by `ACTION_NATIVE_AA_POKE(mac)`. The service is restarted only
+     * when [WirelessStartPolicy] finds it wedged; a session that is connecting or up is left alone.
+     */
+    fun startWireless(address: String?, profile: VehicleProfile) {
+        engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
+        // Exactly the chosen phone (DA§10.5, §10.7): an empty list pokes every bonded device, and a
+        // long one pokes absent phones and wakes unwanted ones every 15 s cycle.
+        if (address != null) engine.setPokeTargets(address)
+        val decision = WirelessStartPolicy.decide(
+            serviceRunning = engine.isServiceRunning(),
+            busy = engine.isBusy(),
+            wedged = monitor.p2pOwnedByOther,
+            armedWith = monitor.armedWith,
+            current = engine.wirelessConfig(),
+        )
+        Log.i(TAG, "wireless start decision=$decision phone=${address != null}")
+        emit(AaProtocol.KIND_START_DECISION, "decision=$decision")
+        when (decision) {
+            WirelessStartDecision.ALREADY_ACTIVE -> {
+                report()
+                return
+            }
+            WirelessStartDecision.RESTART -> {
+                if (!stopService()) Log.w(TAG, "AapService did not stop within ${SERVICE_STOP_MILLIS}ms; starting anyway")
+                clearCarPlayLeftover()
+            }
+            WirelessStartDecision.START -> clearCarPlayLeftover()
+            WirelessStartDecision.ARM, WirelessStartDecision.REARM -> Unit
+        }
+        monitor.armed(engine.wirelessConfig())
+        // REARM: initWifiMode(force = true). ACTION_START_WIRELESS_SCAN does only that in mode 3,
+        // plus clearing the user-exit cooldown and the boot-loop pause (DA§2.2).
+        val action = if (decision == WirelessStartDecision.REARM) AapService.ACTION_START_WIRELESS_SCAN
+            else AapService.ACTION_START_WIRELESS
+        if (!engine.startService(action)) {
+            monitor.reset()
+            emit(AaProtocol.KIND_START_REFUSED, "action=$action")
+            return
+        }
+        if (address != null) engine.startService(AapService.ACTION_NATIVE_AA_POKE, address)
+        report()
+    }
+
+    /** Pokes the chosen phone again, for an armed, idle engine (the manual poke is one 20 s hold). */
+    fun poke(address: String) {
+        if (!engine.isServiceRunning() || engine.isBusy()) return
+        engine.startService(AapService.ACTION_NATIVE_AA_POKE, address)
+    }
+
+    /**
+     * USB start (DA§11.4): CarLink performs the Android Open Accessory switch itself, with the
+     * engine's own USB auto-switch off (`auto-connect-last-session=false`). AapService is started
+     * first so its USB receiver sees the phone re-enumerate as an accessory and connects it.
+     */
+    fun startUsb(device: UsbDevice?, address: String?, profile: VehicleProfile) {
+        engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
+        if (address != null) engine.setPokeTargets(address)
+        if (device == null || engine.isAccessory(device)) {
+            // Already an accessory (or re-enumerated): the engine's own check finds and connects it.
+            if (!engine.startService(AapService.ACTION_CHECK_USB)) {
+                emit(AaProtocol.KIND_START_REFUSED, "action=${AapService.ACTION_CHECK_USB}")
+            }
+            report()
+            return
+        }
+        if (!engine.isServiceRunning()) {
+            if (!engine.startService(null)) {
+                emit(AaProtocol.KIND_START_REFUSED, "action=start")
+                return
+            }
+            waitUntil(SERVICE_START_MILLIS) { engine.isServiceRunning() }
+        }
+        report()
+        if (engine.hasUsbPermission(device)) switchToAccessory(device) else engine.requestUsbPermission(device)
+    }
+
+    /** The answer to [AaEngineAccess.requestUsbPermission]. */
+    fun onUsbPermission(device: UsbDevice?, granted: Boolean) {
+        when {
+            device == null -> emit(AaProtocol.KIND_USB_DEVICE_MISSING, null)
+            granted -> switchToAccessory(device)
+            else -> emit(EngineEvent.USB_PERMISSION_DENIED.name, "device=${engine.deviceName(device)}")
+        }
+    }
+
+    private fun switchToAccessory(device: UsbDevice) {
+        val switched = engine.switchToAccessory(device)
+        Log.i(TAG, "AOA switch result=$switched")
+        if (!switched) emit(AaProtocol.KIND_AOA_SWITCH_FAILED, "device=${engine.deviceName(device)}")
+    }
+
+    /**
+     * Ends everything and acknowledges only once AapService is gone and Android Auto's Wi-Fi Direct
+     * group is released, so the next engine finds the radio free (design/REBUILD_V2.md §4).
+     * `static-bssid` goes back to "0" (DA§10.1): it overrides both credential chains.
+     */
+    fun stop(token: Long) {
+        val wasRunning = engine.isServiceRunning()
+        val serviceStopped = !wasRunning || stopService()
+        // AapService.onDestroy → WifiDirectManager.stop() removes the group asynchronously; give
+        // it its own time first, then remove a group that is still ours.
+        val groupReleased = releaseAndroidAutoGroup(waitForEngine = wasRunning)
+        engine.resetStaticBssid()
+        engine.setClaimHiddenBottomStrip(false)
+        monitor.reset()
+        Log.i(TAG, "stop done serviceStopped=$serviceStopped groupReleased=$groupReleased")
+        ack(token, serviceStopped, groupReleased)
+        report()
+    }
+
+    private fun stopService(): Boolean {
+        engine.startService(AapService.ACTION_STOP_SERVICE)
+        return waitUntil(SERVICE_STOP_MILLIS) { !engine.isServiceRunning() }
+    }
+
+    private fun releaseAndroidAutoGroup(waitForEngine: Boolean): Boolean? {
+        fun ours(reading: P2pGroupReading) = LeftoverGroupPolicy.isAndroidAutoGroup(
+            reading.name, reading.isOwner, engine.keptGroupName(), engine.recordedGroupName())
+        var reading = engine.currentGroup()
+        if (waitForEngine) {
+            val end = engine.now() + GROUP_RELEASE_MILLIS
+            while (reading.known && ours(reading) && engine.now() < end) {
+                engine.sleep(POLL_MILLIS)
+                reading = engine.currentGroup()
+            }
+        }
+        if (!reading.known) return null
+        if (!ours(reading)) return true
+        Log.i(TAG, "removing Android Auto's group ${reading.name} left after the engine stopped")
+        engine.removeGroup()
+        reading = engine.currentGroup()
+        return if (reading.known) !ours(reading) else null
+    }
+
+    /** CarPlay's group left on the radio would make DiAuto stand down (foreign owner). */
+    private fun clearCarPlayLeftover() {
+        val reading = engine.currentGroup()
+        val action = LeftoverGroupPolicy.decide(reading.name, reading.isOwner, engine.keptGroupName(), engine.recordedGroupName())
+        when (action) {
+            LeftoverGroupAction.REMOVE_CARPLAY_GROUP -> {
+                Log.i(TAG, "removing CarPlay's leftover Wi-Fi Direct group ${reading.name}")
+                engine.removeGroup()
+            }
+            LeftoverGroupAction.LEAVE_FOREIGN -> Log.w(TAG, "a Wi-Fi Direct group not owned by CarLink is up (${reading.name}); leaving it")
+            LeftoverGroupAction.NONE, LeftoverGroupAction.LEAVE_FOR_ENGINE -> Unit
+        }
+    }
+
+    private fun waitUntil(timeoutMillis: Long, condition: () -> Boolean): Boolean {
+        val end = engine.now() + timeoutMillis
+        while (!condition()) {
+            if (engine.now() >= end) return false
+            engine.sleep(POLL_MILLIS)
+        }
+        return true
+    }
+
+    companion object {
+        private const val TAG = "CarLink-AA2"
+        const val SERVICE_STOP_MILLIS = 6_000L
+        const val SERVICE_START_MILLIS = 3_000L
+        const val GROUP_RELEASE_MILLIS = 4_000L
+        const val POLL_MILLIS = 200L
+    }
+}

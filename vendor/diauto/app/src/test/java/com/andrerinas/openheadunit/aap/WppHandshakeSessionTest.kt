@@ -355,4 +355,88 @@ class WppHandshakeSessionTest {
         s.on(WppEvent.TcpSessionUp)
         assertNull("a finished handshake has no deadline", s.currentStageTimeoutMs())
     }
+
+    // --- CarLink: holding the channel for the session (ported from open-headunit PR #1029) ---
+
+    /** A Bluetooth session that has handed over and landed, holding its channel. */
+    private fun heldSession(): WppHandshakeSession {
+        val s = WppHandshakeSession(versionExchangeEnabled = false, holdsChannel = true)
+        s.on(WppEvent.SocketReady)
+        s.on(WppEvent.CredentialsReady)
+        s.on(msg(WppMessageType.INFO_REQUEST))
+        assertEquals(listOf(WppAction.CompleteSuccess), s.on(WppEvent.TcpSessionUp))
+        return s
+    }
+
+    @Test
+    fun `a holding session keeps the channel after the session lands`() {
+        val s = heldSession()
+
+        assertEquals(WppStage.HOLDING, s.stage)
+        assertFalse(s.isTerminal())
+        assertNull("a held channel lasts as long as the session", s.currentStageTimeoutMs())
+    }
+
+    @Test
+    fun `a held channel answers every ping`() {
+        val s = heldSession()
+
+        repeat(3) {
+            assertEquals(listOf(WppAction.SendPingResponse), s.on(msg(WppMessageType.PING_REQUEST)))
+        }
+        assertEquals(WppStage.HOLDING, s.stage)
+    }
+
+    @Test
+    fun `a held channel never sends credentials or a start request, whatever the phone says`() {
+        val s = heldSession()
+        val events = (WppMessageType.START_REQUEST..WppMessageType.SETUP_INFO)
+            .filter { it != WppMessageType.PING_REQUEST }
+            .flatMap { listOf(msg(it), msg(it, status = 0), msg(it, status = -1)) } +
+            listOf(
+                WppEvent.SocketReady, WppEvent.CredentialsReady, WppEvent.CredentialsUnavailable,
+                WppEvent.StageTimeout, WppEvent.TcpSessionUp, WppEvent.SettleTimeout,
+            )
+
+        for (event in events) {
+            assertEquals("$event", emptyList<WppAction>(), s.on(event))
+            assertEquals(WppStage.HOLDING, s.stage)
+        }
+    }
+
+    @Test
+    fun `the phone closing a held channel releases it`() {
+        val s = heldSession()
+
+        assertEquals(listOf(WppAction.Release(peerClosed = true)), s.on(WppEvent.PeerClosed))
+        assertTrue(s.isTerminal())
+        assertEquals(emptyList<WppAction>(), s.on(msg(WppMessageType.PING_REQUEST)))
+    }
+
+    @Test
+    fun `the session ending releases a held channel`() {
+        val s = heldSession()
+
+        assertEquals(listOf(WppAction.Release(peerClosed = false)), s.on(WppEvent.SessionEnded))
+        assertTrue(s.isTerminal())
+    }
+
+    @Test
+    fun `release events mean nothing before the session lands`() {
+        val s = WppHandshakeSession(versionExchangeEnabled = true, holdsChannel = true)
+        s.on(WppEvent.SocketReady)
+
+        assertEquals(emptyList<WppAction>(), s.on(WppEvent.PeerClosed))
+        assertEquals(emptyList<WppAction>(), s.on(WppEvent.SessionEnded))
+        assertEquals(WppStage.AWAIT_VERSION, s.stage)
+    }
+
+    @Test
+    fun `a session that does not hold still finishes when the session lands`() {
+        val s = settledSession()
+
+        s.on(WppEvent.TcpSessionUp)
+        assertEquals(WppStage.DONE, s.stage)
+        assertTrue(s.isTerminal())
+    }
 }

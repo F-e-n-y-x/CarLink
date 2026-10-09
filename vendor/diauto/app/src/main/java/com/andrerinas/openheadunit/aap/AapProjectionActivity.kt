@@ -884,7 +884,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         overlayView.requestFocus()
         // DiLink (byd-freeform) hides the bottom ~96px of the window from the decor;
         // claim it back so projection is true fullscreen and bottom-bar touches land.
-        bydFullscreen.expand(this, container, overlayView)
+        // CarLink: only where the host says a DiLink caption hides that area (DA§12 #8).
+        if (com.andrerinas.openheadunit.HostIntegration.claimHiddenBottomStrip) {
+            bydFullscreen.expand(this, container, overlayView)
+        }
         setFullscreen() // Call setFullscreen here as well
 
         val loadingOverlay = findViewById<View>(R.id.loading_overlay)

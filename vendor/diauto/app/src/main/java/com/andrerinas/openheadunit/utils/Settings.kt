@@ -451,6 +451,26 @@ class Settings(private val context: Context) {
         get() = prefs.getString("vehicle-display-name", "DiAuto")!!
         set(value) { prefs.edit().putString("vehicle-display-name", value).apply() }
 
+    // CarLink: ported from open-headunit PR #1006 (same keys). Keep the Native AA Wi-Fi Direct
+    // group's name and passphrase across bring-ups, so the phone rejoins a network it saved.
+    var wifiDirectStableIdentity: Boolean
+        get() = prefs.getBoolean("wifi-direct-stable-identity", true)
+        set(value) { prefs.edit().putBoolean("wifi-direct-stable-identity", value).apply() }
+
+    /** CarLink (PR #1006): the kept pair, or null before the first bring-up draws one. */
+    var wifiDirectGroupIdentity: com.andrerinas.openheadunit.aap.StoredP2pIdentity?
+        get() {
+            val name = prefs.getString("wifi-direct-group-name", null) ?: return null
+            val passphrase = prefs.getString("wifi-direct-group-passphrase", null) ?: return null
+            return com.andrerinas.openheadunit.aap.StoredP2pIdentity(name, passphrase)
+        }
+        set(value) {
+            prefs.edit()
+                .putString("wifi-direct-group-name", value?.networkName)
+                .putString("wifi-direct-group-passphrase", value?.passphrase)
+                .apply()
+        }
+
     var vehicleMake: String
         get() = prefs.getString("vehicle-make", "Google")!!
         set(value) { prefs.edit().putString("vehicle-make", value).apply() }

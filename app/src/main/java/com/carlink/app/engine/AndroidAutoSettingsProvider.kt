@@ -56,11 +56,25 @@ class AndroidAutoSettingsProvider : ContentProvider() {
                     }
                 }
                 editor.commit()
+                syncDeviceProtected(context, values)
                 notifyEngine(context, values.keySet())
                 Bundle()
             }
             else -> Bundle()
         }
+    }
+
+    /**
+     * DiAuto keeps a device-protected copy of its auto-start switches for direct-boot receivers
+     * (`Settings.sync*ToDeviceStorage`, DA§6.2); a value written only to the normal file would leave
+     * the old one there (DA§11.1).
+     */
+    private fun syncDeviceProtected(context: Context, values: Bundle) {
+        fun flag(key: String): Boolean? = if (values.containsKey(key)) values.getBoolean(key) else null
+        flag("auto-start-on-boot")?.let { Settings.syncAutoStartOnBootToDeviceStorage(context, it) }
+        flag("auto-start-on-screen-on")?.let { Settings.syncAutoStartOnScreenOnToDeviceStorage(context, it) }
+        flag("auto-start-on-usb")?.let { Settings.syncAutoStartOnUsbToDeviceStorage(context, it) }
+        flag("auto-start-on-wifi")?.let { Settings.syncAutoStartOnWifiToDeviceStorage(context, it) }
     }
 
     /**

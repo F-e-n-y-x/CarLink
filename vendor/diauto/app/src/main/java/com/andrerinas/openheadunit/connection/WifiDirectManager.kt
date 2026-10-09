@@ -22,6 +22,8 @@ import com.andrerinas.openheadunit.aap.AapService
 import com.andrerinas.openheadunit.aap.NativeGroupFrequencyPolicy
 import com.andrerinas.openheadunit.aap.NativeGroupBandPolicy
 import com.andrerinas.openheadunit.aap.NativeHandoffPolicy
+import com.andrerinas.openheadunit.aap.P2pGroupIdentity // CarLink (PR #1006)
+import com.andrerinas.openheadunit.aap.P2pGroupIdentityPolicy // CarLink (PR #1006)
 import com.andrerinas.openheadunit.aap.P2pOperatingChannelPolicy
 import com.andrerinas.openheadunit.aap.P2pChannelPolicy
 import com.andrerinas.openheadunit.utils.ToastUtils
@@ -43,6 +45,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         private const val NATIVE_GROUP_MODE_24GHZ_FORCED = "2.4GHz forced (debug)"
         private const val NATIVE_GROUP_MODE_STANDARD_FALLBACK = "standard fallback"
         private const val NATIVE_GROUP_MODE_STANDARD_LEGACY = "standard (no 5GHz API)"
+        private const val NATIVE_GROUP_MODE_KEPT_GROUP_READ = "kept group read" // CarLink (PR #1006)
         // Native AA join recovery: if no phone joins the quiet-host group within this window,
         // tear it down and recreate a fresh one (bounded), dropping the forced 5GHz band after
         // a couple of tries. 60s not 30s — a live BT reconnect was observed taking ~35s even
@@ -657,6 +660,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         lastUnfriendlyChannelSsid = ssid
                         AppLog.e("WifiDirectManager: WiFi Direct group came up on ${P2pChannelPolicy.describe(frequency)} ($frequency MHz). Carrying on, but a phone limited to channels 1-11 will not find this network: it will scan and never see the SSID. Restarting this unit's WiFi, or giving it a WiFi country code, is what moves the group off channel 12/13.")
                         showToast("WiFi Direct is on ${P2pChannelPolicy.describe(frequency)}, which most phones cannot join. Restart WiFi and try again.")
+                        com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                            com.andrerinas.openheadunit.HostIntegration.EngineEvent.DFS_CHANNEL, "frequency=$frequency")
                     }
                 } else if (frequency > 0) {
                     lastUnfriendlyChannelSsid = null
@@ -1167,6 +1172,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 wifiManager.isWifiEnabled = true
             } else {
                 showToast("Native AA requires Wi-Fi. Please turn it on.")
+                com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                    com.andrerinas.openheadunit.HostIntegration.EngineEvent.WIFI_OFF)
                 // We return for now, the user must turn it on. In the future we could open settings.
                 isGroupCreatingOrCreated = false
                 return
@@ -1193,7 +1200,66 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         nativeJoinWatchdogSsid = null
         nativeRecreateCount = 0
         cancelNativeJoinWatchdog()
-        recreateNativeGroup(forceStandard = false)
+        // CarLink: ported from open-headunit PR #1006. A group already up under the kept identity
+        // (a re-arm after a dropped session, or a process that died without its teardown) is read
+        // as it stands instead of being torn down and asked for again: every create re-addresses
+        // the group, so the phone's saved network would be stale before it tried to rejoin.
+        if (App.provide(context).settings.wifiDirectStableIdentity) {
+            val kept = chooseNativeGroupIdentity()
+            val gen = generation
+            mgr.requestGroupInfo(ch) { group ->
+                if (supersededByStop(gen, "the adopt-or-create decision")) return@requestGroupInfo
+                if (group != null && P2pGroupIdentityPolicy.readsExistingGroup(
+                        Build.VERSION.SDK_INT, group.isGroupOwner, group.networkName, kept.networkName,
+                        group.passphrase, kept.passphrase,
+                        ownedByThisEngine = sessionOwnership.owns(group.isGroupOwner, group.networkName),
+                    )
+                ) {
+                    AppLog.i("WifiDirectManager: a group named ${group.networkName} is already up from before this bring-up; reading it instead of tearing it down.")
+                    sessionOwnership.expect(group.networkName)
+                    ownershipPrefs.edit().putString("network_name", group.networkName).apply()
+                    sessionOwnership.created(gen)
+                    nativeGroupCreationMode = NATIVE_GROUP_MODE_KEPT_GROUP_READ
+                    isGroupOwner = true
+                    mgr.requestConnectionInfo(ch, this@WifiDirectManager)
+                    mgr.requestGroupInfo(ch, this@WifiDirectManager)
+                } else {
+                    recreateNativeGroup(forceStandard = false)
+                }
+            }
+        } else {
+            recreateNativeGroup(forceStandard = false)
+        }
+    }
+
+    /**
+     * CarLink (PR #1006): the name and passphrase to ask for, from [P2pGroupIdentityPolicy]. The
+     * suffix is the car name the phone is shown (`vehicle-display-name`), so the network the phone
+     * lists reads as the car, not "HeadUnit".
+     */
+    private fun chooseNativeGroupIdentity(): P2pGroupIdentity {
+        val appSettings = App.provide(context).settings
+        val choice = P2pGroupIdentityPolicy.decide(
+            keepIdentity = appSettings.wifiDirectStableIdentity,
+            stored = appSettings.wifiDirectGroupIdentity,
+            deviceName = appSettings.vehicleDisplayName,
+        )
+        choice.toStore?.let { appSettings.wifiDirectGroupIdentity = it }
+        AppLog.i("WifiDirectManager: ${choice.reason}")
+        return choice.identity
+    }
+
+    /**
+     * CarLink: the per-group log/watchdog latches are keyed by SSID. With a kept name a recreated
+     * group has the same SSID as the one it replaces, so they are cleared on every recreate; else
+     * the join watchdog would never arm again for the new group.
+     */
+    private fun forgetPerGroupKeys() {
+        nativeJoinWatchdogSsid = null
+        lastUnfriendlyChannelSsid = null
+        lastCoexistenceSsid = null
+        lastFrequencyUnreadableSsid = null
+        lastNativeGroupStatusMessage = null
     }
 
     private fun delayedCreateQuietGroup(retryCount: Int) {
@@ -1245,10 +1311,12 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         else WifiP2pConfig.GROUP_OWNER_BAND_5GHZ
                     )
                 }
-                val config = builder
-                    .setNetworkName(generateP2pNetworkName())
-                    .setPassphrase(generateP2pPassphrase())
-                    .build()
+                // CarLink (PR #1006): the kept name and passphrase, asked for as a persistent group,
+                // so the phone rejoins a network it saved instead of being set up for a new one.
+                val identity = chooseNativeGroupIdentity()
+                builder.setNetworkName(identity.networkName).setPassphrase(identity.passphrase)
+                if (identity.persistent) builder.enablePersistentMode(true)
+                val config = builder.build()
 
                 // Recorded here and not before the gate: this is the only branch that asks for a
                 // band, so it is the only one whose answer can be mismatched. Below Q the request
@@ -1329,20 +1397,6 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             }
             standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_LEGACY)
         }
-    }
-
-    private fun generateP2pNetworkName(): String {
-        val suffix = AapService.wifiDirectName.value
-            ?.filter { it.isLetterOrDigit() }
-            ?.take(20)
-            ?.ifEmpty { null } ?: "HeadUnit"
-        val code = (('A'..'Z') + ('0'..'9')).let { pool -> "${pool.random()}${pool.random()}" }
-        return "DIRECT-$code-$suffix"
-    }
-
-    private fun generateP2pPassphrase(): String {
-        val pool = ('A'..'Z') + ('a'..'z') + ('0'..'9')
-        return (1..12).map { pool.random() }.joinToString("")
     }
 
     private fun getP2pErrorString(reason: Int): String {
@@ -1452,6 +1506,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // MAC — a cached BSSID from the group we're tearing down is now stale and must never
         // be delivered for the new one.
         lastKnownBssid = null
+        forgetPerGroupKeys() // CarLink: same SSID, new group
         // The group this replaces is gone; any credential delivery still waiting on it describes a
         // network that will not exist by the time it lands.
         credentialsEpoch++
@@ -1481,6 +1536,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         val mgr = manager ?: return
         val ch = channel ?: return
         lastKnownBssid = null
+        forgetPerGroupKeys() // CarLink: same SSID, new group
         // Let an in-progress credential wait pick up the fresh group's creds, not stale ones.
         credentialsEpoch++
         onNativeGroupInvalidated?.invoke()
@@ -1672,6 +1728,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         cancelNativeJoinWatchdog()
         AppLog.w("WifiDirectManager: Another app owns Wi-Fi Direct; leaving its connection untouched. Exit that app before starting DiAuto.")
         showToast("Wi-Fi Direct is in use by another app. Disconnect it before connecting DiAuto.")
+        com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+            com.andrerinas.openheadunit.HostIntegration.EngineEvent.P2P_OWNED_BY_OTHER)
     }
 
     /** A removeGroup call acts on the whole radio, even when another app now owns it. */

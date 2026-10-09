@@ -49,6 +49,8 @@ class NativeAaHandshakeManager(
         /** How long to wait for this head unit's own WiFi network to come up before giving up on
          *  a handshake. P2P group creation is the slow case. */
         private const val CREDENTIALS_WAIT_MS = 60_000L
+        /** CarLink (PR #1029): how often a held Bluetooth channel reports itself; the phone pings it once a second. */
+        private const val HOLD_SUMMARY_INTERVAL_MS = 60_000L
 
         /** How long to wait for the AAP TCP port to be bound before giving up on a handshake. */
         private const val PORT_WAIT_MS = 3_000L
@@ -216,6 +218,14 @@ class NativeAaHandshakeManager(
     // backoff, so a phone retrying every ~12 s does not repeat the long explanation each time.
     @Volatile private var loggedHandshakeBackoff = false
 
+    /** CarLink: the system Location switch, which Android ties to reading the Wi-Fi Direct MAC (DA§1.3). */
+    private fun locationEnabled(): Boolean = try {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) lm.isLocationEnabled
+        else lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+    } catch (e: Exception) { true }
+
     /** Polls until the AAP TCP port is bound, or [timeoutMs] passes. */
     private suspend fun awaitWirelessServerListening(timeoutMs: Long): Boolean {
         val deadline = SystemClock.elapsedRealtime() + timeoutMs
@@ -289,6 +299,8 @@ class NativeAaHandshakeManager(
             if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) 
                 != PackageManager.PERMISSION_GRANTED) {
                 AppLog.e("NativeAA: Missing BLUETOOTH_CONNECT permission. Handshake server cannot start.")
+                com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                    com.andrerinas.openheadunit.HostIntegration.EngineEvent.BLUETOOTH_UNAVAILABLE, "cause=permission")
                 return
             }
         }
@@ -299,6 +311,8 @@ class NativeAaHandshakeManager(
             // re-arm check) need to see this as genuinely stopped so they retry later,
             // instead of believing the listener sockets are up when nothing was ever opened.
             AppLog.e("NativeAA: Bluetooth adapter not available or disabled")
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.BLUETOOTH_UNAVAILABLE, "cause=off")
             return
         }
 
@@ -342,9 +356,12 @@ class NativeAaHandshakeManager(
         // Start HFP RFCOMM Server (Required by some phones to detect HU)
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer")) {
             try {
-                hfpServerSocket = adapter.listenUsingRfcommWithServiceRecord("Hands-Free Unit", HFP_UUID)
+                // CarLink (PR #1029): a local, so a record withdrawn for the session ends this loop
+                // instead of leaving it spinning on a nulled field.
+                val server = adapter.listenUsingRfcommWithServiceRecord("Hands-Free Unit", HFP_UUID)
+                hfpServerSocket = server
                 while (isRunning && isActive) {
-                    val socket = hfpServerSocket?.accept()
+                    val socket = server.accept()
                     if (socket != null) {
                         logHfpAccept(socket, localRadioName)
                         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpResponder-${socket.remoteDevice.address}")) {
@@ -353,7 +370,7 @@ class NativeAaHandshakeManager(
                     }
                 }
             } catch (e: Exception) {
-                if (isRunning) {
+                if (isRunning && !aaListenersClosedForSession) {
                     AppLog.e("NativeAA: HFP Server socket error: ${e.message}", e)
                 } else {
                     AppLog.d("NativeAA: HFP Server socket closed cleanly.")
@@ -449,17 +466,21 @@ class NativeAaHandshakeManager(
     }
 
     /**
-     * Stop accepting new AA_UUID connections (primary + any secondary radios) after a
-     * successful handoff to WiFi. Closing just the client socket isn't enough: the phone reads
-     * that as an unexpected drop and immediately retries, and with the listener still up we'd
-     * accept, bail out (already connected), and close again — a tight reconnect storm (confirmed
-     * on-device: hundreds of accept/close cycles a second, indistinguishable from a Bluetooth
-     * pairing loop). HFP listeners are left running. Re-opened the next time start() runs, which
-     * AapService already does on disconnect.
+     * Stop accepting AA_UUID connections once the handoff lands, because the phone's own channel is
+     * held for the session (CarLink: ported from open-headunit PR #1029). Closing that channel
+     * instead makes Android Auto re-dial every few seconds while a Bluetooth profile keeps this unit
+     * present. The primary radio's stand-in HFP record goes too, so a phone cannot attach its
+     * hands-free link (and its calls) to a record that cannot carry them while projection runs.
+     * Both reopen the next time start() runs, which AapService does when the session ends.
      */
     private fun closeAaListeners() {
         aaListenersClosedForSession = true
         try { aaServerSocket?.close() } catch (e: Exception) {}
+        hfpServerSocket?.let { // CarLink (PR #1029)
+            AppLog.i("NativeAA: session is live, so the stand-in hands-free record is withdrawn until it ends.")
+            try { it.close() } catch (e: Exception) {}
+            hfpServerSocket = null
+        }
         synchronized(extraAaServerSockets) {
             extraAaServerSockets.forEach { try { it.close() } catch (e: Exception) {} }
             extraAaServerSockets.clear()
@@ -769,6 +790,9 @@ class NativeAaHandshakeManager(
                         pokesSinceLastAccept, everAcceptedAaConnection
                     )
                 ) {
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.POKE_ANSWERED_NO_ACCEPT,
+                        "pokes=$pokesSinceLastAccept")
                     AppLog.w(
                         "NativeAA: The phone has answered $pokesSinceLastAccept wake pokes but has " +
                             "never opened the Android Auto channel on radio [$localRadioName]. Its " +
@@ -842,6 +866,9 @@ class NativeAaHandshakeManager(
         if (NativeHandoffPolicy.shouldServeHandshake(consecutiveHandshakeFailures)) return false
         if (!loggedHandshakeBackoff) {
             loggedHandshakeBackoff = true
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.HANDSHAKE_BACKOFF,
+                "failures=$consecutiveHandshakeFailures")
             AppLog.w(
                 "NativeAA: $consecutiveHandshakeFailures handshakes in a row ended with no answer from the phone, " +
                     "so this connection is being dropped instead of served. Each attempt costs a thread that " +
@@ -920,7 +947,8 @@ class NativeAaHandshakeManager(
         var abortedLocally = false
         // Captured once, so a settings change mid-exchange cannot split it across two rulesets.
         val transport = NativeTransport.fromSetting(settings.nativeApTransport)
-        val session = WppHandshakeSession(settings.nativeWifiVersionExchange)
+        // CarLink (PR #1029): hold this Bluetooth channel for the whole session once it lands.
+        val session = WppHandshakeSession(settings.nativeWifiVersionExchange, holdsChannel = true)
         // Everything the phone sends, in order. Replaces the single bounded read this used to do:
         // types 6 and 7 arrive *after* the credentials go out, so a one-shot read could never see
         // them, and the phone is free to interject a ping at any point in between.
@@ -937,6 +965,8 @@ class NativeAaHandshakeManager(
                 try { socket.close() } catch (_: Exception) {}
                 return@withContext
             }
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.BT_CHANNEL_ACCEPTED, "address=${device.address}")
 
             val macs = settings.autoStartBluetoothDeviceMacs
             if (!macs.contains(device.address)) {
@@ -979,6 +1009,11 @@ class NativeAaHandshakeManager(
             // Whether the credentials went out with no BSSID at all. A join failure means something
             // different when they did — see the Fail action below.
             var bssidOmitted = false
+            // CarLink (PR #1029): the held channel's bookkeeping, for its periodic summary and its
+            // release line.
+            var holdingSince = 0L
+            var pingsWhileHolding = 0
+            var lastHoldSummaryAt = 0L
 
             suspend fun runAction(action: WppAction, source: ProtobufMessage?) {
                 when (action) {
@@ -998,6 +1033,8 @@ class NativeAaHandshakeManager(
                         delay(1000) // [FIX] Increased delay to give phone more processing time
                         sendWifiSecurityResponse(output, credSsid, credPsk, credBssid, transport)
                         AppLog.i("NativeAA: Handshake completed successfully on Bluetooth side.")
+                        com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                            com.andrerinas.openheadunit.HostIntegration.EngineEvent.CREDENTIALS_SENT, "transport=$transport")
                         ifOwner(socket) {
                             // The exchange is done; the phone's work is not — it still has to
                             // associate, run WPS and get a DHCP lease. See isHandoffSettling().
@@ -1012,8 +1049,11 @@ class NativeAaHandshakeManager(
                     WppAction.SendPingResponse -> {
                         // Echo the request's own bytes: whatever the phone put in a keepalive,
                         // handing it straight back cannot fail on a schema guess.
-                        AppLog.d("NativeAA: [TX] Echoing WifiPingResponse (Type 9)")
-                        sendProtobuf(output, source?.payload ?: ByteArray(0), WppMessageType.PING_RESPONSE)
+                        // CarLink (PR #1029): counted, not logged, while holding (one a second).
+                        if (session.stage == WppStage.HOLDING) pingsWhileHolding++
+                        else AppLog.d("NativeAA: [TX] Echoing WifiPingResponse (Type 9)")
+                        sendProtobuf(output, source?.payload ?: ByteArray(0), WppMessageType.PING_RESPONSE,
+                            quiet = session.stage == WppStage.HOLDING)
                     }
                     WppAction.ExtendSettle -> {
                         AppLog.i("NativeAA: Phone reports it is still joining — extending the settling window.")
@@ -1023,14 +1063,23 @@ class NativeAaHandshakeManager(
                         ifOwner(socket) { handoffSettlingSince = SystemClock.elapsedRealtime() }
                     }
                     WppAction.CompleteSuccess -> {
-                        AppLog.i("NativeAA: WiFi session landed. Handshake session ending, releasing Bluetooth connection.")
+                        // CarLink (PR #1029): the channel is held, not released.
+                        AppLog.i("NativeAA: WiFi session landed. Holding the Bluetooth channel for the session and answering the phone's pings, as a head unit does.")
+                        holdingSince = SystemClock.elapsedRealtime()
+                        lastHoldSummaryAt = holdingSince
                         ifOwner(socket) {
+                            handshakeStartedAt = 0L
                             handoffSettlingSince = 0L
-                            // Stop accepting new AA_UUID connections too, not just this socket —
-                            // otherwise the phone's immediate reconnect-retry gets accepted,
-                            // bounced (already connected), and retried again in a tight loop. See
-                            // closeAaListeners() kdoc.
+                            // The held channel is the only one this session needs. See closeAaListeners().
                             closeAaListeners()
+                        }
+                    }
+                    is WppAction.Release -> { // CarLink (PR #1029)
+                        val heldS = (SystemClock.elapsedRealtime() - holdingSince) / 1000
+                        if (action.peerClosed) {
+                            AppLog.w("NativeAA: the phone closed the held Bluetooth channel after ${heldS}s and $pingsWhileHolding pings; the Android Auto listeners reopen when this session ends.")
+                        } else {
+                            AppLog.i("NativeAA: the session ended; releasing the held Bluetooth channel after ${heldS}s and $pingsWhileHolding pings.")
                         }
                     }
                     is WppAction.Fail -> {
@@ -1104,14 +1153,41 @@ class NativeAaHandshakeManager(
                         delay(25)
                     }
                     if (msg != null) {
-                        AppLog.i("NativeAA: [RX] Received Type ${msg.type} (Payload size: ${msg.payload.size})")
+                        // CarLink: the held channel's once-a-second pings at debug (PR #1029 port).
+                        if (session.stage == WppStage.HOLDING && msg.type == WppMessageType.PING_REQUEST) {
+                            AppLog.d("NativeAA: [RX] Received Type ${msg.type} (Payload size: ${msg.payload.size})")
+                        } else {
+                            AppLog.i("NativeAA: [RX] Received Type ${msg.type} (Payload size: ${msg.payload.size})")
+                        }
                         logReceivedDetail(msg)
                         // The phone answered, so the channel carries data in at least one
                         // direction. Whatever the type turns out to be, this was not a silent unit.
                         ifOwner(socket) { resetHandshakeBackoff() }
-                        feed(WppEvent.MessageReceived(msg.type, parseStatus(msg)), msg)
+                        val status = parseStatus(msg)
+                        if (status != null && session.stage != WppStage.HOLDING &&
+                            (msg.type == WppMessageType.CONNECT_STATUS || msg.type == WppMessageType.START_RESPONSE)) {
+                            // CarLink: the phone's own verdict on the network it was handed.
+                            com.andrerinas.openheadunit.HostIntegration.engineEvent(context,
+                                com.andrerinas.openheadunit.HostIntegration.EngineEvent.PHONE_WIFI_STATUS,
+                                "type=${msg.type};status=$status;stage=${session.stage}")
+                        }
+                        feed(WppEvent.MessageReceived(msg.type, status), msg)
                         if (session.isTerminal()) return
                     }
+                }
+                if (session.stage == WppStage.HOLDING) { // CarLink (PR #1029)
+                    val now = SystemClock.elapsedRealtime()
+                    val sessionAlive = commManager.isConnected ||
+                        commManager.connectionState.value is CommManager.ConnectionState.Connecting
+                    when {
+                        readerClosed -> feed(WppEvent.PeerClosed)
+                        !sessionAlive -> feed(WppEvent.SessionEnded)
+                        now - lastHoldSummaryAt >= HOLD_SUMMARY_INTERVAL_MS -> {
+                            lastHoldSummaryAt = now
+                            AppLog.i("NativeAA: [HOLD] Bluetooth channel held ${(now - holdingSince) / 1000}s, $pingsWhileHolding pings answered.")
+                        }
+                    }
+                    return
                 }
                 if (session.stage == WppStage.SETTLING &&
                     (commManager.isConnected ||
@@ -1129,6 +1205,8 @@ class NativeAaHandshakeManager(
                     // until AapService stopped and restarted the manager), and restart the poke,
                     // which was cancelled once the credentials went out.
                     AppLog.w("NativeAA: No WiFi session within ${limit / 1000}s of delivering credentials — keeping the AA listener open and resuming the wake poke.")
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.SETTLE_TIMEOUT, "seconds=${limit / 1000}")
                     feed(WppEvent.SettleTimeout)
                 } else {
                     feed(WppEvent.StageTimeout)
@@ -1202,6 +1280,9 @@ class NativeAaHandshakeManager(
                         // and no setting will unblock them. Say so, or the log sends the reader back
                         // to a location toggle that is already on.
                         AppLog.e("NativeAA: If location is already on, this device cannot read its own WiFi Direct MAC at all. Read it from the system (P2P device address) and set it as the static BSSID in Advanced settings.")
+                        com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink
+                            com.andrerinas.openheadunit.HostIntegration.EngineEvent.BSSID_UNRESOLVED,
+                            "location=${if (locationEnabled()) "on" else "off"}")
                         // Triggering a P2P refresh so the next attempt has a valid BSSID
                         context.triggerWifiDirectRefresh()
                         // Not fed to the session as CredentialsUnavailable: its failure reason
@@ -1391,13 +1472,15 @@ class NativeAaHandshakeManager(
         sendProtobuf(output, response.toByteArray(), WppMessageType.INFO_RESPONSE)
     }
 
-    private fun sendProtobuf(output: OutputStream, data: ByteArray, type: Int) {
+    private fun sendProtobuf(output: OutputStream, data: ByteArray, type: Int, quiet: Boolean = false) {
         output.write(WppFraming.encodeFrame(data, type))
         output.flush()
         // Not "successfully delivered": write() and flush() returned, nothing more. A stack that
         // accepts the write and puts nothing on the air logs every send exactly like this, so the
         // old wording made a dead radio read as a textbook handshake. Proof is the phone's reply.
-        AppLog.i("NativeAA: [TX] Wrote TYPE $type (size ${data.size}) to Bluetooth (write() returned; delivery unconfirmed)")
+        // CarLink: [quiet] for the held channel's once-a-second ping answers (PR #1029 port).
+        if (quiet) AppLog.d("NativeAA: [TX] Wrote TYPE $type (size ${data.size}) to Bluetooth")
+        else AppLog.i("NativeAA: [TX] Wrote TYPE $type (size ${data.size}) to Bluetooth (write() returned; delivery unconfirmed)")
     }
 
     private fun readProtobuf(input: DataInputStream): ProtobufMessage {

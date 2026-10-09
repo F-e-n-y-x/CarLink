@@ -37,6 +37,8 @@ internal class AapReadSingleMessage(
                 }
                 AapReadRecoveryPolicy.Outcome.DISCONNECT_IDLE -> {
                     AppLog.w("AapRead: WiFi read timeout (${timeout}ms) - connection lost.")
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(null, // CarLink
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.LINK_READ_TIMEOUT, "millis=$timeout")
                     return -1
                 }
                 AapReadRecoveryPolicy.Outcome.DISCONNECT_DESYNC -> {
