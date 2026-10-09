@@ -714,4 +714,39 @@
     <string name="cluster_small_window_card_opacity">بطاقة المنعطف في النافذة الصغيرة · الشفافية</string>
     <string name="turn_card_theme_day">نهاري دائمًا</string>
     <string name="turn_card_theme_night">ليلي دائمًا</string>
+
+    <!-- Optional BYD ambient lighting. -->
+    <string name="settings_ambient_title">الإضاءة المحيطية (تجريبي)</string>
+    <string name="settings_ambient_configuration">إعدادات الإضاءة المحيطية</string>
+    <string name="settings_ambient_static">ثابت</string>
+    <string name="settings_ambient_energy">طاقة الصوت</string>
+    <string name="settings_ambient_beat">الإيقاع</string>
+    <string name="settings_ambient_tempo">BPM تقديري</string>
+    <string name="settings_ambient_bass">أولوية الجهير</string>
+    <string name="settings_ambient_smart">متابعة ذكية</string>
+    <string name="settings_ambient_slow">سلس</string>
+    <string name="settings_ambient_standard">قياسي</string>
+    <string name="settings_ambient_fast">سريع</string>
+    <string name="settings_ambient_enabled">مفعّل</string>
+    <string name="settings_ambient_disabled">معطّل</string>
+    <string name="settings_ambient_summary">%1$s · %2$s · %3$s · %4$d ألوان · السطوع %5$d</string>
+    <string name="settings_ambient_enable">تفعيل التحكم بالإضاءة المحيطية</string>
+    <string name="settings_ambient_enable_description">يحاول إيقاف التحكم استعادة الألوان والسطوع والمنطقة الأصلية. يلزم تفويض ADB موجود.</string>
+    <string name="settings_ambient_music">متابعة الموسيقى</string>
+    <string name="settings_ambient_music_description">أثناء التشغيل تتبع الموسيقى أو تستخدم ألوانًا وسطوعًا ثابتين. عند الإيقاف المؤقت أو قطع الاتصال تبقى كل المناطق عند أدنى مستوى. تُطبق التغييرات بعد الحفظ.</string>
+    <string name="settings_ambient_color_mode">تغييرات اللون</string>
+    <string name="settings_ambient_speed">سرعة انتقال السطوع</string>
+    <string name="settings_ambient_palette">أرقام ألوان المصنع (اختيارات متعددة)</string>
+    <string name="settings_ambient_palette_summary">الألوان · %1$d محددة</string>
+    <string name="settings_ambient_select_all">تحديد الكل</string>
+    <string name="settings_ambient_select_one">حدد لونًا واحدًا على الأقل</string>
+    <string name="settings_ambient_brightness">أقصى سطوع</string>
+    <string name="settings_ambient_minimum">0 (أدنى مستوى)</string>
+    <string name="settings_ambient_area">المنطقة</string>
+    <string name="settings_ambient_front">أمامية</string>
+    <string name="settings_ambient_rear">خلفية</string>
+    <string name="settings_ambient_all">الكل</string>
+    <string name="settings_ambient_parked_notice">اضبط أثناء الوقوف. دعم تجريبي لبعض واجهات BYD؛ التوافق يختلف حسب الطراز والبرنامج الثابت. المستوى 0 يعني أدنى مستوى للمصنع وليس إطفاء الإضاءة.</string>
+    <string name="settings_ambient_checking">جارٍ التحقق…</string>
+    <string name="settings_ambient_unavailable">فشل التحقق للقراءة فقط: تفويض ADB الموجود أو واجهة الإضاءة المدعومة غير متاحة. لم تُحفظ الإعدادات. اضبط الوصول بشكل منفصل أثناء الوقوف؛ هذه الميزة لا تفعّل ADB ولا تطلب التفويض.</string>
 </resources>
