@@ -718,4 +718,12 @@
     <string name="bt_suspend_delay_option">%1$d с після підключення</string>
     <string name="bt_suspend_during_carplay">Призупинити Bluetooth авто під час CarPlay · потрібен ADB</string>
     <string name="bt_suspend_during_carplay_description">Телефон тримає hands-free звʼязок з авто, тому вхідний дзвінок звучить і в телефоні авто, і в CarPlay. Після ввімкнення: Bluetooth авто призупиняється через ADB на час сеансу CarPlay — дзвінки йдуть лише в CarPlay; поки Bluetooth вимкнено, дзвінки CarPlay йдуть через динамік і мікрофон авто. Вмикається назад після сеансу і перед наступним бездротовим зʼєднанням. Пара не змінюється. Застосується з наступного підключення.</string>
+    <string name="cluster_small_window_card_theme">Тема картки в малому вікні</string>
+    <string name="cluster_small_window_card_theme_follow">Слідувати темі картки</string>
+    <string name="cluster_small_window_card_size">Картка в малому вікні · розмір</string>
+    <string name="cluster_small_window_card_horizontal">Картка в малому вікні · ліворуч / праворуч</string>
+    <string name="cluster_small_window_card_vertical">Картка в малому вікні · вгору / вниз</string>
+    <string name="cluster_small_window_card_opacity">Картка маневру в міні-вікні · прозорість</string>
+    <string name="turn_card_theme_day">Завжди день</string>
+    <string name="turn_card_theme_night">Завжди ніч</string>
 </resources>
