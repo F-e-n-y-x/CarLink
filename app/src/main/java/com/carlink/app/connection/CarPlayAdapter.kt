@@ -16,6 +16,7 @@ import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
 import com.shilapi.xcertplay.orchestration.CarPlayStatusBus
+import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -48,6 +49,7 @@ class CarPlayAdapter internal constructor(
 
     private val statusListener: (CarPlayStatus?) -> Unit = { status -> main.post { onStatus(status) } }
     private val hostStateListener: (HostState) -> Unit = { state -> main.post { onHostState(state) } }
+    private val milestoneListener: (WirelessStartupTimeline.Phase) -> Unit = { phase -> main.post { onMilestone(phase) } }
 
     override fun start(plan: SessionPlan, listener: (AdapterEvent) -> Unit) {
         require(plan.engine == Engine.CARPLAY) { "CarPlayAdapter cannot start ${plan.engine}" }
@@ -65,6 +67,7 @@ class CarPlayAdapter internal constructor(
         this.listener = listener
         hooks.addHostStateListener(hostStateListener)
         hooks.addStatusListener(statusListener)
+        hooks.setMilestoneListener(milestoneListener)
         Log.i(TAG, "start transport=${plan.transport} path=${plan.path} attempt=${plan.attempt} " +
             "phone=${plan.phoneAddress != null} usb=${plan.usbAttach != null}")
         // DiPlay reads the transport and the iPhone from its preferences when the host opens (§6).
@@ -102,6 +105,12 @@ class CarPlayAdapter internal constructor(
         deliver(tracker.onStatus(status))
     }
 
+    private fun onMilestone(phase: WirelessStartupTimeline.Phase) {
+        val tracker = tracker ?: return
+        if (listener == null) return
+        deliver(tracker.onMilestone(phase))
+    }
+
     private fun onHostState(state: HostState) {
         val tracker = tracker ?: return
         if (listener == null) return
@@ -117,14 +126,14 @@ class CarPlayAdapter internal constructor(
         if (tracker?.finished == true) {
             // Terminal: keep the tracker for lastFailure, stop listening.
             listener = null
-            hooks.removeStatusListener(statusListener)
-            hooks.removeHostStateListener(hostStateListener)
+            detach()
         }
     }
 
     private fun detach() {
         hooks.removeStatusListener(statusListener)
         hooks.removeHostStateListener(hostStateListener)
+        hooks.setMilestoneListener(null)
     }
 
     companion object {
@@ -170,6 +179,9 @@ interface CarPlayEngineHooks {
 
     /** Opens the projection host; returns why it could not, or null. */
     fun openHost(usbAttach: Intent?): Throwable?
+
+    /** DiPlay's wireless `WIRELESS_TIMING` milestones (any thread); null stops them. */
+    fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {}
 }
 
 /** Fans DiPlay's single host-state hook out to every listener (adapter, waiting view). */
@@ -200,6 +212,10 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
     override fun selectPhone(address: String, name: String) = CarPlayHostIntegration.selectPhone(app, address, name)
 
     override fun setWirelessEnabled(enabled: Boolean) = AirPlayPersistence.saveWirelessEnabled(app, enabled)
+
+    override fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {
+        WirelessStartupTimeline.milestoneListener = listener
+    }
 
     override fun openHost(usbAttach: Intent?): Throwable? {
         val host = Intent(app, CarPlayHostActivity::class.java)

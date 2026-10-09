@@ -5,6 +5,7 @@ import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupPolicy
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 
 /** What CarLink concluded about one DiPlay failure. */
 data class CarPlayFailure(
@@ -68,6 +69,24 @@ object CarPlayEventMapping {
             ProgressStage.STARTING_PROJECTION
         CarPlayStatus.ControlEnded, is CarPlayStatus.Failed -> null
     }
+
+    /**
+     * Wireless milestones DiPlay's `WIRELESS_TIMING` line marks inside RunningWireless, which is
+     * otherwise one status from the Bluetooth answer to the first frame (13.3 s on one step in the
+     * audit's C9, K4): the Wi-Fi details sent (`0x5703`) start Linking; the iPhone's first AirPlay
+     * TCP starts the picture.
+     */
+    fun stageOf(milestone: WirelessStartupTimeline.Phase): ProgressStage? = when (milestone) {
+        WirelessStartupTimeline.Phase.WIFI_CONFIG, WirelessStartupTimeline.Phase.START_SESSION,
+        WirelessStartupTimeline.Phase.PEER_ASSOCIATED, WirelessStartupTimeline.Phase.PEER_MDNS -> ProgressStage.JOINING_WIFI
+        WirelessStartupTimeline.Phase.TCP_ACCEPTED, WirelessStartupTimeline.Phase.SESSION_ACTIVE -> ProgressStage.STARTING_PROJECTION
+        else -> null
+    }
+
+    /** A Bluetooth dial the iPhone did not answer (DiPlay's own test, CarPlayHostActivity.isBluetoothDialFailure). */
+    fun isDialFailure(message: String?): Boolean = message != null && (
+        message.contains("socket might closed", ignoreCase = true) || message.contains("RFCOMM", ignoreCase = true) ||
+            message.contains("Bluetooth connect", ignoreCase = true))
 
     /** DiPlay messages (CarPlayController.kt, ExistingWifiManager.kt) that no retry can fix. */
     private val HARD_BLUETOOTH = listOf(
@@ -156,6 +175,12 @@ class CarPlaySessionTracker(
      * waiting after as many as DiPlay allows a startup failure (WirelessStartupPolicy).
      */
     private val maxUnboundedRetries: Int = WirelessStartupPolicy.MAX_STARTUP_RETRIES,
+    /**
+     * Unanswered Bluetooth dials in a row before giving up: each is one page timeout (5.15 s on the
+     * tablet) plus a 2.5 s restart, and DiPlay dials on forever (RELIABILITY_AUDIT K3: four in a
+     * row cost 28.6 s). Two take about 13 s.
+     */
+    private val maxDialFailures: Int = MAX_DIAL_FAILURES,
 ) {
     private val stages = CarPlayEventMapping.stages(transport)
     private var lastStage: CarPlayStatus? = null
@@ -163,6 +188,7 @@ class CarPlaySessionTracker(
     private var projecting = false
     private var everConnected = false
     private var unboundedRetries = 0
+    private var dialFailures = 0
 
     /** True once [AdapterEvent.Ended] or [AdapterEvent.Failed] was returned; nothing follows. */
     var finished = false
@@ -174,6 +200,12 @@ class CarPlaySessionTracker(
 
     /** The first event of a session, before DiPlay reports anything. */
     fun started(): AdapterEvent = progress(ProgressStage.WAITING_FOR_PHONE)!!
+
+    /** A `WIRELESS_TIMING` milestone of the running wireless bring-up ([CarPlayEventMapping.stageOf]). */
+    fun onMilestone(milestone: WirelessStartupTimeline.Phase): List<AdapterEvent> {
+        if (finished || projecting || transport != Transport.WIRELESS) return emptyList()
+        return listOfNotNull(CarPlayEventMapping.stageOf(milestone)?.let(::progress))
+    }
 
     fun onStatus(status: CarPlayStatus?): List<AdapterEvent> {
         if (finished) return emptyList()
@@ -194,6 +226,8 @@ class CarPlaySessionTracker(
             )
             else -> {
                 lastStage = status
+                // The iPhone answered the dial: earlier misses were not "unreachable".
+                if (status == CarPlayStatus.RunningWireless) dialFailures = 0
                 if (projecting) emptyList() else listOfNotNull(CarPlayEventMapping.stageOf(status, transport)?.let(::progress))
             }
         }
@@ -222,6 +256,7 @@ class CarPlaySessionTracker(
                 projecting = true
                 everConnected = true
                 unboundedRetries = 0
+                dialFailures = 0
                 lastProgress = null
                 listOf(AdapterEvent.Connected)
             }
@@ -236,13 +271,23 @@ class CarPlaySessionTracker(
         lastProgress = null
         val failure = CarPlayEventMapping.classify(state.failure, lastStage, transport)
         lastFailure = failure
+        val dialMissed = transport == Transport.WIRELESS && failure.reason == FailureReason.BLUETOOTH &&
+            (lastStage == CarPlayStatus.ConnectingBluetooth || CarPlayEventMapping.isDialFailure(state.reason) ||
+                CarPlayEventMapping.isDialFailure(failure.message))
         // Retrying statuses start over from the beginning; the stage of the failure is kept above.
         lastStage = null
         if (failure.hard) return finish(failed(failure))
+        if (dialMissed && !everConnected) {
+            dialFailures += 1
+            if (dialFailures >= maxDialFailures) {
+                return finish(failed(failure.copy(hard = true, message = NOT_REACHABLE_OVER_BLUETOOTH)))
+            }
+        }
+        val detail = if (dialMissed) "the iPhone did not answer over Bluetooth" else null
         // DiPlay's startup budget bounds these and ends in RetriesStopped (F1).
-        if (state.maxAttempts != null) return listOf(AdapterEvent.Retrying(state.attempt, failure.reason))
+        if (state.maxAttempts != null) return listOf(AdapterEvent.Retrying(state.attempt, failure.reason, detail))
         unboundedRetries += 1
-        if (unboundedRetries <= maxUnboundedRetries) return listOf(AdapterEvent.Retrying(unboundedRetries, failure.reason))
+        if (unboundedRetries <= maxUnboundedRetries) return listOf(AdapterEvent.Retrying(unboundedRetries, failure.reason, detail))
         // A phone that was projecting and is now unreachable has left (§4: DiPlay has no
         // auto-reconnect beyond its own loop); anything else is a failure.
         val phoneGone = everConnected && failure.reason in setOf(FailureReason.BLUETOOTH, FailureReason.USB, FailureReason.LINK_TOO_WEAK)
@@ -250,7 +295,10 @@ class CarPlaySessionTracker(
     }
 
     private fun progress(stage: ProgressStage): AdapterEvent? {
-        if (stage == lastProgress) return null
+        // Forward only within a bring-up: a later status of an earlier kind (RunningWireless after
+        // the Wi-Fi details) never moves the bar back. A retry resets it (onRetrying).
+        val last = lastProgress
+        if (last != null && stages.indexOf(stage) <= stages.indexOf(last)) return null
         lastProgress = stage
         return AdapterEvent.Progress(stages.indexOf(stage) + 1, stages.size, stage)
     }
@@ -263,5 +311,11 @@ class CarPlaySessionTracker(
     private fun finish(event: AdapterEvent): List<AdapterEvent> {
         finished = true
         return listOf(event)
+    }
+
+    companion object {
+        const val MAX_DIAL_FAILURES = 2
+        const val NOT_REACHABLE_OVER_BLUETOOTH =
+            "iPhone not reachable over Bluetooth: unlock it, check that its Bluetooth is on, or plug in a cable"
     }
 }

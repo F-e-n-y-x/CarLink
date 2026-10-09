@@ -10,6 +10,7 @@ import com.carlink.app.settings.WirelessPath
 import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,6 +54,8 @@ class CarPlayAdapterTest {
             if (openError == null) session = true
             return openError
         }
+        var milestones: ((WirelessStartupTimeline.Phase) -> Unit)? = null
+        override fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) { milestones = listener }
         fun status(status: CarPlayStatus?) = statusListeners.toList().forEach { it(status) }
         fun host(state: HostState) = hostListeners.toList().forEach { it(state) }
         val listening get() = statusListeners.size + hostListeners.size
@@ -161,5 +164,19 @@ class CarPlayAdapterTest {
         adapter.start(wirelessPlan) { events += it }
         idle()
         assertEquals(AdapterEvent.Failed(FailureReason.ENGINE, "background start blocked"), events.last())
+    }
+
+    @Test fun wirelessMilestonesBecomeProgressUntilTheSessionEnds() {
+        // RELIABILITY_AUDIT K4: the Wi-Fi details and the first AirPlay TCP are steps 3 and 4.
+        adapter.start(wirelessPlan) { events += it }
+        hooks.status(CarPlayStatus.RunningWireless)
+        hooks.milestones!!(WirelessStartupTimeline.Phase.WIFI_CONFIG)
+        hooks.milestones!!(WirelessStartupTimeline.Phase.TCP_ACCEPTED)
+        idle()
+        assertEquals(listOf(ProgressStage.WAITING_FOR_PHONE, ProgressStage.HANDSHAKE, ProgressStage.JOINING_WIFI,
+            ProgressStage.STARTING_PROJECTION), events.map { (it as AdapterEvent.Progress).stage })
+        hooks.host(HostState.Closed)
+        idle()
+        assertEquals("no listener once the session is over", null, hooks.milestones)
     }
 }

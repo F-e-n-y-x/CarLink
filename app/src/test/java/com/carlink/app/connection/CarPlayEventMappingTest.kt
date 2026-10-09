@@ -4,6 +4,7 @@ import com.carlink.app.core.Transport
 import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -116,7 +117,7 @@ class CarPlayEventMappingTest {
         tracker.started()
         tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
         val events = tracker.onHostState(HostState.Retrying(1, null, 2_000L, rfcomm, "rfcomm"))
-        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH)), events)
+        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH, "the iPhone did not answer over Bluetooth")), events)
         assertFalse(FailureReason.BLUETOOTH.pathRelated)
         // An iAP2 bootstrap failure over RFCOMM is the Bluetooth stage as well.
         assertEquals(FailureReason.BLUETOOTH,
@@ -125,12 +126,13 @@ class CarPlayEventMappingTest {
 
     @Test fun unboundedRetriesEndAfterTheBudget() {
         val rfcomm = CarPlayStatus.Failed("Bluetooth connect timed out")
-        val tracker = CarPlaySessionTracker(Transport.WIRELESS, maxUnboundedRetries = 2)
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS, maxUnboundedRetries = 2, maxDialFailures = 10)
+        val missed = "the iPhone did not answer over Bluetooth"
         tracker.started()
         tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
-        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH)), tracker.onHostState(HostState.Retrying(1, null, 2_000L, rfcomm, "r")))
+        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH, missed)), tracker.onHostState(HostState.Retrying(1, null, 2_000L, rfcomm, "r")))
         tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
-        assertEquals(listOf(AdapterEvent.Retrying(2, FailureReason.BLUETOOTH)), tracker.onHostState(HostState.Retrying(2, null, 4_000L, rfcomm, "r")))
+        assertEquals(listOf(AdapterEvent.Retrying(2, FailureReason.BLUETOOTH, missed)), tracker.onHostState(HostState.Retrying(2, null, 4_000L, rfcomm, "r")))
         tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
         assertEquals(listOf(AdapterEvent.Failed(FailureReason.BLUETOOTH, rfcomm.message)),
             tracker.onHostState(HostState.Retrying(3, null, 8_000L, rfcomm, "r")))
@@ -240,5 +242,67 @@ class CarPlayEventMappingTest {
         assertEquals(FailureReason.ENGINE, reason(null))
         assertEquals(FailureReason.USB, CarPlayEventMapping.classify(null, CarPlayStatus.RunningControl, Transport.USB).reason)
         assertNull(CarPlayEventMapping.classify(null, null, Transport.WIRELESS).message)
+    }
+
+    // --- RELIABILITY_AUDIT 2026-10-09 ---------------------------------------------------------
+
+    @Test fun twoUnansweredDialsInARowFailAsUnreachableOverBluetooth() {
+        // K3 / C8: DiPlay dials forever (5.15 s page + 2.5 s restart each); two misses are enough.
+        val miss = CarPlayStatus.Failed("read failed, socket might closed or timeout, read ret: -1")
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS)
+        tracker.started()
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        assertEquals(FailureReason.BLUETOOTH,
+            (tracker.onHostState(HostState.Retrying(1, null, 1_500L, miss, miss.message)).single() as AdapterEvent.Retrying).reason)
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        val failed = tracker.onHostState(HostState.Retrying(2, null, 1_500L, miss, miss.message)).single() as AdapterEvent.Failed
+        assertEquals(FailureReason.BLUETOOTH, failed.reason)
+        assertEquals(CarPlaySessionTracker.NOT_REACHABLE_OVER_BLUETOOTH, failed.detail)
+        assertTrue(tracker.finished)
+    }
+
+    @Test fun anAnsweredDialResetsTheMissCount() {
+        val miss = CarPlayStatus.Failed("read failed, socket might closed or timeout, read ret: -1")
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS)
+        tracker.started()
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        tracker.onHostState(HostState.Retrying(1, null, 1_500L, miss, miss.message))
+        tracker.onStatus(CarPlayStatus.RunningWireless) // the iPhone answered this time
+        tracker.onHostState(HostState.Retrying(2, null, 2_000L, CarPlayStatus.Failed("iAP2 link closed"), "iap2"))
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        assertTrue(tracker.onHostState(HostState.Retrying(3, null, 1_500L, miss, miss.message)).single() is AdapterEvent.Retrying)
+        assertFalse(tracker.finished)
+    }
+
+    @Test fun wirelessMilestonesMoveTheBarToLinkingAndPicture() {
+        // K4 / C9: RunningWireless used to hold "Phone answered" for 13.3 s until the first frame.
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS)
+        tracker.started()
+        assertEquals(listOf(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)), tracker.onStatus(CarPlayStatus.RunningWireless))
+        assertEquals(emptyList<AdapterEvent>(), tracker.onMilestone(WirelessStartupTimeline.Phase.AUTHENTICATED))
+        assertEquals(listOf(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI)),
+            tracker.onMilestone(WirelessStartupTimeline.Phase.WIFI_CONFIG))
+        assertEquals(emptyList<AdapterEvent>(), tracker.onMilestone(WirelessStartupTimeline.Phase.START_SESSION))
+        assertEquals(listOf(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)),
+            tracker.onMilestone(WirelessStartupTimeline.Phase.TCP_ACCEPTED))
+        // A status of an earlier kind never moves the bar back.
+        assertEquals(emptyList<AdapterEvent>(), tracker.onStatus(CarPlayStatus.RunningWireless))
+        assertEquals(emptyList<AdapterEvent>(), tracker.onStatus(CarPlayStatus.WirelessActive))
+        assertEquals(listOf(AdapterEvent.Connected), tracker.onHostState(HostState.FirstFrame))
+    }
+
+    @Test fun milestonesAreIgnoredOverUsb() {
+        val tracker = CarPlaySessionTracker(Transport.USB)
+        tracker.started()
+        assertEquals(emptyList<AdapterEvent>(), tracker.onMilestone(WirelessStartupTimeline.Phase.TCP_ACCEPTED))
+    }
+
+    @Test fun aRetryStartsTheBarOverFromWaiting() {
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS)
+        tracker.started()
+        tracker.onStatus(CarPlayStatus.RunningWireless)
+        tracker.onMilestone(WirelessStartupTimeline.Phase.WIFI_CONFIG)
+        tracker.onHostState(HostState.Retrying(1, null, 2_000L, CarPlayStatus.Failed("iAP2 link closed"), "iap2"))
+        assertEquals(listOf(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE)), tracker.onStatus(CarPlayStatus.StartingHotspot))
     }
 }
