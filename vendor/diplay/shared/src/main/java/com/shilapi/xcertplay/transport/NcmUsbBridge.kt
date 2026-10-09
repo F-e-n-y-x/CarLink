@@ -28,6 +28,8 @@ class NcmUsbBridge internal constructor(
     private val claimedInterfaces: List<UsbInterface>,
     descriptorHostMac: ByteArray?,
     private val onDiagnostic: (String) -> Unit = {},
+    private val onLinkEvent: (NcmLinkEvent) -> Unit = {}, // CarLink
+    private val isDeviceAlive: () -> Boolean = { usbDeviceResponds(connection) }, // CarLink
 ) : Closeable {
     private val descriptorMac = descriptorHostMac?.copyOf()
     val hostMac: ByteArray? get() = descriptorMac?.copyOf()
@@ -37,7 +39,6 @@ class NcmUsbBridge internal constructor(
     private var closed = false
     private var failure: IphoneUsbException? = null
     private var sequence = 0
-    private var loggedWriteTimeout = false
     private val frames = ArrayDeque<ByteArray>()
     private var queuedBytes = 0
     private var buffered = ByteArray(0)
@@ -53,15 +54,38 @@ class NcmUsbBridge internal constructor(
     private var readQueued = false
     private val readQueuePolicy = UsbReadQueuePolicy.forCurrentPlatform()
     private val readRequests = UsbRequestQueue(connection, "ncm-read-reaper")
-    private val statusRunning = AtomicBoolean(statusEndpoint != null)
-    private val statusThread = statusEndpoint?.let { endpoint ->
-        Thread({ drainStatus(endpoint) }, "ncm-status-in").apply {
-            isDaemon = true
-            start()
-        }
+    // CarLink: the interrupt (status) endpoint is read continuously by a second persistent async
+    // request on the same connection, reaped by the NCM reader's requestWait(). Upstream polled it
+    // with a 20 ms bulkTransfer every 500 ms and only logged the first notification.
+    private val statusBuffer = statusEndpoint?.let {
+        ByteBuffer.allocateDirect(it.maxPacketSize.coerceAtLeast(STATUS_BUFFER_BYTES))
+    }
+    private var statusRequest: UsbRequest? = null
+    private var statusQueued = false
+    private var statusDisabled = statusEndpoint == null
+    private var emptyStatusCompletions = 0
+    private val nullReaps = UsbTransientFailureBudget() // CarLink
+
+    // CarLink: bulk-out is owned by one writer thread fed from a bounded queue (see NcmOutbound.kt).
+    private val outLock = Object()
+    private val outbound = NcmOutboundQueue()
+    private val pacing = NcmOutboundPacing()
+    private var writeTimeoutMillis = DEFAULT_WRITE_TIMEOUT_MILLIS
+    private var linkSignals = 0
+    private val writerRunning = AtomicBoolean(true)
+    private val writerThread = Thread(::runWriter, "ncm-bulk-out").apply {
+        isDaemon = true
+        start()
     }
 
-    /** Wraps one Ethernet frame in one NTB16 block and writes it to bulk OUT. */
+    /**
+     * Wraps one Ethernet frame in one NTB16 block and queues it for bulk OUT.
+     *
+     * CarLink: upstream wrote synchronously and dropped the frame when the phone did not accept it
+     * within [timeoutMillis]. The block now waits in a bounded queue until the phone accepts it, so
+     * the first replies after link-up are not lost. When the queue is full this waits up to
+     * [timeoutMillis] for room (upstream's backpressure), then drops the oldest block.
+     */
     fun send(frame: ByteArray, timeoutMillis: Int) = synchronized(writeLock) {
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
@@ -70,25 +94,116 @@ class NcmUsbBridge internal constructor(
             this.sequence.also { this.sequence = (this.sequence + 1) and 0xffff }
         }
         val block = Ntb16Codec.build(frame, sequence)
-        val transferred = connection.bulkTransfer(outEndpoint, block, block.size, timeoutMillis)
-        // Before StartCarPlaySession the phone keeps the NCM data path NAKed. Android reports the
-        // resulting timeout as -1; it is not a detach and later packets must be allowed to retry.
-        if (transferred <= 0) {
-            if (!loggedWriteTimeout) {
-                loggedWriteTimeout = true
-                Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out not ready; retaining bridge for retry")
+        synchronized(outLock) {
+            writeTimeoutMillis = timeoutMillis
+            val deadline = System.nanoTime() + timeoutMillis * NANOS_PER_MILLISECOND
+            while (!outbound.hasRoomFor(block) && writerRunning.get()) {
+                val remaining = deadline - System.nanoTime()
+                if (remaining <= 0) break
+                try {
+                    waitNanos(remaining)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw IphoneUsbException.DeviceUnavailable("Interrupted while queueing an NCM frame")
+                }
             }
-            return@synchronized
+            checkOpen()
+            if (outbound.offer(block) > 0 && outbound.dropped == 1L) {
+                Log.i(IphoneCarPlayConfiguration.TAG, "ncm outbound queue full; dropping oldest frames")
+            }
+            outLock.notifyAll()
         }
-        if (transferred != block.size) {
-            throw IphoneUsbException.DeviceUnavailable(
-                "NCM write transferred $transferred of ${block.size} bytes",
+    }
+
+    // CarLink
+    private fun runWriter() = try {
+        writeLoop()
+    } catch (_: InterruptedException) {
+        // close() or the owner interrupted the writer; nothing else to do.
+    }
+
+    private fun writeLoop() {
+        while (true) {
+            val (block, timeout) = synchronized(outLock) {
+                while (writerRunning.get() && outbound.isEmpty()) outLock.wait()
+                if (!writerRunning.get()) return
+                outbound.peek()!! to pacing.attemptTimeoutMillis(writeTimeoutMillis)
+            }
+            val transferred = try {
+                connection.bulkTransfer(outEndpoint, block, block.size, timeout)
+            } catch (error: RuntimeException) {
+                if (writerRunning.get()) failSession("NCM write failed", error)
+                return
+            }
+            if (!writerRunning.get()) return
+            if (transferred > 0 && transferred != block.size) {
+                failSession("NCM write transferred $transferred of ${block.size} bytes")
+                synchronized(outLock) { outLock.notifyAll() }
+                return
+            }
+            var event: NcmLinkEvent? = null
+            synchronized(outLock) {
+                if (transferred == block.size) {
+                    outbound.removeHead()
+                    event = pacing.onAccepted()
+                } else {
+                    // Before StartCarPlaySession, and until the phone's NCM link is up, the phone
+                    // NAKs bulk OUT. Android reports the timeout as -1; it is not a detach.
+                    if (!pacing.onRefused()) outbound.removeHead()
+                    if (pacing.firstRefusal) event = NcmLinkEvent.BulkOutNotReady
+                }
+                outLock.notifyAll()
+            }
+            event?.let(::emitLinkEvent)
+            if (transferred != block.size) pauseAfterRefusal()
+        }
+    }
+
+    // CarLink: waits before the next attempt, but wakes at once on a link signal or close.
+    private fun pauseAfterRefusal() = synchronized(outLock) {
+        val signals = linkSignals
+        val deadline = System.nanoTime() + pacing.pauseAfterRefusalMillis() * NANOS_PER_MILLISECOND
+        while (writerRunning.get() && signals == linkSignals) {
+            val remaining = deadline - System.nanoTime()
+            if (remaining <= 0) return@synchronized
+            waitNanos(remaining)
+        }
+    }
+
+    private fun waitNanos(nanos: Long) {
+        outLock.wait(nanos / NANOS_PER_MILLISECOND, (nanos % NANOS_PER_MILLISECOND).toInt())
+    }
+
+    // CarLink
+    private fun onStatusNotification(bytes: ByteArray) {
+        val events = NcmNotificationParser.parse(bytes)
+        Log.i(
+            IphoneCarPlayConfiguration.TAG,
+            "ncm status notification bytes=${bytes.size} data=${bytes.hex(32)} events=$events",
+        )
+        for (event in events) {
+            if (event is NcmLinkEvent.NetworkConnection) {
+                synchronized(outLock) {
+                    pacing.onLinkSignal(event.connected)
+                    linkSignals += 1
+                    outLock.notifyAll()
+                }
+            }
+            emitLinkEvent(event)
+        }
+    }
+
+    private fun emitLinkEvent(event: NcmLinkEvent) {
+        when (event) {
+            NcmLinkEvent.BulkOutNotReady ->
+                Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out not ready; keeping frames for retry")
+            is NcmLinkEvent.BulkOutReady -> Log.i(
+                IphoneCarPlayConfiguration.TAG,
+                "ncm bulk-out became ready waited=${event.waitedMillis}ms attempts=${event.attempts}",
             )
+            else -> Unit
         }
-        if (loggedWriteTimeout) {
-            loggedWriteTimeout = false
-            Log.i(IphoneCarPlayConfiguration.TAG, "ncm bulk-out became ready")
-        }
+        runCatching { onLinkEvent(event) }
     }
 
     /**
@@ -116,18 +231,23 @@ class NcmUsbBridge internal constructor(
     }
 
     override fun close() {
-        statusRunning.set(false)
-        val requestToClose = synchronized(stateLock) {
+        val (requestToClose, statusToClose) = synchronized(stateLock) {
             if (closed) return
             closed = true
-            readRequest
+            readRequest to statusRequest
+        }
+        // CarLink: stop the bulk-out writer; its attempts are short unless the link was ready.
+        writerRunning.set(false)
+        synchronized(outLock) {
+            outbound.clear()
+            outLock.notifyAll()
         }
         // Wakes a reader blocked in requestWait(); it then observes the closed state.
         runCatching { requestToClose?.cancel() }
-        statusThread?.let { thread ->
-            thread.interrupt()
+        runCatching { statusToClose?.cancel() } // CarLink
+        if (Thread.currentThread() !== writerThread) {
             try {
-                thread.join(STATUS_POLL_TIMEOUT_MILLIS + 250L)
+                writerThread.join(WRITER_JOIN_MILLIS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
@@ -142,34 +262,39 @@ class NcmUsbBridge internal constructor(
         readRequests.close()
         connection.close()
         runCatching { requestToClose?.close() }
+        runCatching { statusToClose?.close() } // CarLink
     }
 
-    private fun drainStatus(endpoint: UsbEndpoint) {
-        val buffer = ByteArray(endpoint.maxPacketSize.coerceAtLeast(64))
-        var loggedFirst = false
-        while (statusRunning.get()) {
-            // Short synchronous polls keep this thread out of JNI critical sections most of the time;
-            // notifications are rare, small interrupt packets that are only logged.
-            val transferred = try {
-                connection.bulkTransfer(endpoint, buffer, buffer.size, STATUS_POLL_TIMEOUT_MILLIS)
-            } catch (_: RuntimeException) {
+    /**
+     * CarLink: keeps one status (interrupt-IN) request queued. Call under [stateLock]. A status
+     * endpoint Android will not read is logged once and skipped; it never fails the data path.
+     */
+    private fun queueStatusLocked() = try {
+        queueStatusOnceLocked()
+    } catch (error: RuntimeException) {
+        statusDisabled = true
+        Log.w(IphoneCarPlayConfiguration.TAG, "ncm status request failed; notifications ignored", error)
+    }
+
+    private fun queueStatusOnceLocked() {
+        if (statusDisabled || statusQueued) return
+        val endpoint = statusEndpoint ?: return
+        val buffer = statusBuffer ?: return
+        val request = statusRequest ?: UsbRequest().also {
+            if (!it.initialize(connection, endpoint)) {
+                it.close()
+                statusDisabled = true
+                Log.w(IphoneCarPlayConfiguration.TAG, "ncm status request could not be initialized; notifications ignored")
                 return
             }
-            if (transferred <= 0) {
-                try {
-                    Thread.sleep(STATUS_POLL_INTERVAL_MILLIS)
-                } catch (_: InterruptedException) {
-                    return
-                }
-                continue
-            }
-            if (!loggedFirst) {
-                loggedFirst = true
-                Log.i(
-                    IphoneCarPlayConfiguration.TAG,
-                    "ncm status notification bytes=$transferred data=${buffer.copyOf(transferred).hex(32)}",
-                )
-            }
+            statusRequest = it
+        }
+        buffer.clear()
+        if (readRequests.queue(request, buffer)) {
+            statusQueued = true
+        } else {
+            statusDisabled = true
+            Log.w(IphoneCarPlayConfiguration.TAG, "ncm status request could not be queued; notifications ignored")
         }
     }
 
@@ -259,6 +384,7 @@ class NcmUsbBridge internal constructor(
                     readQueued = true
                     if (queued.fallbackBytes != null) acceptedFallback = queued
                 }
+                queueStatusLocked() // CarLink
                 current
             }
         } catch (error: RuntimeException) {
@@ -275,13 +401,50 @@ class NcmUsbBridge internal constructor(
             }
         }
         try {
-            val completed = try {
-                readRequests.await(timeoutMillis.coerceAtLeast(1))
-            } catch (_: TimeoutException) {
-                // Nothing arrived yet; the request stays queued for the next call. USBMUX owns
-                // authoritative detach/failure detection for the same phone.
-                return null
-            } ?: throw failSession("Android returned no NCM read request")
+            // CarLink: the status request completes on this connection too, and a null reap is
+            // retried while the phone still answers (see UsbTransientRetry.kt).
+            val deadline = System.nanoTime() + timeoutMillis.coerceAtLeast(1) * NANOS_PER_MILLISECOND
+            var completed: UsbRequest
+            while (true) {
+                val remainingMillis = ((deadline - System.nanoTime() + NANOS_PER_MILLISECOND - 1) / NANOS_PER_MILLISECOND).coerceAtLeast(1)
+                val reaped = try {
+                    readRequests.await(remainingMillis)
+                } catch (_: TimeoutException) {
+                    // Nothing arrived yet; the request stays queued for the next call. USBMUX owns
+                    // authoritative detach/failure detection for the same phone.
+                    return null
+                }
+                if (reaped == null) {
+                    if (nullReaps.recordFailure() && !isClosed() && isDeviceAlive()) {
+                        runCatching { onDiagnostic("NCM reap returned no request; phone present, retry=${nullReaps.consecutive}") }
+                        if (System.nanoTime() >= deadline) return null
+                        continue
+                    }
+                    throw failSession("Android returned no NCM read request")
+                }
+                nullReaps.reset()
+                if (reaped === statusRequest && reaped !== request) {
+                    val notification = synchronized(stateLock) {
+                        statusQueued = false
+                        val buffer = statusBuffer!!
+                        val bytes = ByteArray(buffer.position()).also {
+                            buffer.flip()
+                            buffer.get(it)
+                        }
+                        // An endpoint that completes empty again and again (an error) is dropped
+                        // rather than spun on.
+                        emptyStatusCompletions = if (bytes.isEmpty()) emptyStatusCompletions + 1 else 0
+                        if (emptyStatusCompletions >= MAX_EMPTY_STATUS_COMPLETIONS) statusDisabled = true
+                        if (!closed) queueStatusLocked()
+                        bytes
+                    }
+                    if (notification.isNotEmpty()) onStatusNotification(notification)
+                    if (System.nanoTime() >= deadline) return null
+                    continue
+                }
+                completed = reaped
+                break
+            }
             if (completed !== request) throw failSession("Android completed an unexpected NCM request")
             readQueued = false
             val transferred = directReadBuffer.position()
@@ -308,6 +471,8 @@ class NcmUsbBridge internal constructor(
         synchronized(stateLock) { checkOpenLocked() }
     }
 
+    private fun isClosed(): Boolean = synchronized(stateLock) { closed } // CarLink
+
     private fun checkOpenLocked() {
         failure?.let { throw it }
         if (closed) throw IphoneUsbException.DeviceUnavailable("NCM bridge is closed")
@@ -325,8 +490,11 @@ class NcmUsbBridge internal constructor(
     companion object {
         private const val READ_CHUNK_BYTES = 32 * 1024
         private const val USB_PACKET_SIZE = 512
-        private const val STATUS_POLL_TIMEOUT_MILLIS = 20
-        private const val STATUS_POLL_INTERVAL_MILLIS = 500L
+        // CarLink: the status poll constants are gone (continuous async read); writer settings.
+        private const val STATUS_BUFFER_BYTES = 64
+        private const val MAX_EMPTY_STATUS_COMPLETIONS = 8
+        private const val DEFAULT_WRITE_TIMEOUT_MILLIS = 2_000
+        private const val WRITER_JOIN_MILLIS = 300L
         private const val MAX_QUEUED_FRAMES = 256
         private const val MAX_QUEUED_BYTES = 1 shl 20
         private const val NANOS_PER_MILLISECOND = 1_000_000L
@@ -336,6 +504,7 @@ class NcmUsbBridge internal constructor(
             connection: UsbDeviceConnection,
             function: NcmFunctionDiscovery.NcmFunction,
             onDiagnostic: (String) -> Unit = {},
+            onLinkEvent: (NcmLinkEvent) -> Unit = {}, // CarLink
         ): NcmUsbBridge {
             val claimed = ArrayList<UsbInterface>(2)
             try {
@@ -396,6 +565,7 @@ class NcmUsbBridge internal constructor(
                     claimed,
                     descriptorHostMac,
                     onDiagnostic,
+                    onLinkEvent, // CarLink
                 )
             } catch (error: Throwable) {
                 for (usbInterface in claimed.asReversed()) {

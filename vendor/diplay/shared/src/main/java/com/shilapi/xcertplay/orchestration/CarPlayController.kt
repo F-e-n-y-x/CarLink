@@ -89,6 +89,7 @@ import com.shilapi.xcertplay.transport.LockdownCarKitClient
 import com.shilapi.xcertplay.transport.LockdownPairingClient
 import com.shilapi.xcertplay.transport.LockdownPairRecord
 import com.shilapi.xcertplay.transport.NcmFunctionDiscovery
+import com.shilapi.xcertplay.transport.NcmLinkEvent
 import com.shilapi.xcertplay.transport.NcmUsbBridge
 import java.io.Closeable
 import java.io.IOException
@@ -307,6 +308,7 @@ class CarPlayController(
             }
             activeSession = session
             if (replacement) restoreDashboardContent(session)
+            if (config.transport == CarPlayTransport.WIRED) wiredTimeline.mark(WiredStartupTimeline.Milestone.SESSION_ACTIVE) // CarLink
             debugLog(
                 "AirPlay session active controller=${session.controllerId ?: "unknown"} " +
                     "peer=${session.host}",
@@ -390,8 +392,33 @@ class CarPlayController(
 
         override fun onDebugLog(message: String) {
             debugLog(message)
+            // CarLink: CarPlayVpnService reports a wired accept only as this log line.
+            if (config.transport == CarPlayTransport.WIRED && message.startsWith("airplay TCP accepted")) {
+                wiredTimeline.mark(WiredStartupTimeline.Milestone.TCP_ACCEPTED)
+            }
+        }
+
+        // CarLink: the wired path used this listener without forwarding rendered frames, so the
+        // host never heard of the first wired frame (CarLink's HostState.FirstFrame, "Connected").
+        // Wireless wraps this listener and overrides this method, so it is unaffected.
+        override fun onVideoFrameRendered(session: AirPlaySession) {
+            if (config.transport != CarPlayTransport.WIRED || activeSession !== session) return
+            val firstFrame = synchronized(wiredFrameLock) {
+                if (wiredFrameSession === session) false else {
+                    wiredFrameSession = session
+                    true
+                }
+            }
+            if (!firstFrame) return
+            wiredTimeline.mark(WiredStartupTimeline.Milestone.FIRST_FRAME)
+            uiListener?.onVideoFrameRendered(session)
         }
     }
+
+    // CarLink: always-on wired bring-up timing, in diplay.log and logcat.
+    private val wiredTimeline = WiredStartupTimeline { line -> debugLog(line) }
+    private val wiredFrameLock = Any()
+    @Volatile private var wiredFrameSession: AirPlaySession? = null
 
     fun attachUi(
         listener: AirPlaySessionListener,
@@ -1738,6 +1765,7 @@ class CarPlayController(
     }
 
     private fun requestIphonePermission(device: UsbDevice) {
+        wiredTimeline.mark(WiredStartupTimeline.Milestone.IPHONE_FOUND) // CarLink
         mainHandler.post { awaitDefaultGrantThenRequest(device, waitedMs = 0L) }
     }
 
@@ -1888,6 +1916,7 @@ class CarPlayController(
 
     private fun openDataPaths(device: UsbDevice) {
         phase = Phase.DATAPATHS
+        wiredTimeline.mark(WiredStartupTimeline.Milestone.DATA_PATHS) // CarLink
         debugLog("wired opening iPhone USB data paths")
         onStatus(CarPlayStatus.SelectingConfiguration)
         onStatus(CarPlayStatus.OpeningDataPaths)
@@ -1907,6 +1936,26 @@ class CarPlayController(
         }
     }
 
+    // CarLink: NCM link events become timing lines and session-log lines (both INFO, always on).
+    private fun onNcmLinkEvent(event: NcmLinkEvent) {
+        when (event) {
+            is NcmLinkEvent.NetworkConnection -> {
+                debugLog("ncm NETWORK_CONNECTION connected=${event.connected}")
+                if (event.connected) wiredTimeline.mark(WiredStartupTimeline.Milestone.NETWORK_CONNECTION)
+            }
+            is NcmLinkEvent.SpeedChange ->
+                debugLog("ncm CONNECTION_SPEED_CHANGE down=${event.downlinkBitsPerSecond} up=${event.uplinkBitsPerSecond}")
+            NcmLinkEvent.BulkOutNotReady -> debugLog("ncm bulk-out not ready; keeping frames for retry")
+            is NcmLinkEvent.BulkOutReady -> {
+                debugLog("ncm bulk-out ready waited=${event.waitedMillis}ms attempts=${event.attempts}")
+                wiredTimeline.mark(
+                    WiredStartupTimeline.Milestone.BULK_OUT_READY,
+                    "waited=${event.waitedMillis}ms attempts=${event.attempts}",
+                )
+            }
+        }
+    }
+
     private fun openNcm(device: UsbDevice): NcmUsbBridge {
         val configuration = IphoneCarPlayConfiguration.find(device)
             ?: throw IphoneUsbException.Protocol(
@@ -1922,7 +1971,12 @@ class CarPlayController(
         )
         val connection = requireUsbManager().openDevice(device)
             ?: throw IphoneUsbException.DeviceUnavailable("Could not open the iPhone NCM connection")
-        return NcmUsbBridge.open(connection, function, onDiagnostic = ::connectionDiagnostic)
+        return NcmUsbBridge.open(
+            connection,
+            function,
+            onDiagnostic = ::connectionDiagnostic,
+            onLinkEvent = ::onNcmLinkEvent, // CarLink
+        )
     }
 
     private fun runStack(usbSession: Iap2UsbSession, ncm: NcmUsbBridge) {
@@ -2050,6 +2104,7 @@ class CarPlayController(
             }
             ncmOwnedLocally = false
             debugLog("wired NCM/VPN AirPlay transport attached")
+            wiredTimeline.mark(WiredStartupTimeline.Milestone.NCM_ATTACHED) // CarLink
             if (closed) {
                 vpnService?.detach()
                 return
@@ -2078,7 +2133,10 @@ class CarPlayController(
                 locationProvider = locationProvider,
                 vehicleStatusProvider = vehicleStatusProvider,
                 onIncoming = ::onRouteFrame,
-                onProgress = { message -> debugLog("wired $message") },
+                onProgress = { message ->
+                    debugLog("wired $message")
+                    wiredTimeline.onIap2Progress(message) // CarLink
+                },
             )
             onStatus(
                 when (result.terminal) {
