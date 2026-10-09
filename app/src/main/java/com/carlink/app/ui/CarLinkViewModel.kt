@@ -17,11 +17,13 @@ import com.carlink.app.detect.PairedPhone
 import com.carlink.app.detect.PhonesRepository
 import com.carlink.app.engine.EngineCoordinator
 import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.app.settings.ConnectionMethod
 import com.carlink.app.settings.EngineSettingsApplier
 import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.settings.WirelessPath
 import com.carlink.app.settings.WirelessPathSelector
+import com.carlink.app.settings.isValid
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 import com.shilapi.xcertplay.CarPlayHostActivity
@@ -55,6 +57,8 @@ data class NetworkPreview(
     val joinedSsid: String? = null,
     /** True when [joinedSsid] is not the saved "same Wi-Fi" network yet. */
     val canOfferSameWifi: Boolean = false,
+    /** The driver's choice; [path] is what it resolves to right now. */
+    val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
 )
 
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
@@ -192,13 +196,22 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     private fun refreshNetwork() {
         val engine = home.value.defaultPhone?.kind?.engine ?: Engine.CARPLAY
-        val wifi = EngineSettingsApplier.wifiEnvironment(app)
-        val path = WirelessPathSelector.select(engine, _unified.value, wifi)
+        val settings = _unified.value
+        val wifi = EngineSettingsApplier.wifiEnvironment(app, settings)
+        val effective = if (!settings.carHotspot.isValid() && wifi.systemHotspot != null) {
+            settings.copy(carHotspot = wifi.systemHotspot)
+        } else settings
+        val path = WirelessPathSelector.select(engine, effective, wifi)
+        val saved = settings.homeWifi
         _network.value = NetworkPreview(
             path = path,
             ssid = if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null,
             joinedSsid = wifi.joinedSsid,
-            canOfferSameWifi = wifi.joinedSsid != null && wifi.joinedSsid != _unified.value.homeWifi.ssid,
+            // Offered again when the saved entry cannot work: no password for a secured network,
+            // or a phone already refused the one saved.
+            canOfferSameWifi = wifi.joinedSsid != null && (wifi.joinedSsid != saved.ssid ||
+                (saved.password.isEmpty() && wifi.joinedOpen != true) || wifi.androidAutoRefusedJoined),
+            method = settings.connectionMethod,
         )
     }
 

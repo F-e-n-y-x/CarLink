@@ -18,6 +18,12 @@ data class WifiEnvironment(
     val joinedBssid: String? = null,
     /** The car's Wi-Fi client interface (usually wlan0), or null. */
     val joinedInterface: String? = null,
+    /** Whether [joinedSsid] needs no password (open or OWE); null when Android does not say. */
+    val joinedOpen: Boolean? = null,
+    /** An Android Auto phone already refused [joinedSsid] with the saved password (see WirelessRefusals). */
+    val androidAutoRefusedJoined: Boolean = false,
+    /** The car's own hotspot name and password, read from the system where the firmware allows it. */
+    val systemHotspot: WifiDetails? = null,
 )
 
 /**
@@ -33,12 +39,19 @@ object WirelessPathSelector {
     fun select(engine: Engine, settings: UnifiedSettings, wifi: WifiEnvironment): WirelessPath {
         val joinedSaved = settings.homeWifi.isValid() &&
             wifi.joinedNetworks == 1 && wifi.joinedSsid != null && wifi.joinedSsid == settings.homeWifi.ssid
-        val sameWifiUsable = joinedSaved && (engine == Engine.CARPLAY ||
-            (wifi.joinedBssid != null && wifi.joinedInterface != null))
-        val hotspotUsable = settings.carHotspot.isValid() && wifi.carHotspotOn != false
+        // A phone handed a secured network without its password refuses it at once, so an empty
+        // password only counts on a network Android reports as open.
+        val passwordKnown = settings.homeWifi.password.isNotEmpty() || wifi.joinedOpen == true
+        val sameWifiUsable = joinedSaved && passwordKnown && (engine == Engine.CARPLAY ||
+            (wifi.joinedBssid != null && wifi.joinedInterface != null && !wifi.androidAutoRefusedJoined))
+        val hotspotUsable = (settings.carHotspot.isValid() && wifi.carHotspotOn != false) ||
+            (wifi.systemHotspot != null && wifi.carHotspotOn == true)
         return when (settings.connectionMethod) {
             ConnectionMethod.SAME_WIFI -> when {
-                engine == Engine.CARPLAY || sameWifiUsable -> WirelessPath.SAME_WIFI
+                // CarPlay's pre-flight reports missing details itself; only a saved entry known
+                // to be unusable (secured network, no password) is not honoured.
+                sameWifiUsable || (engine == Engine.CARPLAY && (passwordKnown || !settings.homeWifi.isValid())) ->
+                    WirelessPath.SAME_WIFI
                 hotspotUsable -> WirelessPath.CAR_HOTSPOT
                 else -> WirelessPath.WIFI_DIRECT
             }

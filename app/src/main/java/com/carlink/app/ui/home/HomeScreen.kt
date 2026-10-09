@@ -86,6 +86,7 @@ import com.carlink.app.core.PhoneKind
 import com.carlink.app.core.Transport
 import com.carlink.app.detect.BluetoothAvailability
 import com.carlink.app.detect.PairedPhone
+import com.carlink.app.settings.ConnectionMethod
 import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.ConnectionPrefs
@@ -143,6 +144,7 @@ internal interface HomeActions {
     fun returnToProjection() {}
     fun resumeAutoConnect() {}
     fun saveSameWifi(ssid: String, password: String) {}
+    fun setConnectionMethod(method: ConnectionMethod) {}
     fun navigate(route: Route) {}
 }
 
@@ -165,6 +167,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun returnToProjection() = vm.returnToProjection()
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
+            override fun setConnectionMethod(method: ConnectionMethod) = vm.updateSettings { it.copy(connectionMethod = method) }
             override fun navigate(route: Route) = navigate(route)
         }
     }
@@ -183,6 +186,7 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
         else -> scheme.primary.copy(alpha = 0.35f)
     }
     var phonesOpen by rememberSaveable { mutableStateOf(false) }
+    var networkOpen by rememberSaveable { mutableStateOf(false) }
     val layout = CarLinkTokens.layout
     val dimens = CarLinkTokens.dimens
 
@@ -192,7 +196,8 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
             TopBar(onSettings = { actions.navigate(Route.SETTINGS) })
             BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                 val landscape = maxWidth > maxHeight && layout.width >= WidthClass.MEDIUM
-                val onPhones = { phonesOpen = true }
+                val taps = StatusTaps(onBluetooth = actions::openBluetoothSettings,
+                    onNetwork = { networkOpen = true }, onPhones = { phonesOpen = true })
                 if (landscape) {
                     // Two columns on one grid: copy and status on the start side, the phone centred on
                     // the end side, fully inside its column with room for its shadow.
@@ -203,8 +208,8 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
                             Modifier.weight(0.6f).fillMaxHeight(),
                             statusGap = dimens.gutter * 2,
                             main = { dense -> HeroText(mode, ui, actions, dense) },
-                            status = { StatusChips(mode, ui, onPhones) },
-                            strip = { StatusStrip(mode, ui, onPhones) },
+                            status = { StatusChips(mode, ui, taps) },
+                            strip = { StatusStrip(mode, ui, taps) },
                         )
                         Spacer(Modifier.width(dimens.gutter * 2))
                         Box(Modifier.weight(0.4f).fillMaxHeight(), contentAlignment = Alignment.Center) {
@@ -219,8 +224,8 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
                             .padding(bottom = dimens.gutter),
                         statusGap = dimens.gutter * 1.5f,
                         main = { dense -> HeroText(mode, ui, actions, dense) },
-                        status = { if (compact) StatusList(mode, ui, onPhones) else StatusChips(mode, ui, onPhones) },
-                        strip = { StatusStrip(mode, ui, onPhones) },
+                        status = { if (compact) StatusList(mode, ui, taps) else StatusChips(mode, ui, taps) },
+                        strip = { StatusStrip(mode, ui, taps) },
                         // The phone takes what the copy and status leave, and steps aside when that is too little.
                         hero = {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -237,6 +242,9 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
     }
     if (phonesOpen) {
         PhonesSheet(ui, actions, onDismiss = { phonesOpen = false })
+    }
+    if (networkOpen) {
+        NetworkSheet(ui, actions, onDismiss = { networkOpen = false })
     }
 }
 
@@ -473,10 +481,14 @@ private fun pathName(path: WirelessPath?, transport: Transport?): String = strin
 })
 
 /** One line of Home's status: Bluetooth, the wireless path, the phone. */
-private class StatusItem(val eyebrow: String, val value: String, @DrawableRes val icon: Int, val status: Color?)
+private class StatusItem(val eyebrow: String, val value: String, @DrawableRes val icon: Int, val status: Color?,
+    val onClick: (() -> Unit)? = null)
+
+/** What tapping each status opens: Bluetooth settings, the connection-type picker, the phone list. */
+private class StatusTaps(val onBluetooth: () -> Unit, val onNetwork: () -> Unit, val onPhones: () -> Unit)
 
 @Composable
-private fun statusItems(mode: HomeMode, ui: HomeUi): List<StatusItem> {
+private fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<StatusItem> {
     val colors = CarLinkTokens.colors
     val bt = ui.home.bluetooth
     val path = if (mode == HomeMode.CONNECTED && ui.home.link.transport == Transport.USB) null else ui.network?.path
@@ -489,7 +501,7 @@ private fun statusItems(mode: HomeMode, ui: HomeUi): List<StatusItem> {
             BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission
             BluetoothAvailability.UNSUPPORTED -> R.string.carlink_home_bt_chip_unsupported
         }), if (bt == BluetoothAvailability.READY) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_bluetooth_disabled,
-            if (bt == BluetoothAvailability.READY) colors.success else colors.warning),
+            if (bt == BluetoothAvailability.READY) colors.success else colors.warning, taps.onBluetooth),
         StatusItem(stringResource(R.string.carlink_home_chip_network), when (path) {
             WirelessPath.SAME_WIFI -> ui.network?.ssid?.let { stringResource(R.string.carlink_home_net_same_wifi_named, isolate(it)) }
                 ?: stringResource(R.string.carlink_home_net_same_wifi)
@@ -501,20 +513,20 @@ private fun statusItems(mode: HomeMode, ui: HomeUi): List<StatusItem> {
             WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
             WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
             null -> R.drawable.carlink_ic_usb
-        }, if (path == WirelessPath.SAME_WIFI) colors.success else null),
+        }, if (path == WirelessPath.SAME_WIFI) colors.success else null, taps.onNetwork),
         StatusItem(stringResource(R.string.carlink_home_chip_phone),
             phone?.name?.let(::isolate)
                 ?: if (phones.isEmpty()) stringResource(R.string.carlink_home_no_phones)
                 else pluralStringResource(R.plurals.carlink_home_phone_count, phones.size, phones.size),
             phone?.let { com.carlink.app.ui.components.phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
-            if (phone?.connected == true) colors.success else null),
+            if (phone?.connected == true) colors.success else null, taps.onPhones),
     )
 }
 
-/** Three glass chips of one height: Bluetooth, Network, Phone (the Phone chip opens the phone list). */
+/** Three glass chips of one height: Bluetooth, Network, Phone; each opens what [StatusTaps] names. */
 @Composable
-private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
-    val items = statusItems(mode, ui)
+private fun StatusChips(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
+    val items = statusItems(mode, ui, taps)
     val dimens = CarLinkTokens.dimens
     val measurer = rememberTextMeasurer()
     val value = MaterialTheme.typography.titleSmall
@@ -533,7 +545,7 @@ private fun StatusChips(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
         content = {
             items.forEachIndexed { index, item ->
                 GlassChip(item.eyebrow, item.value, item.icon, status = item.status,
-                    onClick = if (index == items.lastIndex) onPhones else null)
+                    onClick = item.onClick)
             }
         },
         modifier = Modifier.fillMaxWidth(),
@@ -581,16 +593,16 @@ private fun chipWidths(natural: List<Int>, available: Int): List<Int> {
 
 /** Narrow windows: the three statuses as one glass card with aligned rows instead of three stacked chips. */
 @Composable
-private fun StatusList(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
+private fun StatusList(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
     val colors = CarLinkTokens.colors
     val dimens = CarLinkTokens.dimens
-    val items = statusItems(mode, ui)
+    val items = statusItems(mode, ui, taps)
     GlassCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(vertical = 4.dp)) {
         Column {
             items.forEachIndexed { index, item ->
                 if (index > 0) HorizontalDivider(Modifier.padding(horizontal = dimens.gutter), color = colors.glassStrokeBottom)
                 Row(Modifier.fillMaxWidth().heightIn(min = dimens.rowOneLine)
-                    .then(if (index == items.lastIndex) Modifier.clickable(onClick = onPhones) else Modifier)
+                    .then(item.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
                     .padding(horizontal = dimens.gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(item.icon), null, Modifier.size(dimens.iconSecondary), tint = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(dimens.gutter))
@@ -611,13 +623,13 @@ private fun StatusList(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
 /**
  * Short windows: the three statuses on one glass pill. Values are shown when they all fit on the
  * line; otherwise Bluetooth and Network shrink to their icons (named for TalkBack) and only the
- * phone keeps its name. Tapping it opens the phone list, like the Phone chip.
+ * phone keeps its name. Each part opens what its chip opens.
  */
 @Composable
-private fun StatusStrip(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
+private fun StatusStrip(mode: HomeMode, ui: HomeUi, taps: StatusTaps) {
     val dimens = CarLinkTokens.dimens
     val colors = CarLinkTokens.colors
-    val items = statusItems(mode, ui)
+    val items = statusItems(mode, ui, taps)
     val style = MaterialTheme.typography.titleSmall
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -628,14 +640,16 @@ private fun StatusStrip(mode: HomeMode, ui: HomeUi, onPhones: () -> Unit) {
         val text = with(density) { items.sumOf { measurer.measure(it.value, style, maxLines = 1).size.width }.toDp() }
         val fixed = gap * 2 + (icon + iconGap) * items.size + (gap * 2 + 1.dp) * (items.size - 1)
         val labels = text + fixed <= maxWidth
-        GlassCard(Modifier.heightIn(min = dimens.minTouch), shape = CircleShape, onClick = onPhones,
+        GlassCard(Modifier.heightIn(min = dimens.minTouch), shape = CircleShape,
             contentPadding = PaddingValues(horizontal = gap, vertical = 8.dp)) {
             Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(gap)) {
                 items.forEachIndexed { index, item ->
                     if (index > 0) Box(Modifier.width(1.dp).height(icon).background(colors.glassStrokeTop))
                     val showValue = labels || index == items.lastIndex
-                    Row(if (showValue && !labels) Modifier.weight(1f, fill = false) else Modifier,
+                    Row((if (showValue && !labels) Modifier.weight(1f, fill = false) else Modifier)
+                        .heightIn(min = dimens.minTouch).clip(CircleShape)
+                        .then(item.onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier),
                         verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(icon)) {
                             Icon(painterResource(item.icon), if (showValue) null else "${item.eyebrow}: ${item.value}",

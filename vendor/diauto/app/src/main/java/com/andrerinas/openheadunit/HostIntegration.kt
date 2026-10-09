@@ -56,4 +56,13 @@ object HostIntegration {
     @Volatile
     @JvmStatic
     var exitMenuHomeLabel: String? = null
+
+    /**
+     * Called (on an engine thread) each time a phone reports it could not join the access point it
+     * was handed (Native AA over a hotspot). Lets a host switch to another wireless path instead of
+     * re-offering the same network. Null keeps the engine's own retry.
+     */
+    @Volatile
+    @JvmStatic
+    var onPhoneWifiJoinFailed: ((context: Context) -> Unit)? = null
 }

@@ -69,6 +69,8 @@
     <string name="carlink_home_net_same_wifi_named">%1$s · fastest</string>
     <string name="carlink_home_net_hotspot">Car hotspot</string>
     <string name="carlink_home_net_direct">Wi-Fi Direct</string>
+    <string name="carlink_home_network_sheet_title">Connection type</string>
+    <string name="carlink_home_network_sheet_now">Bluetooth starts the connection; the picture and sound travel over Wi-Fi. Now using: %1$s.</string>
     <string name="carlink_home_no_phones">No phone yet</string>
     <plurals name="carlink_home_phone_count">
         <item quantity="one">%d phone</item>

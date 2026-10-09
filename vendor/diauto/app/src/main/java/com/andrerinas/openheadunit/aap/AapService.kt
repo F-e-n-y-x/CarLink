@@ -2562,6 +2562,7 @@ class AapService : Service(), UsbReceiver.Listener {
             nativeTransport() != NativeTransport.HOTSPOT) return
         AppLog.i("AapService: Phone could not join the hotspot — discarding credentials and resolving the access point again.")
         softApCredentialsProvider?.refresh()
+        HostIntegration.onPhoneWifiJoinFailed?.invoke(applicationContext) // CarLink
     }
 
     fun triggerWifiDirectRefresh() {

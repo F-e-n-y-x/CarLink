@@ -89,6 +89,8 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
      * time, so every group on this head unit's P2P interface was created by CarLink.
      */
     private fun startWireless(context: Context, address: String?) {
+        lastWirelessAddress = address
+        AndroidAutoWifiFallback.reset()
         if (App.provide(context).commManager.isConnected) {
             Log.i(TAG, "wireless start skipped: an Android Auto session is already connected")
             return
@@ -144,6 +146,15 @@ class AndroidAutoCommandReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "CarLink-AA"
+
+        /** The phone of the last wireless start, for [restartWireless]. */
+        @Volatile private var lastWirelessAddress: String? = null
+
+        /** Starts the last wireless attempt again with whatever path DiAuto's settings now name. Blocking. */
+        fun restartWireless(context: Context) {
+            val address = lastWirelessAddress
+            AndroidAutoCommandReceiver().startWireless(context.applicationContext, address)
+        }
         private const val NATIVE_WIRELESS_MODE = 3
         private const val STOP_WAIT_MILLIS = 3_000L
 

@@ -15,7 +15,10 @@ import com.carlink.app.core.Engine
 import com.carlink.app.core.LinkStage
 import com.carlink.app.core.LinkState
 import com.carlink.app.core.Transport
+import com.carlink.app.diagnostics.EventLog
 import com.carlink.app.engine.AndroidAutoProtocol as P
+import com.carlink.app.settings.UnifiedSettingsStore
+import com.carlink.app.settings.WirelessRefusals
 
 /**
  * Main-process handle on the Android Auto engine in the ":aa" process. Commands go to
@@ -71,8 +74,25 @@ internal class AndroidAutoEngine(
         }
     }
 
+    /** The phone refused the network it was handed and ":aa" restarted the attempt on Wi-Fi Direct. */
+    private val fallbackReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // The restart stops and starts AapService; give it the same grace as a fresh start.
+            startedAt = SystemClock.elapsedRealtime()
+            val ssid = intent.getStringExtra(P.EXTRA_REFUSED_SSID)
+            val saved = UnifiedSettingsStore(app).load().homeWifi
+            if (ssid != null && saved.ssid == ssid) WirelessRefusals(app).record(ssid, saved.password)
+            val message = if (ssid != null) "Phone refused Wi-Fi \"$ssid\" (check its password); using Wi-Fi Direct"
+                else "Phone refused the hotspot; using Wi-Fi Direct"
+            Log.i(TAG, message)
+            EventLog.add("CarLink", message)
+        }
+    }
+
     init {
         ContextCompat.registerReceiver(app, stateReceiver, IntentFilter(P.ACTION_STATE),
+            ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(app, fallbackReceiver, IntentFilter(P.ACTION_WIFI_FALLBACK),
             ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 

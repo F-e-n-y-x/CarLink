@@ -135,4 +135,32 @@ class EngineMappingsTest {
             assertFalse("$it must not be written without a session path", it in aa)
         }
     }
+
+    @Test fun sameWifiNeedsThePasswordOfASecuredNetwork() {
+        val noPassword = UnifiedSettings(homeWifi = WifiDetails("HomeNet", ""))
+        val full = homeJoined.copy(joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0")
+        // Secured (or unknown) network and no password: the phone would refuse it at once.
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, noPassword, full))
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.CARPLAY, noPassword, full.copy(joinedOpen = false)))
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.CARPLAY,
+            noPassword.copy(connectionMethod = ConnectionMethod.SAME_WIFI), full))
+        // An open network needs none.
+        assertEquals(WirelessPath.SAME_WIFI, WirelessPathSelector.select(Engine.ANDROID_AUTO, noPassword, full.copy(joinedOpen = true)))
+    }
+
+    @Test fun androidAutoSkipsANetworkThePhoneRefused() {
+        val settings = UnifiedSettings(homeWifi = home)
+        val full = homeJoined.copy(joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0", androidAutoRefusedJoined = true)
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, settings, full))
+        // CarPlay hands the iPhone the network its own way and is not affected.
+        assertEquals(WirelessPath.SAME_WIFI, WirelessPathSelector.select(Engine.CARPLAY, settings, full))
+    }
+
+    @Test fun systemHotspotCountsOnlyWhileOn() {
+        val system = WifiDetails("CarAP", "carpassword")
+        val on = WifiEnvironment(0, null, carHotspotOn = true, systemHotspot = system)
+        assertEquals(WirelessPath.CAR_HOTSPOT, WirelessPathSelector.select(Engine.ANDROID_AUTO, UnifiedSettings(), on))
+        val unknown = on.copy(carHotspotOn = null)
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, UnifiedSettings(), unknown))
+    }
 }

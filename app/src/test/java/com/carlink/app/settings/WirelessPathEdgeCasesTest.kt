@@ -45,8 +45,10 @@ class WirelessPathEdgeCasesTest {
     @Test fun invalidSavedHomeWifiIsNotUsedAutomatically() {
         val badPassword = both.copy(homeWifi = WifiDetails("HomeNet", "short"))
         assertEquals(WirelessPath.CAR_HOTSPOT, select(Engine.CARPLAY, badPassword, routerKnown))
-        val openHome = both.copy(homeWifi = WifiDetails("HomeNet", ""))
-        assertEquals(WirelessPath.SAME_WIFI, select(Engine.CARPLAY, openHome, routerKnown))
+        val noPassword = both.copy(homeWifi = WifiDetails("HomeNet", ""))
+        assertEquals(WirelessPath.SAME_WIFI, select(Engine.CARPLAY, noPassword, routerKnown.copy(joinedOpen = true)))
+        // Not known to be open: an empty password is a missing one.
+        assertEquals(WirelessPath.CAR_HOTSPOT, select(Engine.CARPLAY, noPassword, routerKnown))
     }
 
     @Test fun androidAutoNeedsBothBssidAndInterface() {

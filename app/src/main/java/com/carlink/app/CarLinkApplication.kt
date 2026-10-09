@@ -9,6 +9,7 @@ import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.utils.Settings
 import com.carlink.app.engine.AndroidAutoProtocol
 import com.carlink.app.engine.AndroidAutoStateReporter
+import com.carlink.app.engine.AndroidAutoWifiFallback
 import com.carlink.app.ui.HomeActivity
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostIntegration
@@ -33,6 +34,7 @@ class CarLinkApplication : App() {
         if (isAndroidAutoProcess) {
             nameCarForPhone()
             AndroidAutoStateReporter.start(this)
+            HostIntegration.onPhoneWifiJoinFailed = { context -> AndroidAutoWifiFallback.onJoinFailed(context) }
         } else {
             nameCarForIphone()
             com.carlink.app.entry.UsbWatcher.get(this).start()

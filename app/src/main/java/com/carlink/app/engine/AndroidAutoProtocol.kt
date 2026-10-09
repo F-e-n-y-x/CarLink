@@ -24,6 +24,11 @@ internal object AndroidAutoProtocol {
     const val EXTRA_CONNECTION = "connection"
     const val EXTRA_MESSAGE = "message"
 
+    /** ":aa" → main: the phone refused the network it was handed, so the session moved to Wi-Fi Direct. */
+    const val ACTION_WIFI_FALLBACK = "com.carlink.app.action.ANDROID_AUTO_WIFI_FALLBACK"
+    /** The refused shared network (Same Wi-Fi), absent when it was a hotspot. */
+    const val EXTRA_REFUSED_SSID = "refused_ssid"
+
     /** CommManager.ConnectionState names, in session order. */
     const val CONNECTION_DISCONNECTED = "Disconnected"
     const val CONNECTION_CONNECTING = "Connecting"

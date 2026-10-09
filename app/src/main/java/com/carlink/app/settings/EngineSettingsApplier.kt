@@ -3,10 +3,13 @@ package com.carlink.app.settings
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import com.carlink.app.core.Engine
+import com.andrerinas.openheadunit.utils.HotspotConfigReader
 import com.carlink.app.engine.AndroidAutoSettings
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayNightMode
@@ -32,12 +35,18 @@ object EngineSettingsApplier {
     }
 
     /** Applies the settings plus the chosen wireless path for a session about to start; returns the path. */
-    fun applyForSession(context: Context, engine: Engine, settings: UnifiedSettings): WirelessPath {
-        val wifi = wifiEnvironment(context)
+    fun applyForSession(context: Context, engine: Engine, chosen: UnifiedSettings): WirelessPath {
+        val wifi = wifiEnvironment(context, chosen)
+        // The car's own hotspot needs no typing where the firmware lets CarLink read it.
+        val settings = if (!chosen.carHotspot.isValid() && wifi.systemHotspot != null) {
+            chosen.copy(carHotspot = wifi.systemHotspot)
+        } else chosen
         val path = WirelessPathSelector.select(engine, settings, wifi)
         Log.i(TAG, "session engine=$engine path=$path method=${settings.connectionMethod} " +
             "wifiNetworks=${wifi.joinedNetworks} ssidReadable=${wifi.joinedSsid != null} " +
-            "sameWifiSaved=${settings.homeWifi.isValid()} hotspotOn=${wifi.carHotspotOn}")
+            "sameWifiSaved=${settings.homeWifi.isValid()} passwordSaved=${settings.homeWifi.password.isNotEmpty()} " +
+            "open=${wifi.joinedOpen} aaRefused=${wifi.androidAutoRefusedJoined} hotspotOn=${wifi.carHotspotOn} " +
+            "systemHotspot=${wifi.systemHotspot != null}")
         if (engine == Engine.CARPLAY && settings.homeWifi.isValid() && wifi.joinedNetworks == 1 && wifi.joinedSsid == null) {
             // Android hides the joined network's name without location access (and with location
             // switched off), so Same Wi-Fi cannot be confirmed and the next path is used instead.
@@ -90,9 +99,12 @@ object EngineSettingsApplier {
         AndroidAutoSettings.write(context, bundle)
     }
 
-    /** Client Wi-Fi networks of the car (not VPN), the joined SSID when readable, and hotspot state. */
+    /**
+     * Client Wi-Fi networks of the car (not VPN), the joined SSID when readable, and hotspot state.
+     * [settings] is only needed to look up whether a phone already refused the saved network.
+     */
     @Suppress("DEPRECATION") // connectionInfo is the API-25-compatible way to read the SSID.
-    fun wifiEnvironment(context: Context): WifiEnvironment {
+    fun wifiEnvironment(context: Context, settings: UnifiedSettings? = null): WifiEnvironment {
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
         val wifiNetworks = connectivity?.allNetworks.orEmpty().count { network ->
             connectivity!!.getNetworkCapabilities(network)?.let {
@@ -110,12 +122,31 @@ object EngineSettingsApplier {
             } == true
         }
         val iface = wifiNetwork?.let { runCatching { connectivity!!.getLinkProperties(it)?.interfaceName }.getOrNull() }
+        val open = if (Build.VERSION.SDK_INT >= 31 && info != null) {
+            when (info.currentSecurityType) {
+                WifiInfo.SECURITY_TYPE_OPEN, WifiInfo.SECURITY_TYPE_OWE -> true
+                WifiInfo.SECURITY_TYPE_UNKNOWN -> null
+                else -> false
+            }
+        } else null
+        val hotspotOn = runCatching { CarHotspotStatus.isEnabled(context) }.getOrNull()
+        val joined = if (wifiNetworks == 1) ssid else null
         return WifiEnvironment(
             joinedNetworks = wifiNetworks,
-            joinedSsid = if (wifiNetworks == 1) ssid else null,
-            carHotspotOn = runCatching { CarHotspotStatus.isEnabled(context) }.getOrNull(),
+            joinedSsid = joined,
+            carHotspotOn = hotspotOn,
             joinedBssid = if (wifiNetworks == 1) bssid else null,
             joinedInterface = if (wifiNetworks == 1) iface else null,
+            joinedOpen = if (wifiNetworks == 1) open else null,
+            androidAutoRefusedJoined = joined != null && settings != null &&
+                WirelessRefusals(context).isRefused(joined, settings.homeWifi.password),
+            systemHotspot = if (hotspotOn == true) systemHotspot(context) else null,
         )
     }
+
+    /** The hotspot's own name and password; most phones and tablets refuse this, many head units allow it. */
+    private fun systemHotspot(context: Context): WifiDetails? =
+        runCatching { HotspotConfigReader.getSystemHotspotConfig(context) }.getOrNull()
+            ?.let { (ssid, password) -> WifiDetails(ssid, password) }
+            ?.takeIf { it.isValid() && it.password.isNotEmpty() }
 }
