@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
@@ -167,7 +168,10 @@ class AdaptiveSettingsUiTest {
     @Test fun openDialogKeepsItsAppearanceAndEditsWhileTheScreenRepaints() {
         AirPlayPersistence.saveAppAppearance(context, AppAppearance.LIGHT)
         val screen = openSettings()
-        texts(screen).single { it.text == screen.getString(R.string.settings_search) }.performClick()
+        // Search is an inline box now; any themed text dialog shows the same behaviour.
+        DiPlayActivity::class.java.getDeclaredMethod("textInput", String::class.java, String::class.java,
+            Boolean::class.javaPrimitiveType, Function1::class.java).apply { isAccessible = true }
+            .invoke(screen, screen.getString(R.string.settings_search), "", false, { _: String -> })
         val dialog = ShadowAlertDialog.getLatestAlertDialog()
         val input = descendants(dialog.window!!.decorView).filterIsInstance<EditText>().single()
         input.setText("display")
@@ -272,6 +276,52 @@ class AdaptiveSettingsUiTest {
 
         assertEquals(SettingsCategory.DISPLAY, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
         assertTrue(texts(screen).any { it.text.startsWith(screen.getString(R.string.frame_rate) + " · ") })
+    }
+
+    @Test fun headerSearchBoxListsMatchesAsYouTypeAndOpensTheChosenSetting() {
+        val screen = openSettings()
+        fun box() = descendants(screen.window.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == screen.getString(R.string.settings_search) }
+        assertFalse("Opening settings must not focus the search box", box().hasFocus())
+        assertFalse(texts(screen).any { it is android.widget.Button && it.text == screen.getString(R.string.settings_search) })
+
+        box().setText("FRAME rate")
+        shadowOf(Looper.getMainLooper()).idle()
+
+        // Indexing re-rendered the header; the new box keeps the query and focus.
+        assertEquals("FRAME rate", box().text.toString())
+        assertTrue(box().hasFocus())
+        val popup = ReflectionHelpers.getField<PopupWindow>(screen, "settingsSearchPopup")
+        assertTrue(popup.isShowing)
+        val row = descendants(popup.contentView).first {
+            it.isClickable && it.contentDescription?.startsWith(screen.getString(R.string.frame_rate) + ", ") == true
+        }
+        row.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(popup.isShowing)
+        assertEquals(SettingsCategory.DISPLAY, ReflectionHelpers.getField<SettingsCategory>(screen, "settingsCategory"))
+        assertTrue(texts(screen).any { it.text.startsWith(screen.getString(R.string.frame_rate) + " · ") })
+        assertEquals("", box().text.toString())
+    }
+
+    @Test fun backClosesAnOpenSearchBeforeLeavingSettings() {
+        val screen = openSettings()
+        fun box() = descendants(screen.window.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == screen.getString(R.string.settings_search) }
+        box().setText("no such setting zz")
+        shadowOf(Looper.getMainLooper()).idle()
+        val popup = ReflectionHelpers.getField<PopupWindow>(screen, "settingsSearchPopup")
+        assertTrue(descendants(popup.contentView).filterIsInstance<TextView>()
+            .any { it.text == screen.getString(R.string.settings_search_empty) })
+
+        screen.onBackPressedDispatcher.onBackPressed()
+
+        assertEquals("settings", ReflectionHelpers.getField<String>(screen, "page"))
+        assertFalse(popup.isShowing)
+        assertEquals("", box().text.toString())
+        screen.onBackPressedDispatcher.onBackPressed()
+        assertEquals("home", ReflectionHelpers.getField<String>(screen, "page"))
     }
 
     @Test
