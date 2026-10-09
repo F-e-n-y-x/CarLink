@@ -1,5 +1,13 @@
 # DiPlay dissection: engineering reference for CarLink
 
+> **Note (2026-10-09):** the CarLink v1 classes this document cites as they were when it was
+> written (`EngineCoordinator`, `CarPlayEngine`, `engine/CarPlayPreflight`, `AndroidAutoEngine`,
+> `AndroidAutoCommandReceiver`, `AndroidAutoStateReporter`, `AndroidAutoWifiFallback`,
+> `EngineSettingsApplier`, `EngineMappings`/`WirelessPathSelector`) and the hooks
+> `EXTRA_CARLINK_CONNECT` and `onPhoneWifiJoinFailed` have been removed; the v2 replacements are in
+> `app/.../connection/` ([design/REBUILD_V2.md](../../design/REBUILD_V2.md)). Engine findings are
+> unaffected.
+
 DiPlay version vendored: **0.2.15** (`vendor/diplay/mobile/build.gradle.kts:21`, `CHANGELOG.md:1`).
 Package `com.shilapi.xcertplay`. Paths below are relative to `vendor/diplay/` unless they start
 with `app/` (CarLink). `CarPlayController.kt` means
