@@ -48,6 +48,19 @@ object Connection {
         }, "carlink-prewarm").start()
     }
 
+    /** Home is in front: start the last-used phone wirelessly when the rules allow (see [SessionManager.onHomeShown]). */
+    @android.annotation.SuppressLint("MissingPermission") // The name is read only when the permission allows.
+    fun onHomeShown(context: Context) {
+        val app = context.applicationContext
+        val address = DeviceEnvironment.lastPhoneAddress(app) ?: return
+        val kind = com.carlink.app.detect.KnownPhones(app).kindOf(address)
+        val name = runCatching {
+            app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.bondedDevices
+                ?.firstOrNull { it.address.equals(address, ignoreCase = true) }?.name
+        }.getOrNull()
+        get(app).onHomeShown(address, kind, name)
+    }
+
     /** The driver's car brand choice, or what this device looks like when they never chose. */
     fun vehicleProfile(context: Context): VehicleProfile {
         val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PROFILE, null)

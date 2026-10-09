@@ -244,6 +244,30 @@ class SessionManager(
         }
     }
 
+    /**
+     * Home came to the front (app opened, screen woke): start the last-used phone wirelessly, as a
+     * car head unit does on power-up, so the driver does not wait for a tap. A tablet is not a
+     * Bluetooth car kit, so the phone never connects to it by itself (DA§11.3). Same rules as a
+     * Bluetooth wake, plus: only from idle, at most once per [HOME_AUTO_START_COOLDOWN_MILLIS].
+     */
+    fun onHomeShown(address: String?, kind: PhoneKind?, phoneName: String?) {
+        val engine = kind?.engine ?: return
+        if (address == null) return
+        val now = SystemClock.uptimeMillis()
+        when {
+            !environment.autoConnectBluetooth || environment.autoConnectPaused -> return
+            _state.value !is SessionState.Idle -> return
+            now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS -> return
+            else -> {
+                lastHomeAutoStart = now
+                note("Home shown: connecting the last phone ($engine)")
+                start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
+            }
+        }
+    }
+
+    private var lastHomeAutoStart = -HOME_AUTO_START_COOLDOWN_MILLIS
+
     /** The driver asked for this phone. Clears the pause and replaces any running session. */
     fun connect(address: String?, kind: PhoneKind, phoneName: String?, transport: Transport = Transport.WIRELESS) {
         val engine = kind.engine ?: return
@@ -411,6 +435,9 @@ class SessionManager(
 
         /** How long a wireless phone may stay silent before Home says it is not answering. */
         const val NOT_ANSWERING_MILLIS = 10_000L
+
+        /** A failed or cancelled automatic start is not retried every time Home reappears. */
+        const val HOME_AUTO_START_COOLDOWN_MILLIS = 60_000L
 
         /** After the picture is up: long enough for a cable wiggle, short enough to feel instant. */
         const val USB_GONE_CONNECTED_GRACE_MILLIS = 1_200L

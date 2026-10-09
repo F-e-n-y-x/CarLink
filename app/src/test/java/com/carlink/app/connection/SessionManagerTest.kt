@@ -259,4 +259,17 @@ class SessionManagerTest {
         assertEquals(SessionState.Idle, m.state.value)
         assertEquals("home", log.last())
     }
+
+    @Test fun homeShownConnectsTheLastPhoneOnceAndRespectsThePause() {
+        val m = manager()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(listOf("CARPLAY start WIRELESS WIFI_DIRECT"), starts)
+        m.stop(); idle()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals("cooldown", 1, starts.size)
+        advance(SessionManager.HOME_AUTO_START_COOLDOWN_MILLIS + 1)
+        env.autoConnectPaused = true
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals("paused by the driver", 1, starts.size)
+    }
 }
