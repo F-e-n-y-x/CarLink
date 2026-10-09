@@ -43,8 +43,13 @@ object BydBluetoothSuspend {
         }
     }
 
-    fun suspend(context: Context, owner: Any, delayMillis: Long = 10_000L) {
+    /**
+     * [stillActive] is checked under the same lock as [resume]: an owner that closes, or a session
+     * that ends, before the pause begins never leaves a lease that nothing will release.
+     */
+    fun suspend(context: Context, owner: Any, delayMillis: Long = 10_000L, stillActive: () -> Boolean = { true }) {
         synchronized(gate) {
+            if (!stillActive()) return
             val state = lease(context)
             val ticket = state.begin(owner) ?: return
             pending?.cancel(false)

@@ -308,9 +308,11 @@ class CarPlayController(
             }
             activeSession = session
             val btPrefs = appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
-            synchronized(this@CarPlayController) {
-                if (!closed && btPrefs.getBoolean("bt_suspend_during_carplay", false)) {
-                    BydBluetoothSuspend.suspend(appContext, this@CarPlayController, btSuspendDelayMs(btPrefs))
+            if (btPrefs.getBoolean("bt_suspend_during_carplay", false)) {
+                // close() marks [closed], and a closing session marks itself before onSessionEnded
+                // clears it, ahead of each resume; the pause checks all three under resume's lock.
+                BydBluetoothSuspend.suspend(appContext, this@CarPlayController, btSuspendDelayMs(btPrefs)) {
+                    !closed && activeSession === session && !session.isClosed
                 }
             }
             if (replacement) restoreDashboardContent(session)
