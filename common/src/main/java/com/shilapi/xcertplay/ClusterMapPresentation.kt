@@ -203,7 +203,7 @@ internal class ClusterMapPresentation(
                 if (DiLink51ClusterLayout.supported()) return null
                 return displays.firstOrNull { display ->
                     val size = sizeOf(display)
-                    DiLink4ClusterDisplay.matches(display.name, size.x, size.y)
+                    DiLink4ClusterDisplay.accepts(display.name, size.x, size.y)
                 }
             }
             return displays.firstOrNull { it.name == name }?.takeIf {
