@@ -5,6 +5,7 @@ import android.util.Log
 import com.shilapi.xcertplay.hud.BydAmbientLightClient
 import com.shilapi.xcertplay.hud.BydAmbientLightPolicy
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -57,11 +58,20 @@ object AmbientMusicController {
         },
     )
 
-    init {
-        executor.scheduleWithFixedDelay({ runCatching { tick() }.onFailure {
-            Log.w("DiPlay-Ambient", "lamp update failed", it)
-            lampSession.recover()
-        } }, 50, 50, TimeUnit.MILLISECONDS)
+    // The 20 Hz lamp update, scheduled only while the feature is on; turning it off restores the lamps by itself.
+    private var ticking: ScheduledFuture<*>? = null
+
+    /** On the executor, after [settings] changed. */
+    private fun updateTicking() {
+        if (!settings.enabled) {
+            ticking?.cancel(false)
+            ticking = null
+        } else if (ticking == null) {
+            ticking = executor.scheduleWithFixedDelay({ runCatching { tick() }.onFailure {
+                Log.w("DiPlay-Ambient", "lamp update failed", it)
+                lampSession.recover()
+            } }, 50, 50, TimeUnit.MILLISECONDS)
+        }
     }
 
     @Synchronized fun openSink(context: Context?): Long {
@@ -77,6 +87,7 @@ object AmbientMusicController {
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled; envelope = null; playback = null
             if (!settings.enabled) restoreOriginal()
+            updateTicking()
         }
         return token
     }
@@ -133,6 +144,7 @@ object AmbientMusicController {
             brightnessEnvelope = AmbientMusicBrightness(settings.speed)
             allowed = settings.enabled
             if (!settings.enabled) restoreOriginal()
+            updateTicking()
         }
     }
 
