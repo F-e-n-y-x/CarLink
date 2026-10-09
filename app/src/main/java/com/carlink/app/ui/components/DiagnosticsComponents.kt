@@ -184,7 +184,7 @@ fun CarSheet(
             val duration = if (reduceMotion) 0 else CarMotion.MEDIUM
             Box(
                 Modifier.fillMaxSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null,
                         onClick = onDismiss),
                 contentAlignment = Alignment.CenterEnd,
@@ -205,7 +205,9 @@ fun CarSheet(
                             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                         shape = if (fullScreen) RoundedCornerShape(0.dp)
                         else RoundedCornerShape(topStart = 40.dp, bottomStart = 40.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        // The same graphite as GlassSheet, so every panel that rises over a screen matches.
+                        color = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) MaterialTheme.colorScheme.surfaceContainer
+                        else MaterialTheme.colorScheme.surfaceContainerLow,
                         // Named explicitly: in the dark scheme surfaceContainerHigh equals surfaceVariant,
                         // so contentColorFor() would pick the dimmer onSurfaceVariant.
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -214,7 +216,7 @@ fun CarSheet(
                             Row(Modifier.fillMaxWidth().heightIn(min = dimens.topBar + 16.dp).padding(horizontal = dimens.gutter),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 if (showBackArrow) {
-                                    com.carlink.app.ui.settings.RoundGlassButton(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_back), onBack)
+                                    com.carlink.app.ui.premium.RoundGlassIconButton(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_back), onBack)
                                     Spacer(Modifier.width(16.dp))
                                 }
                                 Text(title, style = MaterialTheme.typography.headlineMedium, maxLines = 2,
@@ -222,7 +224,7 @@ fun CarSheet(
                                         heading()
                                         liveRegion = LiveRegionMode.Polite
                                     })
-                                com.carlink.app.ui.settings.RoundGlassButton(R.drawable.carlink_ic_close, stringResource(R.string.carlink_about_close), onDismiss)
+                                com.carlink.app.ui.premium.RoundGlassIconButton(R.drawable.carlink_ic_close, stringResource(R.string.carlink_about_close), onDismiss)
                             }
                             Column(
                                 Modifier.fillMaxWidth().weight(1f)

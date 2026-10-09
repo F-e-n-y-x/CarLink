@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -292,7 +293,7 @@ private fun Summary(checks: List<CheckResult>?) {
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically) {
-        GlyphDisc(icon, tint, if (isCar) 88.dp else 56.dp)
+        com.carlink.app.ui.premium.IconTile(icon, tint = tint, size = if (isCar) 88.dp else 56.dp)
         Spacer(Modifier.width(if (isCar) 28.dp else 18.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -331,12 +332,13 @@ private fun SessionCard(ui: DiagnosticsUi) {
 private fun StageTag(stage: LinkStage) {
     val colors = CarLinkTokens.colors
     val scheme = MaterialTheme.colorScheme
-    val (color, icon) = when (stage) {
-        LinkStage.CONNECTED -> colors.success to R.drawable.carlink_ic_check_circle_filled
-        LinkStage.FAILED -> scheme.error to R.drawable.carlink_ic_error_filled
-        else -> scheme.onSurfaceVariant to R.drawable.carlink_ic_sync
+    // The same tell-tale as Home's: a lit dot in the state's colour.
+    val color = when (stage) {
+        LinkStage.CONNECTED -> colors.success
+        LinkStage.FAILED -> scheme.error
+        else -> scheme.primary
     }
-    Box(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) { Tag(stageName(stage), color, icon) }
+    Box(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) { com.carlink.app.ui.premium.TellTale(stageName(stage), color) }
 }
 
 @Composable
@@ -522,7 +524,7 @@ private fun StatusGlyph(status: CheckStatus, size: Dp) {
         CheckStatus.FAIL -> Triple(R.drawable.carlink_ic_error_filled, scheme.error, R.string.carlink_diag_status_fail)
         CheckStatus.INFO -> Triple(R.drawable.carlink_ic_info, scheme.onSurfaceVariant, R.string.carlink_diag_status_info)
     }
-    Box(Modifier.size(size).clip(CircleShape).background(tint.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.3f)).background(tint.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
         Icon(painterResource(icon), stringResource(label), Modifier.size(size * 0.55f), tint = tint)
     }
 }

@@ -46,6 +46,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -477,9 +478,12 @@ private fun DrivingSidePreview(right: Boolean) {
         drawLine(line.copy(alpha = 0.25f), Offset(0f, h * 0.62f), Offset(w, h * 0.62f), strokeWidth = 2.dp.toPx())
         // Steering wheel.
         val cx = if (right) w * 0.8f else w * 0.2f
-        val radius = h * 0.32f
-        drawCircle(line.copy(alpha = 0.75f), radius, Offset(cx, h * 0.92f), style = Stroke(h * 0.06f))
-        drawCircle(line.copy(alpha = 0.75f), radius * 0.22f, Offset(cx, h * 0.92f))
+        // Only the top of the wheel shows above the preview's lower edge, so it never covers the caption.
+        val radius = h * 0.3f
+        clipRect {
+            drawCircle(line.copy(alpha = 0.75f), radius, Offset(cx, h * 0.98f), style = Stroke(h * 0.06f))
+            drawCircle(line.copy(alpha = 0.75f), radius * 0.22f, Offset(cx, h * 0.98f))
+        }
     }
 }
 

@@ -68,7 +68,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
-import com.carlink.app.core.PhoneKind
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.LocalReduceMotion
 import java.util.Locale
@@ -294,81 +293,6 @@ fun GlassButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
             }
             Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
         }
-    }
-}
-
-/**
- * The hero: an unbranded handset drawn in code (no image assets), tilted in 3D with a cheap
- * graphicsLayer rotation. [screen] draws live status on its display; [glow] tints the screen.
- */
-@Composable
-fun HeroPhone(kind: PhoneKind, modifier: Modifier = Modifier, glow: Color = Color.Transparent, tilt: Float = -9f,
-              screen: @Composable BoxScope.() -> Unit = {}) {
-    val reduceMotion = LocalReduceMotion.current
-    val float = if (reduceMotion) 0f else rememberInfiniteTransition(label = "float").animateFloat(
-        initialValue = -1f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Reverse), label = "float",
-    ).value
-    Box(
-        modifier
-            .aspectRatio(PHONE_ASPECT)
-            .graphicsLayer {
-                rotationY = tilt
-                rotationX = 2f
-                cameraDistance = 18f * density
-                translationY = float * 6.dp.toPx()
-            },
-    ) {
-        Canvas(Modifier.fillMaxSize()) { drawPhone(kind, glow) }
-        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
-            // Keep status clear of the bezel and the camera cut-out.
-            val bezel = maxWidth * 0.1f
-            Box(Modifier.fillMaxSize().padding(start = bezel, end = bezel, top = bezel * 2.2f, bottom = bezel * 1.4f),
-                contentAlignment = Alignment.Center, content = screen)
-        }
-    }
-}
-
-private const val PHONE_ASPECT = 0.49f
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPhone(kind: PhoneKind, glow: Color) {
-    val w = size.width
-    val h = size.height
-    val radius = w * 0.15f
-    // Contact shadow (baked into the drawing; there are no UI shadows).
-    drawOval(Brush.radialGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent),
-        center = Offset(w / 2, h * 1.01f), radius = w * 0.55f), topLeft = Offset(-w * 0.05f, h * 0.95f), size = Size(w * 1.1f, h * 0.12f))
-    // Graphite body with a rim light from the top-start.
-    drawRoundRect(Brush.linearGradient(listOf(Color(0xFF3A3F47), Color(0xFF1A1D22), Color(0xFF101216)),
-        start = Offset(0f, 0f), end = Offset(w, h)), cornerRadius = CornerRadius(radius))
-    drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.18f)),
-        start = Offset(0f, 0f), end = Offset(w, h)), cornerRadius = CornerRadius(radius), style = Stroke(width = w * 0.012f))
-    // Side buttons.
-    val button = Color(0xFF2A2E35)
-    drawRoundRect(button, Offset(-w * 0.012f, h * 0.2f), Size(w * 0.018f, h * 0.07f), CornerRadius(w * 0.01f))
-    drawRoundRect(button, Offset(-w * 0.012f, h * 0.3f), Size(w * 0.018f, h * 0.07f), CornerRadius(w * 0.01f))
-    drawRoundRect(button, Offset(w * 0.994f, h * 0.26f), Size(w * 0.018f, h * 0.11f), CornerRadius(w * 0.01f))
-    // Display.
-    val inset = w * 0.045f
-    val screenSize = Size(w - inset * 2, h - inset * 2)
-    val screenRadius = CornerRadius(radius - inset * 0.8f)
-    // A quiet "wallpaper" so the display reads as a lit screen, not a black slab.
-    drawRoundRect(Brush.linearGradient(listOf(Color(0xFF14303C), Color(0xFF0A1219), Color(0xFF06080B)),
-        start = Offset(inset, inset), end = Offset(w - inset, h - inset)), Offset(inset, inset), screenSize, screenRadius)
-    drawRoundRect(Brush.radialGradient(listOf(Color(0xFF1E4F63).copy(alpha = 0.55f), Color.Transparent),
-        center = Offset(w * 0.25f, h * 0.2f), radius = w * 0.9f), Offset(inset, inset), screenSize, screenRadius)
-    if (glow.alpha > 0f) {
-        drawRoundRect(Brush.radialGradient(listOf(glow.copy(alpha = 0.38f), Color.Transparent),
-            center = Offset(w / 2, h * 0.62f), radius = w * 0.75f), Offset(inset, inset), screenSize, screenRadius)
-    }
-    // Glass reflection across the display.
-    drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.07f), Color.Transparent),
-        start = Offset(inset, inset), end = Offset(w * 0.75f, h * 0.45f)), Offset(inset, inset), screenSize, screenRadius)
-    // Camera: an island for iPhone, a punch hole for Android, a neutral pill when unknown.
-    val camY = inset + h * 0.028f
-    when (kind) {
-        PhoneKind.ANDROID -> drawCircle(Color.Black, radius = w * 0.028f, center = Offset(w / 2, camY + w * 0.01f))
-        else -> drawRoundRect(Color.Black, Offset(w * 0.34f, camY - w * 0.01f), Size(w * 0.32f, w * 0.085f), CornerRadius(w * 0.05f))
     }
 }
 
