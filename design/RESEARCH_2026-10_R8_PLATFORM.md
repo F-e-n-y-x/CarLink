@@ -10,7 +10,7 @@
 | 1 | Check Android 17 background-audio hardening | A session started from the background could play no sound | S (test) | High if hit | Rule proven; whether CarLink hits it is untested (tablet is Android 16) |
 | 2 | R8 in release, in phases (below) | Startup, memory, APK size on low-end units | M–L | Medium | Proven technique; CarLink's numbers unmeasured |
 | 3 | Baseline + startup profiles covering engine code; explicit `androidx.profileinstaller` | Faster first launch / first connection | M | Low | Proven; sideloaded APKs get it after background dexopt |
-| 4 | Pull DiPlay 0.2.16 (we vendor 0.2.15) | NCM short-packet framing, USB read retry, IPv6/IPv4 retry after first AirPlay timeout, video backlog recovery, Opus fallback | S–M | Low–Med | Upstream release 2026-10-09; needs the user's approval for a subtree pull |
+| 4 | Pull DiPlay 0.2.16 (we vendored 0.2.15) | **Done 2026-10-10.** Checked against the commits: video backlog recovery, Qualcomm low-latency decoding + FPS counter, smooth-video frame requests, call echo-cancel alignment, opt-in BYD Bluetooth pause, side panel and settings UI. It does *not* contain NCM/USB-retry/address-family changes (the first reading of the release notes was wrong) | S–M | Low–Med | Pulled; see docs/VENDOR_CHANGES.md |
 | 5 | Handle `BluetoothDevice.ACTION_KEY_MISSING` (Android 16) → "forget and re-pair" | Stale-pairing failures explained | S | Low | API proven |
 | 6 | CompanionDeviceManager association + device presence | Phone nearby could wake CarLink | M–L | Medium | Speculative for a tablet associating to a phone |
 | 7 | Wi-Fi Direct R2 bootstrapping, Wi-Fi Aware, 6 GHz P2P | none | – | – | Neither AA nor CarPlay phones use them |

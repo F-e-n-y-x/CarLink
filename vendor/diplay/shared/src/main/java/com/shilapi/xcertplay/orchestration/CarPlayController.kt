@@ -34,6 +34,7 @@ import com.shilapi.xcertplay.airplay.AirPlaySessionListener
 import com.shilapi.xcertplay.airplay.PairingStore
 import com.shilapi.xcertplay.airplay.VideoInCar
 import com.shilapi.xcertplay.airplay.VideoPlaybackDelivery
+import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import com.shilapi.xcertplay.hud.BydNavigationOutputs
 import com.shilapi.xcertplay.iap2.session.Iap2Session
 import com.shilapi.xcertplay.mfi.Iap2MfiAuthenticationClient
@@ -309,6 +310,14 @@ class CarPlayController(
                 }
             }
             activeSession = session
+            val btPrefs = appContext.getSharedPreferences("xcertplay_airplay", android.content.Context.MODE_PRIVATE)
+            if (btPrefs.getBoolean("bt_suspend_during_carplay", false)) {
+                // close() marks [closed], and a closing session marks itself before onSessionEnded
+                // clears it, ahead of each resume; the pause checks all three under resume's lock.
+                BydBluetoothSuspend.suspend(appContext, this@CarPlayController, btSuspendDelayMs(btPrefs)) {
+                    !closed && activeSession === session && !session.isClosed
+                }
+            }
             if (replacement) restoreDashboardContent(session)
             if (config.transport == CarPlayTransport.WIRED) wiredTimeline.mark(WiredStartupTimeline.Milestone.SESSION_ACTIVE) // CarLink
             debugLog(
@@ -322,6 +331,7 @@ class CarPlayController(
             if (activeSession === session) {
                 activeSession = null
                 BydNavigationOutputs.endNow(preserveTurnOverlay = !closed && config.transport == CarPlayTransport.WIRELESS)
+                BydBluetoothSuspend.resume(appContext, this@CarPlayController)
                 com.shilapi.xcertplay.glance.CarPlayGlance.setConnected(false)
                 videoListener?.onVideoSessionEnded()
                 synchronized(playbackStatus) {
@@ -633,6 +643,7 @@ class CarPlayController(
             dashboardMapOutputVisible = false
         }
         firstTcpWatchdog?.terminate()
+        BydBluetoothSuspend.resume(appContext, this)
         startupTimer.shutdownNow()
         (hotspot as? ManualHotspotManager)?.close()
         val teardownStarted = System.nanoTime()
@@ -1203,7 +1214,11 @@ class CarPlayController(
             // while it runs; the iAP2 link opens once both are ready, as before.
             val adapter = bluetoothAdapter
                 ?: throw IOException("Bluetooth adapter is unavailable")
+            // CarLink: DiPlay 0.2.16's recovery of its own BYD Bluetooth pause, before the early dial
+            // (it returns at once when DiPlay paused nothing).
+            val bluetoothRecoveryComplete = BydBluetoothSuspend.resumeAndWait(appContext, adapter)
             if (!adapter.isEnabled) throw IOException("Bluetooth is not enabled")
+            if (!bluetoothRecoveryComplete) throw IOException("Bluetooth recovery did not complete before the handshake")
             val device = selectWirelessBluetoothDevice(adapter)
             debugLog(
                 "wireless RFCOMM connecting address=${device.address} " +
@@ -1814,6 +1829,16 @@ class CarPlayController(
         }
     }
 
+
+    /** The user's grace period before Bluetooth is suspended: 5–30 s, 10 s by default. */
+    private fun btSuspendDelayMs(prefs: android.content.SharedPreferences): Long =
+        when (prefs.getInt("bt_suspend_delay_seconds", 10)) {
+            5 -> 5_000L
+            15 -> 15_000L
+            30 -> 30_000L
+            else -> 10_000L
+        }
+
     private fun closeBluetoothBootstrapTransport() {
         val activeCsm = csm
         csm = null
@@ -2358,7 +2383,9 @@ class CarPlayController(
         closed || phase != Phase.WIRELESS || generation != wirelessGeneration.get() || wirelessFailureReported.get()
 
     // Kept across reconnects within this controller: resuming between attempts would start a scan.
-    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(this) {
+    // close() sets [closed] under this lock, so a lease is either taken first and released by
+    // close, or never taken.
+    private fun pauseWifiScans(backend: WirelessHotspotBackend) = synchronized(wirelessResourceLock) {
         if (closed || !WifiScanPause.eligible(backend)) return@synchronized
         (wifiScanPause ?: WifiScanPause(appContext, ::debugLog).also { wifiScanPause = it }).pause()
     }
