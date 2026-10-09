@@ -65,6 +65,16 @@ object Connection {
 
     /** Writes the session's settings into its engine (worker thread; IPC to ":aa" for Android Auto). */
     private fun applySession(app: Context, plan: SessionPlan) {
+        val started = android.os.SystemClock.uptimeMillis()
+        try {
+            writeSession(app, plan)
+        } finally {
+            com.carlink.app.diagnostics.EventLog.add("CarLink",
+                "${plan.engine} settings written in ${android.os.SystemClock.uptimeMillis() - started} ms")
+        }
+    }
+
+    private fun writeSession(app: Context, plan: SessionPlan) {
         val stored = UnifiedSettingsStore(app).load()
         val wifi = EngineSettingsApplier.wifiEnvironment(app, stored)
         val settings = effectiveSettings(stored, wifi)

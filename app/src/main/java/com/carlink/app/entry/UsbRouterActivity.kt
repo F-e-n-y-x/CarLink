@@ -35,6 +35,7 @@ class UsbRouterActivity : Activity() {
         val device = usbDevice(intent) ?: return
         val kind = PhoneClassifier.classifyUsb(describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
+        com.carlink.app.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
         if (!UsbWatcher.get(this).claim(device)) {
             Log.i(TAG, "USB attach already routed by the watcher")

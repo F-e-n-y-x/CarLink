@@ -75,6 +75,7 @@ class UsbWatcher private constructor(context: Context) {
         if (!claim(device)) return
         val kind = PhoneClassifier.classifyUsb(UsbRouterActivity.describe(device))
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
+        com.carlink.app.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
         val attach = Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED).putExtra(UsbManager.EXTRA_DEVICE, device)
         Connection.get(app).onUsbPhone(kind, com.carlink.app.detect.UsbPhoneNames.resolve(app, kind, device), attach)

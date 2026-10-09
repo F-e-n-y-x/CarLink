@@ -56,6 +56,18 @@ def main():
         t = dt.datetime.strptime(f"{now.year}-{m.group(1)} {m.group(2)[:8]}", "%Y-%m-%d %H:%M:%S")
         events.append((t, "carlink", f"{m.group(4)}: {m.group(5)}"))
 
+    # CarLink's own file log (survives logcat rotation); when present, its session lines replace logcat's.
+    carlink_file = adb(a.serial, "shell", "run-as", a.package, "cat", "files/logs/carlink.log")
+    if carlink_file.strip():
+        events = [e for e in events if not (e[1] == "carlink" and "CarLink-Session:" in e[2])]
+    for line in carlink_file.splitlines():
+        m = re.match(r"(\d{13}) \[([^\]]+)\] (.*)", line)
+        if m:
+            t = dt.datetime.fromtimestamp(int(m.group(1)) / 1000) + offset
+            msg = m.group(3)
+            # Same wording as the logcat lines the attempt parser looks for.
+            events.append((t.replace(microsecond=0), "carlink", f"CarLink-Session: {msg}" if m.group(2) == "CarLink" else f"CarLink-{m.group(2)}: {msg}"))
+
     journal = adb(a.serial, "shell", "run-as", a.package, "cat", "files/diagnostics/current.log")
     for line in journal.splitlines():
         m = re.match(r"(\d{13}) \[(\d)\] (?:\[\d+\] )?(.*)", line)
@@ -74,6 +86,13 @@ def main():
             continue
         if a.all or KEY_DIPLAY.search(m.group(2)):
             events.append((dt.datetime.strptime(f"{day} {m.group(1)}", "%Y-%m-%d %H:%M:%S"), "carplay", m.group(2)))
+
+    # USB attaches from the system, for "plugged in → session" timing.
+    for line in adb(a.serial, "logcat", "-d", "-v", "time", "-s", "UsbHostManager:D").splitlines():
+        m = re.match(r"(\d\d-\d\d) (\d\d:\d\d:\d\d\.\d+) \w/UsbHostManager\(\s*\d+\): USB device attached: vidpid (\S+)", line)
+        if m:
+            t = dt.datetime.strptime(f"{now.year}-{m.group(1)} {m.group(2)[:12]}", "%Y-%m-%d %H:%M:%S.%f")
+            events.append((t, "usb", f"attached {m.group(3)}"))
 
     events = sorted((e for e in events if e[0] >= since), key=lambda e: e[0])
     if not events:
@@ -110,7 +129,11 @@ def main():
         dropped = "CONNECTED -> WAITING" in text or "session ended" in text
         stays = "stayed connected" if verdict == "connected" and not dropped else \
             "dropped after connecting" if verdict == "connected" else ""
-        print(f"{at['start']:%H:%M:%S} {at['engine']:<12} path={path_name:<11} {verdict} {stays}"
+        connected_at = next((t for t, _, m in events if t >= at["start"] and " connected on " in m), None)
+        took = f" in {(connected_at - at['start']).total_seconds():.1f}s" if connected_at else ""
+        plugged = [t for t, src, m in events if src == "usb" and t <= at["start"] and (at["start"] - t).total_seconds() < 15]
+        from_plug = f" ({(connected_at - plugged[0]).total_seconds():.1f}s from plug-in)" if connected_at and plugged else ""
+        print(f"{at['start']:%H:%M:%S} {at['engine']:<12} path={path_name:<11} {verdict}{took}{from_plug} {stays}"
               + (f" — {'; '.join(causes)}" if causes else ""))
 
 

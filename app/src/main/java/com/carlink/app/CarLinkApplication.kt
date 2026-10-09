@@ -35,6 +35,7 @@ class CarLinkApplication : App() {
             // (DA§12 #8), engine events and states to the main process.
             com.carlink.app.connection.aa.AaEngineHooks.install(this)
         } else {
+            com.carlink.app.diagnostics.EventLog.attachFile(java.io.File(filesDir, "logs"))
             nameCarForIphone()
             // The car's name, the vehicle profile's BYD gate, CarLink's waiting view (DIPLAY.md §12, F2).
             com.carlink.app.connection.CarPlayAdapter.install(this, com.carlink.app.connection.Connection.vehicleProfile(this))
