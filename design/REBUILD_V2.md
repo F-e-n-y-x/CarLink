@@ -1,5 +1,8 @@
 # CarLink v2: rebuild plan
 
+> **Status: current.** The connection layer described here is what the app runs
+> (`app/.../connection/`); milestone 4 (v1 removal, docs, skills) is done.
+
 Status: approved direction (user, 2026-10-09: "first dissect both projects, understand them, then
 make the app; start from scratch if you have to"). Built on `docs/dissection/DIPLAY.md`,
 `docs/dissection/DIAUTO.md` and `design/RESEARCH_PLUG_AND_PLAY.md`. Section numbers like

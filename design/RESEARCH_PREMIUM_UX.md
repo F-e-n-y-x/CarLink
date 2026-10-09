@@ -1,5 +1,10 @@
 # CarLink: premium UX research and direction
 
+> **Status (2026-10-09): superseded for the visual direction** by
+> [RESEARCH_HOME_V2.md](RESEARCH_HOME_V2.md) and [HOME_V2_RATIONALE.md](HOME_V2_RATIONALE.md)
+> (the "Instrument" language the app uses now). The research itself (in-car UX sources, settings
+> structure, head-unit constraints) is kept and still cited.
+
 Status: research and recommendations, 2026-10-09. No code changes.
 Audience: whoever rebuilds the CarLink UI after the rejection of the Material 3 settings-style attempt.
 User-chosen direction: **"Premium dashboard": Tesla/Rivian-like, full-bleed, large hero imagery of the phone/car, glass cards, bold type.**

@@ -1,5 +1,7 @@
 # How shipping receivers make wireless CarPlay / Android Auto "just work"
 
+> **Status: current** research behind [REBUILD_V2.md](REBUILD_V2.md).
+
 Research for CarLink's connection redesign, 2026-10-09. Sources are linked; vendor pages and
 forum posts are practical guidance, not specifications.
 

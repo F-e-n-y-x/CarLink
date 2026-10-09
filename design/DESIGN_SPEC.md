@@ -1,5 +1,12 @@
 # CarLink UI Design Spec
 
+> **Status (2026-10-09): partly superseded; kept for reference.** Written for BYD DiLink head
+> units and the v1 app. The connection behaviour (state machine, stages, error handling) is
+> replaced by [REBUILD_V2.md](REBUILD_V2.md) and `app/.../connection/`; the look and the Home and
+> Settings structure by [RESEARCH_HOME_V2.md](RESEARCH_HOME_V2.md) and
+> [HOME_V2_RATIONALE.md](HOME_V2_RATIONALE.md). Still useful for touch-target and text sizes,
+> canvas scaling and the driver-facing error wording.
+
 Status: v1.0, ready to build. Date: 2026-10-09.
 Scope: CarLink's own UI on BYD DiLink head units: Home, Connecting, Phone detail, Settings, Onboarding, Diagnostics and About.
 Out of scope: the projected CarPlay and Android Auto content. Those UIs belong to Apple and Google.

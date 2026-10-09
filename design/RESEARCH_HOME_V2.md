@@ -1,5 +1,8 @@
 # Home v2: research and redesign notes
 
+> **Status: current** research behind the UI; decisions are recorded in
+> [HOME_V2_RATIONALE.md](HOME_V2_RATIONALE.md).
+
 October 2026. This builds on `RESEARCH_PREMIUM_UX.md` (§1, §6, §7) and `DESIGN_SPEC.md` §6.1. Where the
 two disagree, this file wins for Home.
 

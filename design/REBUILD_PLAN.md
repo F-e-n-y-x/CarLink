@@ -1,5 +1,10 @@
 # CarLink rebuild plan
 
+> **Status (2026-10-09): superseded by [REBUILD_V2.md](REBUILD_V2.md).** This plan led to the v1
+> connection layer (`EngineCoordinator`, `CarPlayEngine`, `AndroidAutoEngine`,
+> `WirelessPathSelector`), which v2 replaced and which has since been deleted. Kept as a record of
+> the first build's problems and the settings inventories.
+
 Status: proposal for approval. Date: 2026-10-09.
 Inputs: the user's feedback on the first build, `design/RESEARCH_PREMIUM_UX.md` (visual and settings
 research), and full settings inventories of both engines (DiPlay ≈70 settings, DiAuto ≈90).
