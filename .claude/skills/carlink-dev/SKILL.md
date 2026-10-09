@@ -129,7 +129,27 @@ $S shot home    # /tmp/carlink-shots/home.png — then LOOK at it with the Read 
 $S size 1080x2400 420   # phone; "1920x1080 240" head unit; "reset" to restore
 $S logs
 ./gradlew --no-daemon :app:recordScreenshots   # docs/screenshots gallery, no device needed
+$S build-release                        # the shrunk (R8) release APK, com.carlink.app
+CARLINK_TARGET=tablet $S install-release   # install it on the tablet and launch it
 ```
+
+**Release builds run R8** (shrink + optimize + resource shrinking, `-dontobfuscate`; phase 1 of
+`design/RESEARCH_2026-10_R8_PLATFORM.md`). Debug builds do not, so a change that adds reflection,
+JNI or a class loaded by name (app_process tools, Parcelables from other processes, Shizuku)
+needs a narrow rule: app rules in `app/src/main/keepRules/carlink.keep`, engine rules in the
+engine's consumer file (`vendor/diplay/shared/ambient-consumer-rules.pro`,
+`vendor/diauto/app/proguard-project.txt`, rows in `docs/VENDOR_CHANGES.md`). No package-wide
+member keeps for CarLink's code (the class-identity rules in `carlink.keep` keep no members).
+`build-release` signs with the local debug key unless `ANDROID_KEYSTORE_PATH`/`_PASSWORD`,
+`ANDROID_KEY_ALIAS`/`_PASSWORD` name the release key (none exists on this PC). The release
+package `com.carlink.app` installs next to the debug `com.carlink.app.hudtest`; both answer USB
+plugs and Bluetooth, so uninstall or stop the other one for a clean test (the user decides; the
+debug app's data, e.g. pairings, goes with it). It is not debuggable: `run-as` fails, and
+`report.py --package com.carlink.app` takes the engines' lines from logcat instead (run it right
+after the test). R8 output: `app/build/outputs/mapping/release/` (`mapping.txt` to retrace inlined
+frames, `configuration.txt`, `usage.txt`, `seeds.txt`); `./gradlew :app:analyzeReleaseR8Config`
+for the keep-rule report. Any R8 change is verified on the tablet with the device matrix in the
+research note, not only by a green build.
 
 `SmoothVideoHostLifecycleTest` (DiPlay) is a known flaky timing test: rerun when it is the only
 failure. Environment facts: the Gradle daemon needs JDK 25 (registered in

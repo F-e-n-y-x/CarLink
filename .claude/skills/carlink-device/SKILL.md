@@ -22,9 +22,12 @@ tap, before a test.
 ```sh
 S=.claude/skills/carlink-dev/scripts/dev.sh
 $S build && CARLINK_TARGET=tablet $S install      # install + launch on the tablet
+# the shrunk release build instead (package com.carlink.app, not debuggable; see carlink-dev):
+$S build-release && CARLINK_TARGET=tablet $S install-release
 # ask the user to connect / unlock the phone, then:
 python3 .claude/skills/carlink-device/scripts/report.py --since HH:MM   # device local time
 python3 .claude/skills/carlink-device/scripts/report.py --since HH:MM --all   # every engine line
+python3 .claude/skills/carlink-device/scripts/report.py --package com.carlink.app --since HH:MM   # release build (logcat only)
 ```
 
 `report.py` is read-only. It merges CarLink's logcat lines and its file log

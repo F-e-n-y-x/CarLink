@@ -189,11 +189,33 @@ and `AaSessionSettings.values`.
   engines' chrome); the screenshot gallery (`docs/screenshots`, ~1 GB) is not packaged (no asset
   or resource from `docs/` is in the APK); DiPlay's `navigation_test.pcm` (171 KB compressed) is
   used by DiPlay's own test button and left alone (vendor asset).
-- **Not done**: R8 shrinking. The five dex files are 18.5 MB compressed, the bulk of the APK, but
-  both engines reflect into their own, framework and BYD classes (the reason release builds have
-  `optimization { enable = false }`); shrinking needs keep rules for both engines and a full
-  CarPlay and Android Auto session test on a device. ABI splits / an app bundle would also cut
-  each download to its ABI (the "part only" rows above).
+- **R8 (release builds, 2026-10-10, phase 1)**: shrink, optimize and shrink resources, without
+  renaming (`-dontobfuscate`); rules in `app/src/main/keepRules/carlink.keep` and the engines'
+  consumer files (`docs/VENDOR_CHANGES.md`). Measured with `assembleRelease` signed with the debug
+  key, no CarPlay authentication files, arm ABIs only; `apkanalyzer` and `unzip -lv`:
+
+  | Measure | Before (e05e8ce5, R8 off) | After (R8 phase 1) |
+  |---|---|---|
+  | Release APK | 29.63 MB (29,630,256 B) | **15.82 MB** (15,818,867 B), −47 % |
+  | Dex, compressed in the APK | 18.76 MB in 5 files | **5.66 MB** in 2 files, −70 % |
+  | Dex, uncompressed | 50.14 MB | 13.25 MB |
+  | Classes defined | 39,194 | 10,696 |
+  | Methods defined | 276,644 | 82,439 |
+  | Method references (sum over the dex files) | 315,243 | 92,807 |
+  | `assets/dexopt/baseline.prof` | 15,029 B | 7,458 B (rewritten by R8 for the code that is left) |
+
+  The baseline profile still reaches the APK (`assets/dexopt/baseline.prof` and `.profm`); there
+  is no startup profile yet, so R8 has none to lay out the dex by (phase 3). The biggest
+  remaining code is DiAuto's (1.7 MB), full protobuf (1.2 MB, kept whole by DiAuto's rule), DiPlay
+  (1.0 MB) and Compose. R8 reported no missing classes. Start-up time and memory with R8 are not
+  measured yet, and the shrunk build is not yet verified on a device (below).
+- **Class names stay true.** `-dontobfuscate` alone did not keep them: the first R8 build merged
+  `ConnectionProfiles` and DiPlay's `LiveVideoMeter` into `androidx.lifecycle.ViewModelLazy` and
+  moved composables' static methods into `kotlin.ExceptionsKt` (horizontal class merging), which
+  would have put wrong class names in stack frames and in the diagnostics' `javaClass` names.
+  `carlink.keep` keeps the identity (not the members) of the app's and engines' classes; it costs
+  0.6 % of dex. Inlined frames still disappear from raw stack traces: keep
+  `app/build/outputs/mapping/release/mapping.txt` with each release build and retrace with it.
 
 ## Not verified
 
@@ -203,3 +225,7 @@ and `AaSessionSettings.values`.
 - Connecting/connected animations were not measured for frame rate (they need a phone).
 - The deferred prewarm changes when `:aa` starts; plug-in and wireless start times on the tablet
   were not re-measured (`carlink-device` skill).
+- The R8 release build (above) has passed the build, the unit tests and an audit of reflection,
+  JNI and by-name loading, but has not run on a device yet. Install it with
+  `dev.sh build-release` and `CARLINK_TARGET=tablet dev.sh install-release` and run the device
+  matrix in `design/RESEARCH_2026-10_R8_PLATFORM.md` before calling it done.
