@@ -8,7 +8,7 @@ import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import com.carlink.app.core.Transport
-import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.WifiDetails
 import com.carlink.app.settings.WirelessPath
@@ -186,7 +186,7 @@ object CarPlayPreflight {
         val bonded = if (adapter != null && canReadBonds) {
             runCatching { adapter.bondedDevices.orEmpty().mapNotNull { it.address?.uppercase() }.toSet() }.getOrNull()
         } else null
-        val wifi = runCatching { EngineSettingsApplier.wifiEnvironment(app) }.getOrNull()
+        val wifi = runCatching { WifiEnvironmentReader.read(app) }.getOrNull()
         val location = app.getSystemService(LocationManager::class.java)
         val locationOn = runCatching {
             if (sdk >= Build.VERSION_CODES.P) location?.isLocationEnabled == true

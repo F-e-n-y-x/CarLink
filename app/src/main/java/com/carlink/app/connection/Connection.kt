@@ -8,7 +8,7 @@ import android.os.Looper
 import android.util.Log
 import com.carlink.app.R
 import com.carlink.app.core.Engine
-import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.settings.VehicleProfile
@@ -104,7 +104,7 @@ object Connection {
 
     private fun writeSession(app: Context, plan: SessionPlan) {
         val stored = UnifiedSettingsStore(app).load()
-        val wifi = EngineSettingsApplier.wifiEnvironment(app, stored)
+        val wifi = WifiEnvironmentReader.read(app, stored)
         val settings = effectiveSettings(stored, wifi)
         val profile = vehicleProfile(app)
         when (plan.engine) {

@@ -9,16 +9,15 @@ import java.security.MessageDigest
  * only): an Android Auto phone refused to join, or an iPhone never reached the car over it. Same
  * Wi-Fi is skipped for that engine on such a network until the driver saves a different password,
  * so the next session goes straight to a path that works.
+ *
+ * Only read since connection v2: v1 recorded these entries; v2 fails the session on a refusal
+ * instead (`connection/aa/AaSessionTracker`). Entries recorded by v1 are still honoured.
  */
 class WirelessRefusals(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("carlink_wireless_refusals", Context.MODE_PRIVATE)
 
     fun isRefused(engine: Engine, ssid: String, password: String): Boolean =
         prefs.getString(key(engine, ssid), null) == fingerprint(password)
-
-    fun record(engine: Engine, ssid: String, password: String) {
-        prefs.edit().putString(key(engine, ssid), fingerprint(password)).apply()
-    }
 
     // Android Auto's entries predate CarPlay's and keep their plain-SSID key.
     private fun key(engine: Engine, ssid: String) = if (engine == Engine.ANDROID_AUTO) ssid else "carplay:$ssid"

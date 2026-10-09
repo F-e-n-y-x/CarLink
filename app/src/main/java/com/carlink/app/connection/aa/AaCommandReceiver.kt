@@ -11,8 +11,7 @@ import com.carlink.app.settings.VehicleProfile
 import java.util.concurrent.Executors
 
 /**
- * Runs in the ":aa" process (declared in the manifest, so a command starts the process). Replaces
- * v1's `engine/AndroidAutoCommandReceiver`; both stay registered until the switch-over. Commands
+ * Runs in the ":aa" process (declared in the manifest, so a command starts the process). Commands
  * run one at a time on one background thread, so a stop never interleaves with a start.
  */
 class AaCommandReceiver : BroadcastReceiver() {

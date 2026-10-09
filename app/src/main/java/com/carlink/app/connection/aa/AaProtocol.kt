@@ -4,8 +4,7 @@ package com.carlink.app.connection.aa
  * Broadcasts between [com.carlink.app.connection.AndroidAutoAdapter] (main process) and
  * [AaCommandReceiver] / [AaEngineHooks] (the ":aa" process). Every broadcast is explicit
  * (setClass or setPackage) and every receiver is unexported, so no other app can drive or read the
- * engine. Action names differ from v1's (`engine/AndroidAutoProtocol`) so both can run side by side
- * until the switch-over.
+ * engine.
  *
  * Broadcasts rather than a bound service: a bound connection from the main process would keep
  * ":aa" alive and raise its priority for the app's whole life, and v1's broadcasts are proven on the

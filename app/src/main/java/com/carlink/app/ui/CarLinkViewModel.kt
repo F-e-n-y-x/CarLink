@@ -23,11 +23,10 @@ import com.carlink.app.connection.toLinkState
 import kotlinx.coroutines.flow.map
 import com.carlink.app.settings.CarLinkPreferences
 import com.carlink.app.settings.ConnectionMethod
-import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.settings.WirelessPath
-import com.carlink.app.settings.WirelessPathSelector
 import com.carlink.app.settings.isValid
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
@@ -233,7 +232,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun refreshNetwork() {
         val engine = home.value.defaultPhone?.kind?.engine ?: Engine.CARPLAY
         val settings = _unified.value
-        val wifi = EngineSettingsApplier.wifiEnvironment(app, settings)
+        val wifi = WifiEnvironmentReader.read(app, settings)
         val effective = if (!settings.carHotspot.isValid() && wifi.systemHotspot != null) {
             settings.copy(carHotspot = wifi.systemHotspot)
         } else settings

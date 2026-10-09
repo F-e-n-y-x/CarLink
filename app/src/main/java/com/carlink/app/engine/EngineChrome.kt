@@ -85,12 +85,12 @@ object EngineChrome {
      * The CarPlay menu keeps only what belongs to the running session or has no CarLink setting.
      * Hidden, and why:
      * - WIRELESS, WIFI_METHOD, LOCATION, DRIVING_SIDE, RESOLUTION, FRAME_RATE, PHYSICAL_LENGTH:
-     *   CarLink writes these into DiPlay before every session (EngineSettingsApplier,
-     *   CarPlayEngine), so an edit here would silently come undone; they live in CarLink Settings.
+     *   CarLink writes these into DiPlay before every session (CarPlaySettingsPolicy in
+     *   connection/CarPlaySettings.kt, applied from Connection), so an edit here would silently come undone; they live in CarLink Settings.
      * - DOCK, HEVC, SYSTEM_BARS, DEBUG_LOGS, GESTURE_FINGERS: CarLink Settings › Advanced has them.
      * - AUTO_START: DiPlay's boot receiver is not used; CarLink's own auto-start applies.
      * - LANGUAGE: CarLink ships in English only.
-     * - EXIT_APPLICATION: kills the whole CarLink process (Home and the coordinator with it);
+     * - EXIT_APPLICATION: kills the whole CarLink process (Home and the SessionManager with it);
      *   CarLink's Disconnect ends a session.
      * Kept: the side panel, picture safe area, MFi source, audio channel mapping, the car's name
      * and button icon and the size basis (no CarLink setting yet), the hotspot status (live), and

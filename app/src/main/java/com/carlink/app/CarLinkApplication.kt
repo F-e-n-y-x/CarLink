@@ -7,7 +7,7 @@ import android.util.Log
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.utils.Settings
-import com.carlink.app.engine.AndroidAutoProtocol
+import com.carlink.app.connection.aa.AaProtocol
 import com.carlink.app.ui.HomeActivity
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayHostIntegration
@@ -20,7 +20,7 @@ import com.shilapi.xcertplay.CarPlayHostIntegration
 class CarLinkApplication : App() {
 
     private val isAndroidAutoProcess: Boolean by lazy {
-        processName().endsWith(AndroidAutoProtocol.ENGINE_PROCESS_SUFFIX)
+        processName().endsWith(AaProtocol.ENGINE_PROCESS_SUFFIX)
     }
 
     override fun initializesAndroidAutoEngine(): Boolean = isAndroidAutoProcess

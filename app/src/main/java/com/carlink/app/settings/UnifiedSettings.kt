@@ -4,7 +4,8 @@ import android.content.Context
 
 /**
  * The settings a driver sets once for both CarPlay and Android Auto (design/REBUILD_PLAN.md,
- * "Essentials"). Each value says what the driver wants; [EngineMappings] translates it into each
+ * "Essentials"). Each value says what the driver wants; `connection/CarPlaySettings` and
+ * `connection/aa/AaSessionSettings` translate it into each
  * engine's own storage. [Picture.CUSTOM] and [InterfaceSize.CUSTOM] mean an Advanced, per-engine
  * value was set and the unified choice must not overwrite it.
  */

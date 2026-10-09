@@ -74,7 +74,7 @@ object CarPlaySettingsPolicy {
         fineLocationGranted: Boolean,
         brandName: String = "CarLink",
     ): CarPlayEngineSettings {
-        // Picture and size: unchanged from settings/EngineMappings (verified correct, F17).
+        // Picture and size: unchanged from v1's settings mapping (verified correct, F17).
         val (scale, fps) = when (settings.picture) {
             Picture.AUTOMATIC -> 100 to 30 // DiPlay's own defaults
             Picture.BEST -> 100 to 60

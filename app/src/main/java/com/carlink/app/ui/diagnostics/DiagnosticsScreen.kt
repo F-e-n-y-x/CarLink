@@ -670,7 +670,7 @@ internal val previewLink = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Trans
 
 internal fun previewLog(now: Long = System.currentTimeMillis()): List<LogLine> = listOf(
     LogLine(now - 1_000, LogSource.CARPLAY, null, "Video stream started 1920x1080 @ 60 fps"),
-    LogLine(now - 2_400, LogSource.CARLINK, null, "EngineCoordinator: CarPlay session is live"),
+    LogLine(now - 2_400, LogSource.CARLINK, null, "SessionManager: CarPlay session is live"),
     LogLine(now - 4_100, LogSource.CARPLAY, 'W', "AirPlay timeout waiting for RTSP SETUP, retrying"),
     LogLine(now - 6_900, LogSource.CARPLAY, null, "Wi-Fi joined, phone at [ip]"),
     LogLine(now - 9_300, LogSource.CARLINK, null, "Bluetooth: Sara’s iPhone ([address]) connected, starting CarPlay"),

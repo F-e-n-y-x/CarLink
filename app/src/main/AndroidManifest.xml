@@ -6,7 +6,7 @@
   (Android Auto, ":aa" process). This file:
   1. makes CarLink the only launcher, USB-attach, boot and Bluetooth entry point;
   2. pins every Android Auto component to the ":aa" process;
-  3. ships DiAuto's key/media receivers disabled (EngineCoordinator enables them per session).
+  3. ships DiAuto's key/media receivers disabled (connection/DeviceEnvironment enables them per Android Auto session).
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -96,13 +96,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Android Auto engine command endpoint; lives in (and starts) the ":aa" process. -->
-        <receiver
-            android:name=".engine.AndroidAutoCommandReceiver"
-            android:exported="false"
-            android:process=":aa" />
-
-        <!-- Android Auto v2 command endpoint (connection/aa); replaces the one above at the switch-over. -->
+        <!-- Android Auto engine command endpoint (connection/aa); lives in (and starts) the ":aa" process. -->
         <receiver
             android:name=".connection.aa.AaCommandReceiver"
             android:exported="false"

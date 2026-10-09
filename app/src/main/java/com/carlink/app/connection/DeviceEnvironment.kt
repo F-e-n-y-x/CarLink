@@ -12,7 +12,7 @@ import com.carlink.app.detect.PhoneClassifier
 import com.carlink.app.diagnostics.EventLog
 import com.carlink.app.entry.UsbRouterActivity
 import com.carlink.app.settings.CarLinkPreferences
-import com.carlink.app.settings.EngineSettingsApplier
+import com.carlink.app.settings.WifiEnvironmentReader
 import com.carlink.app.settings.UnifiedSettingsStore
 import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.theme.UiProfileDetector
@@ -39,7 +39,7 @@ class DeviceEnvironment(
 
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()
-        val wifi = EngineSettingsApplier.wifiEnvironment(app, settings)
+        val wifi = WifiEnvironmentReader.read(app, settings)
         val facts = DevicePreflight.facts(app, request.phoneAddress)
         return (DevicePreflight.check(request, path, facts, settings, wifi) + enginePreflight(request, path)).distinct()
     }
@@ -49,7 +49,7 @@ class DeviceEnvironment(
         return WirelessPolicy.candidates(WirelessPolicy.Inputs(
             engine = request.engine,
             settings = settings,
-            wifi = EngineSettingsApplier.wifiEnvironment(app, settings),
+            wifi = WifiEnvironmentReader.read(app, settings),
             headUnit = UiProfileDetector.looksLikeCarDisplay(app),
             lastWorking = request.phoneAddress?.let { paths.lastWorking(request.engine, it) },
         ))
