@@ -24,6 +24,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Diagnostics asks to keep CarLink ready when the car wakes (DESIGN_SPEC §6.4). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Android 17 Local Network Protection: without it a targetSdk 37 app's local IPv4 traffic
+         is silently dropped, which breaks wireless CarPlay's AirPlay TCP (DiPlay #425,
+         docs/dissection/DIPLAY.md F4). Requested at runtime; checked by connection/CarPlayPreflight. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:name=".CarLinkApplication"

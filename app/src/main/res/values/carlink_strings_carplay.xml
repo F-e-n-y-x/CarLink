@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- CarPlay waiting view placeholder (connection/CarPlayWaitingView.kt), shown in the
+         projection window until CarLink registers its own content. -->
+    <string name="carlink_carplay_waiting_phone">Waiting for your iPhone. Unlock it and keep Bluetooth and Wi-Fi on.</string>
+    <string name="carlink_carplay_waiting_handshake">Connecting to your iPhone…</string>
+    <string name="carlink_carplay_waiting_wifi">Your iPhone is joining the car\'s Wi-Fi…</string>
+    <string name="carlink_carplay_waiting_starting">Starting CarPlay…</string>
+</resources>

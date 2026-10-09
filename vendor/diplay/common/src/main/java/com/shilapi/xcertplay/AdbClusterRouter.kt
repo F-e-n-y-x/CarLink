@@ -11,7 +11,8 @@ internal object AdbClusterRouter {
     data class Result(val success: Boolean, val report: String)
 
     /** Existing public cluster displays always win, even when the experimental switch is saved. */
-    fun enabled(context: Context): Boolean = AirPlayPersistence.loadAdbClusterEnabled(context) &&
+    fun enabled(context: Context): Boolean = CarPlayHostIntegration.vehicleIntegrations && // CarLink
+        AirPlayPersistence.loadAdbClusterEnabled(context) &&
         !DiLink51ClusterLayout.supported() && ClusterMapPresentation.findDisplay(context) == null
 
     // Match only the base logical display, not a device's layer-stack number or override record.

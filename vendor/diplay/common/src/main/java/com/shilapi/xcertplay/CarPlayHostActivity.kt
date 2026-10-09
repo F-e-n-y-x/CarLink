@@ -158,7 +158,7 @@ class CarPlayHostActivity : ComponentActivity() {
         remoteMfiServer = remoteMfiServer.trim().takeIf { it.isNotEmpty() },
         remoteMfiToken = remoteMfiToken.takeIf { it.isNotEmpty() },
         identification = Iap2IdentificationConfig(
-            name = "DiPlay",
+            name = CarPlayHostIntegration.accessoryName, // CarLink
             modelIdentifier = normalizedModel(),
             manufacturer = normalizedManufacturer(),
             serialNumber = "DIPLAY-" + DiPlayBootstrap.deviceId(airPlayIdentity).replace(":", ""),
@@ -170,7 +170,7 @@ class CarPlayHostActivity : ComponentActivity() {
             chargingConnectors = com.shilapi.xcertplay.hud.BydOutputSettings.chargingConnectors(this),
             vehicleSpeedEnabled = locationReportingEnabled && com.shilapi.xcertplay.hud.BydOutputSettings.wheelSpeedToIphoneActive(this),
         ),
-        label = "DiPlay",
+        label = CarPlayHostIntegration.accessoryName, // CarLink
         hostName = "diplay-" + DiPlayBootstrap.deviceId(airPlayIdentity).replace(":", "").lowercase(),
         hostMac = DiPlayBootstrap.deviceId(airPlayIdentity).split(":").map { it.toInt(16).toByte() }.toByteArray(),
         wirelessBluetoothDeviceAddress = DiPlayPreferences.phoneAddress(this),
@@ -195,6 +195,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 maybeStartCarPlay()
             } else {
                 setStatus(getString(R.string.vpn_consent_was_denied))
+                CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.VpnConsentDenied) // CarLink
             }
         }
     private val wirelessPermissions =
@@ -208,6 +209,10 @@ class CarPlayHostActivity : ComponentActivity() {
                     "Wireless startup permissions denied"
                 },
             )
+            if (!wirelessPermissionsReady) { // CarLink
+                CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.PermissionsDenied(
+                    requiredWirelessPermissions().filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }))
+            }
             updateHotspotStatusBlock()
             maybeStartCarPlay()
         }
@@ -466,6 +471,17 @@ class CarPlayHostActivity : ComponentActivity() {
         }
     }
     private val teardownExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    // CarLink: this window as HostSessions sees it (CarPlayHostIntegration.hasSession/stopSession).
+    private var carLinkEnded = false
+    private val sessionHost = object : HostSessions.Host {
+        override val ended: Boolean get() = carLinkEnded || isFinishing || isDestroyed
+        override fun end(done: () -> Unit) {
+            carLinkEnded = true
+            shutdown(terminateProcess = false, reason = "host stop", completion = done)
+            finish()
+        }
+        override fun retryNow(): Boolean = manualRetry()
+    }
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
     private val expireOldLogLines = Runnable { refreshLogView(System.currentTimeMillis()) }
@@ -571,9 +587,11 @@ class CarPlayHostActivity : ComponentActivity() {
             AirPlayPersistence.saveWirelessEnabled(this, false)
         }
         if (runCatching { DiPlayBootstrap.ensure(this, AirPlayPersistence.loadMfiTarget(this)) }.isFailure) {
+            CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.AuthenticationUnavailable) // CarLink
             startActivity(CarPlayHostIntegration.homeIntent(this)) // CarLink
             finish(); return
         }
+        HostSessions.opened(sessionHost) // CarLink
         WheelKeyService.restoreIfNeeded(this)
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         getSystemService(android.hardware.display.DisplayManager::class.java)
@@ -1403,6 +1421,7 @@ class CarPlayHostActivity : ComponentActivity() {
         sessionLog?.close()
         sessionLog = null
         super.onDestroy()
+        HostSessions.closed(sessionHost) // CarLink
     }
 
     private fun buildContentView(): View {
@@ -1419,9 +1438,14 @@ class CarPlayHostActivity : ComponentActivity() {
         root.addView(video, FrameLayout.LayoutParams(-1, -1))
         root.addView(gestureLayer, FrameLayout.LayoutParams(-1, -1))
         // Measure the preparation content naturally, then fit it inside the safe viewport.
+        // CarLink: the host's own waiting view replaces DiPlay's panel (CarPlayHostIntegration.waitingView).
+        val hostWaiting = CarPlayHostIntegration.waitingView?.let { factory ->
+            runCatching { factory(this) }.onFailure { Log.w(TAG, "host waiting view failed", it) }.getOrNull()
+        }
         val viewport = object : FrameLayout(this) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+                if (hostWaiting != null) return // CarLink: full-bleed host view keeps its own measure
                 getChildAt(0)?.measure(
                     View.MeasureSpec.makeMeasureSpec((measuredWidth - paddingLeft - paddingRight).coerceAtLeast(0), View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
@@ -1468,15 +1492,7 @@ class CarPlayHostActivity : ComponentActivity() {
             text = getString(R.string.retry_carplay_connection)
             isAllCaps = false
             visibility = View.GONE
-            setOnClickListener {
-                if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
-                    shuttingDown.get() || menuOpen || handshakeResetInProgress) return@setOnClickListener
-                startupRetryBudget.manualRetry()
-                startupRetryStopped = false
-                reconnectAttempts = 0
-                visibility = View.GONE
-                restartCarPlay(getString(R.string.connecting_to_your_iphone))
-            }
+            setOnClickListener { manualRetry() } // CarLink: shared with CarPlayHostIntegration.retryNow
             startupRetryButton = this
         }
         panel.addView(retry, LinearLayout.LayoutParams(dp(300), dp(64)).apply { bottomMargin = dp(12) })
@@ -1504,10 +1520,14 @@ class CarPlayHostActivity : ComponentActivity() {
                 setColor(buttonPalette.accent)
                 cornerRadius = dp(20).toFloat()
             }
-            CarPlayHostIntegration.styleChrome(viewport, CarPlayHostIntegration.Chrome.WAITING, darkMode) // CarLink
+            if (hostWaiting == null) CarPlayHostIntegration.styleChrome(viewport, CarPlayHostIntegration.Chrome.WAITING, darkMode) // CarLink
         }
         paintWaitingScreen()
-        viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        if (hostWaiting != null) { // CarLink
+            viewport.addView(hostWaiting, FrameLayout.LayoutParams(-1, -1))
+        } else {
+            viewport.addView(panel, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        }
         root.addView(viewport, FrameLayout.LayoutParams(-1, -1))
         // Above the video and gesture layer, below the menus.
         sidePanel = buildSidePanel().also { root.addView(it, FrameLayout.LayoutParams(0, 0)) }
@@ -1558,7 +1578,8 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         ViewCompat.setOnApplyWindowInsetsListener(viewport) { _, insets ->
             val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-            viewport.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+            // CarLink: a host waiting view is full-bleed and handles insets itself.
+            if (hostWaiting == null) viewport.setPadding(safe.left, safe.top, safe.right, safe.bottom)
             viewport.post { updatePreparationLayout() }
             insets
         }
@@ -3713,7 +3734,7 @@ class CarPlayHostActivity : ComponentActivity() {
         val carBluetoothAudio = AirPlayPersistence.loadCarBluetoothAudio(this)
         if (carBluetoothAudio) logCarBluetoothAudio()
         return AirPlayConfig(
-            deviceName = "DiPlay",
+            deviceName = CarPlayHostIntegration.accessoryName, // CarLink
             deviceId = DiPlayBootstrap.deviceId(airPlayIdentity),
             btMac = DiPlayBluetooth.localAddress(this) ?: DiPlayBootstrap.deviceId(airPlayIdentity),
             sourceVersion = "950.7.1",
@@ -3989,6 +4010,7 @@ class CarPlayHostActivity : ComponentActivity() {
                 runOnUiThread {
                     if (controllerGeneration != restartGeneration || activeAirPlaySession !== session || shuttingDown.get()) return@runOnUiThread
                     if (!startupRetryBudget.firstFrame(session, android.os.SystemClock.elapsedRealtime())) return@runOnUiThread
+                    CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.FirstFrame) // CarLink
                     mainHandler.postDelayed({
                         if (controllerGeneration == restartGeneration && activeAirPlaySession === session &&
                             !shuttingDown.get() && CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) &&
@@ -4081,7 +4103,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     if (startupFailureGeneration == controllerGeneration) return@report
                     startupFailureGeneration = controllerGeneration
                 }
-                reconnectAfterLoss(description, status.startupFailure)
+                reconnectAfterLoss(description, status.startupFailure, status) // CarLink: status
             }
             else -> Unit
         }
@@ -4266,6 +4288,8 @@ class CarPlayHostActivity : ComponentActivity() {
         } catch (error: RuntimeException) {
             appendLog("Connection could not start: ${error.javaClass.simpleName}")
             shutdown(false, "foreground service could not start")
+            CarPlayHostIntegration.publishHostState( // CarLink
+                CarPlayHostIntegration.HostState.ForegroundServiceFailed(error.message ?: error.javaClass.simpleName))
             setConnectionStage(getString(R.string.could_not_start_carplay_return_to_diplay_and_check_app_per))
         }
     }
@@ -4556,7 +4580,11 @@ class CarPlayHostActivity : ComponentActivity() {
         startCarPlay(size)
     }
 
-    private fun reconnectAfterLoss(reason: String, startupFailure: WirelessStartupFailure? = null) {
+    private fun reconnectAfterLoss(
+        reason: String,
+        startupFailure: WirelessStartupFailure? = null,
+        failure: CarPlayStatus.Failed? = null, // CarLink: for HostState
+    ) {
         if (!CarPlayBackgroundSession.isOwner(this)) return
         if (menuOpen) recoveryPendingAfterMenu = true
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || startupRetryStopped) return
@@ -4569,6 +4597,9 @@ class CarPlayHostActivity : ComponentActivity() {
             setConnectionStage(if (startupFailure == WirelessStartupFailure.HOTSPOT_CONFIGURATION) reason
                 else "$reason\n${getString(R.string.wireless_startup_retries_exhausted)}")
             appendLog("wireless startup recovery stopped generation=$restartGeneration reason=$startupFailure retries=${startupRetryBudget.retries}")
+            CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.RetriesStopped( // CarLink
+                failure, startupFailure, startupRetryBudget.retries,
+                exhausted = startupFailure != WirelessStartupFailure.HOTSPOT_CONFIGURATION))
             return
         }
         reconnectScheduled = true
@@ -4582,6 +4613,10 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         reconnectAttempts += 1
         appendLog("$reason; retrying in ${delayMillis}ms generation=$generation startupFailure=$startupFailure startupRetries=${startupRetryBudget.retries}")
+        CarPlayHostIntegration.publishHostState(CarPlayHostIntegration.HostState.Retrying( // CarLink
+            attempt = if (startupDelay != null) startupRetryBudget.retries else reconnectAttempts,
+            maxAttempts = if (startupDelay != null) WirelessStartupPolicy.MAX_STARTUP_RETRIES else null,
+            delayMillis = delayMillis, failure = failure, reason = reason))
         mainHandler.postDelayed(
             {
                 reconnectScheduled = false
@@ -4598,6 +4633,18 @@ class CarPlayHostActivity : ComponentActivity() {
             },
             delayMillis,
         )
+    }
+
+    /** The waiting screen's Retry after startup recovery stopped. CarLink: a function for retryNow. */
+    private fun manualRetry(): Boolean {
+        if (!CarPlayBackgroundSession.isOwner(this@CarPlayHostActivity) ||
+            shuttingDown.get() || menuOpen || handshakeResetInProgress) return false
+        startupRetryBudget.manualRetry()
+        startupRetryStopped = false
+        reconnectAttempts = 0
+        startupRetryButton?.visibility = View.GONE
+        restartCarPlay(getString(R.string.connecting_to_your_iphone))
+        return true
     }
 
     /** Full-stack fallback when an AirPlay-only reconnect is unavailable. */
@@ -4775,6 +4822,7 @@ class CarPlayHostActivity : ComponentActivity() {
 
     private fun shutdown(terminateProcess: Boolean, reason: String, completion: () -> Unit = {}) {
         if (!shuttingDown.compareAndSet(false, true)) { completion(); return }
+        HostSessions.teardownStarted() // CarLink
         resetSidePanel()
         startupRetryBudget.disconnected()
         restartGeneration += 1
@@ -4799,7 +4847,7 @@ class CarPlayHostActivity : ComponentActivity() {
             Log.i(TAG, "shutdown complete clean=$clean")
             applicationContext.stopService(Intent(applicationContext, DiPlaySessionService::class.java))
             teardownExecutor.shutdown()
-            mainHandler.post { completion() }
+            mainHandler.post { HostSessions.teardownFinished(); completion() } // CarLink: teardown accounting
             if (terminateProcess) Process.killProcess(Process.myPid())
         }
     }

@@ -53,7 +53,8 @@ internal class WifiScanPause(
         internal const val TAG = "DiPlayWifiScan"
 
         fun eligible(backend: WirelessHotspotBackend, sdk: Int = Build.VERSION.SDK_INT): Boolean =
-            sdk == Build.VERSION_CODES.Q && backend != WirelessHotspotBackend.EXISTING_WIFI
+            sdk == Build.VERSION_CODES.Q && backend != WirelessHotspotBackend.EXISTING_WIFI &&
+                com.shilapi.xcertplay.hud.VehicleIntegrations.enabled // CarLink
 
         fun restoreIfNeeded(context: Context) = ProcessWifiScanPause.recover(context.applicationContext)
 
