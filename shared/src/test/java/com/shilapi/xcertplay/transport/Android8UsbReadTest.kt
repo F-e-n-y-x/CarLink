@@ -21,6 +21,30 @@ import org.robolectric.util.ReflectionHelpers.ClassParameter
 class Android8UsbReadTest {
     @Before fun reset() { UsbQueueReplay.reset() }
 
+    @Test fun usbmuxCappedRejectionRetriesSmallerAndCachesSuccess() {
+        UsbQueueReplay.outcomes.addAll(listOf(false, true, true))
+        val pipe = Iap2UsbSession(connection(), endpoint(0x04), endpoint(0x85))
+        try {
+            repeat(2) { assertArrayEquals(UsbReadQueueCompatibilityTest.payload, pipe.read(1_000)) }
+        } finally { pipe.close() }
+        assertEquals(listOf(16_384, 8_192, 8_192), UsbQueueReplay.sizes)
+    }
+
+    @Test fun ncmReassemblesLargeNtbAfterCappedRejectionAtEightK() {
+        val frame = ByteArray(32_740) { (it * 31).toByte() }
+        val following = UsbReadQueueCompatibilityTest.payload
+        val padded = Ntb16Codec.build(frame, 7)
+        UsbQueueReplay.transfer = padded.copyOf(padded.size - 1) + Ntb16Codec.build(following, 8)
+        UsbQueueReplay.outcomes.addAll(listOf(false, true))
+        val ncm = ncm()
+        try {
+            assertArrayEquals(frame, ncm.recv(1_000))
+            assertArrayEquals(following, ncm.recv(1_000))
+        } finally { ncm.close() }
+        assertEquals(listOf(16_384, 8_192, 8_192, 8_192, 8_192, 8_192), UsbQueueReplay.sizes)
+        assertEquals(listOf(8_192, 8_192, 8_192, 8_192, 32), UsbQueueReplay.completedBytes)
+    }
+
     @Test fun usbmuxCapsTheFirstAndSubsequentRequests() {
         val diagnostics = mutableListOf<String>()
         val pipe = Iap2UsbSession(connection(), endpoint(0x04), endpoint(0x85), diagnostics::add)
@@ -45,16 +69,16 @@ class Android8UsbReadTest {
         assertEquals(listOf(16_384, 16_384, 32), UsbQueueReplay.completedBytes)
     }
 
-    @Test fun explicitRejectionOfCappedRequestIsNotResubmitted() {
-        UsbQueueReplay.outcomes.add(false)
+    @Test fun rejectionOfEveryCappedLadderSizeFailsBothPipes() {
+        UsbQueueReplay.outcomes.addAll(listOf(false, false, false, false))
         val pipe = Iap2UsbSession(connection(), endpoint(0x04), endpoint(0x85))
         try { checkCappedFailure { pipe.read(1_000) } } finally { pipe.close() }
-        assertEquals(listOf(16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(16_384, 8_192, 4_096, 2_048), UsbQueueReplay.sizes)
         UsbQueueReplay.reset()
-        UsbQueueReplay.outcomes.add(false)
+        UsbQueueReplay.outcomes.addAll(listOf(false, false, false, false))
         val ncm = ncm()
         try { checkCappedFailure { ncm.recv(1_000) } } finally { ncm.close() }
-        assertEquals(listOf(16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(16_384, 8_192, 4_096, 2_048), UsbQueueReplay.sizes)
     }
 
     @Test fun ambiguousQueueExceptionIsNotRetriedOnEitherPipe() {
@@ -72,7 +96,7 @@ class Android8UsbReadTest {
     private fun checkCappedFailure(block: () -> Unit) {
         val error = expectFailure(block)
         assertTrue(error.message!!.contains("firstBytes=16384"))
-        assertTrue(error.message!!.contains("fallbackBytes=not_attempted"))
+        assertTrue(error.message!!.contains("fallbackBytes=2048"))
     }
 
     private fun expectFailure(block: () -> Unit): IphoneUsbException.DeviceUnavailable {
