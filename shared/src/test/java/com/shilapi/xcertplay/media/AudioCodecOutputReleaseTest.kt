@@ -52,10 +52,24 @@ class AudioCodecOutputReleaseTest {
                 .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO).build())
             .setBufferSizeInBytes(4096).build()
         val type = Class.forName("com.shilapi.xcertplay.media.AudioRenderer")
-        val renderer = type.declaredConstructors.single { it.parameterCount == 11 }
-            .apply { isAccessible = true }.newInstance(
-                AudioFormat(AudioCodecKind.AAC_LC, 48_000, 2, 96, audioType), false, false, 0, 0,
-                AudioFocusCoordinator(null, false, false), 0, 500, { _: String -> }, null, false)
+        val constructor = type.declaredConstructors.single { !it.isSynthetic }.apply { isAccessible = true }
+        val arguments = mutableListOf<Any?>(
+            AudioFormat(AudioCodecKind.AAC_LC, 48_000, 2, 96, audioType), false, false, 0, 0,
+            AudioFocusCoordinator(null, false, false), 0, 500,
+        )
+        constructor.parameterTypes.drop(arguments.size).forEach { parameter ->
+            arguments.add(when (parameter) {
+                Long::class.javaPrimitiveType -> 0L
+                Boolean::class.javaPrimitiveType -> false
+                EchoReference::class.java -> null
+                else -> {
+                    check(parameter.name == "kotlin.jvm.functions.Function1") { "Unexpected renderer parameter: $parameter" }
+                    val report: (String) -> Unit = {}
+                    report
+                }
+            })
+        }
+        val renderer = constructor.newInstance(*arguments.toTypedArray())
         fun set(name: String, value: Any) = type.getDeclaredField(name).apply { isAccessible = true }.set(renderer, value)
         set("track", track)
         set("fadeApplied", true)
