@@ -240,4 +240,12 @@ class SessionManagerTest {
         m.acceptSwitch(); idle()
         assertEquals(listOf("CARPLAY start USB null", "ANDROID_AUTO start USB null"), starts)
     }
+
+    @Test fun aRealPlugInRightAfterStoppingAWirelessSessionStarts() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        m.disconnect(); idle()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        assertEquals(listOf("ANDROID_AUTO start WIRELESS WIFI_DIRECT", "CARPLAY start USB null"), starts)
+    }
 }

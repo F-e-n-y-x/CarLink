@@ -137,6 +137,15 @@ class SessionManager(
 
     /** When the driver last stopped a session (uptime); see [onUsbPhone]. */
     private var driverStoppedAt = -REENUMERATION_WINDOW_MILLIS
+    /** The engine of the USB session the driver last stopped; only its phone re-enumerates. */
+    private var driverStoppedUsbEngine: Engine? = null
+
+    /** Remembers a driver stop; only a USB session's stop makes its phone re-enumerate. */
+    private fun markDriverStop(stopped: SessionState) {
+        val active = stopped as? SessionState.Active
+        driverStoppedUsbEngine = active?.request?.engine?.takeIf { active.request.transport == Transport.USB }
+        driverStoppedAt = SystemClock.uptimeMillis()
+    }
 
     private val usbGoneCheck = Runnable {
         val current = _state.value as? SessionState.Active ?: return@Runnable
@@ -170,7 +179,8 @@ class SessionManager(
             return note("USB re-attach during the $engine session; left to the engine")
         }
         // Stopping a USB session re-enumerates the phone too; that is not the driver plugging in.
-        if (SystemClock.uptimeMillis() - driverStoppedAt < REENUMERATION_WINDOW_MILLIS) {
+        // A real re-plug after stopping a wireless session (or the other phone) is honoured at once.
+        if (driverStoppedUsbEngine == engine && SystemClock.uptimeMillis() - driverStoppedAt < REENUMERATION_WINDOW_MILLIS) {
             return note("USB $engine attach right after the driver stopped; not restarting")
         }
         val request = SessionRequest(engine, Transport.USB, null, phoneName, attach)
@@ -243,7 +253,7 @@ class SessionManager(
     fun disconnect() {
         note("driver disconnect")
         environment.autoConnectPaused = true
-        driverStoppedAt = SystemClock.uptimeMillis()
+        markDriverStop(_state.value)
         stop()
     }
 
@@ -319,7 +329,7 @@ class SessionManager(
                 note("${plan.engine} session ended${if (event.byUser) " by the driver" else ""}")
                 if (event.byUser) {
                     environment.autoConnectPaused = true
-                    driverStoppedAt = SystemClock.uptimeMillis()
+                    markDriverStop(current)
                 }
                 stop()
             }
