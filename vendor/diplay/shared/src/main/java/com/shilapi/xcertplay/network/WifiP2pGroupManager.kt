@@ -2,7 +2,10 @@ package com.shilapi.xcertplay.network
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.wifi.SupplicantState
@@ -12,6 +15,7 @@ import android.net.wifi.p2p.WifiP2pGroup
 import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
+import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.provider.Settings
@@ -100,6 +104,45 @@ class WifiP2pGroupManager(
             "p2pGroup=interrupted association=unknown"
         } catch (error: RuntimeException) {
             "p2pGroup=unavailable failureClass=${error.javaClass.simpleName} association=unknown"
+        }
+    }
+
+    // CarLink: association timing. The framework adds a joining station (legacy clients included
+    // on the AOSP builds checked) to the group's client list and re-broadcasts the connection.
+    private var clientReceiver: BroadcastReceiver? = null
+
+    override fun observeClients(listener: (Int) -> Unit) {
+        val receiver = object : BroadcastReceiver() {
+            private var last = -1
+            override fun onReceive(context: Context, intent: Intent) {
+                val group = runCatching {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<WifiP2pGroup>(WifiP2pManager.EXTRA_WIFI_P2P_GROUP)
+                }.getOrNull() ?: return
+                if (!group.isGroupOwner || observedCreatedName?.let { it != group.networkName } == true) return
+                val count = group.clientList.size
+                if (count != last) {
+                    last = count
+                    runCatching { listener(count) }
+                }
+            }
+        }
+        val handler = synchronized(stateLock) {
+            if (closed || clientReceiver != null) return
+            val looper = callbackThread?.looper ?: return
+            clientReceiver = receiver
+            Handler(looper)
+        }
+        val filter = IntentFilter(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                appContext.registerReceiver(receiver, filter, null, handler, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                appContext.registerReceiver(receiver, filter, null, handler)
+            }
+        }.onFailure {
+            synchronized(stateLock) { if (clientReceiver === receiver) clientReceiver = null }
+            diagnostic("Wi-Fi P2P client observer unavailable failureClass=${it.javaClass.simpleName}")
         }
     }
 
@@ -328,6 +371,9 @@ class WifiP2pGroupManager(
             callbackThread = null
             startAttempt = null
         }
+        // CarLink: see observeClients.
+        val receiver = synchronized(stateLock) { clientReceiver.also { clientReceiver = null } }
+        if (receiver != null) runCatching { appContext.unregisterReceiver(receiver) }
 
         if (removeGroup && activeChannel != null) {
             removeGroupBlocking(activeChannel)

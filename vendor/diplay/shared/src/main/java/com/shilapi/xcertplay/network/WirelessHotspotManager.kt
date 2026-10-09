@@ -51,6 +51,12 @@ interface WirelessHotspotManager : Closeable {
 
     /** Counts reported by the framework, when available; never contains station identities. */
     fun connectionDiagnosticSnapshot(): String = "association=not_exposed"
+
+    /**
+     * CarLink: calls [listener] with the framework's client count each time it changes, on a
+     * background thread, until [close]; a no-op where the backend cannot observe associations.
+     */
+    fun observeClients(listener: (Int) -> Unit) {}
 }
 
 /**

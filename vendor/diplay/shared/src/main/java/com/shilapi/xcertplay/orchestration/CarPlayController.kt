@@ -41,6 +41,8 @@ import com.shilapi.xcertplay.mfi.MfiAuthenticationClient
 import com.shilapi.xcertplay.mfi.RemoteMfiAuthenticationClient
 import com.shilapi.xcertplay.mfi.LocalMfiAuthenticationClient
 import com.shilapi.xcertplay.network.CarPlayBonjour
+import com.shilapi.xcertplay.network.CarPlayBonjourEvent
+import com.shilapi.xcertplay.network.WirelessAddressFamilyPlan // CarLink
 import com.shilapi.xcertplay.network.diagnosticSummary
 import com.shilapi.xcertplay.network.CarPlayVpnService
 import com.shilapi.xcertplay.network.LocalOnlyHotspotManager
@@ -417,6 +419,8 @@ class CarPlayController(
 
     // CarLink: always-on wired bring-up timing, in diplay.log and logcat.
     private val wiredTimeline = WiredStartupTimeline { line -> debugLog(line) }
+    // CarLink: always-on wireless bring-up timing, in diplay.log and logcat.
+    private val wirelessTimeline = WirelessStartupTimeline { line -> debugLog(line) }
     private val wiredFrameLock = Any()
     @Volatile private var wiredFrameSession: AirPlaySession? = null
 
@@ -450,6 +454,7 @@ class CarPlayController(
             if (closed) return
         }
         connectionDiagnostic("start transport=${config.transport}")
+        if (config.transport == CarPlayTransport.WIRELESS) wirelessTimeline.mark(WirelessStartupTimeline.Phase.CONTROLLER_START) // CarLink
         if (!hasRequiredUsbService()) return
         videoListener?.let { listener ->
             videoGate = VideoInCarGate(
@@ -1114,6 +1119,7 @@ class CarPlayController(
             debugLog("location provider prewarmed=$started")
         }
         if (config.transport == CarPlayTransport.WIRELESS) {
+            wirelessTimeline.mark(WirelessStartupTimeline.Phase.MFI_READY) // CarLink
             startWireless()
         } else {
             startIphone()
@@ -1158,6 +1164,8 @@ class CarPlayController(
     private fun runWireless(generation: Int) {
         try {
             debugLog("wireless bring-up generation=$generation starting")
+            if (generation > 1) wirelessTimeline.restart() // CarLink
+            wirelessTimeline.mark(WirelessStartupTimeline.Phase.BRING_UP, "generation=$generation") // CarLink
             closeWirelessStack(generation = generation)
             if (
                 closed ||
@@ -1177,6 +1185,7 @@ class CarPlayController(
                 },
                 onTimeout = {
                     if (!closed && generation == wirelessGeneration.get()) {
+                        wirelessTimeline.mark(WirelessStartupTimeline.Phase.FIRST_TCP_TIMEOUT) // CarLink
                         flipWirelessAddressFamily(generation)
                         fail(WirelessStartupException(WirelessStartupFailure.FIRST_TCP_TIMEOUT,
                             "No AirPlay TCP after CarPlay StartSession"), generation)
@@ -1189,6 +1198,25 @@ class CarPlayController(
             firstTcpWatchdog = watchdog
             val mfi = mfiSession?.client
                 ?: throw IOException("MFi coprocessor client is unavailable")
+            // CarLink: dial the iPhone first. The RFCOMM dial (6.6 s when the iPhone's Bluetooth
+            // was idle) needs nothing from the access point, listener or Bonjour, which now start
+            // while it runs; the iAP2 link opens once both are ready, as before.
+            val adapter = bluetoothAdapter
+                ?: throw IOException("Bluetooth adapter is unavailable")
+            if (!adapter.isEnabled) throw IOException("Bluetooth is not enabled")
+            val device = selectWirelessBluetoothDevice(adapter)
+            debugLog(
+                "wireless RFCOMM connecting address=${device.address} " +
+                    "uuid=$IAP2_IPHONE_UUID",
+            )
+            val socket = synchronized(wirelessResourceLock) {
+                if (isStaleWirelessRun(generation)) return
+                device.createRfcommSocketToServiceRecord(UUID.fromString(IAP2_IPHONE_UUID))
+                    .also { bluetoothSocket = it }
+            }
+            logBluetoothConnectionSnapshot(device, "before-connect")
+            val dial = BackgroundDial("wireless-rfcomm-connect") { socket.connect() }
+            wirelessTimeline.mark(WirelessStartupTimeline.Phase.RFCOMM_DIAL)
             val hotspotInfo = startWirelessHotspot(generation)
             if (isStaleWirelessRun(generation)) {
                 return
@@ -1198,17 +1226,33 @@ class CarPlayController(
             wirelessConnectionProof.begin(generation) {
                 if (!isStaleWirelessRun(generation)) startedHotspot?.onCarPlayConfirmed()
             }
-            val preferredFamily = HotspotAddressPolicy.parseFamily(
-                appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
-                    .getString(HOTSPOT_FAMILY_PREFERENCE_KEY, null),
+            // CarLink: Wi-Fi Direct tries the IPv6 link-local endpoint first (WirelessAddressFamilyPlan).
+            val familyChoice = WirelessAddressFamilyPlan.choose(
+                hotspotInfo.backend,
+                HotspotAddressPolicy.parseFamily(
+                    appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
+                        .getString(HOTSPOT_FAMILY_PREFERENCE_KEY, null),
+                ),
+                Build.VERSION.SDK_INT,
             )
+            val preferredFamily = familyChoice.preferredFamily
+            startedHotspot?.observeClients { count -> // CarLink
+                if (count > 0 && !isStaleWirelessRun(generation)) {
+                    wirelessTimeline.mark(WirelessStartupTimeline.Phase.PEER_ASSOCIATED, "clients=$count")
+                }
+            }
             val addressRecovery = HotspotAddressRecovery(
                 sample = { hotspotCandidates(hotspotInfo, fallbackToSnapshot = false) },
                 cancelled = { isStaleWirelessRun(generation) },
                 pause = Thread::sleep,
                 log = { if (!isStaleWirelessRun(generation)) debugLog(it) },
             )
-            val candidates = addressRecovery.awaitCandidates(hotspotCandidates(hotspotInfo), preferredFamily)
+            val candidates = addressRecovery.awaitCandidates(
+                hotspotCandidates(hotspotInfo),
+                preferredFamily,
+                if (familyChoice.guessed) WirelessAddressFamilyPlan.GUESS_ADDRESS_WAIT_MILLIS
+                else WirelessStartupPolicy.HOTSPOT_READY_MILLIS, // CarLink
+            )
             val hostAddress = HotspotAddressPolicy.select(candidates, preferredFamily)
                 ?: hotspotInfo.hostAddress
                 ?: throw IOException(
@@ -1229,6 +1273,10 @@ class CarPlayController(
                 )
             }
             val hostAddressText = hostAddressText(hostAddress)
+            // CarLink: an unproven guess gets a short first-TCP deadline; see WirelessAddressFamilyPlan.
+            val publishedFamily = if (hostAddress is Inet6Address) HotspotAddressPolicy.FAMILY_IPV6
+                else HotspotAddressPolicy.FAMILY_IPV4
+            watchdog.timeoutMillis = WirelessAddressFamilyPlan.firstTcpTimeoutMillis(familyChoice, publishedFamily)
             val deviceIdentifier = hotspotInfo.bssid
                 ?.takeUnless { it.equals(ADAPTER_ADDRESS_PLACEHOLDER, ignoreCase = true) }
                 ?: airPlayConfig.deviceId
@@ -1237,6 +1285,7 @@ class CarPlayController(
                     "iface=${hotspotInfo.interfaceName ?: "unknown"} " +
                     "family=${if (hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
                     "preference=${preferredFamily ?: "default"} " +
+                    "guess=${familyChoice.guessed} firstTcpMs=${watchdog.timeoutMillis} " + // CarLink
                     "alternate=${wirelessAlternateAddress != null} " +
                     "identitySource=${if (deviceIdentifier == hotspotInfo.bssid) "interface" else "saved"} " +
                     "host=$hostAddressText " +
@@ -1255,6 +1304,11 @@ class CarPlayController(
                 log = { message -> if (!isStaleWirelessRun(generation)) debugLog(message) },
             )
             wirelessDiagnostics = diagnostics
+            wirelessTimeline.mark( // CarLink
+                WirelessStartupTimeline.Phase.HOTSPOT_READY,
+                "backend=${hotspotInfo.backend.name} family=$publishedFamily guess=${familyChoice.guessed} " +
+                    "firstTcpMs=${watchdog.timeoutMillis} alternate=${wirelessAlternateAddress != null}",
+            )
             onStatus(
                 CarPlayStatus.HotspotReady(
                     ssid = hotspotInfo.ssid,
@@ -1267,10 +1321,6 @@ class CarPlayController(
             )
             onStatus(CarPlayStatus.WaitingForPairedIphone)
 
-            val adapter = bluetoothAdapter
-                ?: throw IOException("Bluetooth adapter is unavailable")
-            if (!adapter.isEnabled) throw IOException("Bluetooth is not enabled")
-            val device = selectWirelessBluetoothDevice(adapter)
             val hostBluetoothMac = accessoryBluetoothMac(adapter)
             debugLog(
                 "wireless selected Bluetooth target name=${device.name ?: "unknown"} " +
@@ -1294,7 +1344,7 @@ class CarPlayController(
                         identity = identity,
                         pairings = pairings,
                         mfi = mfi,
-                        listener = wirelessSessionListener(generation, watchdog),
+                        listener = wirelessSessionListener(generation, watchdog, familyChoice, publishedFamily),
                         listenerIdentity = watchdog.listener,
                         media = media,
                         additionalBindAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
@@ -1308,6 +1358,7 @@ class CarPlayController(
                 }
             }
             val listenerPort = service.boundPort() ?: wirelessAirPlayConfig.port
+            wirelessTimeline.mark(WirelessStartupTimeline.Phase.LISTENER_READY, "port=$listenerPort") // CarLink
             val advertisedAirPlayConfig = wirelessAirPlayConfig.copy(port = listenerPort)
             debugLog(
                 "wireless AirPlay listener attached bind=$hostAddressText " +
@@ -1327,7 +1378,17 @@ class CarPlayController(
                 // The car hotspot previously used system NSD, which could resolve another interface
                 // or IPv6 while the listener/probe was bound to the AP's IPv4 address.
                 useInterfaceMdns = true,
-                onEvent = { event -> debugLog("wireless bonjour: ${event.diagnosticSummary()}") },
+                onEvent = { event ->
+                    debugLog("wireless bonjour: ${event.diagnosticSummary()}")
+                    // CarLink: the iPhone's own mDNS reached us, so it is on the link.
+                    if (event is CarPlayBonjourEvent.Discovery && event.stage == CarPlayBonjourEvent.Discovery.Stage.ADDED &&
+                        !isStaleWirelessRun(generation)) {
+                        wirelessTimeline.mark(
+                            WirelessStartupTimeline.Phase.PEER_MDNS,
+                            "ipv4=${event.ipv4Count} ipv6=${event.ipv6Count}",
+                        )
+                    }
+                },
                 additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
             )
             synchronized(wirelessResourceLock) {
@@ -1339,24 +1400,16 @@ class CarPlayController(
             startedBonjour = bonjourClient
             diagnostics.start()
             debugLog("wireless Bonjour services started mode=interface iface=${hotspotInfo.interfaceName ?: "unknown"}")
+            wirelessTimeline.mark(WirelessStartupTimeline.Phase.BONJOUR_STARTED) // CarLink
             if (isStaleWirelessRun(generation)) {
                 return
             }
 
             onStatus(CarPlayStatus.ConnectingBluetooth)
-            debugLog(
-                "wireless RFCOMM connecting address=${device.address} " +
-                    "uuid=$IAP2_IPHONE_UUID",
-            )
-            val socket = synchronized(wirelessResourceLock) {
-                if (isStaleWirelessRun(generation)) return
-                device.createRfcommSocketToServiceRecord(UUID.fromString(IAP2_IPHONE_UUID))
-                    .also { bluetoothSocket = it }
-            }
-            logBluetoothConnectionSnapshot(device, "before-connect")
-            val bluetoothStarted = System.nanoTime()
+            val bluetoothStarted = dial.startedNanos
+            val waitStarted = System.nanoTime()
             try {
-                connectBluetoothSocket(socket, device.address)
+                awaitBluetoothDial(dial, socket, device.address)
                 connectionDiagnostic("Bluetooth connect completed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
                     "socketReportedConnected=${runCatching { socket.isConnected }.getOrNull() ?: "unknown"}")
             } catch (error: Throwable) {
@@ -1367,6 +1420,11 @@ class CarPlayController(
                 logBluetoothConnectionSnapshot(device, "after-failure")
                 throw error
             }
+            wirelessTimeline.mark( // CarLink
+                WirelessStartupTimeline.Phase.RFCOMM_CONNECTED,
+                "dialMs=${((dial.finishedNanos ?: System.nanoTime()) - bluetoothStarted) / 1_000_000L} " +
+                    "waitedMs=${elapsedMillis(waitStarted)}",
+            )
             debugLog("wireless RFCOMM connected address=${device.address}")
             logBluetoothConnectionSnapshot(device, "after-connect")
             if (isStaleWirelessRun(generation)) {
@@ -1449,6 +1507,7 @@ class CarPlayController(
                 onProgress = { message ->
                     diagnostics.controlProgress(message)
                     debugLog(message)
+                    wirelessTimeline.onIap2Progress(message) // CarLink
                 },
             )
             if (isStaleWirelessRun(generation)) {
@@ -1574,13 +1633,23 @@ class CarPlayController(
         }
     }
 
-    private fun wirelessSessionListener(generation: Int, watchdog: FirstTcpWatchdog): AirPlaySessionListener =
+    private fun wirelessSessionListener(
+        generation: Int,
+        watchdog: FirstTcpWatchdog,
+        familyChoice: WirelessAddressFamilyPlan.Choice, // CarLink
+        publishedFamily: String, // CarLink
+    ): AirPlaySessionListener =
         object : AirPlaySessionListener by sessionListener {
             private var reportedFrameSession: AirPlaySession? = null
+            // CarLink: the accept's family arrives in the debug line right after onTcpAccepted.
+            @Volatile private var externalAcceptPending = false
 
             override fun onTcpAccepted(event: AirPlayTcpAccepted) {
                 if (isStaleWirelessRun(generation)) return
-                if (watchdog.accepted(event)) wirelessDiagnostics?.connectionAccepted()
+                if (watchdog.accepted(event)) {
+                    wirelessDiagnostics?.connectionAccepted()
+                    externalAcceptPending = true
+                }
             }
 
             override fun onTransportError(message: String) {
@@ -1591,6 +1660,7 @@ class CarPlayController(
 
             override fun onSessionActive(session: AirPlaySession) {
                 if (isStaleWirelessRun(generation) || !watchdog.sessionEstablished()) return
+                wirelessTimeline.mark(WirelessStartupTimeline.Phase.SESSION_ACTIVE) // CarLink
                 wirelessDiagnostics?.let {
                     it.sessionActive()
                     it.close()
@@ -1617,12 +1687,27 @@ class CarPlayController(
                         true
                     }
                 }
+                if (firstFrame) wirelessTimeline.mark(WirelessStartupTimeline.Phase.FIRST_FRAME) // CarLink
                 if (firstFrame) uiListener?.onVideoFrameRendered(session)
             }
 
             override fun onDebugLog(message: String) {
                 if (isStaleWirelessRun(generation)) return
                 sessionListener.onDebugLog(message)
+                // CarLink: time the first external TCP and remember a guessed family that worked.
+                if (externalAcceptPending && message.startsWith("airplay TCP accepted")) {
+                    externalAcceptPending = false
+                    val accepted = message.substringAfter("family=", "").substringBefore(' ').ifEmpty { null }
+                    wirelessTimeline.mark(
+                        WirelessStartupTimeline.Phase.TCP_ACCEPTED,
+                        "family=${accepted ?: "unknown"} published=$publishedFamily guess=${familyChoice.guessed}",
+                    )
+                    WirelessAddressFamilyPlan.familyToRemember(familyChoice, publishedFamily, accepted)?.let {
+                        appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
+                            .edit().putString(HOTSPOT_FAMILY_PREFERENCE_KEY, it).apply()
+                        debugLog("wireless address family remembered=$it proof=first_tcp")
+                    }
+                }
             }
 
             // Passed on explicitly: without these the car's video player never opened over Wi-Fi.
@@ -2316,30 +2401,19 @@ class CarPlayController(
         )
     }
 
-    private fun connectBluetoothSocket(socket: BluetoothSocket, address: String) {
-        val result = AtomicReference<Throwable?>()
-        val connected = CountDownLatch(1)
-        Thread(
-            {
-                try {
-                    socket.connect()
-                } catch (error: Throwable) {
-                    result.set(error)
-                } finally {
-                    connected.countDown()
-                }
-            },
-            "wireless-rfcomm-connect",
-        ).apply {
-            isDaemon = true
-            start()
-        }
+    // CarLink: the dial now starts early (BackgroundDial); this waits for it with the same 15 s
+    // budget from the dial's start, the same timeout handling and the same exception wrapping.
+    private fun awaitBluetoothDial(dial: BackgroundDial, socket: BluetoothSocket, address: String) {
         val completed = try {
-            connected.await(RFCOMM_CONNECT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+            dial.await(RFCOMM_CONNECT_TIMEOUT_MILLIS)
         } catch (error: InterruptedException) {
             Thread.currentThread().interrupt()
             runCatching { socket.close() }
             throw IOException("Interrupted while connecting RFCOMM to $address", error)
+        } catch (error: IOException) {
+            throw error
+        } catch (error: Throwable) {
+            throw IOException("Could not connect RFCOMM to $address", error)
         }
         if (!completed) {
             debugLog(
@@ -2350,11 +2424,6 @@ class CarPlayController(
             throw IOException(
                 "Timed out after ${RFCOMM_CONNECT_TIMEOUT_MILLIS}ms connecting RFCOMM to $address",
             )
-        }
-        when (val failure = result.get()) {
-            null -> Unit
-            is IOException -> throw failure
-            else -> throw IOException("Could not connect RFCOMM to $address", failure)
         }
     }
 

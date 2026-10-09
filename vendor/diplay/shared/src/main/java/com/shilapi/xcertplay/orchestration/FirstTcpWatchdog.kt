@@ -9,9 +9,11 @@ internal class FirstTcpWatchdog(
     private val schedule: (Long, () -> Unit) -> (() -> Unit),
     private val onTimeout: () -> Unit,
     private val nowNanos: () -> Long = System::nanoTime,
-    private val timeoutMillis: Long = WirelessStartupPolicy.FIRST_TCP_MILLIS,
+    timeoutMillis: Long = WirelessStartupPolicy.FIRST_TCP_MILLIS,
     private val log: (String) -> Unit = {},
 ) {
+    // CarLink: settable until StartSession, once the published address family is known.
+    @Volatile var timeoutMillis: Long = timeoutMillis
     @Volatile var terminated = false
         private set
     private var firstStartNanos: Long? = null
