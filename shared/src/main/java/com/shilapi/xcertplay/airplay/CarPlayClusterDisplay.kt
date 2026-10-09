@@ -76,7 +76,7 @@ object CarPlayClusterDisplay {
     private const val WIDTH_PHYSICAL_MM = 292 // a 12.3-inch 8:3 cluster panel; Apple Maps ignores it here
     private const val FPS = 30
 
-   fun config(
+    fun config(
         widthPixels: Int,
         heightPixels: Int,
         scalePercent: Int = STREAM_SCALE_PERCENT,
@@ -108,8 +108,7 @@ object CarPlayClusterDisplay {
 
     // The safe area keeps its measured size around the marker and shrinks only where the marker
     // comes close to a panel edge, so the marker always sits at its centre.
-
-   private fun safeArea(
+    private fun safeArea(
         width: Int,
         height: Int,
         horizontalStep: Int,

@@ -34,6 +34,17 @@ class ClusterTurnCardPersistenceTest {
         assertEquals(35, AirPlayPersistence.loadClusterTurnCardOverlaySizePercent(context))
     }
 
+    @Test fun legacyMarkerStepsMigrateAroundTheSlidersCentre() {
+        assertEquals(50, AirPlayPersistence.loadClusterMarkerXPercent(context))
+        assertEquals(45, AirPlayPersistence.loadClusterMarkerYPercent(context))
+        AirPlayPersistence.saveClusterMarkerHorizontalStep(context, 1)
+        AirPlayPersistence.saveClusterMarkerVerticalStep(context, -2)
+        assertEquals(60, AirPlayPersistence.loadClusterMarkerXPercent(context))
+        assertEquals(25, AirPlayPersistence.loadClusterMarkerYPercent(context))
+        AirPlayPersistence.saveClusterMarkerXPercent(context, 37)
+        assertEquals(37, AirPlayPersistence.loadClusterMarkerXPercent(context))
+    }
+
     @Test fun legacyLeftCentreRightMigrateToPercents() {
         val prefs = context.getSharedPreferences("xcertplay_airplay", 0)
         prefs.edit().putString("cluster_turn_card_overlay_position", "LEFT").apply()

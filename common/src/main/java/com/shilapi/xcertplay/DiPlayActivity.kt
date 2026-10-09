@@ -3951,8 +3951,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
     private fun clusterSafeAreaControls(card: LinearLayout) {
         val rect = AirPlayPersistence.loadClusterSafeAreaRect(this)
             ?: DiLink4ClusterDisplay.defaultSafeAreaRect(
-                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
-                AirPlayPersistence.loadClusterMarkerVerticalStep(this))
+                markerXPercent = AirPlayPersistence.loadClusterMarkerXPercent(this),
+                markerYPercent = AirPlayPersistence.loadClusterMarkerYPercent(this))
         card.addView(label(getString(R.string.safe_area_mapping_summary,
             rect.width, rect.height, rect.left, rect.top, 1920, 720), 14, MUTED))
         card.addView(actionButton(getString(R.string.cluster_safe_area_edit), false) {
@@ -3971,8 +3971,8 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         val previewOwner = Any()
         val initial = AirPlayPersistence.loadClusterSafeAreaRect(this)
             ?: DiLink4ClusterDisplay.defaultSafeAreaRect(
-                AirPlayPersistence.loadClusterMarkerHorizontalStep(this),
-                AirPlayPersistence.loadClusterMarkerVerticalStep(this))
+                markerXPercent = AirPlayPersistence.loadClusterMarkerXPercent(this),
+                markerYPercent = AirPlayPersistence.loadClusterMarkerYPercent(this))
         val editor = SafeAreaEditorView(this).apply {
             setBackgroundColor(SURFACE)
             setRect(initial, 1920, 720)
