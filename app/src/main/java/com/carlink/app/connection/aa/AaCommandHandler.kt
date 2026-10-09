@@ -58,6 +58,7 @@ internal class AaCommandHandler(
      * when [WirelessStartPolicy] finds it wedged; a session that is connecting or up is left alone.
      */
     fun startWireless(address: String?, profile: VehicleProfile) {
+        engine.setUsbOnlySession(false)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         // Exactly the chosen phone (DA§10.5, §10.7): an empty list pokes every bonded device, and a
         // long one pokes absent phones and wakes unwanted ones every 15 s cycle.
@@ -109,6 +110,9 @@ internal class AaCommandHandler(
      * first so its USB receiver sees the phone re-enumerate as an accessory and connects it.
      */
     fun startUsb(device: UsbDevice?, address: String?, profile: VehicleProfile) {
+        // No P2P group, poke or wireless server while the phone is on the cable (RELIABILITY_AUDIT
+        // K10: the engine pulled a plugged-in phone into wireless Android Auto).
+        engine.setUsbOnlySession(true)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         if (address != null) engine.setPokeTargets(address)
         if (device == null || engine.isAccessory(device)) {
@@ -154,6 +158,24 @@ internal class AaCommandHandler(
         return current
     }
 
+    /**
+     * A phone left in accessory mode by a session whose host side died (process death, reinstall)
+     * hands the next session the old stream, and the handshake fails ("Drained 549115 bytes of stale
+     * USB data", RELIABILITY_AUDIT K2). The accessory switch sent again makes it re-enumerate; the
+     * engine connects the fresh accessory by itself. Asked for by the main process on the first
+     * handshake failure (DiAuto's own re-switch waits for a second one that never comes).
+     */
+    fun reswitchStaleAccessory() {
+        val device = engine.accessoryDevice()
+        val result = when {
+            device == null -> "no-accessory"
+            engine.isBusy() -> "busy" // a new session is already under way
+            else -> engine.switchToAccessory(device).toString()
+        }
+        Log.i(TAG, "stale accessory re-switch result=$result")
+        emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))
+    }
+
     /** The answer to [AaEngineAccess.requestUsbPermission]. */
     fun onUsbPermission(device: UsbDevice?, granted: Boolean) {
         when {
@@ -197,6 +219,7 @@ internal class AaCommandHandler(
         val groupReleased = releaseAndroidAutoGroup(waitForEngine = wasRunning)
         engine.resetStaticBssid()
         engine.setClaimHiddenBottomStrip(false)
+        engine.setUsbOnlySession(false)
         monitor.reset()
         Log.i(TAG, "stop done serviceStopped=$serviceStopped groupReleased=$groupReleased")
         ack(token, serviceStopped, groupReleased)

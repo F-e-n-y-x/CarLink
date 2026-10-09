@@ -243,4 +243,62 @@ class AaSessionTrackerTest {
         assertTrue(t.shouldRepoke(now + 3_000))
         assertFalse(usb().shouldRepoke(now + 100_000))
     }
+
+    // ---- RELIABILITY_AUDIT K2: a stale USB accessory ----
+
+    @Test fun aUsbSessionThatEndsBeforeAnyFrameIsReswitchedAtOnce() {
+        val t = usb()
+        t.state(P.CONNECTION_CONNECTING)
+        // Handshake failed 1.4 s after the open ("Drained 549115 bytes of stale USB data").
+        now += 1_400
+        assertEquals(emptyList<AdapterEvent>(), t.onState(P.CONNECTION_ERROR, "Handshake failed", true, false, now))
+        val retry = t.after(limits.noVideoEndDebounceMillis).single() as AdapterEvent.Retrying
+        assertEquals(FailureReason.USB, retry.reason)
+        assertTrue(retry.detail!!.contains("earlier Android Auto session"))
+        assertTrue("the adapter sends the switch again", t.takeReswitchRequest())
+        assertFalse("once", t.takeReswitchRequest())
+        // The phone re-enumerates and the engine connects the fresh accessory.
+        now += 2_000
+        assertEquals(listOf(AdapterEvent.Progress(2, 3, ProgressStage.HANDSHAKE)), t.state(P.CONNECTION_CONNECTING))
+        assertEquals(emptyList<AdapterEvent>(), t.after(10_000))
+        assertEquals(listOf(AdapterEvent.Connected), t.state(P.CONNECTION_TRANSPORT_STARTED, firstFrame = true).filterIsInstance<AdapterEvent.Connected>())
+    }
+
+    @Test fun aPhoneThatIgnoresTheReswitchNeedsAReplugWithinFiveSeconds() {
+        val t = usb()
+        t.state(P.CONNECTION_CONNECTING)
+        t.state(P.CONNECTION_DISCONNECTED)
+        t.after(limits.noVideoEndDebounceMillis)
+        assertEquals(emptyList<AdapterEvent>(), t.after(limits.staleReplugMillis - 1_000))
+        val failed = t.after(1_000).failure()
+        assertEquals(FailureReason.USB, failed.reason)
+        assertTrue(failed.detail!!.startsWith("unplug the phone and plug it in again"))
+    }
+
+    @Test fun aSecondFailedHandshakeAsksForAReplugAtOnce() {
+        val t = usb()
+        t.state(P.CONNECTION_CONNECTING); t.state(P.CONNECTION_DISCONNECTED)
+        t.after(limits.noVideoEndDebounceMillis)
+        t.takeReswitchRequest()
+        t.state(P.CONNECTION_CONNECTING); t.state(P.CONNECTION_DISCONNECTED)
+        assertTrue(t.after(limits.noVideoEndDebounceMillis).failure().detail!!.startsWith("unplug"))
+        assertFalse(t.takeReswitchRequest())
+    }
+
+    @Test fun anErrorStateAloneStillCountsAsAFailedUsbHandshake() {
+        val t = usb()
+        // The Connecting report was conflated away; only the error arrived.
+        t.onState(P.CONNECTION_ERROR, "Handshake failed with exception", true, false, now)
+        assertTrue(t.after(limits.noVideoEndDebounceMillis).single() is AdapterEvent.Retrying)
+        assertTrue(t.takeReswitchRequest())
+    }
+
+    @Test fun aConnectedUsbSessionThatDropsIsStillALoss() {
+        val t = usb()
+        t.state(P.CONNECTION_TRANSPORT_STARTED, firstFrame = true)
+        t.state(P.CONNECTION_DISCONNECTED)
+        assertEquals(emptyList<AdapterEvent>(), t.after(limits.noVideoEndDebounceMillis))
+        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.USB)), t.after(limits.endDebounceMillis))
+        assertFalse(t.takeReswitchRequest())
+    }
 }

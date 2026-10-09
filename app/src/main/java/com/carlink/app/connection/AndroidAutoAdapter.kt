@@ -147,6 +147,28 @@ class AndroidAutoAdapter internal constructor(
 
     override fun hasSession(): Boolean = sessionOpen
 
+    override fun recover(action: RecoveryAction): Boolean {
+        val s = session ?: return false
+        if (s.tracker.terminal || stopToken != null) return false
+        return when (action) {
+            // DiAuto's manual poke is one 20 s hold; a silent phone gets another (DA§2.7).
+            RecoveryAction.NUDGE -> {
+                val address = s.plan.phoneAddress
+                if (s.plan.transport != Transport.WIRELESS || address == null) return false
+                Log.i(TAG, "watchdog: waking the phone again")
+                send(AaProtocol.COMMAND_POKE) { putExtra(AaProtocol.EXTRA_ADDRESS, address) }
+                true
+            }
+            RecoveryAction.RESWITCH_USB -> {
+                if (s.plan.transport != Transport.USB) return false
+                Log.i(TAG, "watchdog: sending the accessory switch again")
+                send(AaProtocol.COMMAND_RESWITCH_USB)
+                true
+            }
+            else -> false
+        }
+    }
+
     override fun start(plan: SessionPlan, listener: (AdapterEvent) -> Unit) {
         check(!sessionOpen) { "Android Auto start while the previous session has not stopped" }
         check(plan.engine == Engine.ANDROID_AUTO) { "not an Android Auto plan: ${plan.engine}" }
@@ -212,6 +234,11 @@ class AndroidAutoAdapter internal constructor(
 
     private fun deliver(s: Session, events: List<AdapterEvent>) {
         if (session !== s || stopToken != null) return
+        // A stale accessory (RELIABILITY_AUDIT K2): switch it again at once, before reporting.
+        if (s.tracker.takeReswitchRequest()) {
+            Log.i(TAG, "USB session ended before any frame; sending the accessory switch again")
+            send(AaProtocol.COMMAND_RESWITCH_USB)
+        }
         events.forEach { event ->
             Log.i(TAG, "-> $event")
             s.listener(event)

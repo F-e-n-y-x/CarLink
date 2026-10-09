@@ -68,6 +68,10 @@ class AaCommandHandlerTest {
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
         override fun deviceName(device: UsbDevice) = "Pixel"
         override fun currentDevice(previous: UsbDevice): UsbDevice? = previous
+        var accessoryOnBus: UsbDevice? = null
+        override fun accessoryDevice(): UsbDevice? = accessoryOnBus
+        var usbOnly: Boolean? = null
+        override fun setUsbOnlySession(usbOnly: Boolean) { this.usbOnly = usbOnly }
         override fun sleep(millis: Long) { clock += millis }
         override fun now() = clock
     }
@@ -232,5 +236,31 @@ class AaCommandHandlerTest {
         engine.busy = false
         handler.poke(phone)
         assertEquals(listOf(AapService.ACTION_NATIVE_AA_POKE), actions())
+    }
+
+    // ---- RELIABILITY_AUDIT K2 / K10 ----
+
+    @Test fun aStaleAccessoryIsSwitchedAgainUnlessASessionIsAlreadyUnderWay() {
+        handler.reswitchStaleAccessory()
+        assertEquals("result=no-accessory", events.last().second)
+        engine.accessoryOnBus = device()
+        handler.reswitchStaleAccessory()
+        assertEquals(AaProtocol.KIND_AOA_RESWITCH, events.last().first)
+        assertTrue(events.last().second!!.startsWith("result=true"))
+        assertEquals(1, engine.switched)
+        engine.busy = true
+        handler.reswitchStaleAccessory()
+        assertTrue(events.last().second!!.startsWith("result=busy"))
+        assertEquals(1, engine.switched)
+    }
+
+    @Test fun usbSessionsArmNoWirelessAndTheFlagIsClearedAfterwards() {
+        handler.startUsb(device(), phone, VehicleProfile.GENERIC)
+        assertEquals(true, engine.usbOnly)
+        handler.stop(1L)
+        assertEquals(false, engine.usbOnly)
+        handler.startUsb(device(), phone, VehicleProfile.GENERIC)
+        handler.startWireless(phone, VehicleProfile.GENERIC)
+        assertEquals("a wireless start arms wireless again", false, engine.usbOnly)
     }
 }

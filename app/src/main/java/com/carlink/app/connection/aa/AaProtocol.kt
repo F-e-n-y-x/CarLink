@@ -29,6 +29,11 @@ internal object AaProtocol {
     const val COMMAND_REPORT = "report"
     /** Wake the chosen phone again on an armed, idle engine (DiAuto's manual poke is a single 20 s hold). */
     const val COMMAND_POKE = "poke"
+    /**
+     * Send the accessory switch again to a phone stuck in accessory mode from an earlier session, so
+     * it re-enumerates and the next handshake reads a clean stream (RELIABILITY_AUDIT K2).
+     */
+    const val COMMAND_RESWITCH_USB = "reswitch_usb"
     /** ":aa" → ":aa": the answer to CarLink's own USB permission request (PendingIntent). */
     const val COMMAND_USB_PERMISSION = "usb_permission"
 
@@ -54,6 +59,8 @@ internal object AaProtocol {
     const val KIND_AOA_SWITCH_FAILED = "CARLINK_AOA_SWITCH_FAILED"
     /** The phone was already in accessory mode at plug-in but never started Android Auto: it needs a re-plug. */
     const val KIND_AOA_STALE = "CARLINK_AOA_STALE"
+    /** The result of [COMMAND_RESWITCH_USB] (`result=true|false|busy|no-accessory`). */
+    const val KIND_AOA_RESWITCH = "CARLINK_AOA_RESWITCH"
     /** What the receiver did with a wireless start ([WirelessStartDecision] name in the detail). */
     const val KIND_START_DECISION = "CARLINK_START_DECISION"
 

@@ -33,6 +33,34 @@ interface EngineAdapter {
 
     /** True from [start] until the engine's teardown completes, including internal restarts. */
     fun hasSession(): Boolean
+
+    /**
+     * Applies [action] to the running session in place, when the engine has a way to
+     * ([RecoveryAction.NUDGE], [RecoveryAction.RESWITCH_USB]). Returns false when it has none;
+     * [SessionManager] then only shows why it waits, or restarts the attempt itself.
+     */
+    fun recover(action: RecoveryAction): Boolean = false
+}
+
+/**
+ * What [SessionManager]'s stall watchdog does when a phase takes longer than its deadline
+ * ([StallPlaybook] says which, in which order).
+ */
+enum class RecoveryAction {
+    /** Wake the phone again (Android Auto: one more Bluetooth poke). Nothing is torn down. */
+    NUDGE,
+    /** Android Auto over USB: send the accessory switch again so the phone re-enumerates. */
+    RESWITCH_USB,
+    /** Stop the engine and start the same path again. */
+    RETRY_STEP,
+    /** Same as [RETRY_STEP]; the stop releases the Wi-Fi Direct group, so the phone gets a fresh one. */
+    RESET_WIFI_DIRECT,
+    /** Give up on this wireless path and try the next one. */
+    NEXT_PATH,
+    /** Fail with "unplug the phone and plug it in again". */
+    ASK_REPLUG,
+    /** Fail with the phase's reason. */
+    GIVE_UP,
 }
 
 /** One session to start. */
@@ -55,8 +83,11 @@ sealed interface AdapterEvent {
     /** The engine is working through its stages; [step] of [stepCount] for Home's timeline. */
     data class Progress(val step: Int, val stepCount: Int, val stage: ProgressStage) : AdapterEvent
 
-    /** The engine is retrying on its own after [reason]; not a failure yet. */
-    data class Retrying(val attempt: Int, val reason: FailureReason) : AdapterEvent
+    /**
+     * The engine is retrying on its own after [reason]; not a failure yet. [detail] says what
+     * happened in the driver's terms ("the iPhone did not answer over Bluetooth").
+     */
+    data class Retrying(val attempt: Int, val reason: FailureReason, val detail: String? = null) : AdapterEvent
 
     /** Projection is up (first frame shown). */
     data object Connected : AdapterEvent

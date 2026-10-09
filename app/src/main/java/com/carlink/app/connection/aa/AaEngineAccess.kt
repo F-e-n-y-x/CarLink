@@ -58,6 +58,10 @@ internal interface AaEngineAccess {
      * Null when no phone from that maker is attached.
      */
     fun currentDevice(previous: UsbDevice): UsbDevice?
+    /** The attached phone that is in accessory mode, if any. */
+    fun accessoryDevice(): UsbDevice?
+    /** DiAuto's `HostIntegration.usbOnlySession`: no wireless bring-up while true. */
+    fun setUsbOnlySession(usbOnly: Boolean)
     fun sleep(millis: Long)
     fun now(): Long
 }
@@ -198,6 +202,13 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
         return attached.firstOrNull { it.deviceName == previous.deviceName }
             ?: attached.firstOrNull { it.vendorId == previous.vendorId && it.productId == previous.productId }
             ?: attached.firstOrNull { it.vendorId == previous.vendorId || UsbDeviceCompat.isInAccessoryMode(it) }
+    }
+
+    override fun accessoryDevice(): UsbDevice? =
+        app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty().firstOrNull { UsbDeviceCompat.isInAccessoryMode(it) }
+
+    override fun setUsbOnlySession(usbOnly: Boolean) {
+        HostIntegration.usbOnlySession = usbOnly
     }
 
     override fun sleep(millis: Long) = Thread.sleep(millis)

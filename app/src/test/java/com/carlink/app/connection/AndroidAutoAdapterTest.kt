@@ -195,4 +195,39 @@ class AndroidAutoAdapterTest {
         val a = started()
         a.start(wirelessPlan()) {}
     }
+
+    // ---- RELIABILITY_AUDIT K2 and the stall watchdog's recoveries ----
+
+    @Test fun aUsbSessionEndingBeforeAnyFrameSendsTheAccessorySwitchAgain() {
+        val a = adapter()
+        alive = true
+        a.start(SessionPlan(Engine.ANDROID_AUTO, Transport.USB, null, null, "S25", usbAttach = Intent())) { e -> events += e }
+        idle()
+        state(P.CONNECTION_CONNECTING)
+        state(P.CONNECTION_DISCONNECTED)
+        advance(1_100)
+        assertEquals(P.COMMAND_RESWITCH_USB, command(commands.last()))
+        assertEquals(FailureReason.USB, (events.last() as AdapterEvent.Retrying).reason)
+        // No new session within the re-plug window: say so in seconds, not after 60 s.
+        advance(AaSessionTracker.Limits().staleReplugMillis + 1_000)
+        val failed = events.last() as AdapterEvent.Failed
+        assertTrue(failed.detail!!.startsWith("unplug the phone"))
+    }
+
+    @Test fun theWatchdogCanNudgeAWirelessPhoneAndReswitchAUsbOne() {
+        val wireless = started()
+        assertTrue(wireless.recover(RecoveryAction.NUDGE))
+        assertEquals(P.COMMAND_POKE, command(commands.last()))
+        assertFalse(wireless.recover(RecoveryAction.RESWITCH_USB))
+        assertFalse(wireless.recover(RecoveryAction.RETRY_STEP))
+        wireless.stop {}
+        assertFalse("not while stopping", wireless.recover(RecoveryAction.NUDGE))
+
+        alive = false // a fresh adapter that finds no engine left running
+        val usb = adapter()
+        usb.start(SessionPlan(Engine.ANDROID_AUTO, Transport.USB, null, null, "S25", usbAttach = Intent())) {}
+        assertTrue(usb.recover(RecoveryAction.RESWITCH_USB))
+        assertEquals(P.COMMAND_RESWITCH_USB, command(commands.last()))
+        assertFalse(usb.recover(RecoveryAction.NUDGE))
+    }
 }

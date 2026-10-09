@@ -42,6 +42,14 @@ internal class AaSessionTracker(
         val endDebounceMillis: Long = 2_000,
         /** Wake the phone again this long after a loss (after the engine's own 1.5 s re-arm, DA§2.6). */
         val repokeAfterLossMillis: Long = 3_000,
+        /**
+         * USB: a session that ended before any frame (a stale accessory's failed handshake) is
+         * re-switched once; with no new session by this long after, the phone needs a re-plug
+         * (RELIABILITY_AUDIT K2: it used to wait 60 s, then blamed a locked phone).
+         */
+        val staleReplugMillis: Long = 5_000,
+        /** USB, no frame yet: SESSION_ENDED only follows a session that connected, so wait less for it. */
+        val noVideoEndDebounceMillis: Long = 500,
     )
 
     private val wireless = transport == Transport.WIRELESS
@@ -69,6 +77,9 @@ internal class AaSessionTracker(
     private var nextRepokeAt: Long? = null
     private var lastError: String? = null
     private var dfsChannel: String? = null
+    private var staleReswitches = 0
+    private var reswitchRequested = false
+    private var reswitchDeadline: Long? = null
 
     fun begin(now: Long): List<AdapterEvent> {
         startedAt = now
@@ -95,6 +106,11 @@ internal class AaSessionTracker(
                 if (firstFrame) out += connect()
             }
             AaProtocol.CONNECTION_DISCONNECTED, AaProtocol.CONNECTION_ERROR -> {
+                // A failed USB handshake can go Connecting → Error → Disconnected faster than the
+                // state reports; the error message alone still means a session started and ended.
+                if (!wireless && !sessionLive && message?.contains("Handshake failed", ignoreCase = true) == true) {
+                    sessionLive = true
+                }
                 if (sessionLive && pendingEndSince == null) pendingEndSince = now
             }
         }
@@ -163,7 +179,11 @@ internal class AaSessionTracker(
     fun onTick(now: Long): List<AdapterEvent> {
         if (terminal) return emptyList()
         pendingEndSince?.let { since ->
-            if (now - since >= limits.endDebounceMillis) return endSession(userExit = false, clean = false, now = now)
+            val debounce = if (!wireless && !connected) limits.noVideoEndDebounceMillis else limits.endDebounceMillis
+            if (now - since >= debounce) return endSession(userExit = false, clean = false, now = now)
+        }
+        reswitchDeadline?.let { deadline ->
+            if (!sessionLive && now >= deadline) return fail(FailureReason.USB, STALE_REPLUG)
         }
         if (sessionLive || accepted) return emptyList()
         val waited = now - waitingSince
@@ -189,6 +209,9 @@ internal class AaSessionTracker(
         nextRepokeAt = now + limits.acceptHintMillis
         return true
     }
+
+    /** True once after a stale USB accessory was found: the adapter sends the accessory switch again. */
+    fun takeReswitchRequest(): Boolean = reswitchRequested.also { reswitchRequested = false }
 
     /** ":aa" died under the session (crash or low-memory kill; the service is not sticky). */
     fun onProcessDied(): List<AdapterEvent> =
@@ -217,6 +240,7 @@ internal class AaSessionTracker(
         sessionLive = true
         pendingEndSince = null
         nextRepokeAt = null
+        reswitchDeadline = null
     }
 
     private fun connect(): List<AdapterEvent> {
@@ -237,6 +261,15 @@ internal class AaSessionTracker(
         return when {
             userExit -> ended(byUser = true)
             clean -> ended(byUser = false) // the phone sent ByeBye
+            // USB, not one frame: the phone did not take the session (stale accessory, K2). Re-switch
+            // once, at once; a second time means the phone needs a re-plug.
+            !wireless && !hadVideo -> if (staleReswitches++ == 0) {
+                backToWaiting(now)
+                reswitchRequested = true
+                reswitchDeadline = now + limits.staleReplugMillis
+                listOf(AdapterEvent.Retrying(1, FailureReason.USB,
+                    "the phone was still in an earlier Android Auto session; restarting its USB link"))
+            } else fail(FailureReason.USB, STALE_REPLUG)
             else -> {
                 losses++
                 // Starved (no frame on an established link) or idle for the read timeout: the link
@@ -294,6 +327,7 @@ internal class AaSessionTracker(
 
     private companion object {
         const val CONNECT_STATUS = 6
+        const val STALE_REPLUG = "unplug the phone and plug it in again (it did not start a new Android Auto session over USB)"
         val WIRELESS_ONLY = setOf(
             EngineEvent.WIFI_OFF.name, EngineEvent.P2P_OWNED_BY_OTHER.name, EngineEvent.DFS_CHANNEL.name,
             EngineEvent.BSSID_UNRESOLVED.name, EngineEvent.BLUETOOTH_UNAVAILABLE.name,
