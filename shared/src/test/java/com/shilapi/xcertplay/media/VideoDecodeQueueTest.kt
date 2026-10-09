@@ -76,6 +76,7 @@ class VideoDecodeQueueTest {
     @Test fun invalidatedChainDropsOldFramesAndResyncButPreservesTheNextControlSegment() {
         for (barrier in listOf(
             VideoJob.Config(VideoCodec.H264, byteArrayOf(1)), VideoJob.SurfaceChanged(null),
+            VideoJob.DetachSurface(SurfaceDetachRequest(Any(), park = true)), VideoJob.RefreshPicture,
         )) {
             val queue = VideoDecodeQueue()
             queue.offer(VideoJob.Frame(byteArrayOf(1)))
@@ -119,6 +120,28 @@ class VideoDecodeQueueTest {
             VideoDecodeQueue.Backlog(3, now + 1)))
         assertFalse(VideoRecoveryFrameAge.isObsolete(now, now + 1,
             VideoDecodeQueue.Backlog(3, now + 2)))
+    }
+
+    @Test fun backlogStopsAtEachControlAndKeepsPacingTimestamps() {
+        for (control in listOf(
+            VideoJob.Config(VideoCodec.H264, byteArrayOf(1)), VideoJob.SurfaceChanged(null),
+            VideoJob.DetachSurface(SurfaceDetachRequest(Any(), park = true)), VideoJob.RefreshPicture,
+        )) {
+            val queue = VideoDecodeQueue()
+            val current = VideoJob.Frame(byteArrayOf(1), receivedNs = 100, senderNanos = 80, arrivalNanos = 90)
+            queue.offer(current)
+            queue.offer(VideoJob.Frame(byteArrayOf(2), receivedNs = 200))
+            queue.offer(control)
+            val paced = VideoJob.Frame(byteArrayOf(3), receivedNs = 900, senderNanos = 700, arrivalNanos = 800)
+            queue.offer(paced)
+            assertSame(current, queue.poll(0))
+            assertEquals(VideoDecodeQueue.Backlog(1, 200), queue.backlogAfterCurrent())
+            queue.discardCurrentChain()
+            assertSame(control, queue.poll(0))
+            assertSame(paced, queue.poll(0))
+            assertEquals(700L, paced.senderNanos)
+            assertEquals(800L, paced.arrivalNanos)
+        }
     }
 
 }

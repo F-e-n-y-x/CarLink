@@ -7,8 +7,18 @@ import java.util.concurrent.TimeUnit
 
 internal sealed interface VideoJob {
     data class Config(val codec: VideoCodec, val codecData: ByteArray) : VideoJob
-    data class Frame(val nalus: ByteArray, val receivedNs: Long = System.nanoTime()) : VideoJob
+    data class Frame(
+        val nalus: ByteArray,
+        val receivedNs: Long = System.nanoTime(),
+        /** The iPhone's frame time and when the frame arrived (System.nanoTime), 0 when unknown. */
+        val senderNanos: Long = 0L,
+        val arrivalNanos: Long = 0L,
+    ) : VideoJob
     data class SurfaceChanged(val surface: Surface?) : VideoJob
+    /** Stop rendering to a surface that is going away; completes [request] once the codec has let go. */
+    data class DetachSurface(val request: SurfaceDetachRequest) : VideoJob
+    /** Ask the iPhone for a keyframe, so a surface that just came back gets a picture without waiting for motion. */
+    data object RefreshPicture : VideoJob
     data object Resync : VideoJob
 }
 
@@ -44,7 +54,6 @@ internal class VideoDecodeQueue(
         return Backlog(frames, newest)
     }
 
-
     @Synchronized fun offer(job: VideoJob) {
         if (job is VideoJob.Frame) {
             val frames = jobs.filterIsInstance<VideoJob.Frame>()
@@ -63,8 +72,8 @@ internal class VideoDecodeQueue(
         val iterator = jobs.iterator()
         while (iterator.hasNext()) {
             when (iterator.next()) {
-                is VideoJob.Config, is VideoJob.SurfaceChanged -> return
                 is VideoJob.Frame, VideoJob.Resync -> iterator.remove()
+                else -> return
             }
         }
     }
@@ -74,6 +83,9 @@ internal class VideoDecodeQueue(
     }
 
     fun poll(timeoutMillis: Long): VideoJob? = jobs.poll(timeoutMillis, TimeUnit.MILLISECONDS)
+
+    /** Removes and returns every queued job, for a worker that is shutting down. */
+    @Synchronized fun drain(): List<VideoJob> = ArrayList<VideoJob>().also { jobs.drainTo(it) }
 }
 
 /** Drain output while waiting for input: full output buffers can otherwise starve input forever. */
