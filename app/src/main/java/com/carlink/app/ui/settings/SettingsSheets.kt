@@ -220,35 +220,13 @@ private fun <T> customPreset(show: Boolean, value: T): List<Preset<T>> =
 // ---- Sheet frame ----------------------------------------------------------------------------
 
 /** A bottom sheet on graphite glass, wide enough on a head unit for a row of large tiles. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val dimens = CarLinkTokens.dimens
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        sheetMaxWidth = if (isCar) 1240.dp else 760.dp,
-        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = if (isCar) dimens.screenMargin else dimens.gutter * 1.5f)
-                .navigationBarsPadding().padding(bottom = dimens.gutter * 1.5f),
-            content = content,
-        )
-    }
-}
+internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) =
+    com.carlink.app.ui.premium.GlassSheet(onDismiss, content)
 
 @Composable
 private fun SheetTitle(title: String, body: String?, nextConnection: Boolean) {
-    Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.semantics { heading() })
-    if (body != null) {
-        Spacer(Modifier.height(8.dp))
-        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    com.carlink.app.ui.premium.SheetHeader(title, body)
     if (nextConnection) {
         Spacer(Modifier.height(14.dp))
         NextConnectionTag()

@@ -70,7 +70,7 @@ fun CarLinkTheme(
             fontScale = systemDensity.fontScale.coerceIn(1f, 1.3f),
         )
         UiProfile.HANDHELD -> Density(
-            density = systemDensity.density * scale,
+            density = systemDensity.density * scale * largeHandheldScale(LocalConfiguration.current),
             fontScale = systemDensity.fontScale.coerceIn(0.85f, 1.3f),
         )
     }
@@ -109,6 +109,22 @@ fun CarLinkTheme(
 }
 
 private const val CAR_CANVAS_SHORT_SIDE_DP = 810f
+
+/**
+ * Large-handheld scale (design/RESEARCH_HOME_V2.md §4): a tablet mounted in a dash is read from
+ * arm's length, like a head unit, so the HANDHELD profile grows by
+ * `min(longSide / 1100dp, shortSide / 690dp)`, clamped to 1–1.35×. A Redmi Pad Pro in landscape
+ * (≈1460×914dp) gets ≈1.32× and reads like the 1440×810dp car canvas; an 800×1280dp tablet gets
+ * 1.16×; phones stay at 1×. It applies to every screen, sheet and dialog alike, so a sheet never
+ * looks miniature over the stage it opened from. The window (not the panel) is measured, so a
+ * split-screen tablet window shrinks back towards 1×.
+ */
+internal fun largeHandheldScale(configuration: android.content.res.Configuration): Float {
+    val long = maxOf(configuration.screenWidthDp, configuration.screenHeightDp).toFloat()
+    val short = minOf(configuration.screenWidthDp, configuration.screenHeightDp).toFloat()
+    if (short <= 0f) return 1f
+    return min(long / 1100f, short / 690f).coerceIn(1f, 1.35f)
+}
 
 @Suppress("DEPRECATION") // getRealMetrics is the API-25-compatible way to read the panel size.
 private fun screenShortSidePx(context: android.content.Context): Float {

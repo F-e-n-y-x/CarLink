@@ -100,7 +100,7 @@ internal fun GlassGroup(
 @Composable
 internal fun GroupDivider() {
     Box(Modifier.fillMaxWidth().padding(horizontal = rowPadding).height(1.dp)
-        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)))
+        .background(CarLinkTokens.colors.hairline))
 }
 
 /** Eyebrow header of a group, with an optional leading glyph. */
@@ -127,21 +127,19 @@ internal fun EngineHeader(engine: Engine, color: Color? = null) {
         icon = if (engine == Engine.CARPLAY) R.drawable.carlink_ic_phone_iphone else R.drawable.carlink_ic_android)
 }
 
-/** A rounded glass disc with a glyph: the leading mark of a row. */
+/** A rounded glass tile with a glyph: the leading mark of a row. */
 @Composable
 internal fun RowGlyph(@DrawableRes icon: Int, tint: Color = MaterialTheme.colorScheme.onSurface) {
-    val size = if (isCar) 56.dp else 40.dp
-    Box(Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)),
-        contentAlignment = Alignment.Center) {
-        Icon(painterResource(icon), null, Modifier.size(size * 0.5f), tint = tint)
-    }
+    // The same rounded tile as Home's status cells, so every list in CarLink reads alike.
+    val accent = tint.takeIf { it != MaterialTheme.colorScheme.onSurface }
+    com.carlink.app.ui.premium.IconTile(icon, tint = accent, size = if (isCar) 56.dp else 40.dp)
 }
 
 /** A small status pill under a row's description ("Applies at next connection"). */
 @Composable
 internal fun Tag(text: String, color: Color, @DrawableRes icon: Int? = null) {
     Row(
-        Modifier.clip(CircleShape).background(color.copy(alpha = 0.12f)).border(1.dp, color.copy(alpha = 0.45f), CircleShape)
+        Modifier.clip(CircleShape).background(color.copy(alpha = 0.12f)).border(1.dp, color.copy(alpha = 0.30f), CircleShape)
             .padding(horizontal = if (isCar) 14.dp else 10.dp, vertical = if (isCar) 4.dp else 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -287,6 +285,8 @@ internal fun SelectableGlass(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(28.dp),
     role: Role = Role.Button,
+    /** Selected shows as a lit Ion bar on the leading edge (navigation), not an Ion outline. */
+    accentEdge: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = CarLinkTokens.colors
@@ -295,11 +295,12 @@ internal fun SelectableGlass(
     val pressed by interaction.collectIsPressedAsState()
     val selectedText = stringResource(R.string.carlink_state_selected)
     val fill = when {
-        selected -> scheme.primary.copy(alpha = if (pressed) 0.22f else 0.14f)
+        selected && accentEdge -> colors.glassFillPressed
+        selected -> scheme.primary.copy(alpha = if (pressed) 0.18f else 0.10f)
         pressed -> colors.glassFillPressed
         else -> colors.glassFill
     }
-    val border = if (selected) BorderStroke(2.dp, scheme.primary.copy(alpha = 0.8f))
+    val border = if (selected && !accentEdge) BorderStroke(1.5.dp, scheme.primary.copy(alpha = 0.7f))
     else BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom)))
     Box(
         modifier
@@ -309,7 +310,15 @@ internal fun SelectableGlass(
             .border(border, shape)
             .clickable(interaction, indication = ripple(), role = role, onClick = onClick)
             .then(if (selected && role != Role.Switch) Modifier.semantics { stateDescription = selectedText } else Modifier),
-    ) { content() }
+    ) {
+        content()
+        if (selected && accentEdge) {
+            // The lit edge: a short Ion bar, like a selector lamp.
+            val bar = if (isCar) 5.dp else 4.dp
+            Box(Modifier.align(Alignment.CenterStart).padding(start = bar).size(width = bar, height = if (isCar) 32.dp else 22.dp)
+                .clip(CircleShape).background(scheme.primary))
+        }
+    }
 }
 
 /** A category tile of the landscape rail. */
@@ -319,7 +328,7 @@ internal fun RailTile(title: String, @DrawableRes icon: Int, selected: Boolean, 
     val scheme = MaterialTheme.colorScheme
     val dimens = CarLinkTokens.dimens
     SelectableGlass(selected, onClick, modifier.fillMaxWidth().heightIn(min = if (isCar) 84.dp else 56.dp),
-        shape = RoundedCornerShape(if (isCar) 28.dp else 20.dp), role = Role.Tab) {
+        shape = RoundedCornerShape(if (isCar) 28.dp else 20.dp), role = Role.Tab, accentEdge = true) {
         Row(Modifier.fillMaxWidth().heightIn(min = if (isCar) 84.dp else 56.dp).padding(horizontal = if (isCar) 24.dp else 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(icon), null, Modifier.size(dimens.iconSecondary), tint = if (selected) scheme.primary else scheme.onSurfaceVariant)
@@ -352,11 +361,7 @@ internal fun GridTile(title: String, summary: String, @DrawableRes icon: Int, on
 /** A round glass icon button (back, close). */
 @Composable
 internal fun RoundGlassButton(@DrawableRes icon: Int, contentDescription: String, onClick: () -> Unit) {
-    val dimens = CarLinkTokens.dimens
-    GlassCard(Modifier.size(dimens.minTouch), shape = CircleShape, onClick = onClick, contentPadding = PaddingValues(0.dp)) {
-        Icon(painterResource(icon), contentDescription, Modifier.align(Alignment.Center).size(dimens.iconSecondary),
-            tint = MaterialTheme.colorScheme.onSurface)
-    }
+    com.carlink.app.ui.premium.RoundGlassIconButton(icon, contentDescription, onClick)
 }
 
 /** The "Show advanced" switch as a glass pill (it sits in the header on wide layouts). */

@@ -19,6 +19,7 @@ import com.carlink.app.ui.diagnostics.previewChecks
 import com.carlink.app.ui.diagnostics.previewLink
 import com.carlink.app.ui.diagnostics.previewLog
 import com.carlink.app.ui.home.HomeContent
+import com.carlink.app.ui.home.NetworkSheet
 import com.carlink.app.ui.home.PhonesSheet
 import com.carlink.app.settings.AdvancedSettings
 import com.carlink.app.settings.SettingsCategory
@@ -106,6 +107,11 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
         val ui = ui(phones = listOf(iphone, pixel, unknown))
         HomeContent(ui, actions)
         PhonesSheet(ui, actions, onDismiss = {})
+    },
+    home("sheet-network", opensWindow = true) {
+        val ui = ui(phones = listOf(iphone, pixel))
+        HomeContent(ui, actions)
+        NetworkSheet(ui, actions, onDismiss = {})
     },
 ) }
 

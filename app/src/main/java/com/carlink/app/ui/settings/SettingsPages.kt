@@ -127,8 +127,7 @@ private fun PausedCard(onResume: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(CarLinkTokens.dimens.gutter))
-            IonButton(stringResource(R.string.carlink_settings_resume), onResume, icon = R.drawable.carlink_ic_play_arrow_filled,
-                modifier = Modifier.width(if (isCar) 240.dp else 140.dp))
+            IonButton(stringResource(R.string.carlink_settings_resume), onResume, icon = R.drawable.carlink_ic_play_arrow_filled)
         }
     }
 }

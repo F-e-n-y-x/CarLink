@@ -208,15 +208,13 @@ private data class DialSpot(val center: Offset, val radius: Float)
 /**
  * Home, "Instrument" (design/RESEARCH_HOME_V2.md §4): a link dial as the focal object, one
  * tell-tale, one sentence, one action, and the status bar docked to the bottom edge. On large
- * handhelds the stage is scaled to read like the car canvas ([HomeScaled]).
+ * handhelds the theme scales the whole app to read like the car canvas (`largeHandheldScale`).
  */
 @Composable
 internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
     var phonesOpen by rememberSaveable { mutableStateOf(false) }
     var networkOpen by rememberSaveable { mutableStateOf(false) }
-    HomeScaled {
-        HomeStageScreen(ui, actions, onPhones = { phonesOpen = true }, onNetwork = { networkOpen = true })
-    }
+    HomeStageScreen(ui, actions, onPhones = { phonesOpen = true }, onNetwork = { networkOpen = true })
     if (phonesOpen) PhonesSheet(ui, actions, onDismiss = { phonesOpen = false })
     if (networkOpen) NetworkSheet(ui, actions, onDismiss = { networkOpen = false })
 }
@@ -689,7 +687,7 @@ private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {
             }
         }
     }
-    if (asking) HomeUnscaled { SameWifiDialog(ssid, actions, onDismiss = { asking = false }) }
+    if (asking) SameWifiDialog(ssid, actions, onDismiss = { asking = false })
 }
 
 @Composable

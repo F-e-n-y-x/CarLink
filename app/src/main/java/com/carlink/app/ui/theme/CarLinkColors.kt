@@ -34,6 +34,8 @@ data class CarLinkExtColors(
     val glassFillPressed: Color,
     val glassStrokeTop: Color,
     val glassStrokeBottom: Color,
+    /** Hairlines between cells and rows inside glass. */
+    val hairline: Color,
 )
 
 internal object CarLinkDark {
@@ -63,7 +65,7 @@ internal object CarLinkDark {
         bgDeep = Color(0xFF07090D),
         atmosphereLight = Color(0xFF16324A), atmosphereFill = Color(0xFF111A26),
         glassFill = Color(0x0FFFFFFF), glassFillPressed = Color(0x1AFFFFFF),
-        glassStrokeTop = Color(0x29FFFFFF), glassStrokeBottom = Color(0x0AFFFFFF),
+        glassStrokeTop = Color(0x29FFFFFF), glassStrokeBottom = Color(0x0AFFFFFF), hairline = Color(0x1AFFFFFF),
     )
 }
 
@@ -94,7 +96,9 @@ internal object CarLinkLight {
         bgDeep = Color(0xFF07090D),
         atmosphereLight = Color(0xFFF3EEE6), atmosphereFill = Color(0xFFDDE2E8),
         glassFill = Color(0x9EFFFFFF), glassFillPressed = Color(0xC7FFFFFF),
-        glassStrokeTop = Color(0xCCFFFFFF), glassStrokeBottom = Color(0x33FFFFFF),
+        // Day glass is lit from above and seated by a faint graphite edge below, so white cards
+        // keep their outline on the pale canvas without shadows.
+        glassStrokeTop = Color(0xE6FFFFFF), glassStrokeBottom = Color(0x1A0D1117), hairline = Color(0x1A0D1117),
     )
 }
 

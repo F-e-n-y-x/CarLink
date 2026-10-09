@@ -165,7 +165,7 @@ internal fun StatusPanel(items: List<StatusItem>, modifier: Modifier = Modifier)
         Layout(
             content = {
                 items.forEach { StatusCell(it) }
-                repeat(items.size - 1) { Box(Modifier.background(colors.glassStrokeTop)) }
+                repeat(items.size - 1) { Box(Modifier.background(colors.hairline)) }
             },
             modifier = Modifier.fillMaxWidth(),
         ) { measurables, constraints ->
@@ -199,7 +199,7 @@ internal fun StatusRows(items: List<StatusItem>, modifier: Modifier = Modifier) 
             items.forEachIndexed { index, item ->
                 if (index > 0) {
                     Box(Modifier.fillMaxWidth().padding(start = dimens.gutter + cellTile() + cellGap(), end = dimens.gutter)
-                        .height(1.dp).background(colors.glassStrokeTop))
+                        .height(1.dp).background(colors.hairline))
                 }
                 StatusCell(item, Modifier.fillMaxWidth())
             }
@@ -231,7 +231,7 @@ internal fun StatusStrip(items: List<StatusItem>, modifier: Modifier = Modifier)
             Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(gap)) {
                 items.forEachIndexed { index, item ->
-                    if (index > 0) Box(Modifier.width(1.dp).height(icon).background(colors.glassStrokeTop))
+                    if (index > 0) Box(Modifier.width(1.dp).height(icon).background(colors.hairline))
                     val showValue = labels || index == items.lastIndex
                     Row((if (showValue && !labels) Modifier.weight(1f, fill = false) else Modifier)
                         .heightIn(min = dimens.minTouch).clip(CircleShape)
