@@ -81,7 +81,7 @@ internal class AndroidAutoEngine(
             startedAt = SystemClock.elapsedRealtime()
             val ssid = intent.getStringExtra(P.EXTRA_REFUSED_SSID)
             val saved = UnifiedSettingsStore(app).load().homeWifi
-            if (ssid != null && saved.ssid == ssid) WirelessRefusals(app).record(ssid, saved.password)
+            if (ssid != null && saved.ssid == ssid) WirelessRefusals(app).record(Engine.ANDROID_AUTO, ssid, saved.password)
             val message = if (ssid != null) "Phone refused Wi-Fi \"$ssid\" (check its password); using Wi-Fi Direct"
                 else "Phone refused the hotspot; using Wi-Fi Direct"
             Log.i(TAG, message)

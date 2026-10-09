@@ -45,7 +45,7 @@ object EngineSettingsApplier {
         Log.i(TAG, "session engine=$engine path=$path method=${settings.connectionMethod} " +
             "wifiNetworks=${wifi.joinedNetworks} ssidReadable=${wifi.joinedSsid != null} " +
             "sameWifiSaved=${settings.homeWifi.isValid()} passwordSaved=${settings.homeWifi.password.isNotEmpty()} " +
-            "open=${wifi.joinedOpen} aaRefused=${wifi.androidAutoRefusedJoined} hotspotOn=${wifi.carHotspotOn} " +
+            "open=${wifi.joinedOpen} aaRefused=${wifi.androidAutoRefusedJoined} cpRefused=${wifi.carPlayRefusedJoined} hotspotOn=${wifi.carHotspotOn} " +
             "systemHotspot=${wifi.systemHotspot != null}")
         if (engine == Engine.CARPLAY && settings.homeWifi.isValid() && wifi.joinedNetworks == 1 && wifi.joinedSsid == null) {
             // Android hides the joined network's name without location access (and with location
@@ -139,7 +139,9 @@ object EngineSettingsApplier {
             joinedInterface = if (wifiNetworks == 1) iface else null,
             joinedOpen = if (wifiNetworks == 1) open else null,
             androidAutoRefusedJoined = joined != null && settings != null &&
-                WirelessRefusals(context).isRefused(joined, settings.homeWifi.password),
+                WirelessRefusals(context).isRefused(Engine.ANDROID_AUTO, joined, settings.homeWifi.password),
+            carPlayRefusedJoined = joined != null && settings != null &&
+                WirelessRefusals(context).isRefused(Engine.CARPLAY, joined, settings.homeWifi.password),
             systemHotspot = if (hotspotOn == true) systemHotspot(context) else null,
         )
     }

@@ -7,12 +7,17 @@ import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.os.Looper
 import com.carlink.app.core.Engine
+import com.carlink.app.core.LinkProblem
 import com.carlink.app.core.LinkStage
 import com.carlink.app.core.LinkState
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.core.Transport
 import com.carlink.app.detect.KnownPhones
 import com.carlink.app.settings.CarLinkPreferences
+import com.carlink.app.settings.UnifiedSettingsStore
+import com.carlink.app.settings.WifiDetails
+import com.carlink.app.settings.WirelessPath
+import com.carlink.app.settings.WirelessRefusals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -41,6 +46,8 @@ class EngineCoordinatorTest {
     private val settingsApplied = mutableListOf<Engine>()
     private var usbPhonePresent = false
     private var carPlayAtCreation = LinkState.Idle
+    /** The wireless path each session's settings choose, in order (the last one repeats). */
+    private var sessionPaths = mutableListOf<WirelessPath?>(null)
 
     private inner class FakeEngine(val engine: Engine, val report: (LinkState) -> Unit) : EngineHandle {
         var refreshed = 0
@@ -84,7 +91,10 @@ class EngineCoordinatorTest {
     private fun coordinator() = EngineCoordinator(
         app,
         engineFactory = { _, engine, onState -> FakeEngine(engine, onState).also { engines[engine] = it } },
-        applySessionSettings = { _, engine, _ -> settingsApplied += engine },
+        applySessionSettings = { _, engine, _ ->
+            settingsApplied += engine
+            if (sessionPaths.size > 1) sessionPaths.removeAt(0) else sessionPaths.first()
+        },
         worker = { it.run() },
         usbPhonePresent = { usbPhonePresent },
     )
@@ -397,5 +407,26 @@ class EngineCoordinatorTest {
         c.stopAll()
         assertEquals(setOf("CARPLAY stop", "ANDROID_AUTO stop"), log.toSet())
         assertEquals(LinkState.Idle, c.state.value)
+    }
+
+    // --- Same Wi-Fi fallback ----------------------------------------------------------------
+
+    @Test fun carPlayThatFailsOverSameWifiRetriesOnTheNextPathWithoutShowingTheFailure() {
+        UnifiedSettingsStore(app).save(UnifiedSettingsStore(app).load().copy(homeWifi = WifiDetails("Home", "homepassword")))
+        sessionPaths = mutableListOf(WirelessPath.SAME_WIFI, WirelessPath.WIFI_DIRECT)
+        val c = coordinator()
+        c.connectPhone("AA:BB:CC:DD:EE:FF", PhoneKind.IPHONE, "iPhone")
+        idle()
+        carPlay.report(LinkState(LinkStage.FAILED, Engine.CARPLAY, Transport.WIRELESS, "iPhone",
+            detail = "No AirPlay TCP after CarPlay StartSession", problem = LinkProblem.ENGINE))
+        assertTrue("the failure is not shown", c.state.value.stage != LinkStage.FAILED)
+        idle()
+        assertEquals(listOf("CARPLAY start WIRELESS", "CARPLAY start WIRELESS"), starts)
+        assertTrue(WirelessRefusals(app).isRefused(Engine.CARPLAY, "Home", "homepassword"))
+        // The retry failing too is shown: one retry per attempt.
+        carPlay.report(LinkState(LinkStage.FAILED, Engine.CARPLAY, Transport.WIRELESS, "iPhone", problem = LinkProblem.ENGINE))
+        idle()
+        assertEquals(LinkStage.FAILED, c.state.value.stage)
+        assertEquals(2, starts.size)
     }
 }

@@ -163,4 +163,12 @@ class EngineMappingsTest {
         val unknown = on.copy(carHotspotOn = null)
         assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, UnifiedSettings(), unknown))
     }
+
+    @Test fun carPlaySkipsANetworkWhereTheIphoneNeverReachedTheCar() {
+        val settings = UnifiedSettings(homeWifi = home)
+        val refused = homeJoined.copy(carPlayRefusedJoined = true)
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.CARPLAY, settings, refused))
+        assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.CARPLAY,
+            settings.copy(connectionMethod = ConnectionMethod.SAME_WIFI), refused))
+    }
 }

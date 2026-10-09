@@ -1,21 +1,27 @@
 package com.carlink.app.settings
 
 import android.content.Context
+import com.carlink.app.core.Engine
 import java.security.MessageDigest
 
 /**
- * Networks an Android Auto phone refused to join with the password CarLink handed it (main
- * process only). Same Wi-Fi is skipped for Android Auto on such a network until the driver saves
- * a different password, so the next session goes straight to a path that works.
+ * Shared networks that did not work for an engine with the password saved for them (main process
+ * only): an Android Auto phone refused to join, or an iPhone never reached the car over it. Same
+ * Wi-Fi is skipped for that engine on such a network until the driver saves a different password,
+ * so the next session goes straight to a path that works.
  */
 class WirelessRefusals(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("carlink_wireless_refusals", Context.MODE_PRIVATE)
 
-    fun isRefused(ssid: String, password: String): Boolean = prefs.getString(ssid, null) == fingerprint(password)
+    fun isRefused(engine: Engine, ssid: String, password: String): Boolean =
+        prefs.getString(key(engine, ssid), null) == fingerprint(password)
 
-    fun record(ssid: String, password: String) {
-        prefs.edit().putString(ssid, fingerprint(password)).apply()
+    fun record(engine: Engine, ssid: String, password: String) {
+        prefs.edit().putString(key(engine, ssid), fingerprint(password)).apply()
     }
+
+    // Android Auto's entries predate CarPlay's and keep their plain-SSID key.
+    private fun key(engine: Engine, ssid: String) = if (engine == Engine.ANDROID_AUTO) ssid else "carplay:$ssid"
 
     companion object {
         // Only a digest is kept, so the password never lands in a second file.

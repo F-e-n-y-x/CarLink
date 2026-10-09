@@ -22,6 +22,8 @@ data class WifiEnvironment(
     val joinedOpen: Boolean? = null,
     /** An Android Auto phone already refused [joinedSsid] with the saved password (see WirelessRefusals). */
     val androidAutoRefusedJoined: Boolean = false,
+    /** An iPhone already failed to reach the car over [joinedSsid] with the saved password. */
+    val carPlayRefusedJoined: Boolean = false,
     /** The car's own hotspot name and password, read from the system where the firmware allows it. */
     val systemHotspot: WifiDetails? = null,
 )
@@ -42,15 +44,18 @@ object WirelessPathSelector {
         // A phone handed a secured network without its password refuses it at once, so an empty
         // password only counts on a network Android reports as open.
         val passwordKnown = settings.homeWifi.password.isNotEmpty() || wifi.joinedOpen == true
-        val sameWifiUsable = joinedSaved && passwordKnown && (engine == Engine.CARPLAY ||
-            (wifi.joinedBssid != null && wifi.joinedInterface != null && !wifi.androidAutoRefusedJoined))
+        val sameWifiUsable = joinedSaved && passwordKnown && when (engine) {
+            Engine.CARPLAY -> !wifi.carPlayRefusedJoined
+            Engine.ANDROID_AUTO -> wifi.joinedBssid != null && wifi.joinedInterface != null && !wifi.androidAutoRefusedJoined
+        }
         val hotspotUsable = (settings.carHotspot.isValid() && wifi.carHotspotOn != false) ||
             (wifi.systemHotspot != null && wifi.carHotspotOn == true)
         return when (settings.connectionMethod) {
             ConnectionMethod.SAME_WIFI -> when {
                 // CarPlay's pre-flight reports missing details itself; only a saved entry known
                 // to be unusable (secured network, no password) is not honoured.
-                sameWifiUsable || (engine == Engine.CARPLAY && (passwordKnown || !settings.homeWifi.isValid())) ->
+                sameWifiUsable || (engine == Engine.CARPLAY && !wifi.carPlayRefusedJoined &&
+                    (passwordKnown || !settings.homeWifi.isValid())) ->
                     WirelessPath.SAME_WIFI
                 hotspotUsable -> WirelessPath.CAR_HOTSPOT
                 else -> WirelessPath.WIFI_DIRECT

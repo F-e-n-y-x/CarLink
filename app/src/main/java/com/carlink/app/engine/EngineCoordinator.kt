@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import com.carlink.app.core.Engine
+import com.carlink.app.core.LinkProblem
 import com.carlink.app.core.LinkStage
 import com.carlink.app.core.LinkState
 import com.carlink.app.core.PhoneKind
@@ -21,6 +22,8 @@ import com.carlink.app.settings.CarLinkPreferences
 import com.carlink.app.settings.EngineSettingsApplier
 import com.carlink.app.settings.UnifiedSettings
 import com.carlink.app.settings.UnifiedSettingsStore
+import com.carlink.app.settings.WirelessPath
+import com.carlink.app.settings.WirelessRefusals
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +45,8 @@ class EngineCoordinator internal constructor(
     context: Context,
     // Production defaults; unit tests inject fakes. Everything else goes through [get].
     engineFactory: EngineFactory = defaultEngineFactory,
-    private val applySessionSettings: (Context, Engine, UnifiedSettings) -> Unit =
+    /** Writes the session's settings and returns the wireless path chosen for it (null for USB). */
+    private val applySessionSettings: (Context, Engine, UnifiedSettings) -> WirelessPath? =
         { c, e, s -> EngineSettingsApplier.applyForSession(c, e, s) },
     /** Settings are written into the engines (IPC to ":aa") off the main thread, in order. */
     private val worker: Executor = Executors.newSingleThreadExecutor { Thread(it, "carlink-engine") },
@@ -62,6 +66,11 @@ class EngineCoordinator internal constructor(
     /** Bluetooth address of the phone the current session was started for, when known. */
     private var sessionAddress: String? = null
     private var engaged: Engine? = null
+
+    /** The current attempt's start, for a retry on another wireless path; see [fallBackFromSameWifi]. */
+    private var sessionRequest: SessionRequest? = null
+    private class SessionRequest(val transport: Transport, val address: String?, val phoneName: String?,
+                                 var path: WirelessPath? = null, val retried: Boolean = false)
 
     /** When the driver last stopped a session (elapsed realtime); see [onUsbPhone]. */
     private var driverStoppedAt = -REENUMERATION_WINDOW_MILLIS
@@ -164,8 +173,9 @@ class EngineCoordinator internal constructor(
         disengage()
     }
 
-    private fun connect(engine: Engine, transport: Transport, address: String?, phoneName: String?, usbAttach: Intent? = null) {
-        note("connect engine=$engine transport=$transport known=${address != null}")
+    private fun connect(engine: Engine, transport: Transport, address: String?, phoneName: String?,
+                        usbAttach: Intent? = null, retried: Boolean = false) {
+        note("connect engine=$engine transport=$transport known=${address != null}${if (retried) " (retry on another path)" else ""}")
         if (engaged != null && engaged != engine) stopAll()
         main.removeCallbacks(usbGoneCheck)
         engaged = engine
@@ -173,11 +183,14 @@ class EngineCoordinator internal constructor(
         setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
         _state.value = LinkState(LinkStage.WAITING, engine, transport, phoneName, 1, 6)
         val thisAttempt = ++attempt
+        val request = SessionRequest(transport, address, phoneName, retried = retried)
+        sessionRequest = request
         worker.execute {
             // The engine starts from the driver's unified settings and this session's wireless path.
-            runCatching { applySessionSettings(app, engine, unifiedSettings.load()) }
-                .onFailure { Log.w(TAG, "could not apply settings", it) }
+            val path = runCatching { applySessionSettings(app, engine, unifiedSettings.load()) }
+                .onFailure { Log.w(TAG, "could not apply settings", it) }.getOrNull()
             main.post {
+                request.path = if (transport == Transport.WIRELESS) path else null
                 if (thisAttempt != attempt || engaged != engine) {
                     note("attempt $thisAttempt superseded before $engine started")
                     return@post
@@ -202,6 +215,7 @@ class EngineCoordinator internal constructor(
         attempt++
         engaged = null
         sessionAddress = null
+        sessionRequest = null
         main.removeCallbacks(usbGoneCheck)
         setAndroidAutoReceivers(false)
         _state.value = LinkState.Idle
@@ -217,6 +231,7 @@ class EngineCoordinator internal constructor(
             setAndroidAutoReceivers(engine == Engine.ANDROID_AUTO)
         }
         if (engaged != engine) return
+        if (fallBackFromSameWifi(engine, state)) return
         if (state.stage != _state.value.stage) {
             note("$engine ${_state.value.stage} -> ${state.stage}${state.problem?.let { " problem=$it" } ?: ""}" +
                 (state.detail?.let { " ($it)" } ?: ""))
@@ -226,6 +241,27 @@ class EngineCoordinator internal constructor(
         }
         _state.value = state
         if (state.stage == LinkStage.IDLE) disengage()
+    }
+
+    /**
+     * A wireless CarPlay attempt over the shared Wi-Fi failed in the engine (typically the iPhone
+     * never reaches the car over the router: "No AirPlay TCP", when the router or the car's
+     * firmware drops the Bonjour multicast CarPlay relies on). The network is remembered as not
+     * working for CarPlay and the attempt starts again at once on the next path (car hotspot or
+     * Wi-Fi Direct), without showing the failure in between. Once per attempt.
+     */
+    private fun fallBackFromSameWifi(engine: Engine, state: LinkState): Boolean {
+        val request = sessionRequest ?: return false
+        if (engine != Engine.CARPLAY || state.stage != LinkStage.FAILED || state.problem != LinkProblem.ENGINE) return false
+        if (request.transport != Transport.WIRELESS || request.path != WirelessPath.SAME_WIFI || request.retried) return false
+        val saved = unifiedSettings.load().homeWifi
+        if (saved.ssid.isNotEmpty()) WirelessRefusals(app).record(Engine.CARPLAY, saved.ssid, saved.password)
+        note("CarPlay over Wi-Fi \"${saved.ssid}\" failed (${state.detail ?: "no detail"}); trying the next path")
+        val address = request.address
+        val phoneName = request.phoneName
+        // Let the failed session finish closing before the next one opens.
+        main.post { if (engaged == Engine.CARPLAY && sessionRequest === request) connect(Engine.CARPLAY, Transport.WIRELESS, address, phoneName, retried = true) }
+        return true
     }
 
     private fun usbPhonePresent(engine: Engine): Boolean =
