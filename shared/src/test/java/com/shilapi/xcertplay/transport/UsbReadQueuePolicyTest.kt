@@ -8,6 +8,37 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UsbReadQueuePolicyTest {
+    @Test fun platformCeilingCapsTheFirstSubmissionWithoutRewindingPosition() {
+        val buffer = ByteBuffer.allocateDirect(65_536).apply { position(5_000) }
+        val result = UsbReadQueuePolicy(queueCeiling = 16_384).queue(buffer, {}) {
+            assertEquals(5_000, it.position())
+            assertEquals(16_384, it.remaining())
+            true
+        }
+        assertTrue(result.queued)
+        assertEquals(16_384, result.firstBytes)
+        assertEquals(null, result.fallbackBytes)
+        assertEquals(21_384, buffer.limit())
+    }
+
+    @Test fun platformCeilingDoesNotEnlargeASmallerRegionAndRejectionRestoresTheLimit() {
+        val policy = UsbReadQueuePolicy(queueCeiling = 16_384)
+        val large = ByteBuffer.allocateDirect(65_536)
+        var calls = 0
+        val rejected = policy.queue(large, {}) { calls++; false }
+        assertFalse(rejected.queued)
+        assertEquals(1, calls)
+        assertEquals(null, rejected.fallbackBytes)
+        assertEquals(65_536, large.limit())
+        val small = ByteBuffer.allocateDirect(32_768).apply { position(5_000); limit(11_000) }
+        policy.queue(small, {}) {
+            assertEquals(5_000, it.position())
+            assertEquals(6_000, it.remaining())
+            true
+        }
+        assertEquals(11_000, small.limit())
+    }
+
     @Test fun acceptedPrimarySizeDoesNotRetryOrReduceLaterReads() {
         val policy = UsbReadQueuePolicy()
         val sizes = mutableListOf<Int>()
