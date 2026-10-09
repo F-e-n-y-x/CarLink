@@ -94,7 +94,7 @@ class PairingSession(context: Context) {
     @SuppressLint("MissingPermission") // The pairing screen runs after the permission step.
     private fun refresh() {
         _state.value = if (adapter?.isEnabled != true) State.BluetoothOff
-        else State.Waiting(runCatching { adapter.name }.getOrNull())
+        else State.Waiting(runCatching { adapter?.name }.getOrNull())
     }
 
     @SuppressLint("MissingPermission")
