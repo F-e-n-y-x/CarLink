@@ -27,7 +27,6 @@ half charged; nothing animates).
 | Config | Profile | Panel | CarLink canvas | Themes |
 |---|---|---|---|---|
 | `tablet` | Phone/tablet | The user's Redmi Pad Pro: 2560×1600px at 280dpi (1463×914dp) | ≈1108×692dp (large-handheld scale 1.32×) | dark, light |
-| `tablet` | Phone/tablet | The user's Redmi Pad Pro: 2560×1600px at 280dpi (1463×914dp) | ≈1108×692dp (large-handheld scale 1.32×) | dark, light |
 | `car-landscape` | Car | 2160×1215px (1440×810dp at 240dpi) | 1440×810dp | dark, light |
 | `car-1080p` | Car | 1920×1080px reporting 240dpi | 1440×810dp | dark |
 | `car-split-third` | Car | 640×1080px window on a 1920×1080px panel (BYD ⅓ split) | 480×810dp | dark |
