@@ -1,0 +1,5 @@
+# :carlink-core's baseline profile. The host merges it into its APK (AGP does this for library
+# dependencies), so the connection backend is compiled ahead of time like the host's own code
+# (docs/LOW_END_PERFORMANCE.md). The backend is small; the whole package is listed.
+HSPLcom/carlink/core/**->**(**)**
+Lcom/carlink/core/**;

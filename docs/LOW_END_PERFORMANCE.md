@@ -137,9 +137,10 @@ Connected, a failure, the Phones sheet, Settings › General and the Visual effe
 - **The decoder probe for Automatic picture runs in the same deferred step**, on a low-priority
   thread, so the first session does not pay for it (5 ms on the emulator; longer on units with
   many codecs).
-- **Baseline profile** (`app/src/main/baseline-prof.txt`): all of `com.carlink.app` is listed, so
-  ART compiles CarLink's own code at install (with ProfileInstaller) instead of interpreting it on
-  the first launches. Libraries (Compose, Material 3) ship their own profiles, merged by AGP.
+- **Baseline profile** (`app/src/main/baseline-prof.txt` lists all of `com.carlink.app`,
+  `carlink-core/src/main/baseline-prof.txt` all of `com.carlink.core`), so ART compiles CarLink's
+  own code at install (with ProfileInstaller) instead of interpreting it on the first launches.
+  AGP merges the library's profile, and those of Compose and Material 3, into the APK.
 - Unchanged and measured cheap: brand hooks, DiPlay hooks, USB watcher registration and the
   switcher install (~10 ms together).
 
