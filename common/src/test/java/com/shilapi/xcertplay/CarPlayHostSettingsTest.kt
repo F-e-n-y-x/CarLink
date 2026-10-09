@@ -18,6 +18,8 @@ import com.shilapi.xcertplay.transport.Iap2IdentificationConfig
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.After
+import android.app.AlertDialog
+import android.os.Looper
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -29,6 +31,7 @@ import org.mockito.Mockito.`when`
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowAlertDialog
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.android.util.concurrent.PausedExecutorService
@@ -117,6 +120,10 @@ class CarPlayHostSettingsTest {
         val original = AirPlayPersistence.loadDisplayScalePercent(activity)
         resolutionSlider().progress = 0
         fullSettingsButton().performClick()
+        // A staged edit is pending, so leaving asks first and nothing has been thrown away yet.
+        assertTrue(field("menuOpen") as Boolean)
+        assertNull(shadowOf(activity).nextStartedActivity)
+        discardPendingEdits()
         assertFalse(field("menuOpen") as Boolean)
         assertNull(field("settingsBaseline"))
         assertEquals(original, field("displayScalePercent"))
@@ -126,6 +133,49 @@ class CarPlayHostSettingsTest {
         val intent = shadowOf(activity).nextStartedActivity
         assertEquals(DiPlayActivity::class.java.name, intent.component!!.className)
         assertEquals("settings", intent.getStringExtra("page"))
+    }
+
+    @Test fun leavingWithoutAPendingEditDoesNotAsk() {
+        attachController()
+        invoke("openSettingsMenu")
+        fullSettingsButton().performClick()
+        assertNull(ShadowAlertDialog.getLatestAlertDialog())
+        assertFalse(field("menuOpen") as Boolean)
+        assertEquals(DiPlayActivity::class.java.name,
+            shadowOf(activity).nextStartedActivity.component!!.className)
+    }
+
+    @Test fun theQuestionAloneChangesNothing() {
+        attachController()
+        invoke("openSettingsMenu")
+        val original = AirPlayPersistence.loadDisplayScalePercent(activity)
+        resolutionSlider().progress = 0
+        val staged = field("displayScalePercent")
+        assertNotEquals(original, staged)
+
+        fullSettingsButton().performClick()
+        assertNotNull(ShadowAlertDialog.getLatestAlertDialog())
+        assertTrue(field("menuOpen") as Boolean)
+        assertNotNull(field("settingsBaseline"))
+        assertEquals(staged, field("displayScalePercent"))
+        assertEquals(original, AirPlayPersistence.loadDisplayScalePercent(activity))
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test fun answeringSaveKeepsTheStagedEditInsteadOfDiscardingIt() {
+        attachController()
+        invoke("openSettingsMenu")
+        resolutionSlider().progress = 0
+        val staged = field("displayScalePercent")
+
+        fullSettingsButton().performClick()
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            ?: error("leaving the menu with a pending edit should ask before discarding")
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(field("menuOpen") as Boolean)
+        assertEquals(staged, AirPlayPersistence.loadDisplayScalePercent(activity))
     }
 
     @Test fun returningFromFullSettingsReloadsSavedConnectionPreferences() {
@@ -513,6 +563,14 @@ class CarPlayHostSettingsTest {
         .first { it.text == activity.getString(R.string.settings_gesture_fingers, field("gestureFingerCount")) }
     private fun fullSettingsButton() = views(menu()).filterIsInstance<Button>()
         .first { it.text == activity.getString(R.string.app_name) + " " + activity.getString(R.string.settings) }
+    /** Answers the "Discard your changes?" dialog that an exit with staged edits now shows. */
+    private fun discardPendingEdits() {
+        val dialog = ShadowAlertDialog.getLatestAlertDialog()
+            ?: error("leaving the menu with a pending edit should ask before discarding")
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
     private fun views(view: View): Sequence<View> = sequence {
         yield(view)
         if (view is ViewGroup) for (index in 0 until view.childCount) yieldAll(views(view.getChildAt(index)))

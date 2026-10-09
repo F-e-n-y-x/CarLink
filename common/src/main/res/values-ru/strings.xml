@@ -690,4 +690,7 @@
     <string name="setup_badge_adb">Требуется ADB по сети</string>
     <string name="setup_done_title">Всё готово</string>
     <string name="setup_done_description">Подключите iPhone сейчас. Этот мастер можно снова открыть в настройках.</string>
+    <string name="settings_discard_pending_title">Отменить изменения?</string>
+    <string name="settings_discard_pending_message">Разрешение, частота кадров, подключение и остальные изменённые настройки ещё не сохранены. «Сохранить и переподключиться» применяет их.</string>
+    <string name="settings_discard_pending_confirm">Отменить</string>
 </resources>

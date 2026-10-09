@@ -690,4 +690,7 @@
     <string name="setup_badge_adb">يتطلب ADB عبر الشبكة</string>
     <string name="setup_done_title">أنت جاهز</string>
     <string name="setup_done_description">اتصل بـ iPhone الآن. يمكنك فتح هذا الدليل مرة أخرى من الإعدادات.</string>
+    <string name="settings_discard_pending_title">تجاهل التغييرات؟</string>
+    <string name="settings_discard_pending_message">لم يتم بعد حفظ الدقة ومعدل الإطارات والاتصال وباقي الإعدادات التي غيرتها. حفظ وإعادة الاتصال يطبقها.</string>
+    <string name="settings_discard_pending_confirm">تجاهل</string>
 </resources>

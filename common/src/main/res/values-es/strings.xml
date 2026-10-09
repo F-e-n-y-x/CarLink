@@ -690,4 +690,7 @@
     <string name="setup_badge_adb">Requiere ADB por red</string>
     <string name="setup_done_title">Todo listo</string>
     <string name="setup_done_description">Conecta tu iPhone ahora. Puedes volver a abrir esta guía desde Ajustes.</string>
+    <string name="settings_discard_pending_title">¿Descartar los cambios?</string>
+    <string name="settings_discard_pending_message">La resolución, la velocidad de fotogramas, la conexión y los demás ajustes que acabas de cambiar todavía no se han guardado. Guardar y reconectar los aplica.</string>
+    <string name="settings_discard_pending_confirm">Descartar</string>
 </resources>
