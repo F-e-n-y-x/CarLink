@@ -1619,6 +1619,12 @@ class AapService : Service(), UsbReceiver.Listener {
 
     /** Starts [WirelessServer] if the user has configured server WiFi mode. */
     private fun initWifiMode(force: Boolean = false) {
+        // CarLink: a USB-only session arms no wireless route (no P2P group, no Bluetooth pokes), so
+        // the plugged-in phone is never pulled into the wireless flow (RELIABILITY_AUDIT K10).
+        if (com.andrerinas.openheadunit.HostIntegration.usbOnlySession) {
+            AppLog.i("AapService: USB-only session; wireless bring-up skipped.")
+            return
+        }
         // Every automatic entry point lands here, including the Bluetooth auto-start that fires
         // when the phone comes into range — which on a looping unit would walk straight back into
         // the crash the guard was set to avoid. Explicit user actions release the pause first, so
@@ -2189,6 +2195,9 @@ class AapService : Service(), UsbReceiver.Listener {
         val deviceName = UsbDeviceCompat(accessoryDevice).uniqueName
         AppLog.w("Handshake failed on accessory device $deviceName (failure #$accessoryHandshakeFailures)")
 
+        // CarLink: a host that owns the accessory switch re-switches a stale accessory itself, on the
+        // first failure (connection/aa/AaCommandHandler.reswitchStaleAccessory); two switches would race.
+        if (com.andrerinas.openheadunit.HostIntegration.hostOwnsUsbSwitch) return
         if (accessoryHandshakeFailures > MAX_STALE_ACCESSORY_RETRIES) {
             AppLog.i("Stale accessory detected: forcing re-enumeration via AOA descriptors for $deviceName")
             accessoryHandshakeFailures = 0
@@ -2467,7 +2476,7 @@ class AapService : Service(), UsbReceiver.Listener {
             return
         }
         AppLog.i("AapService: Received WiFi credentials from manager (SSID=$ssid, IP=$ip). Updating and Triggering Poke.")
-        WirelessTiming.mark(WirelessTimeline.Phase.CREDENTIALS) // CarLink
+        WirelessTiming.mark(WirelessTimeline.Phase.CREDENTIALS, "bssid=${WirelessTiming.maskBssid(bssid)}") // CarLink
         nativeAaHandshakeManager?.updateWifiCredentials(ssid, psk, ip, bssid)
         if (commManager.isConnected ||
             commManager.connectionState.value is CommManager.ConnectionState.Connecting) {

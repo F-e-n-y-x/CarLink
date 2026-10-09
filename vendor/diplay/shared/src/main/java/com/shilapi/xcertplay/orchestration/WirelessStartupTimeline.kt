@@ -61,6 +61,7 @@ class WirelessStartupTimeline(
             }
         }
         runCatching { sink(line) }
+        runCatching { milestoneListener?.invoke(phase) } // CarLink
         return line
     }
 
@@ -75,4 +76,14 @@ class WirelessStartupTimeline(
     }
 
     private fun millis(nanos: Long) = nanos / 1_000_000L
+
+    companion object {
+        /**
+         * CarLink: every phase the first time it is marked in a bring-up, on the marking thread.
+         * A host shows the Wi-Fi details and the first AirPlay TCP as progress (RELIABILITY_AUDIT K4).
+         */
+        @Volatile
+        @JvmStatic
+        var milestoneListener: ((Phase) -> Unit)? = null
+    }
 }

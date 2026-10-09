@@ -43,4 +43,14 @@ class WirelessTimelineTest {
         assertEquals("WIRELESS_TIMING group-create start+400ms attempt=0", lines.last())
         assertEquals(4, lines.size)
     }
+
+    @Test fun theGroupBssidIsLoggedAsAStableMaskedValue() {
+        val a = WirelessTiming.maskBssid("8A:12:34:56:78:9A")
+        assertEquals(a, WirelessTiming.maskBssid("8a:12:34:56:78:9a "))
+        assertEquals(9, a.length)
+        assertEquals(false, a.contains("12:34"))
+        assertEquals(false, a == WirelessTiming.maskBssid("8a:12:34:56:78:9b"))
+        assertEquals("none", WirelessTiming.maskBssid("02:00:00:00:00:00"))
+        assertEquals("none", WirelessTiming.maskBssid(null))
+    }
 }

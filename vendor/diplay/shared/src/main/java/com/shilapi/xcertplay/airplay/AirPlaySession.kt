@@ -89,6 +89,9 @@ class AirPlaySession(
 
     private val closed = AtomicBoolean(false)
     internal val isClosed: Boolean get() = closed.get()
+    // CarLink: AIRPLAY_TIMING, counted from the TCP accept (this session's creation).
+    private val createdNanos = System.nanoTime()
+    private var lastResponseNanos = createdNanos
     private val notified = AtomicBoolean(false)
     private var eventServer: ServerSocket? = null
     private var eventSocket: Socket? = null
@@ -481,6 +484,7 @@ class AirPlaySession(
                         "airplay control rx headers=${request.headers} " +
                             "bodyHex=${request.body.toHex()}",
                     )
+                    val requestNanos = System.nanoTime() // CarLink
                     val response = try {
                         handle(request)
                     } catch (error: Exception) {
@@ -499,6 +503,16 @@ class AirPlaySession(
                         "airplay control response status=${response.status ?: 200} contentBytes=${response.body.size}",
                         false,
                     )
+                    if (showInDebugOverlay) { // CarLink: always-on request timing (RELIABILITY_AUDIT K8)
+                        val now = System.nanoTime()
+                        debugLog(
+                            "AIRPLAY_TIMING ${request.method} ${request.path.substringBefore('?')} " +
+                                "conn+${(requestNanos - createdNanos) / 1_000_000L}ms " +
+                                "wait=${(requestNanos - lastResponseNanos) / 1_000_000L}ms " +
+                                "handle=${(now - requestNanos) / 1_000_000L}ms status=${response.status ?: 200}",
+                        )
+                        lastResponseNanos = now
+                    }
                     val wire = RtspMessage.buildResponse(request, response)
                     trace("airplay control tx wireHex=${wire.toHex()}")
                     output.write(cipher?.encrypt(wire) ?: wire)

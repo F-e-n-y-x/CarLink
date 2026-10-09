@@ -66,8 +66,9 @@ class CarPlayBonjourDualStackTest {
             }
             bonjour.close()
             bonjour.close()
-            verify(v6).close()
-            verify(v4).close()
+            // CarLink: the registries close on background threads (teardown never waits for mDNS).
+            verify(v6, timeout(2_000)).close()
+            verify(v4, timeout(2_000)).close()
             verify(lock).release()
         }
     }
@@ -158,7 +159,7 @@ class CarPlayBonjourDualStackTest {
             }
             factory.verify({ JmDNS.create(ipv6, "carplay-020000000002") }, times(1))
             factory.verifyNoMoreInteractions()
-            verify(dns).close()
+            verify(dns, timeout(2_000)).close() // CarLink: closed on a background thread
         }
         verify(context, never()).getSystemService(Context.NSD_SERVICE)
     }

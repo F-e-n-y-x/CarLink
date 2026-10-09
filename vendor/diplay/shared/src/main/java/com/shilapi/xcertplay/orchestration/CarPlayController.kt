@@ -2473,13 +2473,14 @@ class CarPlayController(
 
             closeBluetoothBootstrapTransport()
 
-            val activeBonjour = bonjour
-            bonjour = null
-            if (activeBonjour != null) closeBestEffort("Bonjour") { activeBonjour.close() }
-
+            // CarLink: the radio first (the next engine waits for it), then mDNS, which no longer blocks.
             val activeHotspot = hotspot
             hotspot = null
             if (activeHotspot != null) closeBestEffort("wireless hotspot") { activeHotspot.close() }
+
+            val activeBonjour = bonjour
+            bonjour = null
+            if (activeBonjour != null) closeBestEffort("Bonjour") { activeBonjour.close() }
             wirelessRuntimeIdentification = null
             wirelessAirPlayEndpoint = null
             wirelessPublishedAddress = null

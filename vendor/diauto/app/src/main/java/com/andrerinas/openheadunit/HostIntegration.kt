@@ -156,4 +156,13 @@ object HostIntegration {
     @Volatile
     @JvmStatic
     var hostOwnsUsbSwitch: Boolean = false
+
+    /**
+     * CarLink: the host runs a USB-only session. While true, the service arms no wireless route
+     * (`initWifiMode` returns at once: no Wi-Fi Direct group, no Bluetooth wake pokes, no wireless
+     * server), so a plugged-in phone is never pulled into the wireless flow. Default false.
+     */
+    @Volatile
+    @JvmStatic
+    var usbOnlySession: Boolean = false
 }

@@ -85,4 +85,17 @@ object WirelessTiming {
     fun mark(phase: WirelessTimeline.Phase, detail: String = "") {
         timeline.mark(phase, detail)
     }
+
+    /**
+     * CarLink: a short, stable stand-in for a group owner's BSSID. The same address always gives
+     * the same value, so groups can be compared in the logs without writing the address itself.
+     */
+    fun maskBssid(bssid: String?): String {
+        val normalized = bssid?.trim()?.lowercase().orEmpty()
+        if (normalized.isEmpty() || normalized == "0" || normalized == "02:00:00:00:00:00" ||
+            normalized == "00:00:00:00:00:00") return "none"
+        var hash = 0x811c9dc5.toInt()
+        for (c in normalized) hash = (hash xor c.code) * 0x01000193
+        return "h%08x".format(hash)
+    }
 }

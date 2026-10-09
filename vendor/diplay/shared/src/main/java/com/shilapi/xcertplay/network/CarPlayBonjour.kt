@@ -353,8 +353,12 @@ class CarPlayBonjour(
             workerToJoin?.interrupt()
             if (multicastLock.isHeld) multicastLock.release()
         }
-        dnsToClose.forEach { dns -> runCatching { dns.close() } }
-        workerToJoin?.let(::joinWorker)
+        // CarLink: each JmDNS close (goodbye packets) and the worker's exit ran here in turn, with a
+        // 2 s join, and held up every engine switch by 2-4 s (RELIABILITY_AUDIT K7). They finish on
+        // daemon threads instead; the worker is interrupted and emits nothing once closed.
+        dnsToClose.forEach { dns ->
+            Thread({ runCatching { dns.close() } }, "$WORKER_NAME-close").apply { isDaemon = true; start() }
+        }
     }
 
     @Suppress("DEPRECATION")
@@ -632,15 +636,6 @@ class CarPlayBonjour(
     private fun decodeTxtValue(value: ByteArray): String =
         String(value, StandardCharsets.UTF_8).trimEnd('\u0000')
 
-    private fun joinWorker(worker: Thread) {
-        if (worker === Thread.currentThread()) return
-        try {
-            worker.join(JOIN_TIMEOUT_MILLIS)
-        } catch (_: InterruptedException) {
-            Thread.currentThread().interrupt()
-        }
-    }
-
     private companion object {
         const val TAG = "xcertplay-bonjour"
         const val WORKER_NAME = "carplay-bonjour"
@@ -654,7 +649,6 @@ class CarPlayBonjour(
         const val PROBE_RETRY_DELAY_MILLIS = 1_500L
         const val CONNECT_TIMEOUT_MILLIS = 3_000
         const val READ_TIMEOUT_MILLIS = 3_000
-        const val JOIN_TIMEOUT_MILLIS = 2_000L
         const val FAILURE_NONE = -1
     }
 }

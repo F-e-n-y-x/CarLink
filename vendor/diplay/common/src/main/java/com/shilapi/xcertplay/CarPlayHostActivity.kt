@@ -4390,8 +4390,10 @@ class CarPlayHostActivity : ComponentActivity() {
         }
         pendingDisplaySize = size
         // With a turning screen's square canvas nothing reconnects, so the turn need not wait for the size to settle.
+        // CarLink: the first size has nothing to settle; only later changes are debounced (0.5 s per start).
         mainHandler.postDelayed(applyDisplaySize,
-            if (sessionDisplay?.viewAreas?.turnsWithScreen == true) 0L else DISPLAY_CHANGE_DEBOUNCE_MILLIS)
+            if (sessionDisplay?.viewAreas?.turnsWithScreen == true || activeDisplaySize == null) 0L
+            else DISPLAY_CHANGE_DEBOUNCE_MILLIS)
     }
 
     private fun isMultiWindowActive(): Boolean {
@@ -4876,8 +4878,10 @@ class CarPlayHostActivity : ComponentActivity() {
         sessionDisplay = null
         Log.i(TAG, "shutdown reason=$reason terminateProcess=$terminateProcess")
         teardownExecutor.execute {
+            val teardownStarted = System.nanoTime() // CarLink: teardown duration
             oldController?.close()
             val clean = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
+            Log.i(TAG, "shutdown controller closed clean=$clean elapsedMs=${(System.nanoTime() - teardownStarted) / 1_000_000L}") // CarLink
             oldSink?.let(::closeRetiringSink)
             airPlayCommandExecutor.shutdown()
             if (terminateProcess) {

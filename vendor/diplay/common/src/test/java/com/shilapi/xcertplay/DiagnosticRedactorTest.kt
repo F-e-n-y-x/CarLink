@@ -104,12 +104,32 @@ class DiagnosticRedactorTest {
                     it.append("password=secret")
                 }
             }
-            val history = SessionLogFile.REPORT_NAMES.map { folder.resolve(it).readText() }
-            assertEquals(8, folder.listFiles()!!.size)
-            assertTrue(history.first().contains("session=2"))
+            // CarLink: history is kept by size, so ten short runs all survive.
+            val history = SessionLogFile.REPORT_NAMES.map { folder.resolve(it) }.filter { it.exists() }.map { it.readText() }
+            assertEquals(10, folder.listFiles()!!.size)
+            assertTrue(history.first().contains("session=0"))
             assertTrue(history.last().contains("session=9"))
             assertTrue(history.any { it.contains("rejected code=0") })
             assertFalse(history.any { it.contains("secret") })
+        } finally { folder.deleteRecursively() }
+    }
+    // CarLink: the oldest runs expire once the archives exceed their size budget.
+    @Test fun oldestHistoryExpiresBySize() {
+        val folder = Files.createTempDirectory("diplay-budget-test").toFile()
+        try {
+            val runBytes = 300 * 1024
+            val runs = (SessionLogFile.ARCHIVE_BUDGET_BYTES / runBytes).toInt() + 5
+            repeat(runs) { session ->
+                SessionLogFile(folder.resolve("diplay.log")).use { log ->
+                    log.reset("session=$session")
+                    repeat(runBytes / 700) { log.append("connection state " + "x".repeat(680)) }
+                }
+            }
+            val archives = folder.listFiles()!!.filter { it.name.startsWith("previous") }
+            assertTrue(archives.sumOf { it.length() } <= SessionLogFile.ARCHIVE_BUDGET_BYTES)
+            assertTrue(archives.size >= (SessionLogFile.ARCHIVE_BUDGET_BYTES / runBytes).toInt() - 1)
+            assertTrue(folder.resolve("previous.log").readText().contains("session=${runs - 2}"))
+            assertFalse(archives.any { it.readText().contains("session=0\n") || it.readText().contains("session=0 ") })
         } finally { folder.deleteRecursively() }
     }
     @Test fun safeWifiMetadataSurvivesWithoutWeakeningCredentialFilters() {
