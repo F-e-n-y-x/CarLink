@@ -205,6 +205,11 @@ object AirPlayInfoPlist {
             "heightPhysical" to heightPhysical,
             "features" to (display.features ?: (DISPLAY_FEATURE_HIGH_FIDELITY_TOUCH or DISPLAY_FEATURE_KNOBS)),
             "primaryInputDevice" to display.primaryInputDevice,
+            // Declare automatic UI/map appearance before runtime setNightMode commands.
+            "uiAppearanceMode" to 0,
+            "uiAppearanceSetting" to 0,
+            "mapAppearanceMode" to 0,
+            "mapAppearanceSetting" to 0,
         )
 
         // Several areas let the car move CarPlay between them (another dock edge, the head unit's split

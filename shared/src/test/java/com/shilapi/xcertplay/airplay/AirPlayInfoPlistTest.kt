@@ -10,6 +10,24 @@ import org.junit.Test
 
 class AirPlayInfoPlistTest {
     @Test
+    fun bothDisplaysDeclareAutomaticAppearanceAtConnection() {
+        val config = AirPlayConfig(
+            deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
+            sourceVersion = "366.0",
+            main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+            cluster = AirPlayDisplayConfig(widthPixels = 960, heightPixels = 360),
+        )
+        val displays = AirPlayInfoPlist.build(config)["displays"] as List<*>
+        assertEquals(2, displays.size)
+        for (display in displays) {
+            val fields = display as Map<*, *>
+            for (key in listOf("uiAppearanceMode", "uiAppearanceSetting", "mapAppearanceMode", "mapAppearanceSetting")) {
+                assertEquals(key, 0, fields[key])
+            }
+        }
+    }
+
+    @Test
     fun defaultDisplayIncludesFullViewAndSafeAreas() {
         val info = AirPlayInfoPlist.build(
             AirPlayConfig(
