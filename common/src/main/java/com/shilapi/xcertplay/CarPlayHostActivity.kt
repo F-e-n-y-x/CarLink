@@ -45,6 +45,7 @@ import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.TextureView
+import android.view.ViewConfiguration
 import android.view.ViewTreeObserver
 import android.view.KeyEvent
 import android.view.View
@@ -487,6 +488,14 @@ class CarPlayHostActivity : ComponentActivity() {
     // The tab at the screen edge the side panel takes; dragging it out opens the panel (null drag: not dragged yet).
     private var sidePanelTab: View? = null
     private var sidePanelTabDrag: FloatArray? = null
+    // Until a touch on the tab shows it is a drag, copies of its events wait here; CarPlay under the tab
+    // gets them when it is not (a tap, a scroll along the edge, a long press), and the rest of that touch.
+    private val sidePanelTabHeld = mutableListOf<MotionEvent>()
+    private var sidePanelTabToCarPlay = false
+    private val sidePanelTabLongPress = Runnable {
+        val tab = sidePanelTab
+        if (tab != null && sidePanelTabDrag?.get(1) == 0f) handSidePanelTabTouchToCarPlay(tab)
+    }
     private var sidePanelTabFrom: Int? = null
     // While the panel edge moves: CarPlay's last picture blurred over the video, and the panel's contents blurred.
     // It fades as soon as the finger lifts: in the car CarPlay's own resize transition looked quicker without it held.
@@ -2005,9 +2014,21 @@ class CarPlayHostActivity : ComponentActivity() {
      * where it was let go, and nothing happens when it was let go nearer the screen edge. A tap shows the pill again.
      */
     private fun onSidePanelTabTouch(tab: View, event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            sidePanelTabToCarPlay = false
+            dropHeldSidePanelTabTouch()
+        }
+        if (sidePanelTabToCarPlay) {
+            forwardSidePanelTabTouch(tab, event)
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                sidePanelTabToCarPlay = false
+            }
+            return true
+        }
         val panel = sidePanel ?: return false
         val vertical = sidePanelOpenEdge() == Gravity.BOTTOM
         val position = if (vertical) tab.y + event.y else tab.x + event.x
+        val across = if (vertical) tab.x + event.x else tab.y + event.y
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val from = sidePanelOpenEdge() ?: return false
@@ -2018,13 +2039,27 @@ class CarPlayHostActivity : ComponentActivity() {
                     Gravity.LEFT -> Gravity.END
                     else -> Gravity.START
                 }
-                sidePanelTabDrag = floatArrayOf(position, 0f)
+                // The panel comes out from the left towards the right, otherwise towards smaller x or y.
+                sidePanelTabDrag = floatArrayOf(position, 0f, across, if (from == Gravity.LEFT) 1f else -1f)
+                holdSidePanelTabTouch(event)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 val drag = sidePanelTabDrag ?: return false
                 val screen = sidePanelScreen ?: return false
-                if (drag[1] == 0f && Math.abs(position - drag[0]) < dp(8)) return true
+                if (drag[1] == 0f) {
+                    when (sidePanelTabIntent((position - drag[0]) * drag[3], Math.abs(across - drag[2]), dp(8).toFloat())) {
+                        SidePanelTabIntent.UNDECIDED -> {
+                            holdSidePanelTabTouch(event)
+                            return true
+                        }
+                        SidePanelTabIntent.CARPLAY -> {
+                            handSidePanelTabTouchToCarPlay(tab, event)
+                            return true
+                        }
+                        SidePanelTabIntent.OPEN_PANEL -> dropHeldSidePanelTabTouch()
+                    }
+                }
                 drag[1] = 1f
                 tab.alpha = 0f
                 startSidePanelBlur()
@@ -2047,15 +2082,30 @@ class CarPlayHostActivity : ComponentActivity() {
                 }
                 return true
             }
+            MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> {
+                // More fingers never drag the panel (the settings swipe, a pinch): they go to CarPlay.
+                if (sidePanelTabDrag?.get(1) == 0f) handSidePanelTabTouchToCarPlay(tab, event)
+                return true
+            }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 val drag = sidePanelTabDrag ?: return false
+                if (drag[1] == 0f) {
+                    // Not a drag: a tap goes to CarPlay under the tab and shows the pill again.
+                    if (event.actionMasked == MotionEvent.ACTION_UP) {
+                        handSidePanelTabTouchToCarPlay(tab, event)
+                        sidePanelTabToCarPlay = false
+                        showSidePanelTabHint()
+                    } else {
+                        dropHeldSidePanelTabTouch()
+                        sidePanelTabDrag = null
+                    }
+                    return true
+                }
                 sidePanelTabDrag = null
                 panel.alpha = 1f
                 tab.alpha = 1f
                 val screen = sidePanelScreen
-                val dragged = drag[1] != 0f
-                val carPlay = if (dragged && screen != null) sidePanelCarPlayShare(screen, position) else null
-                if (event.actionMasked == MotionEvent.ACTION_UP && !dragged) showSidePanelTabHint()
+                val carPlay = if (screen != null) sidePanelCarPlayShare(screen, position) else null
                 if (event.actionMasked == MotionEvent.ACTION_UP && carPlay != null && carPlay <= SIDE_PANEL_CLOSE_SHARE) {
                     SidePanelSettings.setSixths(this, CarPlayViewAreas.nearestSidePanelSixths(carPlay.toDouble()))
                     appendLog("Side panel opened from its tab: CarPlay ${SidePanelSettings.sixths(this)}/6 of the screen")
@@ -2068,6 +2118,44 @@ class CarPlayHostActivity : ComponentActivity() {
             }
         }
         return false
+    }
+
+    private fun holdSidePanelTabTouch(event: MotionEvent) {
+        if (sidePanelTabHeld.isEmpty()) {
+            mainHandler.postDelayed(sidePanelTabLongPress, ViewConfiguration.getLongPressTimeout().toLong())
+        }
+        sidePanelTabHeld += MotionEvent.obtain(event)
+    }
+
+    private fun dropHeldSidePanelTabTouch() {
+        mainHandler.removeCallbacks(sidePanelTabLongPress)
+        sidePanelTabHeld.forEach(MotionEvent::recycle)
+        sidePanelTabHeld.clear()
+    }
+
+    /** The touch on the tab is not a drag: CarPlay gets what it held back, [event], and the rest of the touch. */
+    private fun handSidePanelTabTouchToCarPlay(tab: View, event: MotionEvent? = null) {
+        mainHandler.removeCallbacks(sidePanelTabLongPress)
+        sidePanelTabHeld.forEach { held ->
+            forwardSidePanelTabTouch(tab, held)
+            held.recycle()
+        }
+        sidePanelTabHeld.clear()
+        event?.let { forwardSidePanelTabTouch(tab, it) }
+        sidePanelTabDrag = null
+        sidePanelTabToCarPlay = true
+    }
+
+    /** Delivers a tab touch to the CarPlay touch layer under the tab, in that layer's coordinates. */
+    private fun forwardSidePanelTabTouch(tab: View, event: MotionEvent) {
+        val layer = gestureOverlay ?: return
+        val forwarded = MotionEvent.obtain(event)
+        forwarded.offsetLocation(tab.x - layer.x, tab.y - layer.y)
+        try {
+            onHostTouch(layer, forwarded)
+        } finally {
+            forwarded.recycle()
+        }
     }
 
     /**
@@ -2159,6 +2247,8 @@ class CarPlayHostActivity : ComponentActivity() {
 
     // Stops the hints and the blur of a host that goes away.
     private fun releaseSidePanelEffects() {
+        dropHeldSidePanelTabTouch()
+        sidePanelTabToCarPlay = false
         mainHandler.removeCallbacks(sidePanelGripFade)
         mainHandler.removeCallbacks(sidePanelTabFade)
         mainHandler.removeCallbacks(sidePanelBlurEnd)
