@@ -125,6 +125,9 @@ class SessionManager(
     val state: StateFlow<SessionState> = _state.asStateFlow()
 
     private val _pendingSwitch = MutableStateFlow<SessionRequest?>(null)
+
+    /** Bluetooth phones already offered during the current session (one offer each). */
+    private val offeredThisSession = mutableSetOf<String>()
     /**
      * A second phone was plugged in while another session runs: the driver is asked
      * "Switch to <phone>?" (user decision, 2026-10-09) instead of it taking over by itself.
@@ -242,7 +245,18 @@ class SessionManager(
         when {
             !environment.autoConnectBluetooth -> note("Bluetooth $engine phone: automatic start is off")
             environment.autoConnectPaused -> note("Bluetooth $engine phone: paused by the driver")
-            _state.value.isActive -> note("Bluetooth $engine phone: a ${_state.value.engine} session is running")
+            _state.value.isActive -> {
+                // Another phone reached the car while one is projecting: offer it, never take over
+                // (user request, 2026-10-09: "show that a device is available to switch").
+                val current = (_state.value as SessionState.Active).request
+                val samePhone = current.phoneAddress?.equals(address, ignoreCase = true) == true
+                if (!samePhone && _pendingSwitch.value?.phoneAddress?.equals(address, ignoreCase = true) != true &&
+                    address !in offeredThisSession) {
+                    offeredThisSession += address
+                    note("Bluetooth $engine phone while a ${current.engine} session runs; offering a switch")
+                    _pendingSwitch.value = SessionRequest(engine, Transport.WIRELESS, address, phoneName)
+                }
+            }
             else -> start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
         }
     }
@@ -307,6 +321,7 @@ class SessionManager(
     /** Stops whatever runs and goes idle. */
     fun stop() {
         if (_state.value.isActive) lastSessionEndedAt = SystemClock.uptimeMillis()
+        offeredThisSession.clear()
         token++
         main.removeCallbacks(notAnswering)
         main.removeCallbacks(usbGoneCheck)

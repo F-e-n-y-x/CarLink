@@ -144,4 +144,7 @@
     <string name="carlink_switch_body">%1$s will stop.</string>
     <string name="carlink_switch_confirm">Switch</string>
     <string name="carlink_switch_keep">Not now</string>
+    <string name="carlink_switch_how">%1$s · %2$s</string>
+    <string name="carlink_switch_via_usb">Plugged in by USB</string>
+    <string name="carlink_switch_via_wireless">Available wirelessly</string>
 </resources>

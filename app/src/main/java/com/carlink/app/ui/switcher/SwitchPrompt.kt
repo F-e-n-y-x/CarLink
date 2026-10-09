@@ -55,6 +55,8 @@ fun SwitchPrompt(
     currentEngine: Engine,
     onSwitch: () -> Unit,
     onDecline: () -> Unit,
+    /** How the offered phone is reachable: plugged in (USB) or over Bluetooth/Wi-Fi. */
+    newTransport: com.carlink.app.core.Transport = com.carlink.app.core.Transport.USB,
     modifier: Modifier = Modifier,
     safePadding: PaddingValues = PaddingValues(0.dp),
 ) {
@@ -88,6 +90,12 @@ fun SwitchPrompt(
                 style = MaterialTheme.typography.headlineMedium, color = scheme.onSurface, textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading(); liveRegion = LiveRegionMode.Assertive })
             Spacer(Modifier.height(8.dp))
+            // Which phone, which app and how it is connected (user request, 2026-10-09).
+            Text(stringResource(R.string.carlink_switch_how, engineName(newEngine),
+                    stringResource(if (newTransport == com.carlink.app.core.Transport.USB) R.string.carlink_switch_via_usb
+                        else R.string.carlink_switch_via_wireless)),
+                style = MaterialTheme.typography.titleSmall, color = scheme.primary, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(4.dp))
             Text(stringResource(R.string.carlink_home_switch_body, engineName(currentEngine)),
                 style = MaterialTheme.typography.bodyLarge, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Spacer(Modifier.height(dimens.gutter * 1.5f))

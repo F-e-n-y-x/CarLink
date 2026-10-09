@@ -410,7 +410,7 @@ object SwitcherController {
                     ?: if (asked.engine == Engine.CARPLAY) Engine.ANDROID_AUTO else Engine.CARPLAY
                 SwitchPrompt(
                     phoneName = asked.phoneName ?: app.getString(R.string.carlink_switcher_phone_fallback),
-                    newEngine = asked.engine, currentEngine = current,
+                    newEngine = asked.engine, currentEngine = current, newTransport = asked.transport,
                     onSwitch = ::acceptSwitch, onDecline = ::declineSwitch, safePadding = padding,
                 )
             }

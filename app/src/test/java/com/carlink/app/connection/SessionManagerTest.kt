@@ -190,6 +190,12 @@ class SessionManagerTest {
         m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
         m.onBluetoothPhone("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
         assertEquals(1, starts.size)
+        // It is offered instead, once.
+        assertEquals("Pixel", m.pendingSwitch.value?.phoneName)
+        assertEquals(Transport.WIRELESS, m.pendingSwitch.value?.transport)
+        m.declineSwitch()
+        m.onBluetoothPhone("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals(null, m.pendingSwitch.value)
         m.disconnect(); idle()
         m.onBluetoothPhone("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
         assertEquals(1, starts.size)

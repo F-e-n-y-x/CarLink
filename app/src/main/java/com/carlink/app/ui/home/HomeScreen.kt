@@ -182,17 +182,22 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     pendingSwitch?.let { request ->
         val context = androidx.compose.ui.platform.LocalContext.current
         if (android.os.Build.VERSION.SDK_INT < 23 || !android.provider.Settings.canDrawOverlays(context)) {
-            SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
+            SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, request.engine, request.transport, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
         }
     }
 }
 
 @Composable
-private fun SwitchPhoneDialog(phoneName: String, running: Engine?, onSwitch: () -> Unit, onKeep: () -> Unit) {
+private fun SwitchPhoneDialog(phoneName: String, running: Engine?, newEngine: Engine, newTransport: Transport,
+                              onSwitch: () -> Unit, onKeep: () -> Unit) {
     AlertDialog(
         onDismissRequest = onKeep,
         title = { Text(stringResource(R.string.carlink_switch_title, phoneName)) },
-        text = { Text(stringResource(R.string.carlink_switch_body, running?.let { engineName(it) } ?: "")) },
+        text = {
+            Text(stringResource(R.string.carlink_switch_how, engineName(newEngine),
+                stringResource(if (newTransport == Transport.USB) R.string.carlink_switch_via_usb else R.string.carlink_switch_via_wireless)) +
+                "\n" + stringResource(R.string.carlink_switch_body, running?.let { engineName(it) } ?: ""))
+        },
         confirmButton = { IonButton(stringResource(R.string.carlink_switch_confirm), onSwitch) },
         dismissButton = { GlassButton(stringResource(R.string.carlink_switch_keep), onKeep) },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
