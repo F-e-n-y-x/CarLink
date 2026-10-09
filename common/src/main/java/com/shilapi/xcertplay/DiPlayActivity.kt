@@ -1911,14 +1911,14 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
                                     AirPlayPersistence.loadClusterSmallWindowMarkerXPercent(this),
                                 ) { it -> overlayOffsetLabel(it, getString(R.string.marker_left), getString(R.string.marker_right), 50) }
                                     .also { it.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowMarkerXPercent(this, v) } }
-                                    .also { it.onCommit = { reconnectIfRunning() } })
+                                    .also { it.onCommit = { markReconnectNeeded() } })
                                 card.addView(overlaySliderRow(
                                     getString(R.string.cluster_small_window_vertical),
                                     CarPlayClusterDisplay.markerYPercents,
                                     AirPlayPersistence.loadClusterSmallWindowMarkerYPercent(this),
                                 ) { it -> overlayOffsetLabel(it, getString(R.string.marker_up), getString(R.string.marker_down), 45) }
                                     .also { it.onSave = { v -> AirPlayPersistence.saveClusterSmallWindowMarkerYPercent(this, v) } }
-                                    .also { it.onCommit = { reconnectIfRunning() } })
+                                    .also { it.onCommit = { markReconnectNeeded() } })
                                 card.addView(label(getString(R.string.cluster_small_window_hint), 14, MUTED).apply { setPadding(0, dp(10), 0, 0) })
                             }
                         }
