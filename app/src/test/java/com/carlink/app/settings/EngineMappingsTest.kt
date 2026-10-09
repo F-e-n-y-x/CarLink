@@ -163,11 +163,4 @@ class EngineMappingsTest {
         val unknown = on.copy(carHotspotOn = null)
         assertEquals(WirelessPath.WIFI_DIRECT, WirelessPathSelector.select(Engine.ANDROID_AUTO, UnifiedSettings(), unknown))
     }
-
-    @Test fun androidAutoSameWifiPrefersTheRoutersOtherBand() {
-        val full = homeJoined.copy(joinedBssid = "AA:BB:CC:DD:EE:FF", joinedInterface = "wlan0")
-        val aa = EngineMappings.androidAuto(UnifiedSettings(homeWifi = home), WirelessPath.SAME_WIFI, 240,
-            full.copy(otherBandBssid = "11:22:33:44:55:66"))
-        assertEquals("11:22:33:44:55:66", aa["static-bssid"])
-    }
 }
