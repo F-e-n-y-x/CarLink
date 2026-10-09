@@ -1,3 +1,13 @@
+# DiPlay 0.2.15 — 2026-10-08
+
+- The reviewed application baseline at main `75628b298378060698cb60b328fcef100d1e497d`, tree `79cf96a8503bf8d8928ba8459d7b45ac34fa627c`, passed the full source workflow: **1,941 unit cases, 1,940 passed and one expected macOS wildcard-bind assumption skip**, zero failures/errors. Counts: 1,000 shared, 937 common and four Home. Mobile/Home/map-host debug lint and all three identity-free debug APK builds passed.
+- Release preparation changes mobile metadata to `0.2.15` / `34`, documentation and the seven website editions. Minimum SDK is now 25 (Android 7.1), target SDK remains 37. Final release checks repeat the complete repository workflow on the frozen release source; measured artifact details accompany the GitHub release.
+- Added review regressions cover AudioTrack refill accounting and updater installation on API 25/28/33, map streaming after disabling pause, exact-package boot-whitelist checks, and combined appearance/compact-settings navigation on API 25/28/33. Android 7.1 compatibility received additional API 25–28 coverage during review.
+- Android 15 emulator checks covered dark expanded settings, light compact settings/home, portrait home and Arabic RTL settings. The crash buffer was empty. These identity-free emulator checks do not exercise iPhone authentication or prove vehicle behavior.
+- Production packaging requires a clean recorded source commit/tree, release lint, matching package/version/minimum SDK, the existing signing certificate, expected runtime assets and language resources, a corresponding source ZIP without private keys/build outputs, and matching published SHA-256 checksums.
+- Android 7.1–8.1, experimental Bluetooth audio, small-window Auto following and ADB boot repair still need vehicle/firmware feedback. No new maintainer vehicle test of the complete release is claimed. The separate unmerged echo-alignment (#421) and Bluetooth pause/call (#307) work is excluded.
+- See [0.2.15 release notes](RELEASE-NOTES-0.2.15.md) for all 14 contributions and diagnostic-report instructions. Historical validation below is unchanged.
+
 # DiPlay 0.2.14 — 2026-10-07
 
 - The merged application tree `0da34806f3bd91fce36ad26d146d73480ee54667` at main `e837efa95e10632aee3e1d6e8c03dcc66c754868` passed the full source workflow: **1,822 unit cases, 1,821 passed and one expected macOS wildcard-bind assumption skip**, zero failures/errors. Counts: 962 shared, 856 common and four Home. Mobile/Home/map-host debug lint and all three identity-free source-only debug APK builds passed; lint reported zero errors.

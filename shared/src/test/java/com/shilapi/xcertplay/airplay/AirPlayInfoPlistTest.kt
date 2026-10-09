@@ -1,5 +1,7 @@
 package com.shilapi.xcertplay.airplay
 
+import com.shilapi.xcertplay.media.OpusEncoderSupport
+import com.shilapi.xcertplay.media.SoftwareOpusEncoder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -211,6 +213,43 @@ class AirPlayInfoPlistTest {
             0x70004154,
             telephony(AirPlayInfoPlist.build(base.copy(microphone = true)))["audioInputFormats"],
         )
+
+        // Explicitly disabling Opus describes neither platform nor software encoding being usable.
+        val withoutOpus = AirPlayInfoPlist.build(base.copy(microphone = true, microphoneOpus = false))
+        assertEquals(0x4154, telephony(withoutOpus)["audioInputFormats"])
+        assertEquals(0x4154, defaultAudio(withoutOpus)["audioInputFormats"])
+        assertEquals(
+            0x4154,
+            (withoutOpus["audioFormats"] as List<*>)
+                .map { it as Map<*, *> }
+                .single { it["audioType"] == "speechRecognition" }["audioInputFormats"],
+        )
+        // Output is untouched: the Opus decoder exists from API 21, only the encoder is missing.
+        assertEquals(
+            telephony(AirPlayInfoPlist.build(base.copy(microphone = true)))["audioOutputFormats"],
+            telephony(withoutOpus)["audioOutputFormats"],
+        )
+        assertFalse(telephony(AirPlayInfoPlist.build(base.copy(microphoneOpus = false)))
+            .containsKey("audioInputFormats"))
+    }
+
+    @Test
+    fun bundledEncoderKeepsWirelessMicrophoneOpusWithoutAPlatformEncoder() {
+        val config = AirPlayConfig(
+            deviceName = "test", deviceId = "02:00:00:00:00:02", btMac = "02:00:00:00:00:02",
+            sourceVersion = "366.0", main = AirPlayDisplayConfig(widthPixels = 1280, heightPixels = 720),
+            microphone = true,
+            microphoneOpus = OpusEncoderSupport.isAvailable(
+                platformAvailable = { false }, software = { SoftwareOpusEncoder(48_000) },
+            ),
+        )
+        val formats = AirPlayInfoPlist.build(config)["audioFormats"] as List<*>
+        for (audioType in listOf("telephony", "speechRecognition", "default")) {
+            val format = formats.map { it as Map<*, *> }.single {
+                it["type"] == 100 && it["audioType"] == audioType
+            }
+            assertEquals(audioType, 0x70004154, format["audioInputFormats"])
+        }
     }
 
     @Test

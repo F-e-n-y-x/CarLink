@@ -1,3 +1,15 @@
+# DiPlay 0.2.15 — 2026-10-08
+
+- Lower the minimum to Android 7.1/API 25 with compatibility fallbacks; Android 7.1–8.1 vehicle validation remains pending (#407).
+- Add the first-launch DiLink setup guide and manual GitHub update checks in About (#416, #413).
+- Add Light/Dark/Auto app appearance and refine compact layouts, fullscreen handling, Language and About navigation (#422, #420).
+- Recover the music prebuffer after underruns, including corrected retained-audio accounting, and supply a main-decoder operating-rate hint with fallback (#401, #417).
+- Add Wi-Fi Direct automatic band choices and optional selected-iPhone Bluetooth launch; experimental Bluetooth audio remains off by default (#432, #439).
+- Correct square-canvas physical dimensions, refine turn-card placement to 1% steps and add optional small-window marker layouts with experimental Auto following (#404, #440, #438).
+- Add explicit experimental ADB boot-start repair and correct Ukrainian wording (#441, #399).
+
+See [0.2.15 release notes](docs/RELEASE-NOTES-0.2.15.md) for contribution links and limits, and [validation](docs/VALIDATION.md) for checks. Full-release vehicle acceptance is not claimed.
+
 # DiPlay 0.2.14 — 2026-10-07
 
 - Optional delayed pause of the car Bluetooth during CarPlay (ADB, default off). While it is paused, CarPlay calls play on the cabin speaker and microphone because there is no phone SCO.
