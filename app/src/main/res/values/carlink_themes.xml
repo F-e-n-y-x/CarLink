@@ -12,13 +12,4 @@
 
     <!-- Launch theme: same background as the first frame, so there is no flash. -->
     <style name="Theme.CarLink.Starting" parent="Theme.CarLink" />
-
-    <!-- UsbRouterActivity decides and finishes without drawing. -->
-    <style name="Theme.CarLink.Invisible" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:backgroundDimEnabled">false</item>
-    </style>
 </resources>

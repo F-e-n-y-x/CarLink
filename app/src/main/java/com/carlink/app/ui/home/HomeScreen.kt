@@ -618,7 +618,7 @@ private fun failureCopy(link: LinkState): Pair<String, String> = when (link.prob
 
 @Composable
 private fun FailureActions(link: LinkState, actions: HomeActions) {
-    when (link.problem) {
+    when (val problem = link.problem) {
         LinkProblem.CARPLAY_AUTH_MISSING -> IonButton(stringResource(R.string.carlink_home_diagnostics),
             { actions.navigate(Route.DIAGNOSTICS) }, icon = R.drawable.carlink_ic_monitor_heart)
         LinkProblem.NO_IPHONE_SELECTED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
@@ -626,15 +626,15 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
         LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> IonButton(
             stringResource(R.string.carlink_home_open_settings), { actions.navigate(Route.SETTINGS) }, icon = R.drawable.carlink_ic_settings)
         LinkProblem.BLUETOOTH_OFF, LinkProblem.WIFI_OFF -> IonButton(stringResource(R.string.carlink_home_fix_turn_on),
-            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_check)
+            { actions.fix(problem) }, icon = R.drawable.carlink_ic_check)
         LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT -> IonButton(stringResource(R.string.carlink_home_fix_allow),
-            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_check)
+            { actions.fix(problem) }, icon = R.drawable.carlink_ic_check)
         LinkProblem.LOCATION_OFF -> IonButton(stringResource(R.string.carlink_home_fix_open_settings),
-            { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_settings)
+            { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
-            IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_p2p)
+            IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(problem) }, icon = R.drawable.carlink_ic_p2p)
             GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
         }
         else -> {

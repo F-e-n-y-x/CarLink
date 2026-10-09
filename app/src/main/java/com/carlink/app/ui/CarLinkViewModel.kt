@@ -287,8 +287,9 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         val engine = home.value.defaultPhone?.kind?.engine ?: Engine.CARPLAY
         val settings = _unified.value
         val wifi = WifiEnvironmentReader.read(app, settings)
-        val effective = if (!settings.carHotspot.isValid() && wifi.systemHotspot != null) {
-            settings.copy(carHotspot = wifi.systemHotspot)
+        val systemHotspot = wifi.systemHotspot
+        val effective = if (!settings.carHotspot.isValid() && systemHotspot != null) {
+            settings.copy(carHotspot = systemHotspot)
         } else settings
         val path = WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, effective, wifi,
             headUnit = com.carlink.app.ui.theme.UiProfileDetector.looksLikeCarDisplay(app))).first()

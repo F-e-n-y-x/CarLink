@@ -166,6 +166,7 @@ tasks.register("recordScreenshots") {
 }
 
 dependencies {
+    implementation(project(":carlink-core"))
     implementation(project(":carplay-common"))
     implementation(project(":carplay-shared"))
     implementation(project(":androidauto"))

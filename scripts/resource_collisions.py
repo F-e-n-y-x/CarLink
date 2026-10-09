@@ -15,6 +15,7 @@ from pathlib import Path
 
 MODULES = {
     "app": Path("app/src/main/res"),
+    "carlink-core": Path("carlink-core/src/main/res"),
     "carplay-common": Path("vendor/diplay/common/src/main/res"),
     "carplay-shared": Path("vendor/diplay/shared/src/main/res"),
     "androidauto": Path("vendor/diauto/app/src/main/res"),
@@ -23,7 +24,7 @@ MODULES = {
 }
 # Modules belonging to the same engine may legitimately override each other.
 ENGINE = {
-    "app": "app",
+    "app": "app", "carlink-core": "app",
     "carplay-common": "carplay", "carplay-shared": "carplay",
     "androidauto": "androidauto", "androidauto-github": "androidauto",
     "androidauto-contract": "androidauto",

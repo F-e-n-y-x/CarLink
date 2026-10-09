@@ -29,8 +29,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "CarLink"
 
-// The shipped APK: CarLink shell, phone detection and engine dispatch.
+// The shipped APK: CarLink's screens, the floating switcher and the app wiring.
 include(":app")
+
+// The connection backend as a reusable library (detection, sessions, engine adapters, settings).
+include(":carlink-core")
 
 // CarPlay engine, imported from DiPlay (git subtree at vendor/diplay).
 include(":carplay-shared")
