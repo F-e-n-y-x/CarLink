@@ -5,6 +5,7 @@ import android.content.Intent
 import android.hardware.usb.UsbManager
 import android.os.Looper
 import com.carlink.app.core.Engine
+import com.carlink.app.core.LinkStage
 import com.carlink.app.core.PhoneKind
 import com.carlink.app.core.Transport
 import com.carlink.app.settings.WirelessPath
@@ -56,6 +57,10 @@ class SessionManagerTest {
 
         override fun hasSession() = session
 
+        val recovered = mutableListOf<RecoveryAction>()
+        var recoverWorks = true
+        override fun recover(action: RecoveryAction): Boolean { recovered += action; return recoverWorks }
+
         fun completeStop() { pendingStops.toList().forEach { it() }; pendingStops.clear() }
 
         fun emit(event: AdapterEvent) = listener!!.invoke(event)
@@ -75,12 +80,23 @@ class SessionManagerTest {
         override fun usbPhonePresent(engine: Engine) = usbPresent
         override fun onEngaged(engine: Engine?) { engaged += engine }
         override fun returnHome() { log += "home" }
-        override fun log(message: String) {}
+        override fun log(message: String) { notes += message }
+        var warmUps = 0
+        var warmUpDone: (() -> Unit)? = null
+        var warmUpAvailable = false
+        override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean {
+            if (!warmUpAvailable) return false
+            warmUps++
+            warmUpDone = done
+            return true
+        }
     }
+    private val notes = mutableListOf<String>()
+    private var profiles = ConnectionProfiles()
 
     private fun manager() = SessionManager(
         mapOf(Engine.CARPLAY to carPlay, Engine.ANDROID_AUTO to androidAuto), env,
-        applySettings = { applied += it }, worker = { it.run() },
+        applySettings = { applied += it }, worker = { it.run() }, profiles = profiles,
     )
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
@@ -288,5 +304,245 @@ class SessionManagerTest {
         m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
         assertEquals(listOf("ANDROID_AUTO start USB null"), starts)
         assertTrue(env.autoConnectPaused)
+    }
+
+    // --- RELIABILITY_AUDIT 2026-10-09: truthful progress and the stall watchdog -----------------
+
+    private fun active(m: SessionManager) = m.state.value as SessionState.Active
+    private fun link(m: SessionManager) = m.state.value.toLinkState()
+
+    @Test fun aUsbPhoneThatNeverAnswersIsSaidSoAfterTenSeconds() {
+        // K4.4: the hint was wireless-only, so a locked phone or a stale accessory showed a busy bar.
+        val m = manager()
+        m.onUsbPhone(PhoneKind.ANDROID, "S25", null); idle()
+        androidAuto.emit(AdapterEvent.Progress(1, 3, ProgressStage.WAITING_FOR_PHONE)); idle()
+        advance(SessionManager.NOT_ANSWERING_MILLIS - 100)
+        assertEquals(ProgressStage.WAITING_FOR_PHONE, (active(m).phase as SessionState.Phase.Progress).stage)
+        advance(200)
+        assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
+        assertEquals(DETAIL_PHONE_NOT_ANSWERING, link(m).detail)
+        assertEquals(Notice.Kind.PHONE_NOT_ANSWERING, active(m).notice?.kind)
+    }
+
+    @Test fun aDialLoopCannotHideThatThePhoneIsNotAnswering() {
+        // K4.2 / C8: Progress and Retrying every 7.7 s re-armed the 10 s timer forever.
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE)); idle()
+        advance(7_700)
+        carPlay.emit(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH, "the iPhone did not answer over Bluetooth")); idle()
+        advance(2_500)
+        assertEquals("still a retry, now with the silent phone named", LinkStage.WAITING, link(m).stage)
+        assertEquals(DETAIL_PHONE_NOT_ANSWERING, link(m).detail)
+        carPlay.emit(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE)); idle()
+        assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
+    }
+
+    @Test fun aRetryKeepsItsRealStepAndReason() {
+        // K4.1: Retrying was always drawn as step 2, "Phone answered".
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE)); idle()
+        carPlay.emit(AdapterEvent.Retrying(1, FailureReason.BLUETOOTH, "the iPhone did not answer over Bluetooth")); idle()
+        assertEquals(1, link(m).step)
+        assertEquals("Retrying: the iPhone did not answer over Bluetooth", link(m).detail)
+        carPlay.emit(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI)); idle()
+        carPlay.emit(AdapterEvent.Retrying(2, FailureReason.PHONE_NEVER_REACHED_CAR)); idle()
+        val retry = active(m).phase as SessionState.Phase.Retrying
+        assertEquals(ProgressStage.JOINING_WIFI, retry.stage)
+        assertEquals(3, link(m).step)
+        assertEquals("Retrying: the iPhone did not reach the car over Wi-Fi", link(m).detail)
+    }
+
+    @Test fun aPictureThatNeverComesIsRetriedThenTheNextPathThenAFailure() {
+        // K1 remaining risk: nothing timed out on "Picture".
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(AdaptiveDeadlines.HINT_MILLIS + 1)
+        assertEquals("the driver is told before anything is torn down", Notice.Kind.SLOW, active(m).notice?.kind)
+        assertEquals(1, starts.size)
+        advance(10_000)
+        assertEquals(listOf("CARPLAY start WIRELESS WIFI_DIRECT", "CARPLAY start WIRELESS WIFI_DIRECT"), starts)
+        assertEquals(RecoveryAction.RETRY_STEP, active(m).notice?.action)
+        assertTrue(active(m).phase.let { it is SessionState.Phase.Retrying || it is SessionState.Phase.Starting })
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(20_001)
+        assertEquals("CARPLAY start WIRELESS CAR_HOTSPOT", starts.last())
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(20_001)
+        assertEquals(4, starts.size)
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(20_001)
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(FailureReason.LINK_TOO_WEAK, failed.reason)
+        assertEquals(4, starts.size)
+        // Every stall is in the phone's record.
+        val health = m.health.value.single()
+        assertEquals(4, health.attempts)
+        assertEquals(0, health.successes)
+        assertEquals(AttemptOutcome.STALL_PICTURE, health.lastProblems.first().kind)
+    }
+
+    @Test fun aUsbAndroidAutoHandshakeStallIsReswitchedThenNeedsAReplug() {
+        val m = manager()
+        m.onUsbPhone(PhoneKind.ANDROID, "S25", null); idle()
+        androidAuto.emit(AdapterEvent.Progress(2, 3, ProgressStage.HANDSHAKE)); idle()
+        advance(10_001)
+        assertEquals("told first", Notice.Kind.SLOW, active(m).notice?.kind)
+        advance(2_000)
+        assertEquals("the phone may be showing its prompt", listOf(RecoveryAction.NUDGE), androidAuto.recovered)
+        advance(12_000)
+        assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.RESWITCH_USB), androidAuto.recovered)
+        assertTrue(m.state.value is SessionState.Active)
+        advance(12_000)
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(FailureReason.USB, failed.reason)
+        assertTrue(failed.detail!!.startsWith("unplug the phone and plug it in again"))
+    }
+
+    @Test fun aSilentWirelessPhoneIsWokenTwiceThenReportedWithAReason() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Progress(1, 4, ProgressStage.WAITING_FOR_PHONE)); idle()
+        advance(10_001)
+        assertEquals(listOf(RecoveryAction.NUDGE), androidAuto.recovered)
+        assertEquals(DETAIL_PHONE_NOT_ANSWERING, link(m).detail)
+        advance(10_000)
+        assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE), androidAuto.recovered)
+        advance(10_000)
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(FailureReason.PHONE_DID_NOT_ANSWER, failed.reason)
+        assertTrue(failed.detail!!.contains("did not answer in 30 s"))
+    }
+
+    @Test fun deadlinesFollowThisPhonesOwnTimings() {
+        // A phone whose picture always starts in 8 s gets 20 s (2.5 x 8), not the 15 s floor.
+        val request = SessionRequest(Engine.CARPLAY, Transport.WIRELESS, "AA:BB", "iPhone")
+        repeat(3) { profiles.recordStage(request, WirelessPath.WIFI_DIRECT, ProgressStage.STARTING_PROJECTION, 8_000) }
+        assertEquals(20_000, profiles.deadline(request, WirelessPath.WIFI_DIRECT, ProgressStage.STARTING_PROJECTION))
+        val fast = SessionRequest(Engine.CARPLAY, Transport.WIRELESS, "CC:DD", "iPhone 2")
+        repeat(3) { profiles.recordStage(fast, WirelessPath.WIFI_DIRECT, ProgressStage.STARTING_PROJECTION, 1_000) }
+        val m = manager()
+        m.connect("CC:DD", PhoneKind.IPHONE, "iPhone 2"); idle()
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(15_001)
+        assertEquals("the fast phone is retried at the 15 s floor", 2, starts.size)
+    }
+
+    @Test fun aConnectionTeachesTheProfileItsPhaseTimesAndHealth() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        advance(1_000)
+        androidAuto.emit(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)); idle()
+        advance(2_000)
+        androidAuto.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(1_500)
+        androidAuto.emit(AdapterEvent.Connected); idle()
+        val health = m.health.value.single()
+        assertEquals(1, health.successes)
+        assertEquals(1f, health.successRate)
+        assertEquals("WIFI_DIRECT", health.bestPath)
+        val took = health.medianTimeToPictureMillis!!
+        assertTrue("about 4.5 s, was $took", took in 4_400..4_700)
+        val request = SessionRequest(Engine.ANDROID_AUTO, Transport.WIRELESS, "AA:BB", "Pixel")
+        assertEquals(null, profiles.usualMillis(request, WirelessPath.WIFI_DIRECT, ProgressStage.HANDSHAKE))
+    }
+
+    @Test fun aSameEnginePlugDuringAWirelessAttemptSwitchesToUsbWithoutAsking() {
+        // K14: plugging in is deliberate; asking cost 2.5-3 s and a tap.
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        assertEquals(null, m.pendingSwitch.value)
+        assertEquals(listOf("CARPLAY start WIRELESS WIFI_DIRECT", "CARPLAY start USB null"), starts)
+        // Once projecting wirelessly, the driver is still asked.
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Connected); idle()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        assertEquals(Transport.USB, m.pendingSwitch.value?.transport)
+        // The other engine's phone is always a question.
+        m.declineSwitch()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.onUsbPhone(PhoneKind.ANDROID, "S25", null); idle()
+        assertEquals(Engine.ANDROID_AUTO, m.pendingSwitch.value?.engine)
+    }
+
+    @Test fun pathsThatKeepFailingForThisPhoneAreTriedLater() {
+        val request = SessionRequest(Engine.ANDROID_AUTO, Transport.WIRELESS, "AA:BB", "Pixel")
+        repeat(2) { profiles.recordFailure(request, WirelessPath.WIFI_DIRECT, FailureReason.PHONE_REFUSED_WIFI.name, ProgressStage.JOINING_WIFI, null) }
+        // A Bluetooth failure is not the path's fault and changes nothing.
+        val other = SessionRequest(Engine.ANDROID_AUTO, Transport.WIRELESS, "CC:DD", "Pixel 2")
+        repeat(3) { profiles.recordFailure(other, WirelessPath.WIFI_DIRECT, FailureReason.BLUETOOTH.name, ProgressStage.WAITING_FOR_PHONE, null) }
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals("ANDROID_AUTO start WIRELESS CAR_HOTSPOT", starts.last())
+        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel 2"); idle()
+        assertEquals("ANDROID_AUTO start WIRELESS WIFI_DIRECT", starts.last())
+    }
+
+    @Test fun theIphoneIsPagedWhileThePreviousEngineStops() {
+        // Plan item 7: the page overlaps the stop; DiPlay dials only after it.
+        env.warmUpAvailable = true
+        androidAuto.stopsAtOnce = false
+        val m = manager()
+        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(1, env.warmUps)
+        androidAuto.completeStop(); idle()
+        assertEquals("waits for the page", 1, starts.size)
+        env.warmUpDone!!(); idle()
+        assertEquals("CARPLAY start WIRELESS WIFI_DIRECT", starts.last())
+        // From idle there is nothing to overlap.
+        m.stop(); idle()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(1, env.warmUps)
+    }
+
+    @Test fun aWarmUpThatNeverAnswersDelaysTheStartByAtMostItsCap() {
+        env.warmUpAvailable = true
+        val m = manager()
+        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.stopsAtOnce = false
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        androidAuto.completeStop(); idle()
+        advance(SessionManager.WARM_UP_MAX_MILLIS - 100)
+        assertEquals(1, starts.size)
+        advance(200)
+        assertEquals("CARPLAY start WIRELESS WIFI_DIRECT", starts.last())
+    }
+
+    @Test fun eventsFromAnAttemptTheWatchdogReplacedAreIgnored() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        val old = carPlay.listener!!
+        advance(20_001)
+        assertEquals(2, starts.size)
+        old(AdapterEvent.Connected); idle()
+        assertTrue(active(m).phase != SessionState.Phase.Connected)
+    }
+
+    @Test fun aUsbSessionThatHadAPictureEndsQuicklyWhenUnpluggedWhileRetrying() {
+        // K15: a retrying session that once projected used the 3.5 s grace.
+        val m = manager()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        carPlay.emit(AdapterEvent.Connected); idle()
+        carPlay.emit(AdapterEvent.Retrying(1, FailureReason.USB)); idle()
+        m.onUsbDetached()
+        advance(SessionManager.USB_GONE_CONNECTED_GRACE_MILLIS + 1)
+        assertEquals(SessionState.Idle, m.state.value)
+    }
+
+    @Test fun aLostPictureGetsFreshDeadlines() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        androidAuto.emit(AdapterEvent.Connected); idle()
+        advance(120_000)
+        androidAuto.emit(AdapterEvent.Retrying(1, FailureReason.LINK_TOO_WEAK)); idle()
+        advance(1_000)
+        assertTrue("no instant restart from stale timers", m.state.value is SessionState.Active)
+        assertEquals(1, starts.size)
     }
 }

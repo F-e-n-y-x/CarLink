@@ -84,6 +84,7 @@ object Connection {
             applySettings = { plan -> applySession(app, plan) },
             worker = Executors.newSingleThreadExecutor { Thread(it, "carlink-session") },
             main = Handler(Looper.getMainLooper()),
+            profiles = ConnectionProfiles.sharedPreferences(app),
         )
     }
 

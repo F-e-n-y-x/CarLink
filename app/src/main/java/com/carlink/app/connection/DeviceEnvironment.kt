@@ -85,6 +85,9 @@ class DeviceEnvironment(
         }
     }
 
+    override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean =
+        request.phoneAddress?.let { BluetoothWarmup.start(app, it, done) } ?: false
+
     override fun returnHome() = com.carlink.app.entry.HomeLauncher.open(app, com.carlink.app.entry.HomeLauncher.Reason.UNPLUGGED)
 
     override fun log(message: String) = EventLog.add("CarLink", message)

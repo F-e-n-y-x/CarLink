@@ -44,7 +44,11 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
     expires after 10 min);
   - USB is deliberate: a USB phone starts at once when idle; during a session it sets
     `pendingSwitch` ("Switch to <phone>?"); the engines' own re-enumeration is not a new session;
-  - an orphaned engine session found at start-up is stopped (the driver must see what runs).
+  - an orphaned engine session found at start-up is stopped (the driver must see what runs);
+  - no silent waits: a per-phone `ConnectionProfiles` history sets each phase's deadline (2.5 ×
+    the phone's median, bounded); the driver is told why after ≤ 10 s, and a phase past its
+    deadline gets the next `StallPlaybook` recovery (nudge, USB re-switch, retry, fresh Wi-Fi
+    Direct, next path, re-plug, fail). `health: StateFlow<List<PhoneHealth>>` summarises it.
 - **Adapters start exactly the session they are handed** (`EngineAdapter`: `start(plan, listener)`,
   `stop(onStopped)`, `hasSession()`), report `AdapterEvent`s, and never decide paths or retries
   across paths. `CarPlayAdapter` drives DiPlay through `CarPlayHostIntegration` (`hasSession`,
@@ -95,12 +99,13 @@ The hooks CarLink sets (where):
 | Engine | Hook | Set in |
 |---|---|---|
 | DiAuto `HostIntegration` | `homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
-| | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
+| | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName`, `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` | `connection/CarPlayAdapter.install`, `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
+| DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 
 ## Build and test loop
 
@@ -153,8 +158,16 @@ Timing lines (always on, INFO, also in logcat):
   `controller-start` … `rfcomm-dial`, `hotspot-ready`, `rfcomm-connected`, `authenticated`,
   `start-session`, `peer-associated`, `tcp-accepted`, `first-frame` (`first-tcp-timeout` on a miss).
 - `WIRELESS_TIMING <phase> start+<ms>ms [detail]` (DiAuto, wireless Android Auto): `begin`,
-  `wifi-init`, `group-create`/`group-created`, `credentials`, `poke-start`/`poke-connected`,
-  `phone-rfcomm`, `phone-joined`, `tcp-accepted`, `first-frame`.
+  `wifi-init`, `group-create`/`group-created`, `credentials` (with `bssid=<hash>`: compare
+  groups), `poke-start`/`poke-connected`, `phone-rfcomm`, `phone-joined`, `tcp-accepted`,
+  `first-frame`.
+- `AIRPLAY_TIMING <METHOD> <path> conn+<ms>ms wait=<ms>ms handle=<ms>ms status=<n>` (DiPlay,
+  every AirPlay control request): `wait` is the iPhone's time since our previous answer.
+- CarLink (`carlink.log`, lines end `#s<n>`, the session number): `… connected on <PATH> in <ms>
+  ms`, `<ENGINE> stopped in <ms> ms`, `<ENGINE> retrying at <STAGE> (attempt n, REASON: detail)`,
+  `the phone has not answered for N s`, `stall: <ENGINE> <phase> on <PATH> has taken <ms> ms
+  (deadline …, usual …); <ACTION>`, `wireless paths [...] re-ordered by this phone's record`,
+  `Bluetooth warm-up finished in <ms> ms`.
 
 Measured on the tablet (2026-10-09, plug-in/Connect to picture): USB CarPlay ≈ 3.4 s, USB Android
 Auto ≈ 3.8 s, wireless Android Auto ≈ 5 s, wireless CarPlay ≈ 16-20 s (mostly paging the iPhone

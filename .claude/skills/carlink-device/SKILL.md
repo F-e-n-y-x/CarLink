@@ -77,6 +77,10 @@ Measured on this tablet (2026-10-09, plug-in or Connect to the first picture):
 | CarPlay `tcpAccepted=0 … waitingFor=WiFi_discovery_or_AirPlay_TCP` then `No AirPlay TCP` | iPhone authenticated over Bluetooth but never reached the receiver over Wi-Fi (Bonjour/multicast blocked on that network) |
 | CarPlay `read failed, socket might closed or timeout` | the iPhone did not answer the RFCOMM dial; retried after 1.5 s up to 8 times |
 | CarPlay `Video: first frame rendered` / `WIRED_TIMING first-frame` / `WIRELESS_TIMING first-frame` | picture is up |
+| `CarLink-Session: stall: … ; <ACTION>` | the stall watchdog acted on a phase past its deadline (`StallPlaybook`) |
+| `… failed: BLUETOOTH (iPhone not reachable over Bluetooth: …)` | two RFCOMM dials in a row got no answer (capped at about 13 s) |
+| AA `stale accessory re-switch result=…` / `USB session ended before any frame; sending the accessory switch again` | a phone left in accessory mode by an earlier session was switched again (K2); `unplug the phone and plug it in again` within 5 s if it ignored it |
+| AA `USB-only session; wireless bring-up skipped.` | a USB Android Auto session armed no P2P group or poke (K10) |
 
 ## Rules
 

@@ -50,6 +50,44 @@ State, both `StateFlow`s on the main thread:
   (`LinkStateMapping.kt`) turns it into the single `core.LinkState` CarLink's screens show.
 - `pendingSwitch: StateFlow<SessionRequest?>`: a second phone was plugged in during a session;
   the host asks "Switch to <phone>?" and calls `acceptSwitch()` or `declineSwitch()`.
+- `health: StateFlow<List<PhoneHealth>>`: each known phone's connection health, most recently
+  used first: attempts, successes and success rate, median time to picture, the best path
+  ("USB" or a `WirelessPath` name), per-path records and the last problems (`ProblemRecord`:
+  time, path, phase, kind, detail). For a Diagnostics screen or a launcher's status card.
+
+`Active.phase` is truthful (docs/RELIABILITY_AUDIT_2026-10-09.md K4): `Retrying` keeps the
+`ProgressStage` it happened in and a `detail` in the driver's words, and `Active.notice`
+(`Notice(kind, stage, message, action)`) says why a phase takes long: `PHONE_NOT_ANSWERING`
+(the phone has been silent for `AdaptiveDeadlines.HINT_MILLIS`, USB included), `SLOW` (a later
+phase is past that), or `RECOVERING` (the stall watchdog applied `action`). `toLinkState()` puts
+the message in `LinkState.detail` (and `DETAIL_PHONE_NOT_ANSWERING` for a silent phone).
+
+### The connection intelligence (host-independent)
+
+`SessionManager` takes a `ConnectionProfiles` (default: in memory; CarLink passes
+`ConnectionProfiles.sharedPreferences(context)`). It keeps, per phone (engine plus Bluetooth
+address, or plus the USB product name) and per path, the last 20 attempt outcomes, the last 15
+durations of each phase (waiting for the phone, handshake, linking, picture) and of each whole
+attempt, failure kinds with counts and the last 12 problems. A host with its own storage
+implements `ConnectionProfiles.Storage` (`read()`/`write(text)`).
+
+What it is used for:
+
+- **Path order.** `rankPaths` re-orders the policy's wireless paths by this phone's record: a
+  path whose last two attempts failed for path reasons (refused Wi-Fi, never reached the car, a
+  stalled link or picture) moves down. Bluetooth or USB failures never count against a path.
+- **Adaptive deadlines** (`AdaptiveDeadlines`): each phase's deadline is 2.5 × this phone's
+  median for it on that path, within per-phase bounds, or the phase's default before 3 samples.
+- **Stall watchdog** in `SessionManager`: no phase waits silently longer than 10 s (or its
+  deadline, if shorter); a phase past its deadline gets the next step of `StallPlaybook`:
+  wake the phone again, re-send the USB accessory switch, retry the attempt, retry with a fresh
+  Wi-Fi Direct group, the next path, ask for a re-plug, or fail with the phase's reason. Each
+  phase's list is short and ends in a failure, so no attempt loops forever.
+
+Adapters take part through `EngineAdapter.recover(action)` (in-place recoveries; Android Auto
+implements `NUDGE` and `RESWITCH_USB`). `SessionManager.Environment.warmUp(request, done)` lets a
+host page a wireless iPhone over Bluetooth while the previous engine stops (`DeviceEnvironment`
+uses `BluetoothWarmup`); the engine starts after `done` or `SessionManager.WARM_UP_MAX_MILLIS`.
 
 Triggers (each applies the rules in the class comment: one engine at a time, a new session only
 after the previous stop completed, automatic starts never interrupt a running session and respect
@@ -164,6 +202,8 @@ Set once per process, before any session (CarLink does it in `CarLinkApplication
 | DiAuto `HostIntegration.homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler` | both | `HomeActivity`, "CarLink", log-and-drop toasts | `CarLinkApplication.brandEngines` |
 | DiPlay `CarPlayHostIntegration.homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | main | same | `CarLinkApplication.brandEngines` |
 | DiAuto `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip` (false), `hostOwnsUsbSwitch` (true), `onEngineEvent` | `:aa` | | `connection/aa/AaEngineHooks.install` |
+| DiAuto `usbOnlySession` | `:aa` | true for each USB start, false for wireless starts and after a stop | `connection/aa/AaCommandHandler` |
+| DiPlay `WirelessStartupTimeline.milestoneListener` | main | set while a CarPlay session runs | `connection/CarPlayAdapter` (`DiPlayEngineHooks.setMilestoneListener`) |
 | DiPlay `accessoryName`, `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` | main | | `connection/CarPlayAdapter.install` (+ `CarPlayWaitingView.install`) |
 | DiPlay `CarPlayWaitingView.register(factory)` | main | Compose content of Home's connecting screen | `ui/home/CarPlayWaitingContent.register` |
 | DiPlay `palette`, `chromeStyler`, `menuItems`; DiAuto `chromeStyler`, `exitMenuHomeLabel` | both | CarLink's look for the projections' own chrome | `engine/EngineChrome.install` (UI) |

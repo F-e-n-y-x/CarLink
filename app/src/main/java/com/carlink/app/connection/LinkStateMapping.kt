@@ -12,19 +12,29 @@ fun SessionState.toLinkState(): LinkState = when (this) {
     is SessionState.Failed -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
         detail = detail, problem = reason.toLinkProblem())
     is SessionState.Active -> when (val p = phase) {
-        SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS)
-        is SessionState.Phase.Progress -> LinkState(
-            if (p.stage == ProgressStage.WAITING_FOR_PHONE || p.stage == ProgressStage.PHONE_NOT_ANSWERING) LinkStage.WAITING
-            else LinkStage.CONNECTING,
-            request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
-            detail = if (p.stage == ProgressStage.PHONE_NOT_ANSWERING) DETAIL_PHONE_NOT_ANSWERING else null)
-        is SessionState.Phase.Retrying -> LinkState(LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
-            2, STEPS, detail = "retrying")
+        SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS,
+            detail = notice?.message)
+        is SessionState.Phase.Progress -> {
+            val silent = p.stage == ProgressStage.PHONE_NOT_ANSWERING
+            LinkState(
+                if (silent || p.stage == ProgressStage.WAITING_FOR_PHONE) LinkStage.WAITING else LinkStage.CONNECTING,
+                request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
+                detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message)
+        }
+        // A retry stays on the step it happened in, with its reason (RELIABILITY_AUDIT K4): a dial
+        // the iPhone never answered is not "phone answered". A phone that stays silent across
+        // retries is still "not answering".
+        is SessionState.Phase.Retrying -> {
+            val silent = notice?.kind == Notice.Kind.PHONE_NOT_ANSWERING && stepOf(p.stage) == 1
+            LinkState(if (silent) LinkStage.WAITING else LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
+                stepOf(p.stage), STEPS,
+                detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message ?: p.detail?.let { "Retrying: $it" } ?: "retrying")
+        }
         SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.transport, request.phoneName, STEPS, STEPS)
     }
 }
 
-/** [LinkState.detail] while a wireless phone has not answered for a while; Home explains what to check. */
+/** [LinkState.detail] while a phone has not answered for a while; Home explains what to check. */
 const val DETAIL_PHONE_NOT_ANSWERING = "phone_not_answering"
 
 /** Home's timeline: waiting, handshake, joining Wi-Fi, starting the picture. */
