@@ -14,11 +14,11 @@ KEY_DIAUTO = re.compile(
     r"Connection accepted|\[RX\]|Handshake failed|join failure|WiFi session landed|SSL handshake complete"
     r"|First frame rendered|read timeout|Connection closed|isUserExit|sessions in a row|Group formed|createGroup"
     r"|poke|SoftApCredentials: (SUCCESS|No passphrase)|Stop action|AapService creating|Native AA on|Phone refused"
-    r"|Initializing WiFi Mode|moving to Wi-Fi Direct|Byebye|disconnect", re.I)
+    r"|Initializing WiFi Mode|moving to Wi-Fi Direct|Byebye|disconnect|WIRELESS_TIMING", re.I)
 KEY_DIPLAY = re.compile(
     r"CONNECTION_DIAGNOSTIC .*stage=|wireless hotspot backend|Existing Wi-Fi attached|RFCOMM connected"
     r"|iap2 authentication accepted|carplay-start-session|tcpAccepted=[1-9]|waitingFor=|No AirPlay TCP"
-    r"|Failed|sessionActive=true|First frame|Host started|teardown begin", re.I)
+    r"|Failed|sessionActive=true|First frame|Host started|teardown begin|WIRED_TIMING|WIRELESS_TIMING", re.I)
 MAC = re.compile(r"(?i)\b([0-9a-f]{2}:){5}[0-9a-f]{2}\b")
 
 
