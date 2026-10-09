@@ -46,7 +46,8 @@ object CarPlayWaitingContent {
         setContent {
             val state by session.state.collectAsStateWithLifecycle()
             val profile = UiProfileDetector.detect(context, preferences.uiProfileMode)
-            CarLinkTheme(profile, preferences.themeMode, preferences.interfaceScale) {
+            CarLinkTheme(profile, preferences.themeMode, preferences.interfaceScale,
+                com.carlink.app.ui.theme.RenderingPolicy.lite(context, preferences.renderingMode)) {
                 val link = state.toLinkState()
                 // The session's own phone and path, so the status row matches Home's.
                 val active = state as? SessionState.Active

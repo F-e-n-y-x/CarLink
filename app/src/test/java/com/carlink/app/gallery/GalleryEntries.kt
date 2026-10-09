@@ -198,6 +198,13 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR,
             initialSheet = SheetKey.of(EssentialSheet.DRIVING_SIDE))
     },
+    // Settings › General › Visual effects; rendered only by the low-end head-unit configs.
+    GalleryEntry("settings", "sheet-rendering", opensWindow = true, configs = emptySet()) {
+        // As on a low-end head unit, where Automatic picks lite.
+        val ui = settingsPreviewUi().let { it.copy(display = it.display.copy(autoLite = true)) }
+        SettingsContent(ui, SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.GENERAL,
+            initialSheet = SheetKey.of(EssentialSheet.RENDERING))
+    },
     GalleryEntry("settings", "sheet-advanced-choice", opensWindow = true) {
         SettingsContent(settingsPreviewUi(showAdvanced = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.DISPLAY,

@@ -453,7 +453,8 @@ object SwitcherController {
 
     @Composable
     private fun Themed(content: @Composable () -> Unit) {
-        CarLinkTheme(profile(), preferences.themeMode, preferences.interfaceScale, content)
+        CarLinkTheme(profile(), preferences.themeMode, preferences.interfaceScale,
+            com.carlink.app.ui.theme.RenderingPolicy.lite(app, preferences.renderingMode), content)
     }
 
     private fun themedContext(): Context = ContextThemeWrapper(windowContext, R.style.Theme_CarLink)

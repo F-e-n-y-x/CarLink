@@ -120,6 +120,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
             override fun setUiProfileMode(mode: UiProfileMode) = vm.setUiProfileMode(mode)
             override fun setInterfaceScale(scale: Float) = vm.setInterfaceScale(scale)
+            override fun setRenderingMode(mode: com.carlink.app.ui.theme.RenderingMode) = vm.setRenderingMode(mode)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun openAppSettings() = vm.openAppSettings()
             override fun navigate(route: Route) = goTo(route)

@@ -3,10 +3,8 @@ package com.carlink.app.ui.premium
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -32,6 +30,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.dp
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
+import com.carlink.app.ui.theme.LocalLiteRendering
 import com.carlink.app.ui.theme.LocalReduceMotion
 import kotlin.math.cos
 import kotlin.math.sin
@@ -82,9 +81,11 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
         reading.segments == 0 -> 1f
         reading.still -> 0f
         reduceMotion -> 0.55f
-        else -> rememberInfiniteTransition(label = "charge").animateFloat(0.06f, 1f,
-            infiniteRepeatable(tween(1600, easing = CarMotion.Standard), RepeatMode.Restart), label = "charge").value
+        // Lite rendering charges in eight steps (5 redraws a second instead of 60).
+        else -> loopingValue(0.06f, 1f, infiniteRepeatable(tween(1600, easing = CarMotion.Standard), RepeatMode.Restart),
+            label = "charge", liteSteps = 8)
     }
+    val lite = LocalLiteRendering.current
     val ink = scheme.onSurface
     val coreLift = if (dark) scheme.surfaceContainerHighest else scheme.surfaceContainerLowest
     val coreBase = if (dark) scheme.surfaceContainerLow else scheme.surfaceContainerHigh
@@ -94,7 +95,7 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
     Layout(
         content = {
             Canvas(Modifier.fillMaxSize()) {
-                drawDial(reading, color, progress, pulse, ink, coreLift, coreBase, strokeTop, strokeBottom, dark)
+                drawDial(reading, color, progress, pulse, ink, coreLift, coreBase, strokeTop, strokeBottom, dark, lite)
             }
             // The core disc's content area: a square inside the disc, so text never touches its edge.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center, content = core)
@@ -115,7 +116,7 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
 
 private fun DrawScope.drawDial(
     reading: DialReading, color: Color, progress: Float, pulse: Float, ink: Color,
-    coreLift: Color, coreBase: Color, strokeTop: Color, strokeBottom: Color, dark: Boolean,
+    coreLift: Color, coreBase: Color, strokeTop: Color, strokeBottom: Color, dark: Boolean, lite: Boolean,
 ) {
     val r = size.minDimension / 2
     val c = center
@@ -159,7 +160,7 @@ private fun DrawScope.drawDial(
     val capDeg = Math.toDegrees((trackW / 2f / trackR).toDouble()).toFloat()
     fun litArc(start: Float, sweep: Float, alpha: Float, bloom: Boolean = true) {
         if (sweep <= 0.5f) return
-        if (bloom && !reading.dimmed) {
+        if (bloom && !reading.dimmed && !lite) {
             drawArc(lit.copy(alpha = lit.alpha * alpha * if (dark) 0.22f else 0.14f), start, sweep, false, arcTopLeft, arcSize,
                 style = Stroke(trackW * if (dark) 3.2f else 2.4f, cap = StrokeCap.Round))
         }
@@ -189,11 +190,20 @@ private fun DrawScope.drawDial(
 
     // 4. Core disc: lit from above, with a top-lit hairline edge like glass.
     val coreR = r * 0.6f
-    drawCircle(Brush.radialGradient(listOf(coreLift, coreBase), center = Offset(c.x, c.y - coreR * 0.55f),
-        radius = coreR * 1.5f), radius = coreR, center = c)
+    if (lite) {
+        // Lite rendering: the disc's mid tone as one solid fill.
+        drawCircle(androidx.compose.ui.graphics.lerp(coreLift, coreBase, 0.5f), radius = coreR, center = c)
+    } else {
+        drawCircle(Brush.radialGradient(listOf(coreLift, coreBase), center = Offset(c.x, c.y - coreR * 0.55f),
+            radius = coreR * 1.5f), radius = coreR, center = c)
+    }
     drawCircle(lit.copy(alpha = lit.alpha * if (dark) 0.10f else 0.07f), radius = coreR, center = c)
-    drawCircle(Brush.verticalGradient(listOf(strokeTop, strokeBottom), startY = c.y - coreR, endY = c.y + coreR),
-        radius = coreR, center = c, style = Stroke(hair))
+    if (lite) {
+        drawCircle(androidx.compose.ui.graphics.lerp(strokeTop, strokeBottom, 0.5f), radius = coreR, center = c, style = Stroke(hair))
+    } else {
+        drawCircle(Brush.verticalGradient(listOf(strokeTop, strokeBottom), startY = c.y - coreR, endY = c.y + coreR),
+            radius = coreR, center = c, style = Stroke(hair))
+    }
     // A faint inner ring gives the disc a machined edge.
     drawCircle(ink.copy(alpha = if (dark) 0.05f else 0.06f), radius = coreR * 0.9f, center = c, style = Stroke(hair))
 }

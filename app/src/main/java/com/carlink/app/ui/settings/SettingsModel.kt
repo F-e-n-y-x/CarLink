@@ -62,6 +62,7 @@ interface SettingsActions {
     fun setThemeMode(mode: ThemeMode) {}
     fun setUiProfileMode(mode: UiProfileMode) {}
     fun setInterfaceScale(scale: Float) {}
+    fun setRenderingMode(mode: com.carlink.app.ui.theme.RenderingMode) {}
     /** Writes one engine value ("true"/"false" or an option value) through [AdvancedSetting.control]. */
     fun setAdvanced(setting: AdvancedSetting, value: String) {}
     fun openBluetoothSettings() {}
@@ -122,7 +123,7 @@ internal val SettingsCategory.selectedIcon: Int
 /** The bottom sheets Settings opens; saved by [key] so a rotation keeps the sheet open. */
 internal enum class EssentialSheet {
     CONNECTION_METHOD, CAR_HOTSPOT, SAME_WIFI, PICTURE, INTERFACE_SIZE, DAY_NIGHT, NIGHT_START, NIGHT_END,
-    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE,
+    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING,
 }
 
 internal object SheetKey {
@@ -198,6 +199,23 @@ internal fun themeLabel(mode: ThemeMode): String = stringResource(
         ThemeMode.LIGHT -> R.string.carlink_settings_appearance_light
     },
 )
+
+@Composable
+internal fun renderingLabel(mode: com.carlink.app.ui.theme.RenderingMode): String = stringResource(
+    when (mode) {
+        com.carlink.app.ui.theme.RenderingMode.AUTO -> R.string.carlink_settings_rendering_auto
+        com.carlink.app.ui.theme.RenderingMode.FULL -> R.string.carlink_settings_rendering_full
+        com.carlink.app.ui.theme.RenderingMode.LITE -> R.string.carlink_settings_rendering_lite
+    },
+)
+
+/** The row's value: the choice, and for Automatic what it picked on this device. */
+@Composable
+internal fun renderingValue(display: com.carlink.app.ui.DisplayPrefs): String =
+    if (display.renderingMode == com.carlink.app.ui.theme.RenderingMode.AUTO) {
+        stringResource(R.string.carlink_settings_rendering_auto_value, stringResource(
+            if (display.autoLite) R.string.carlink_settings_rendering_lite else R.string.carlink_settings_rendering_full))
+    } else renderingLabel(display.renderingMode)
 
 @Composable
 internal fun layoutLabel(mode: UiProfileMode): String = stringResource(

@@ -2,6 +2,7 @@ package com.carlink.app.ui.premium
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.InfiniteRepeatableSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +58,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -69,6 +72,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
 import com.carlink.app.ui.theme.CarLinkTokens
+import com.carlink.app.ui.theme.LocalLiteRendering
 import com.carlink.app.ui.theme.LocalReduceMotion
 import java.util.Locale
 import kotlin.random.Random
@@ -82,7 +86,8 @@ import kotlin.random.Random
 /**
  * Full-bleed canvas: one soft key light (top-start by default; Home puts it behind its dial), an
  * optional state glow, an optional floor vignette that grounds a bar docked at the bottom, and
- * noise against banding.
+ * noise against banding. In lite rendering it is the background colour alone: the four full-screen
+ * gradients and the grain are the most expensive thing CarLink draws on a weak GPU.
  */
 @Composable
 fun Atmosphere(modifier: Modifier = Modifier, glow: Color = Color.Transparent, glowCenter: Offset = Offset(0.72f, 0.55f),
@@ -90,6 +95,10 @@ fun Atmosphere(modifier: Modifier = Modifier, glow: Color = Color.Transparent, g
                content: @Composable BoxScope.() -> Unit) {
     val colors = CarLinkTokens.colors
     val base = MaterialTheme.colorScheme.background
+    if (LocalLiteRendering.current) {
+        Box(modifier.background(base), content = content)
+        return
+    }
     val animatedGlow by animateColorAsState(glow, tween(if (LocalReduceMotion.current) 0 else 600), label = "glow")
     val noise = rememberNoise()
     val floorColor = if (base.luminance() < 0.5f) Color.Black.copy(alpha = 0.45f) else colors.atmosphereFill
@@ -154,7 +163,7 @@ fun GlassCard(
         modifier
             .clip(shape)
             .background(if (pressed) colors.glassFillPressed else colors.glassFill)
-            .border(BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom))), shape)
+            .border(glassBorder(), shape)
             .then(if (onClick != null) Modifier.clickable(interaction, indication = androidx.compose.material3.ripple(),
                 role = Role.Button, onClick = onClick) else Modifier)
             .padding(contentPadding),
@@ -162,6 +171,34 @@ fun GlassCard(
         // Glass is not a Material Surface: give its text the theme's color instead of the black default.
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) { content() }
     }
+}
+
+/**
+ * Glass's top-lit 1dp edge (white 16% → 4%); in lite rendering a solid hairline of the middle tone.
+ */
+@Composable
+fun glassBorder(width: Dp = 1.dp): BorderStroke {
+    val colors = CarLinkTokens.colors
+    return if (LocalLiteRendering.current) BorderStroke(width, lerp(colors.glassStrokeTop, colors.glassStrokeBottom, 0.5f))
+    else BorderStroke(width, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom)))
+}
+
+/**
+ * An endless animation between [from] and [to]. In lite rendering it moves in [liteSteps] steps
+ * per cycle, so the screen is redrawn a few times a second instead of on every vsync; the value
+ * still reads the same (a charging slot, a pulse).
+ */
+@Composable
+internal fun loopingValue(from: Float, to: Float, spec: InfiniteRepeatableSpec<Float>, label: String, liteSteps: Int = 6): Float {
+    val raw = rememberInfiniteTransition(label = label).animateFloat(from, to, spec, label = label)
+    if (!LocalLiteRendering.current) return raw.value
+    val stepped = remember(raw, liteSteps) {
+        derivedStateOf {
+            val t = ((raw.value - from) / (to - from)).coerceIn(0f, 1f)
+            from + (to - from) * (kotlin.math.round(t * liteSteps) / liteSteps)
+        }
+    }
+    return stepped.value
 }
 
 /** Tracked-caps label for glass chip headers only ("CONNECTION", "NETWORK"); never a sentence. */
@@ -246,17 +283,19 @@ fun IonButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
     val scheme = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
+    val lite = LocalLiteRendering.current
     Row(
         modifier
             .defaultMinSize(minHeight = dimens.primaryButton, minWidth = dimens.primaryButton * 2.6f)
             .clip(CircleShape)
             .background(scheme.primary)
-            .drawBehind {
-                drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (pressed) 0f else 0.20f), Color.Transparent),
-                    endY = size.height * 0.6f))
-                if (pressed) drawRect(Color.Black.copy(alpha = 0.12f))
-            }
-            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0f))), CircleShape)
+            .then(if (lite) Modifier.drawBehind { if (pressed) drawRect(Color.Black.copy(alpha = 0.12f)) } else Modifier
+                .drawBehind {
+                    drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (pressed) 0f else 0.20f), Color.Transparent),
+                        endY = size.height * 0.6f))
+                    if (pressed) drawRect(Color.Black.copy(alpha = 0.12f))
+                }
+                .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0f))), CircleShape))
             .clickable(interaction, indication = androidx.compose.material3.ripple(), role = Role.Button, onClick = onClick)
             .padding(horizontal = dimens.gutter * 1.5f, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -303,8 +342,8 @@ fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Mo
     val colors = CarLinkTokens.colors
     val style = MaterialTheme.typography.labelMedium
     val measurer = rememberTextMeasurer()
-    val pulse = if (LocalReduceMotion.current || failed || still) 1f else rememberInfiniteTransition(label = "pulse").animateFloat(
-        0.45f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), label = "pulse").value
+    val pulse = if (LocalReduceMotion.current || failed || still) 1f else loopingValue(
+        0.45f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), label = "pulse", liteSteps = 3)
     val gap = 12.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
         // Step names go under their segments when every name fits its segment; otherwise one

@@ -1,6 +1,7 @@
 package com.carlink.app.settings
 
 import android.content.Context
+import com.carlink.app.ui.theme.RenderingMode
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 
@@ -56,6 +57,11 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getFloat(KEY_SCALE, 1f)
         set(value) = prefs.edit().putFloat(KEY_SCALE, value).apply()
 
+    /** Full effects or lite rendering; Automatic picks lite on low-end hardware (ui/theme/RenderingMode.kt). */
+    var renderingMode: RenderingMode
+        get() = enumOr(prefs.getString(KEY_RENDERING, null), RenderingMode.AUTO)
+        set(value) = prefs.edit().putString(KEY_RENDERING, value.name).apply()
+
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default
 
@@ -65,6 +71,7 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_THEME = "theme_mode"
         private const val KEY_PROFILE = "ui_profile_mode"
         private const val KEY_SCALE = "interface_scale"
+        private const val KEY_RENDERING = "rendering_mode"
         private const val KEY_AUTO_USB = "auto_connect_usb"
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"

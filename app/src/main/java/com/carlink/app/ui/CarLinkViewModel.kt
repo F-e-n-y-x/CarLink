@@ -38,13 +38,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.carlink.app.ui.theme.RenderingMode
+import com.carlink.app.ui.theme.RenderingPolicy
 
 /** CarLink's own preferences as the UI renders them. */
 data class DisplayPrefs(
     val themeMode: ThemeMode,
     val uiProfileMode: UiProfileMode,
     val interfaceScale: Float,
-)
+    val renderingMode: RenderingMode = RenderingMode.AUTO,
+    /** What [RenderingMode.AUTO] resolves to on this device. */
+    val autoLite: Boolean = false,
+) {
+    val liteRendering: Boolean get() = when (renderingMode) {
+        RenderingMode.AUTO -> autoLite
+        RenderingMode.FULL -> false
+        RenderingMode.LITE -> true
+    }
+}
 
 data class ConnectionPrefs(
     val autoConnectUsb: Boolean,
@@ -298,6 +309,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setThemeMode(mode: ThemeMode) { preferences.themeMode = mode; _display.value = readDisplay() }
     fun setUiProfileMode(mode: UiProfileMode) { preferences.uiProfileMode = mode; _display.value = readDisplay() }
     fun setInterfaceScale(scale: Float) { preferences.interfaceScale = scale; _display.value = readDisplay() }
+    fun setRenderingMode(mode: RenderingMode) { preferences.renderingMode = mode; _display.value = readDisplay() }
 
     fun setAutoConnectUsb(on: Boolean) { preferences.autoConnectUsb = on; _connection.value = readConnection() }
     fun setAutoConnectBluetooth(on: Boolean) { preferences.autoConnectBluetooth = on; _connection.value = readConnection() }
@@ -337,7 +349,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             ?: known.firstOrNull()
     }
 
-    private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale)
+    private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale,
+        preferences.renderingMode, RenderingPolicy.autoIsLite(app))
 
     // The short pause after a Disconnect is silent: Home shows its normal ready state, no "Resume".
     private fun readConnection() = ConnectionPrefs(

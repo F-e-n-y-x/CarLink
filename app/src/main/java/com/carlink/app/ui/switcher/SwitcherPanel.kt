@@ -129,7 +129,7 @@ fun SwitcherBubble(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .clip(CircleShape)
             .background(scheme.surfaceContainerHigh.copy(alpha = 0.86f))
-            .border(BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom))), CircleShape),
+            .border(com.carlink.app.ui.premium.glassBorder(), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         CarLinkMark(Modifier.fillMaxSize(0.5f))
@@ -167,7 +167,7 @@ private fun SwitcherCard(ui: SwitcherUi, actions: SwitcherActions, modifier: Mod
         modifier
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom))), shape)
+            .border(com.carlink.app.ui.premium.glassBorder(), shape)
             // Touches on the card never reach the scrim behind it.
             .pointerInput(Unit) { detectTapGestures {} },
     ) {

@@ -79,7 +79,7 @@ fun SwitchPrompt(
                 .width((if (car) 720.dp else 460.dp).coerceAtMost(maxWidth))
                 .heightIn(max = maxHeight)
                 .background(scheme.surfaceContainer, shape)
-                .border(BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom))), shape)
+                .border(com.carlink.app.ui.premium.glassBorder(), shape)
                 .verticalScroll(rememberScrollState())
                 .padding(dimens.cardPadding),
             horizontalAlignment = Alignment.CenterHorizontally,

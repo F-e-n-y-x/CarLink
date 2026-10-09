@@ -210,6 +210,22 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
             carLinkScales.map { s -> Preset(s, carLinkScaleLabel(s), percentText(s), preview = { ScalePreview(s, carLink = true) }) },
             nearestScale(ui.display.interfaceScale), onSelect = { actions.setInterfaceScale(it); onDismiss() }, onDismiss = onDismiss,
         )
+        EssentialSheet.RENDERING -> ChoiceSheet(
+            stringResource(R.string.carlink_settings_rendering), stringResource(R.string.carlink_settings_rendering_detail), false,
+            com.carlink.app.ui.theme.RenderingMode.entries.map { m ->
+                Preset(m, renderingLabel(m), stringResource(when (m) {
+                    com.carlink.app.ui.theme.RenderingMode.AUTO -> if (ui.display.autoLite) R.string.carlink_settings_rendering_auto_detail_lite
+                        else R.string.carlink_settings_rendering_auto_detail_full
+                    com.carlink.app.ui.theme.RenderingMode.FULL -> R.string.carlink_settings_rendering_full_detail
+                    com.carlink.app.ui.theme.RenderingMode.LITE -> R.string.carlink_settings_rendering_lite_detail
+                }), when (m) {
+                    com.carlink.app.ui.theme.RenderingMode.AUTO -> R.drawable.carlink_ic_devices
+                    com.carlink.app.ui.theme.RenderingMode.FULL -> R.drawable.carlink_ic_dashboard_filled
+                    com.carlink.app.ui.theme.RenderingMode.LITE -> R.drawable.carlink_ic_dashboard
+                })
+            },
+            ui.display.renderingMode, onSelect = { actions.setRenderingMode(it); onDismiss() }, onDismiss = onDismiss,
+        )
     }
 }
 

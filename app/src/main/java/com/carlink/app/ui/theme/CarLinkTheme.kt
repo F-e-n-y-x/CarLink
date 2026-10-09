@@ -46,12 +46,14 @@ val LocalReduceMotion = staticCompositionLocalOf { false }
  * density that maps the screen's short side to an 810dp canvas (DESIGN_SPEC §5.0).
  *
  * @param interfaceScale the driver's "Interface size" (0.9–1.3).
+ * @param liteRendering solid fills and stepped animations for low-end GPUs ([LocalLiteRendering]).
  */
 @Composable
 fun CarLinkTheme(
     profile: UiProfile,
     themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     interfaceScale: Float = 1f,
+    liteRendering: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {
@@ -94,6 +96,7 @@ fun CarLinkTheme(
             LocalCarLinkColors provides if (dark) CarLinkDark.ext else CarLinkLight.ext,
             LocalWindowLayout provides layout,
             LocalReduceMotion provides reduceMotion,
+            LocalLiteRendering provides liteRendering,
             LocalMinimumInteractiveComponentSize provides dimens.minTouch,
             // Overscroll stretch reads as lag on head-unit panels (DESIGN_SPEC §8).
             LocalOverscrollFactory provides if (profile == UiProfile.CAR) null else LocalOverscrollFactory.current,

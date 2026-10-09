@@ -27,7 +27,7 @@ class HomeActivity : ComponentActivity() {
         setContent {
             val display by vm.display.collectAsStateWithLifecycle()
             val profile = remember(display.uiProfileMode) { UiProfileDetector.detect(this, display.uiProfileMode) }
-            CarLinkTheme(profile, display.themeMode, display.interfaceScale) {
+            CarLinkTheme(profile, display.themeMode, display.interfaceScale, display.liteRendering) {
                 CarLinkApp(vm, onExitToCarHome = ::exitToCarHome)
             }
         }
@@ -80,7 +80,6 @@ class HomeActivity : ComponentActivity() {
         const val EXTRA_AUTO_PHONE_ADDRESS = "com.carlink.app.extra.AUTO_PHONE_ADDRESS"
         const val EXTRA_AUTO_PHONE_KIND = "com.carlink.app.extra.AUTO_PHONE_KIND"
         const val EXTRA_AUTO_PHONE_NAME = "com.carlink.app.extra.AUTO_PHONE_NAME"
-
         fun intent(context: Context): Intent = Intent(context, HomeActivity::class.java)
     }
 }

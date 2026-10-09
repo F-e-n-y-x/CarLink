@@ -48,7 +48,15 @@ data class GalleryConfig(
     val themes: List<ThemeMode> = listOf(ThemeMode.DARK),
     /** Only entries that list this config by name render on it (see [GalleryEntry.configs]). */
     val optIn: Boolean = false,
+    /** Lite rendering (ui/theme/RenderingMode.kt), as Automatic picks it on a low-end head unit. */
+    val lite: Boolean = false,
+    /** "area/name" of the entries this config renders, whatever their [GalleryEntry.configs]; null for the usual rules. */
+    val entries: Set<String>? = null,
 )
+
+/** The low-end head-unit configs render these states (docs/LOW_END_PERFORMANCE.md). */
+private val lowEndEntries = setOf("home/ready-no-phone", "home/ready-iphone-same-wifi-offer", "home/connecting-carplay-usb",
+    "home/connected-carplay", "home/failed-wifi-off", "home/sheet-phones", "settings/general-lab", "settings/sheet-rendering")
 
 val galleryConfigs = listOf(
     // The user's Redmi Pad Pro: 2560×1600px at 281dpi, about 1460×914dp in landscape (HANDHELD).
@@ -68,6 +76,10 @@ val galleryConfigs = listOf(
     // The user's Redmi Pad Pro in landscape (2560×1600px, about 1458×911dp).
     GalleryConfig("tablet-landscape", UiProfile.HANDHELD, "w1458dp-h911dp-land-hdpi",
         themes = listOf(ThemeMode.DARK, ThemeMode.LIGHT), optIn = true),
+    // A cheap head unit: 1024×600px at 160dpi (a 600/810 car canvas), full effects and lite rendering.
+    GalleryConfig("headunit-1024x600", UiProfile.CAR, "w1024dp-h600dp-land-mdpi", entries = lowEndEntries),
+    GalleryConfig("headunit-1024x600-lite", UiProfile.CAR, "w1024dp-h600dp-land-mdpi", lite = true,
+        themes = listOf(ThemeMode.DARK, ThemeMode.LIGHT), entries = lowEndEntries),
 )
 
 /**
@@ -103,7 +115,9 @@ class ScreenshotGallery {
             for (theme in config.themes) {
                 for (entry in entries) {
                     if (entry.opensWindow && config.splitWidthDp != null) continue
-                    if (entry.configs?.contains(config.name) == false || (config.optIn && entry.configs == null)) continue
+                    if (config.entries != null) {
+                        if ("${entry.area}/${entry.name}" !in config.entries) continue
+                    } else if (entry.configs?.contains(config.name) == false || (config.optIn && entry.configs == null)) continue
                     val file = File(out, "${entry.area}/${entry.area}_${entry.name}_${config.name}_${theme.fileName}.png")
                     if (only != null && !only.containsMatchIn(file.name)) continue
                     val bitmap = render(config, theme, entry)
@@ -126,7 +140,7 @@ class ScreenshotGallery {
             scenario.onActivity { activity ->
                 activity.setContent {
                     val themed = @Composable {
-                        CarLinkTheme(profile = config.profile, themeMode = theme) { entry.content() }
+                        CarLinkTheme(profile = config.profile, themeMode = theme, liteRendering = config.lite) { entry.content() }
                     }
                     val split = config.splitWidthDp
                     if (split == null) {

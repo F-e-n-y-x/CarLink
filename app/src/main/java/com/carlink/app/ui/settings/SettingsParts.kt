@@ -301,7 +301,7 @@ internal fun SelectableGlass(
         else -> colors.glassFill
     }
     val border = if (selected && !accentEdge) BorderStroke(1.5.dp, scheme.primary.copy(alpha = 0.7f))
-    else BorderStroke(1.dp, Brush.verticalGradient(listOf(colors.glassStrokeTop, colors.glassStrokeBottom)))
+    else com.carlink.app.ui.premium.glassBorder()
     Box(
         modifier
             .focusRing(shape)

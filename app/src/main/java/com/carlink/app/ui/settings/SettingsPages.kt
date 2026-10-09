@@ -212,6 +212,10 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
             { openSheet(SheetKey.of(EssentialSheet.CARLINK_SIZE)) },
             description = stringResource(R.string.carlink_settings_carlink_size_detail), icon = R.drawable.carlink_ic_text_fields)
         GroupDivider()
+        ChoiceRow(stringResource(R.string.carlink_settings_rendering), renderingValue(d),
+            { openSheet(SheetKey.of(EssentialSheet.RENDERING)) },
+            description = stringResource(R.string.carlink_settings_rendering_detail), icon = R.drawable.carlink_ic_dashboard)
+        GroupDivider()
         SwitchRow(stringResource(R.string.carlink_settings_floating_switcher), ui.connection.floatingSwitcher,
             actions::setFloatingSwitcher, description = stringResource(R.string.carlink_settings_floating_switcher_detail),
             icon = R.drawable.carlink_ic_layers)
