@@ -38,7 +38,7 @@ class PhoneClassifierTest {
     @Test fun androidPhoneInterfacesAreRecognised() {
         val samsung = 0x04E8
         listOf(
-            UsbInterfaceInfo(0x08, 0x06, 0x01), // MTP
+            UsbInterfaceInfo(0x06, 0x01, 0x01), // MTP (still-image class, as phones report it)
             UsbInterfaceInfo(0xFF, 0x42, 0x01), // ADB
             UsbInterfaceInfo(0xE0, 0x01, 0x03), // RNDIS
             UsbInterfaceInfo(0xEF, 0x04, 0x01), // IAD

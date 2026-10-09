@@ -14,7 +14,7 @@ import java.util.UUID
 class PhoneClassifierEdgeCasesTest {
     private val handsFree = UUID.fromString("0000111f-0000-1000-8000-00805f9b34fb")
     private val a2dpSink = UUID.fromString("0000110b-0000-1000-8000-00805f9b34fb")
-    private val mtp = UsbInterfaceInfo(0x08, 0x06, 0x01)
+    private val mtp = UsbInterfaceInfo(0x06, 0x01, 0x01)
 
     private fun usb(vendor: Int, product: Int, vararg interfaces: UsbInterfaceInfo) =
         UsbDeviceInfo(vendor, product, interfaces.toList())
@@ -103,5 +103,21 @@ class PhoneClassifierEdgeCasesTest {
 
     @Test fun phoneClassWithoutSdpRecordsWaits() {
         assertEquals(PhoneKind.UNKNOWN, PhoneClassifier.classifyBluetooth(bt("Pixel 9", emptySet()), null))
+    }
+
+    @Test fun usbCDockPartsAreNotPhones() {
+        // The user's USB-C dock, descriptors read on the tablet (2026-10-09).
+        val ethernet = PhoneClassifier.UsbDeviceInfo(0x0BDA, 0x8153, listOf(
+            PhoneClassifier.UsbInterfaceInfo(0xFF, 0xFF, 0x00), PhoneClassifier.UsbInterfaceInfo(0x02, 0x06, 0x00),
+            PhoneClassifier.UsbInterfaceInfo(0x0A, 0x00, 0x00)))
+        val cardReader = PhoneClassifier.UsbDeviceInfo(0x05E3, 0x0749, listOf(PhoneClassifier.UsbInterfaceInfo(0x08, 0x06, 0x50)))
+        val audio = PhoneClassifier.UsbDeviceInfo(0x1B3F, 0x2008, listOf(
+            PhoneClassifier.UsbInterfaceInfo(0x01, 0x01, 0x00), PhoneClassifier.UsbInterfaceInfo(0x03, 0x00, 0x00)))
+        listOf(ethernet, cardReader, audio).forEach { assertEquals("$it", PhoneKind.UNKNOWN, PhoneClassifier.classifyUsb(it)) }
+    }
+
+    @Test fun phoneMakersVendorInterfaceStillCounts() {
+        val samsungChargingOnly = PhoneClassifier.UsbDeviceInfo(0x04E8, 0x6860, listOf(PhoneClassifier.UsbInterfaceInfo(0xFF, 0xFF, 0x00)))
+        assertEquals(PhoneKind.ANDROID, PhoneClassifier.classifyUsb(samsungChargingOnly))
     }
 }

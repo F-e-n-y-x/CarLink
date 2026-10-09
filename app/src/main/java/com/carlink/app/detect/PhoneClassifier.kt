@@ -56,15 +56,33 @@ object PhoneClassifier {
         device.vendorId == APPLE_VENDOR_ID -> PhoneKind.IPHONE
         isAccessoryMode(device) -> PhoneKind.ANDROID
         device.interfaces.any(::isAndroidInterface) -> PhoneKind.ANDROID
+        // A bare vendor-specific bulk interface is what some phones show in charging-only mode,
+        // but USB Ethernet adapters (Realtek r8152 in a USB-C dock) look the same, so it only
+        // counts for phone makers (found on the user's tablet, 2026-10-09).
+        device.vendorId in ANDROID_PHONE_VENDOR_IDS && device.interfaces.any(::isVendorBulk) -> PhoneKind.ANDROID
         else -> PhoneKind.UNKNOWN
     }
+
+    private fun isVendorBulk(i: UsbInterfaceInfo) =
+        i.interfaceClass == 0xFF && i.subclass == 0xFF && i.protocol == 0x00 && i.hasBulkEndpoint
+
+    /** Phone makers whose devices may show only a vendor-specific interface (keep in step with xml/carlink_usb_device_filter). */
+    private val ANDROID_PHONE_VENDOR_IDS = setOf(
+        0x04E8, // Samsung
+        0x18D1, // Google
+        0x2717, // Xiaomi / Redmi / POCO
+        0x2A70, // OnePlus
+        0x22D9, // OPPO / realme
+        0x2D95, // vivo
+        0x22B8, // Motorola
+        0x0FCE, // Sony
+        0x12D1, // Huawei / Honor
+    )
 
     fun isAccessoryMode(device: UsbDeviceInfo): Boolean =
         device.vendorId == GOOGLE_VENDOR_ID && device.productId in AOA_PRODUCT_IDS
 
     private fun isAndroidInterface(i: UsbInterfaceInfo): Boolean = when {
-        i.interfaceClass == 0xFF && i.subclass == 0xFF && i.protocol == 0x00 -> i.hasBulkEndpoint // AOA
-        i.interfaceClass == 0x08 && i.subclass == 0x06 && i.protocol == 0x01 -> true // MTP (as DiAuto)
         i.interfaceClass == 0xFF && i.subclass == 0x42 && i.protocol == 0x01 -> true // ADB
         i.interfaceClass == 0xE0 && i.subclass == 0x01 && i.protocol == 0x03 -> true // RNDIS
         i.interfaceClass == 0xEF && i.subclass == 0x04 && i.protocol == 0x01 -> true // IAD

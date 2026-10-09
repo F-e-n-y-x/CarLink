@@ -1,8 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Every USB device reaches UsbRouterActivity: Android phones have no common vendor ID.
-  The router ignores anything that is not a phone without showing UI (PhoneClassifier).
+  Which USB devices make Android launch (or offer) CarLink. Only phones: a dock, hub, Ethernet
+  adapter, card reader or audio device must not open CarLink (found on the user's tablet with a
+  USB-C dock, 2026-10-09). While CarLink runs, UsbWatcher sees every attach and PhoneClassifier
+  still decides; this list only governs the system's launch prompt.
+
+  Matching is by the device's class or any of its interfaces' classes, or by vendor/product.
 -->
 <resources>
-    <usb-device />
+    <!-- iPhone / iPad (Apple). -->
+    <usb-device vendor-id="1452" />
+    <!-- Android Open Accessory, after the switch (Google 0x18D1, products 0x2D00-0x2D05). -->
+    <usb-device vendor-id="6353" product-id="11520" />
+    <usb-device vendor-id="6353" product-id="11521" />
+    <usb-device vendor-id="6353" product-id="11522" />
+    <usb-device vendor-id="6353" product-id="11523" />
+    <usb-device vendor-id="6353" product-id="11524" />
+    <usb-device vendor-id="6353" product-id="11525" />
+    <!-- A phone in file-transfer or photo mode (MTP/PTP: still-image class). -->
+    <usb-device class="6" />
+    <!-- A phone with USB debugging on (ADB interface). -->
+    <usb-device class="255" subclass="66" protocol="1" />
+    <!-- Major Android phone makers, for phones in charging-only mode. -->
+    <usb-device vendor-id="1256" />  <!-- Samsung -->
+    <usb-device vendor-id="6353" />  <!-- Google -->
+    <usb-device vendor-id="10007" /> <!-- Xiaomi / Redmi / POCO -->
+    <usb-device vendor-id="10864" /> <!-- OnePlus -->
+    <usb-device vendor-id="8921" />  <!-- OPPO / realme -->
+    <usb-device vendor-id="11669" /> <!-- vivo -->
+    <usb-device vendor-id="8888" />  <!-- Motorola -->
+    <usb-device vendor-id="4046" />  <!-- Sony -->
+    <usb-device vendor-id="4817" />  <!-- Huawei / Honor -->
 </resources>
