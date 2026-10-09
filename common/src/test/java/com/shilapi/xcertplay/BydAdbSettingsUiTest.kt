@@ -2,6 +2,7 @@ package com.shilapi.xcertplay
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
+import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -12,12 +13,15 @@ import com.shilapi.xcertplay.host.R
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.hud.BydVehicleCapabilities
 import com.shilapi.xcertplay.hud.BydVehicleFieldStore
+import com.shilapi.xcertplay.media.AndroidMediaSink
 import com.shilapi.xcertplay.network.CarHotspotSettings
+import com.shilapi.xcertplay.orchestration.CarPlayController
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -124,6 +128,28 @@ class BydAdbSettingsUiTest {
         assertFalse(switches(advancedVehicleData()).single {
             it.contentDescription == activity.getString(R.string.bt_suspend_during_carplay)
         }.isEnabled)
+    }
+
+    @Test fun bluetoothPauseChangesApplyAtTheNextConnectionWithoutDroppingTheSession() {
+        AirPlayPersistence.saveBtSuspendDuringCarplay(activity, true)
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            PendingReconnect.clear()
+            switches(advancedVehicleData()).single {
+                it.contentDescription == activity.getString(R.string.bt_suspend_during_carplay)
+            }.performClick()
+            assertFalse(AirPlayPersistence.loadBtSuspendDuringCarplay(activity))
+            assertTrue(PendingReconnect.isPending(session))
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+        } finally {
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
     }
 
     @Test fun unavailableHotspotAdbDoesNotHideTheVehicleModeOrItsSavedSwitches() {
