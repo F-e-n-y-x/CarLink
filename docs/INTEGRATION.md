@@ -7,10 +7,11 @@ be another. This page describes the library: how to include it, the one `install
 interface, what a host observes and calls, what it must still provide itself, and a minimal
 launcher.
 
-Paths are relative to `carlink-core/src/main/java/com/carlink/app/` unless they start with
-`app/`, `carlink-core/`, `vendor/` or `docs/`. The library keeps the `com.carlink.app.*` packages
-the code had inside the app (so the move was a pure rename and every CarLink import stayed);
-its own resources use the namespace `com.carlink.core` (`com.carlink.core.R`).
+Paths are relative to `carlink-core/src/main/java/com/carlink/core/` unless they start with
+`app/`, `carlink-core/`, `vendor/` or `docs/`. The library's Kotlin packages are
+`com.carlink.core.*` (`connection`, `connection.aa`, `detect`, `entry`, `settings`, `core`,
+`engine`, `diagnostics`) and its resources use the same namespace (`com.carlink.core.R`). The
+host keeps its own packages (CarLink's are `com.carlink.app.*`) and its own `applicationId`.
 
 ## What the library holds
 
@@ -278,6 +279,26 @@ The library's manifest merges into the host's and declares:
 Because `:carlink-core` depends on both engines, its `tools:` markers take priority over the
 engines' manifests. When the library was extracted, CarLink's merged debug and release manifests
 were compared before and after: with elements and attributes sorted they are identical.
+
+When the library's packages became `com.carlink.core.*` (2026-10-10), the merged manifests changed
+only in the four backend component names above (`com.carlink.app.<pkg>.X` became
+`com.carlink.core.<pkg>.X`). An update over an older CarLink keeps working without aliases:
+
+- **USB "always open with" and USB permission.** Android stores the default handler for a USB
+  device per *package* (`UsbProfileGroupSettingsManager` writes `<preference package="…">`) and
+  starts the first matching activity of that package; the grant is per uid. The renamed
+  `UsbRouterActivity` inherits both. An `<activity-alias>` with the old name and the USB filter
+  would be a second match in the same package, and the system chooser would list CarLink twice
+  for a driver who has not ticked "always".
+- **Boot and Bluetooth** reach `SystemEventReceiver` through its intent filters, resolved at each
+  broadcast; nothing stores its class name.
+- **`:aa`**: `AaCommandReceiver` is only addressed by CarLink's own explicit intents, built from
+  the class at run time (the one PendingIntent, USB permission, lives for one request; an update
+  restarts both processes anyway). No component of CarLink's is bound as a service. The settings
+  provider's authority is `${applicationId}.androidauto.settings`, unchanged.
+- **Strings kept**: the main ↔ `:aa` broadcast actions stay `com.carlink.app.action.AA2_*`
+  (`connection/aa/AaProtocol`), and every `SharedPreferences` file name and key, log tag and
+  stored enum name is a literal unrelated to the package.
 
 The host declares its `Application` (extending DiAuto's `App`, with `tools:replace` for the
 attributes DiAuto's manifest also sets: see `app/src/main/AndroidManifest.xml`), its own main

@@ -84,8 +84,8 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
 - **Reusable backend: `:carlink-core`.** `connection/`, `detect/`, `settings/`, `core/`, the USB,
   boot and Bluetooth entry points (`entry/UsbRouterActivity`, `UsbWatcher`,
   `SystemEventReceiver`), `engine/AndroidAutoSettingsProvider`, `engine/WifiDirectReset` and
-  `diagnostics/EventLog` live in the library module `carlink-core/` (same `com.carlink.app.*`
-  packages; its own R class is `com.carlink.core.R`), with their unit tests and the engines'
+  `diagnostics/EventLog` live in the library module `carlink-core/` (packages
+  `com.carlink.core.*`, R class `com.carlink.core.R`; the app keeps `com.carlink.app.*`), with their unit tests and the engines'
   manifest overrides (`carlink-core/src/main/AndroidManifest.xml`). A launcher will reuse it
   (`docs/INTEGRATION.md`). The app supplies what the backend needs through
   `CarLinkCore.install(app, CarLinkConfig(accessoryName, host, waitingView))` in

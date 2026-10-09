@@ -9,6 +9,9 @@ package com.carlink.core.connection.aa
  * Broadcasts rather than a bound service: a bound connection from the main process would keep
  * ":aa" alive and raise its priority for the app's whole life, and v1's broadcasts are proven on the
  * user's tablet. Delivery order between two broadcasts from one process to one receiver is kept.
+ *
+ * The action strings keep their com.carlink.app values from before the library moved to
+ * com.carlink.core: they are a wire format between the two processes, not a package reference.
  */
 internal object AaProtocol {
     const val ENGINE_PROCESS_SUFFIX = ":aa"

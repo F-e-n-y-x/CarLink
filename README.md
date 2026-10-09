@@ -138,12 +138,12 @@ Modules:
 | `:carplay-shared`, `:carplay-common` | `vendor/diplay/` | The CarPlay engine (DiPlay), main process |
 | `:androidauto`, `:androidauto-contract` | `vendor/diauto/` | The Android Auto engine (DiAuto), `:aa` process |
 
-- `carlink-core/src/main/java/com/carlink/app/connection/` is the connection layer:
+- `carlink-core/src/main/java/com/carlink/core/connection/` is the connection layer:
   `SessionManager` (one state machine, one engine at a time), `WirelessPolicy` (which paths, in
   which order), `DevicePreflight` and `CarPlayPreflight` (problems with a one-tap fix before
   anything opens), `CarPlayAdapter` and `AndroidAutoAdapter` (drive each engine through small
-  hooks), and `connection/aa/` (the Android Auto side that runs in `:aa`). The library keeps the
-  `com.carlink.app.*` packages.
+  hooks), and `connection/aa/` (the Android Auto side that runs in `:aa`). The library's
+  packages are `com.carlink.core.*`; the app's stay `com.carlink.app.*`.
 - `detect/` tells iPhones from Android phones; `entry/` holds the USB, boot and Bluetooth entry
   points; `settings/` the unified settings (all in `:carlink-core`); `ui/` and `switcher/` the
   screens (in `:app`).
