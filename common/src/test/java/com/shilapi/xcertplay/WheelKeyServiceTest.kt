@@ -382,22 +382,25 @@ class WheelKeyServiceTest {
         // The disabled default must pass the initial wheel press through.
         fun event(action: Int, time: Long, repeat: Int = 0) = KeyEvent(time, time, action,
             KeyEvent.KEYCODE_VOLUME_UP, repeat)
-        assertFalse(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 1)))
+        fun dispatch(event: KeyEvent): Boolean = service.javaClass
+            .getDeclaredMethod("onKeyEvent", KeyEvent::class.java).apply { isAccessible = true }
+            .invoke(service, event) as Boolean
+        assertFalse(dispatch(event(KeyEvent.ACTION_DOWN, 1)))
         prefs.edit().putBoolean("enabled", true).commit()
-        assertTrue(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 2)))
+        assertTrue(dispatch(event(KeyEvent.ACTION_DOWN, 2)))
         assertEquals(3, audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION))
         assertEquals(3, audio.getStreamVolume(AudioManager.STREAM_MUSIC))
         playback = com.shilapi.xcertplay.media.NavigationPlaybackSnapshot(false, null)
-        assertTrue(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 2, 1)))
-        assertTrue(service.onKeyEvent(event(KeyEvent.ACTION_UP, 2)))
+        assertTrue(dispatch(event(KeyEvent.ACTION_DOWN, 2, 1)))
+        assertTrue(dispatch(event(KeyEvent.ACTION_UP, 2)))
         assertEquals(3, audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION))
-        assertFalse(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 3)))
+        assertFalse(dispatch(event(KeyEvent.ACTION_DOWN, 3)))
         playback = com.shilapi.xcertplay.media.NavigationPlaybackSnapshot(true, AudioManager.STREAM_MUSIC)
-        assertFalse(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 4)))
+        assertFalse(dispatch(event(KeyEvent.ACTION_DOWN, 4)))
         playback = com.shilapi.xcertplay.media.NavigationPlaybackSnapshot(true, null)
-        assertFalse(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 5)))
+        assertFalse(dispatch(event(KeyEvent.ACTION_DOWN, 5)))
         playback = com.shilapi.xcertplay.media.NavigationPlaybackSnapshot(true, AudioManager.STREAM_NOTIFICATION, true)
-        assertFalse(service.onKeyEvent(event(KeyEvent.ACTION_DOWN, 6)))
+        assertFalse(dispatch(event(KeyEvent.ACTION_DOWN, 6)))
         assertEquals(3, audio.getStreamVolume(AudioManager.STREAM_MUSIC))
     }
 
