@@ -24,12 +24,17 @@ class CarLinkPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_START_ON_BOOT, value).apply()
 
     /**
-     * Set when the driver cancels or disconnects; cleared when they connect again. Keeps
-     * automatic starts from reconnecting against the driver's wish.
+     * Set when the driver cancels or disconnects; cleared when they connect again, and on its own
+     * after [PAUSE_MILLIS]. Keeps automatic starts from reconnecting right after the driver
+     * stopped, without leaving a "paused · Resume" state behind (user feedback, 2026-10-09).
      */
     var autoConnectPaused: Boolean
-        get() = prefs.getBoolean(KEY_PAUSED, false)
-        set(value) = prefs.edit().putBoolean(KEY_PAUSED, value).apply()
+        get() {
+            if (!prefs.getBoolean(KEY_PAUSED, false)) return false
+            val at = prefs.getLong(KEY_PAUSED_AT, 0L)
+            return System.currentTimeMillis() - at in 0 until PAUSE_MILLIS
+        }
+        set(value) = prefs.edit().putBoolean(KEY_PAUSED, value).putLong(KEY_PAUSED_AT, System.currentTimeMillis()).apply()
 
     /** The floating switcher over CarPlay and Android Auto (needs "Display over other apps"). */
     var floatingSwitcher: Boolean
@@ -63,6 +68,8 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_USB = "auto_connect_usb"
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
+        private const val KEY_PAUSED_AT = "auto_connect_paused_at"
+        const val PAUSE_MILLIS = 10 * 60_000L
         private const val KEY_PAUSED = "auto_connect_paused"
         private const val KEY_FLOATING_SWITCHER = "floating_switcher"
     }

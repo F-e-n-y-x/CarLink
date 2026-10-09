@@ -291,8 +291,11 @@ class SessionManager(
     fun disconnect() {
         note("driver disconnect")
         environment.autoConnectPaused = true
+        val wasActive = _state.value.isActive
         markDriverStop(_state.value)
         stop()
+        // Leave the driver on CarLink's Home, not the system launcher the projection returns to.
+        if (wasActive) environment.returnHome()
     }
 
     /** Stops whatever runs and goes idle. */

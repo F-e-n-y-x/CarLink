@@ -323,7 +323,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale)
 
+    // The short pause after a Disconnect is silent: Home shows its normal ready state, no "Resume".
     private fun readConnection() = ConnectionPrefs(
-        preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, preferences.autoConnectPaused,
-        preferences.floatingSwitcher)
+        preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
+        floatingSwitcher = preferences.floatingSwitcher)
 }
