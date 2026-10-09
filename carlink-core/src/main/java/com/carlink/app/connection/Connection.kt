@@ -39,13 +39,21 @@ object Connection {
      */
     fun prewarm(context: Context) {
         val app = context.applicationContext
+        // App start and Home's resume both ask within milliseconds of each other on a cold start.
+        if (!prewarming.compareAndSet(false, true)) return
         Thread({
-            val started = android.os.SystemClock.uptimeMillis()
-            runCatching { com.carlink.app.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
-            val took = android.os.SystemClock.uptimeMillis() - started
-            if (took > 300) com.carlink.app.diagnostics.EventLog.add("CarLink", "Android Auto engine process warmed in $took ms")
+            try {
+                val started = android.os.SystemClock.uptimeMillis()
+                runCatching { com.carlink.app.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
+                val took = android.os.SystemClock.uptimeMillis() - started
+                if (took > 300) com.carlink.app.diagnostics.EventLog.add("CarLink", "Android Auto engine process warmed in $took ms")
+            } finally {
+                prewarming.set(false)
+            }
         }, "carlink-prewarm").start()
     }
+
+    private val prewarming = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /** Home is in front: start the last-used phone wirelessly when the rules allow (see [SessionManager.onHomeShown]). */
     @android.annotation.SuppressLint("MissingPermission") // The name is read only when the permission allows.
