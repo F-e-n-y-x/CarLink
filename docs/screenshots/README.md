@@ -4,7 +4,7 @@ An index of every CarLink screen state, rendered by
 `app/src/test/java/com/carlink/app/gallery/ScreenshotGallery.kt` (Robolectric, native graphics)
 from each screen's stateless content (`HomeContent`, `SettingsContent`, `DiagnosticsContent`,
 `AboutContent`) with fake state. Nothing here comes from a real phone or head unit. Files are named
-`<area>/<area>_<state>_<config>_<theme>.png`; 382 images in total.
+`<area>/<area>_<state>_<config>_<theme>.png`; 406 images in total.
 
 ## Regenerate
 
@@ -34,13 +34,15 @@ half charged; nothing animates).
 | `phone-landscape` | Phone/tablet | 860×400dp at 420dpi | 860×400dp | dark |
 | `tablet-portrait` | Phone/tablet | 800×1280dp at 240dpi | ≈690×1103dp (scale 1.16×) | dark |
 | `tablet-landscape` | Phone/tablet | 1458×911dp at 240dpi; opt-in (switcher entries only) | ≈1104×690dp | dark, light |
+| `headunit-1024x600` | Car | A cheap head unit: 1024×600px at 160dpi; low-end states only | ≈1382×810dp | dark |
+| `headunit-1024x600-lite` | Car, lite rendering | The same, with lite rendering ([LOW_END_PERFORMANCE.md](../LOW_END_PERFORMANCE.md)) | ≈1382×810dp | dark, light |
 
 Each image shows the first screenful only; content below the fold of a scrolling screen is not
 captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (see Caveats).
 
 ## Screens
 
-### Home — `home/` (177 images)
+### Home — `home/` (195 images)
 
 | State | tablet dark | tablet light | car-landscape dark | car-landscape light | car-1080p dark | car-split-third dark | phone-portrait dark | phone-portrait light | phone-landscape dark | tablet-portrait dark |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -63,7 +65,7 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 | `connected-carplay-usb` — CarPlay connected by cable: transport badge, dial "Cable", USB cable and the session phone in the status bar | [png](home/home_connected-carplay-usb_tablet_dark.png) | [png](home/home_connected-carplay-usb_tablet_light.png) | [png](home/home_connected-carplay-usb_car-landscape_dark.png) | [png](home/home_connected-carplay-usb_car-landscape_light.png) | [png](home/home_connected-carplay-usb_car-1080p_dark.png) | [png](home/home_connected-carplay-usb_car-split-third_dark.png) | [png](home/home_connected-carplay-usb_phone-portrait_dark.png) | [png](home/home_connected-carplay-usb_phone-portrait_light.png) | [png](home/home_connected-carplay-usb_phone-landscape_dark.png) | [png](home/home_connected-carplay-usb_tablet-portrait_dark.png) |
 | `sheet-phones-usb` — Phones sheet during a wired session: Connected · Cable, Plugged in (USB), Wireless | [png](home/home_sheet-phones-usb_tablet_dark.png) | [png](home/home_sheet-phones-usb_tablet_light.png) | [png](home/home_sheet-phones-usb_car-landscape_dark.png) | [png](home/home_sheet-phones-usb_car-landscape_light.png) | [png](home/home_sheet-phones-usb_car-1080p_dark.png) | — | [png](home/home_sheet-phones-usb_phone-portrait_dark.png) | [png](home/home_sheet-phones-usb_phone-portrait_light.png) | [png](home/home_sheet-phones-usb_phone-landscape_dark.png) | [png](home/home_sheet-phones-usb_tablet-portrait_dark.png) |
 
-### Settings — `settings/` (124 images)
+### Settings — `settings/` (130 images)
 
 | State | tablet dark | tablet light | car-landscape dark | car-landscape light | car-1080p dark | car-split-third dark | phone-portrait dark | phone-portrait light | phone-landscape dark | tablet-portrait dark |
 |---|---|---|---|---|---|---|---|---|---|---|
