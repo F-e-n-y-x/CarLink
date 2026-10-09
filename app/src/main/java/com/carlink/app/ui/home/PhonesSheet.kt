@@ -120,7 +120,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
             }
         }
         Spacer(Modifier.height(dimens.gutter))
-        GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.openBluetoothSettings(); onDismiss() },
+        GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.pairPhone(); onDismiss() },
             icon = R.drawable.carlink_ic_bluetooth)
     }
 

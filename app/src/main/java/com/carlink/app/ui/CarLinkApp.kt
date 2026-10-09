@@ -28,13 +28,19 @@ import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 
 /** CarLink's screens (DESIGN_SPEC §4.1). Home is the hub; everything is one level below it. */
-enum class Route { HOME, SETTINGS, DIAGNOSTICS, ABOUT }
+enum class Route {
+    HOME, SETTINGS, DIAGNOSTICS, ABOUT,
+    /** First-time setup from its welcome (first launch, Settings › General › Set up again). */
+    SETUP,
+    /** The setup's pairing step (Home's "Pair a phone"). */
+    SETUP_PAIR,
+}
 
 @Composable
 fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
-    // Back stack of routes; Home is always at the bottom. There is no setup wizard: Home asks
-    // for permissions inline and connects on its own.
-    var stack by rememberSaveable { mutableStateOf(listOf(Route.HOME)) }
+    // Back stack of routes; Home is always at the bottom. The first-time setup runs over Home at
+    // the first launch (and when the driver asks); Home still asks for permissions inline.
+    var stack by rememberSaveable { mutableStateOf(if (vm.setupNeeded()) listOf(Route.HOME, Route.SETUP) else listOf(Route.HOME)) }
     // The Settings category another screen asked to open (Diagnostics), or null for the default.
     var settingsStart by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     val route = stack.last()
@@ -82,6 +88,10 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
                     Route.SETTINGS -> SettingsScreen(vm, onBack = back, navigate = navigate, startCategory = settingsStart)
                     Route.DIAGNOSTICS -> DiagnosticsScreen(vm, onBack = back, openSettings = openSettings)
                     Route.ABOUT -> AboutScreen(onBack = back)
+                    Route.SETUP, Route.SETUP_PAIR -> com.carlink.app.ui.setup.SetupScreen(vm,
+                        start = if (current == Route.SETUP_PAIR) com.carlink.app.ui.setup.SetupStep.PAIR
+                            else com.carlink.app.ui.setup.SetupStep.WELCOME,
+                        onExit = { stack = listOf(Route.HOME) })
                 }
             }
         }

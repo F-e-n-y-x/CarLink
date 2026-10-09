@@ -156,6 +156,21 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun readVehicle() = VehicleChoice(Connection.vehicleProfile(app),
         com.carlink.app.settings.VehicleProfile.detect(app))
 
+    /**
+     * First-time setup runs at launch until it is finished or skipped once. A device that already
+     * knows a phone (an update from before the setup existed) counts as set up.
+     */
+    fun setupNeeded(): Boolean {
+        if (preferences.setupDone) return false
+        val knowsPhone = com.carlink.app.connection.DeviceEnvironment.lastPhoneAddress(app) != null ||
+            home.value.phones.any { it.kind != PhoneKind.UNKNOWN } || session.health.value.isNotEmpty()
+        if (knowsPhone) preferences.setupDone = true
+        return !knowsPhone
+    }
+
+    /** The setup was finished or skipped; it is not shown at launch again (Settings can re-run it). */
+    fun finishSetup() { preferences.setupDone = true }
+
     private val _display = MutableStateFlow(readDisplay())
     val display: StateFlow<DisplayPrefs> = _display.asStateFlow()
 

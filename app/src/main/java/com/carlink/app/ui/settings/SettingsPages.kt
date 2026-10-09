@@ -235,7 +235,9 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_help)) }) {
         LinkRow(stringResource(R.string.carlink_settings_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
             stringResource(R.string.carlink_settings_diagnostics_detail), R.drawable.carlink_ic_monitor_heart)
-
+        GroupDivider()
+        LinkRow(stringResource(R.string.carlink_settings_setup_again), { actions.navigate(Route.SETUP) },
+            stringResource(R.string.carlink_settings_setup_again_detail), R.drawable.carlink_ic_restart_alt)
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_about)) }) {
         val remaining = LAB_TAPS - versionTaps

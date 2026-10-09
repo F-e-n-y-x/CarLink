@@ -42,6 +42,11 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_FLOATING_SWITCHER, true)
         set(value) = prefs.edit().putBoolean(KEY_FLOATING_SWITCHER, value).apply()
 
+    /** The first-time setup was finished or skipped (it then runs only when the driver asks). */
+    var setupDone: Boolean
+        get() = prefs.getBoolean(KEY_SETUP_DONE, false)
+        set(value) = prefs.edit().putBoolean(KEY_SETUP_DONE, value).apply()
+
     /** Follow the car/system day-night mode by default (DESIGN_SPEC §5.1). */
     var themeMode: ThemeMode
         get() = enumOr(prefs.getString(KEY_THEME, null), ThemeMode.FOLLOW_SYSTEM)
@@ -79,5 +84,6 @@ class CarLinkPreferences(context: Context) {
         const val PAUSE_MILLIS = 10 * 60_000L
         private const val KEY_PAUSED = "auto_connect_paused"
         private const val KEY_FLOATING_SWITCHER = "floating_switcher"
+        private const val KEY_SETUP_DONE = "setup_done"
     }
 }

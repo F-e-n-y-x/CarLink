@@ -143,6 +143,8 @@ internal data class HomeUi(
 internal interface HomeActions {
     fun requestPermissions() {}
     fun openBluetoothSettings() {}
+    /** Guided first-time pairing (the setup's pairing step); Android's Bluetooth settings where there is none. */
+    fun pairPhone() = openBluetoothSettings()
     fun connect(phone: PairedPhone) {}
     fun switchTo(phone: PairedPhone) {}
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) {}
@@ -169,6 +171,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
         object : HomeActions {
             override fun requestPermissions() = launcher.launch(vm.missingPermissions().toTypedArray())
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
+            override fun pairPhone() = navigate(Route.SETUP_PAIR)
             override fun connect(phone: PairedPhone) = vm.connect(phone)
             override fun switchTo(phone: PairedPhone) = vm.switchTo(phone)
             override fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = vm.setPhoneKind(phone, kind)
@@ -545,7 +548,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 icon = R.drawable.carlink_ic_check)
             HomeMode.BLUETOOTH_OFF -> IonButton(stringResource(R.string.carlink_home_bt_off_action), actions::openBluetoothSettings,
                 icon = R.drawable.carlink_ic_bluetooth)
-            HomeMode.READY_EMPTY -> GlassButton(stringResource(R.string.carlink_home_pair_action), actions::openBluetoothSettings,
+            HomeMode.READY_EMPTY -> GlassButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
                 icon = R.drawable.carlink_ic_bluetooth)
             HomeMode.READY_PHONE -> phone?.let {
                 IonButton(stringResource(R.string.carlink_home_connect), { actions.connect(it) }, icon = R.drawable.carlink_ic_link)
@@ -618,7 +621,7 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
     when (link.problem) {
         LinkProblem.CARPLAY_AUTH_MISSING -> IonButton(stringResource(R.string.carlink_home_diagnostics),
             { actions.navigate(Route.DIAGNOSTICS) }, icon = R.drawable.carlink_ic_monitor_heart)
-        LinkProblem.NO_IPHONE_SELECTED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::openBluetoothSettings,
+        LinkProblem.NO_IPHONE_SELECTED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> IonButton(
             stringResource(R.string.carlink_home_open_settings), { actions.navigate(Route.SETTINGS) }, icon = R.drawable.carlink_ic_settings)
@@ -628,7 +631,7 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_check)
         LinkProblem.LOCATION_OFF -> IonButton(stringResource(R.string.carlink_home_fix_open_settings),
             { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_settings)
-        LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::openBluetoothSettings,
+        LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
             IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(link.problem) }, icon = R.drawable.carlink_ic_p2p)

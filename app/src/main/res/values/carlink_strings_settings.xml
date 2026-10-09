@@ -202,4 +202,6 @@
     <string name="carlink_settings_car_byd">BYD (DiLink)</string>
     <string name="carlink_settings_car_byd_detail">Directions on the HUD and instrument cluster, BYD steering-wheel keys and BYD helpers.</string>
     <string name="carlink_settings_car_detected">Detected: %1$s</string>
+    <string name="carlink_settings_setup_again">Set up again</string>
+    <string name="carlink_settings_setup_again_detail">Permissions, car brand and pairing a phone, step by step</string>
 </resources>

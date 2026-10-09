@@ -57,7 +57,8 @@ class GalleryEntry(
  * Every registered screen state. To add a screen, append entries that call its stateless
  * content composable (the one its @Preview functions use) with preview fakes.
  */
-val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + diagnosticsEntries() + aboutEntries() + switcherEntries()).also { entries ->
+val galleryEntries: List<GalleryEntry> = (homeEntries() + settingsEntries() + diagnosticsEntries() + aboutEntries() + switcherEntries() +
+    setupEntries()).also { entries ->
         check(entries.map { it.area to it.name }.toSet().size == entries.size) {
             "Gallery entry names must be unique per area"
         }

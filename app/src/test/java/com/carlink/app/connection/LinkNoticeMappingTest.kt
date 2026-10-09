@@ -11,8 +11,11 @@ import com.carlink.app.detect.PairedPhone
 import com.carlink.app.settings.WirelessPath
 import com.carlink.app.ui.home.PhoneUsual
 import com.carlink.app.ui.home.usualFor
+import com.carlink.app.ui.setup.SetupItem
+import com.carlink.app.ui.setup.SetupPermissions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -72,5 +75,15 @@ class LinkNoticeMappingTest {
         assertNull(usualFor(phone, health(1)))
         assertEquals(PhoneUsual(5_000, WirelessPath.WIFI_DIRECT), usualFor(phone, health(3)))
         assertNull(usualFor(phone.copy(kind = PhoneKind.UNKNOWN), health(3)))
+    }
+
+    @Test fun setupAsksForEverySessionPermission() {
+        val runtime = SetupPermissions.runtimePermissions(37)
+        val grouped = SetupPermissions.items(37, runtime).flatMap { it.second }
+        assertTrue(runtime.all { it in grouped })
+        assertTrue(CarPlayPreflight.ACCESS_LOCAL_NETWORK in runtime)
+        val items = SetupPermissions.items(37, runtime).map { it.first }
+        assertTrue(items.containsAll(listOf(SetupItem.OVERLAY, SetupItem.BATTERY, SetupItem.VPN)))
+        assertTrue(SetupItem.BATTERY.optional && SetupItem.VPN.optional && !SetupItem.OVERLAY.optional)
     }
 }

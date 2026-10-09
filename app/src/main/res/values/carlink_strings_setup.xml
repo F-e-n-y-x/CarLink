@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- First-time setup (ui/setup): welcome, permissions, car brand, pairing a phone, done. -->
+<resources>
+    <string name="carlink_setup_title">Set up CarLink</string>
+    <string name="carlink_setup_close">Skip setup</string>
+    <string name="carlink_setup_back">Back</string>
+    <string name="carlink_setup_continue">Continue</string>
+    <string name="carlink_setup_step_of">Step %1$d of %2$d</string>
+    <string name="carlink_setup_step_welcome">Welcome</string>
+    <string name="carlink_setup_step_permissions">Access</string>
+    <string name="carlink_setup_step_car">Car</string>
+    <string name="carlink_setup_step_pair">Phone</string>
+    <string name="carlink_setup_step_done">Done</string>
+
+    <!-- Welcome -->
+    <string name="carlink_setup_welcome_eyebrow">Welcome</string>
+    <string name="carlink_setup_welcome_title">Let’s connect your phone</string>
+    <string name="carlink_setup_welcome_body">CarLink runs Apple CarPlay for iPhone and Android Auto for Android phones, by cable or wirelessly. Setup takes about two minutes.</string>
+    <string name="carlink_setup_welcome_start">Start</string>
+    <string name="carlink_setup_plan_access">Allow access</string>
+    <string name="carlink_setup_plan_access_detail">Bluetooth, Wi-Fi and a few switches, all at once</string>
+    <string name="carlink_setup_plan_car">Choose your car</string>
+    <string name="carlink_setup_plan_car_detail">Generic, or BYD for its HUD and wheel keys</string>
+    <string name="carlink_setup_plan_pair">Pair your phone</string>
+    <string name="carlink_setup_plan_pair_detail">Once, from the phone’s Bluetooth settings</string>
+
+    <!-- Permissions -->
+    <string name="carlink_setup_permissions_eyebrow">Access</string>
+    <string name="carlink_setup_permissions_title">Allow what CarLink needs</string>
+    <string name="carlink_setup_permissions_body">Android asks for each one once. Items marked Optional can be skipped and allowed later.</string>
+    <string name="carlink_setup_permissions_all">Allow all</string>
+    <string name="carlink_setup_permissions_done">Everything needed is allowed</string>
+    <string name="carlink_setup_permissions_missing">%1$d still to allow</string>
+    <string name="carlink_setup_permission_allowed">Allowed</string>
+    <string name="carlink_setup_permission_allow">Allow</string>
+    <string name="carlink_setup_permission_optional">Optional</string>
+    <string name="carlink_setup_perm_bluetooth">Bluetooth</string>
+    <string name="carlink_setup_perm_bluetooth_detail">Finds and pairs your phone, and wakes it for wireless</string>
+    <string name="carlink_setup_perm_wifi">Nearby Wi-Fi devices</string>
+    <string name="carlink_setup_perm_wifi_detail">Sets up the private Wi-Fi link to the phone</string>
+    <string name="carlink_setup_perm_location">Location</string>
+    <string name="carlink_setup_perm_location_detail">Android needs it for Wi-Fi Direct; maps get the car’s position</string>
+    <string name="carlink_setup_perm_local_network">Local network</string>
+    <string name="carlink_setup_perm_local_network_detail">Lets wireless CarPlay reach the iPhone</string>
+    <string name="carlink_setup_perm_microphone">Microphone</string>
+    <string name="carlink_setup_perm_microphone_detail">Siri, Google Assistant and phone calls</string>
+    <string name="carlink_setup_perm_notifications">Notifications</string>
+    <string name="carlink_setup_perm_notifications_detail">Shows that CarLink is connected and lets you stop it</string>
+    <string name="carlink_setup_perm_overlay">Display over other apps</string>
+    <string name="carlink_setup_perm_overlay_detail">Opens CarPlay or Android Auto when the phone connects</string>
+    <string name="carlink_setup_perm_battery">Run in the background</string>
+    <string name="carlink_setup_perm_battery_detail">Keeps the connection up when the screen sleeps</string>
+    <string name="carlink_setup_perm_vpn">Wired CarPlay link</string>
+    <string name="carlink_setup_perm_vpn_detail">A local network link to an iPhone on the cable; no internet traffic</string>
+
+    <!-- Car -->
+    <string name="carlink_setup_car_eyebrow">Your car</string>
+    <string name="carlink_setup_car_title">Which car is this screen in?</string>
+    <string name="carlink_setup_car_body">This turns on features made for one brand. You can change it later in Settings › Car.</string>
+
+    <!-- Pair a phone -->
+    <string name="carlink_setup_pair_eyebrow">Pair your phone</string>
+    <string name="carlink_setup_pair_waiting_title">On your phone, open Bluetooth and tap %1$s</string>
+    <string name="carlink_setup_pair_waiting_title_unnamed">On your phone, open Bluetooth and tap this screen’s name</string>
+    <string name="carlink_setup_pair_waiting_body">Keep this screen open. If the phone shows a code, check that it matches here and tap Pair.</string>
+    <string name="carlink_setup_pair_pairing_title">Pairing with %1$s…</string>
+    <string name="carlink_setup_pair_pairing_title_unnamed">Pairing with your phone…</string>
+    <string name="carlink_setup_pair_pairing_body">Confirm the code on the phone and on this screen.</string>
+    <string name="carlink_setup_pair_found_iphone">iPhone found → CarPlay</string>
+    <string name="carlink_setup_pair_found_android">Android phone found → Android Auto</string>
+    <string name="carlink_setup_pair_found">Phone found</string>
+    <string name="carlink_setup_pair_accept_iphone">Accept “Use CarPlay” on your iPhone</string>
+    <string name="carlink_setup_pair_accept_iphone_body">Keep %1$s unlocked. The first connection can take up to half a minute.</string>
+    <string name="carlink_setup_pair_accept_android">Accept Android Auto on your phone</string>
+    <string name="carlink_setup_pair_accept_android_body">Follow the Android Auto screens on %1$s and keep it unlocked.</string>
+    <string name="carlink_setup_pair_kind_title">%1$s is paired</string>
+    <string name="carlink_setup_pair_kind_body">Is it an iPhone or an Android phone?</string>
+    <string name="carlink_setup_pair_connected_title">%1$s is connected</string>
+    <string name="carlink_setup_pair_connected_body">%1$s is running. Next time it starts by itself.</string>
+    <string name="carlink_setup_pair_failed_title">Not connected yet</string>
+    <string name="carlink_setup_pair_failed_body">The phone is paired. Unlock it, check that Bluetooth and Wi-Fi are on, and try again.</string>
+    <string name="carlink_setup_pair_bt_off_title">Turn on Bluetooth</string>
+    <string name="carlink_setup_pair_bt_off_body">Phones find this screen over Bluetooth. Turn it on to pair.</string>
+    <string name="carlink_setup_pair_bt_on">Turn on Bluetooth</string>
+    <string name="carlink_setup_pair_cable">Plug in with a cable instead</string>
+    <string name="carlink_setup_pair_wireless">Pair over Bluetooth instead</string>
+    <string name="carlink_setup_pair_skip">Skip</string>
+    <string name="carlink_setup_pair_cable_title">Plug your phone into this screen</string>
+    <string name="carlink_setup_pair_cable_body">Use the phone’s charging cable in this screen’s USB port. Unlock the phone and accept its prompt; CarLink starts by itself.</string>
+    <string name="carlink_setup_pair_cable_waiting">Waiting for a phone on the cable…</string>
+    <string name="carlink_setup_pair_name_label">This screen’s Bluetooth name</string>
+    <string name="carlink_setup_pair_name_unknown">Turn on Bluetooth to see it</string>
+    <string name="carlink_setup_pair_visible">Visible to phones</string>
+    <string name="carlink_setup_pair_not_visible">Not visible to new phones yet</string>
+    <string name="carlink_setup_pair_make_visible">Make visible</string>
+    <string name="carlink_setup_pair_known">Paired before</string>
+    <string name="carlink_setup_pair_connect_known">Connect %1$s</string>
+
+    <!-- Done -->
+    <string name="carlink_setup_done_eyebrow">Ready</string>
+    <string name="carlink_setup_done_title">You’re all set</string>
+    <string name="carlink_setup_done_body_phone">Next time just get in: %1$s connects by itself when it’s near this screen, or when you plug it in.</string>
+    <string name="carlink_setup_done_body_none">Plug in your phone, or pair it from Home whenever you’re ready.</string>
+    <string name="carlink_setup_done_action">Go to Home</string>
+    <string name="carlink_setup_done_phone">Phone</string>
+    <string name="carlink_setup_done_phone_none">Not paired yet</string>
+    <string name="carlink_setup_done_car">Car</string>
+    <string name="carlink_setup_done_access">Access</string>
+    <string name="carlink_setup_done_access_all">Everything allowed</string>
+    <string name="carlink_setup_done_access_missing">%1$d not allowed yet</string>
+    <string name="carlink_setup_done_phone_value">%1$s · %2$s</string>
+</resources>

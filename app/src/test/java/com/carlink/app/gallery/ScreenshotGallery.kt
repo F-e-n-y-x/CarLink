@@ -57,7 +57,7 @@ data class GalleryConfig(
 /** The low-end head-unit configs render these states (docs/LOW_END_PERFORMANCE.md). */
 private val lowEndEntries = setOf("home/ready-no-phone", "home/ready-iphone-same-wifi-offer", "home/connecting-carplay-usb",
     "home/connected-carplay", "home/failed-wifi-off", "home/sheet-phones", "settings/general-lab", "settings/sheet-rendering",
-    "home/connecting-notice-wifi")
+    "home/connecting-notice-wifi", "setup/permissions", "setup/pair-waiting", "setup/pair-found-iphone")
 
 val galleryConfigs = listOf(
     // The user's Redmi Pad Pro: 2560×1600px at 281dpi, about 1460×914dp in landscape (HANDHELD).
