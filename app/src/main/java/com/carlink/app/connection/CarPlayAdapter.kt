@@ -140,6 +140,13 @@ class CarPlayAdapter internal constructor(
             val app = context.applicationContext
             CarPlayHostIntegration.accessoryName = app.getString(R.string.app_name)
             CarPlayHostIntegration.resetDebugLogsOnBootstrap = false
+            // The IPv6-first experiment remembered IPv6 on the test tablet; forget it once so the
+            // proven IPv4 path is used again (WirelessAddressFamilyPlan.ipv6Guess is off).
+            val marks = app.getSharedPreferences("carlink_migrations", Context.MODE_PRIVATE)
+            if (!marks.getBoolean("forget_ipv6_guess", false)) {
+                app.getSharedPreferences("diplay_wireless", Context.MODE_PRIVATE).edit().remove("hotspot_address_family").apply()
+                marks.edit().putBoolean("forget_ipv6_guess", true).apply()
+            }
             CarPlayHostIntegration.vehicleIntegrations = profile == VehicleProfile.BYD_DILINK
             CarPlayHostIntegration.onHostState = HostStates::dispatch
             CarPlayWaitingView.install()

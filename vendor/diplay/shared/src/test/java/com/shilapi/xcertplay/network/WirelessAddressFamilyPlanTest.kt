@@ -9,6 +9,16 @@ import org.junit.Test
 
 // CarLink: Wi-Fi Direct tries IPv6 link-local first, with a quick fallback to IPv4.
 class WirelessAddressFamilyPlanTest {
+    // The experiment is opt-in (CarLink); these tests cover its behaviour when switched on.
+    @org.junit.Before fun enableGuess() { WirelessAddressFamilyPlan.ipv6Guess = true }
+    @org.junit.After fun restore() { WirelessAddressFamilyPlan.ipv6Guess = false }
+
+    @Test fun offByDefaultWifiDirectKeepsIpv4First() {
+        WirelessAddressFamilyPlan.ipv6Guess = false
+        val choice = WirelessAddressFamilyPlan.choose(WirelessHotspotBackend.WIFI_P2P, null, 36)
+        org.junit.Assert.assertFalse(choice.guessed)
+    }
+
     @Test fun wifiDirectWithoutMemoryGuessesIpv6OnAndroid13AndLater() {
         assertEquals(Choice(FAMILY_IPV6, guessed = true),
             WirelessAddressFamilyPlan.choose(WirelessHotspotBackend.WIFI_P2P, null, 36))

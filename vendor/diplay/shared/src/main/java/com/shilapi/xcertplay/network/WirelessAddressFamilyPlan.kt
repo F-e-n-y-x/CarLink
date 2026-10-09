@@ -27,9 +27,18 @@ internal object WirelessAddressFamilyPlan {
 
     data class Choice(val preferredFamily: String?, val guessed: Boolean)
 
+    /**
+     * CarLink: off by default. Measured on the Redmi Pad + iPhone 13 (2026-10-09): IPv6 made the
+     * first TCP arrive in 2.0 s instead of 3.6-14.7 s, but the AirPlay handshake on it then took
+     * 9.5 s with 4-5 s pauses (retransmission-like) instead of 1.9 s, so the picture came later.
+     */
+    @Volatile
+    @JvmStatic
+    var ipv6Guess: Boolean = false
+
     fun choose(backend: WirelessHotspotBackend, remembered: String?, sdkInt: Int): Choice = when {
         remembered != null -> Choice(remembered, guessed = false)
-        backend == WirelessHotspotBackend.WIFI_P2P && sdkInt >= MIN_IPV6_GUESS_SDK ->
+        ipv6Guess && backend == WirelessHotspotBackend.WIFI_P2P && sdkInt >= MIN_IPV6_GUESS_SDK ->
             Choice(HotspotAddressPolicy.FAMILY_IPV6, guessed = true)
         else -> Choice(null, guessed = false)
     }
