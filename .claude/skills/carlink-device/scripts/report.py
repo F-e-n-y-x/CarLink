@@ -9,7 +9,7 @@ usage: report.py [--serial S] [--package P] [--since HH:MM[:SS]] [--all]
 """
 import argparse, datetime as dt, re, subprocess, sys
 
-KEY_CARLINK = re.compile(r"CarLink-(Engine|Settings|AAEngine|CarPlay|BT|AA)\b")
+KEY_CARLINK = re.compile(r"CarLink-(Session|Connection|Engine|Settings|AAEngine|CarPlay|BT|AA)\b")
 KEY_DIAUTO = re.compile(
     r"Connection accepted|\[RX\]|Handshake failed|join failure|WiFi session landed|SSL handshake complete"
     r"|First frame rendered|read timeout|Connection closed|isUserExit|sessions in a row|Group formed|createGroup"
@@ -86,15 +86,19 @@ def main():
     print("\n== attempts")
     attempts, cur = [], None
     for t, src, msg in events:
-        if "connect engine=" in msg:
-            cur = {"start": t, "engine": re.search(r"engine=(\w+)", msg).group(1), "lines": []}
+        m = re.search(r"connect engine=(\w+)|CarLink-Session: start (\w+)", msg)
+        if m:
+            cur = {"start": t, "engine": m.group(1) or m.group(2), "lines": []}
             attempts.append(cur)
         if cur:
             cur["lines"].append(msg)
     for at in attempts:
         text = "\n".join(at["lines"])
-        path = re.search(r"session engine=\w+ path=(\w+)", text)
-        verdict = "connected" if "-> CONNECTED" in text else "failed" if "-> FAILED" in text else "no result yet"
+        path = re.search(r"session engine=\w+ path=(\w+)|starting on (\w+)", text)
+        path_name = (path.group(1) or path.group(2)) if path else "?"
+        connected = "-> CONNECTED" in text or " connected on " in text
+        verdict = "connected" if connected else "failed" if ("-> FAILED" in text or "failed:" in text) else \
+            "blocked" if " blocked on " in text else "no result yet"
         causes = [c for c in [
             "phone refused the Wi-Fi (wrong/missing password or network)" if "status=-3" in text else None,
             "video stalled (Wi-Fi read timeout)" if "read timeout" in text else None,
@@ -103,9 +107,10 @@ def main():
             "driver pressed Disconnect/Cancel" if "driver disconnect" in text else None,
             "engine moved to Wi-Fi Direct after refusals" if "moving to Wi-Fi Direct" in text else None,
         ] if c]
-        stays = "stayed connected" if verdict == "connected" and "CONNECTED -> WAITING" not in text else \
+        dropped = "CONNECTED -> WAITING" in text or "session ended" in text
+        stays = "stayed connected" if verdict == "connected" and not dropped else \
             "dropped after connecting" if verdict == "connected" else ""
-        print(f"{at['start']:%H:%M:%S} {at['engine']:<12} path={path.group(1) if path else '?':<11} {verdict} {stays}"
+        print(f"{at['start']:%H:%M:%S} {at['engine']:<12} path={path_name:<11} {verdict} {stays}"
               + (f" — {'; '.join(causes)}" if causes else ""))
 
 
