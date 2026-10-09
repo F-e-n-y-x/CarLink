@@ -58,7 +58,10 @@ class DeviceEnvironment(
     override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) =
         paths.remember(engine, phoneAddress, path)
 
-    override fun rememberPhone(phoneAddress: String, kind: PhoneKind) = knownPhones.remember(phoneAddress, kind)
+    override fun rememberPhone(phoneAddress: String, kind: PhoneKind) {
+        knownPhones.remember(phoneAddress, kind)
+        lastPhone(app).edit().putString(KEY_LAST_PHONE, phoneAddress).apply()
+    }
 
     override fun usbPhonePresent(engine: Engine): Boolean =
         app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty().any { device ->
@@ -86,6 +89,12 @@ class DeviceEnvironment(
 
     companion object {
         private const val TAG = "CarLink-Session"
+        private const val KEY_LAST_PHONE = "address"
+
+        private fun lastPhone(context: Context) = context.getSharedPreferences("carlink_last_phone", Context.MODE_PRIVATE)
+
+        /** The phone the driver last connected or asked for; Home's main button offers it first. */
+        fun lastPhoneAddress(context: Context): String? = lastPhone(context).getString(KEY_LAST_PHONE, null)
 
         val ANDROID_AUTO_KEY_RECEIVERS = listOf(
             "com.andrerinas.openheadunit.connection.CarKeyReceiver",

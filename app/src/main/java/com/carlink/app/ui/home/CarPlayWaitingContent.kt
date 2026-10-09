@@ -9,7 +9,11 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.connection.CarPlayWaitingView
 import com.carlink.app.connection.Connection
+import com.carlink.app.connection.SessionState
 import com.carlink.app.connection.toLinkState
+import com.carlink.app.core.PhoneKind
+import com.carlink.app.detect.PairedPhone
+import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.core.LinkProblem
 import com.carlink.app.detect.BluetoothAvailability
 import com.carlink.app.settings.CarLinkPreferences
@@ -44,12 +48,17 @@ object CarPlayWaitingContent {
             val profile = UiProfileDetector.detect(context, preferences.uiProfileMode)
             CarLinkTheme(profile, preferences.themeMode, preferences.interfaceScale) {
                 val link = state.toLinkState()
+                // The session's own phone and path, so the status row matches Home's.
+                val active = state as? SessionState.Active
+                val phone = active?.request?.phoneAddress?.let {
+                    PairedPhone(it, active.request.phoneName ?: "iPhone", PhoneKind.IPHONE, connected = true)
+                }
                 HomeContent(
                     HomeUi(
-                        home = HomeState(link, emptyList(), BluetoothAvailability.READY, null, null),
+                        home = HomeState(link, listOfNotNull(phone), BluetoothAvailability.READY, phone, null),
                         connection = ConnectionPrefs(preferences.autoConnectUsb, preferences.autoConnectBluetooth,
                             preferences.startOnBoot, preferences.autoConnectPaused),
-                        network = null,
+                        network = active?.path?.let { NetworkPreview(path = it, ssid = null) },
                         permissionsNeeded = false,
                     ),
                     actions,

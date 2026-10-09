@@ -291,9 +291,19 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         runCatching { app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
-    private fun defaultPhone(phones: List<PairedPhone>): PairedPhone? =
-        phones.firstOrNull { it.connected && it.kind != PhoneKind.UNKNOWN }
-            ?: phones.firstOrNull { it.kind != PhoneKind.UNKNOWN }
+    /**
+     * The phone Home's main button offers: the one in the current session, else the one the
+     * driver used last, else one whose Bluetooth is connected, else the first known phone.
+     */
+    private fun defaultPhone(phones: List<PairedPhone>): PairedPhone? {
+        val known = phones.filter { it.kind != PhoneKind.UNKNOWN }
+        fun byAddress(address: String?) = address?.let { a -> known.firstOrNull { it.address.equals(a, ignoreCase = true) } }
+        val current = (session.state.value as? SessionState.Active)?.request?.phoneAddress
+        return byAddress(current)
+            ?: byAddress(com.carlink.app.connection.DeviceEnvironment.lastPhoneAddress(app))
+            ?: known.firstOrNull { it.connected }
+            ?: known.firstOrNull()
+    }
 
     private fun readDisplay() = DisplayPrefs(preferences.themeMode, preferences.uiProfileMode, preferences.interfaceScale)
 
