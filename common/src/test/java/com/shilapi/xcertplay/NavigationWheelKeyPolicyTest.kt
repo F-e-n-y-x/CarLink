@@ -54,10 +54,17 @@ class NavigationWheelKeyPolicyTest {
         assertTrue(policy.onKey(1, 307, 1, 20, 0, false) { false })
     }
 
+    @Test fun preApi28NeverCallsUnavailablePublicMinimum() {
+        for (sdk in listOf(25, 26, 27)) {
+            assertEquals(0, navigationWheelMinimum(5, sdk) { fail("unavailable API"); 9 })
+            assertEquals(0, navigationWheelMinimum(14, sdk) { fail("private stream"); 9 })
+        }
+    }
+
     @Test fun respectsNonZeroMinimumAndPrivateNavigationMinimum() {
         assertEquals(2, navigationWheelTarget(2, 2, 10, -1))
         assertNull(navigationWheelTarget(1, 2, 10, 1))
-        assertEquals(0, navigationWheelMinimum(14) { fail("private stream must not use public validator"); 9 })
-        assertEquals(2, navigationWheelMinimum(5) { 2 })
+        assertEquals(0, navigationWheelMinimum(14, 28) { fail("private stream must not use public validator"); 9 })
+        assertEquals(2, navigationWheelMinimum(5, 28) { 2 })
     }
 }

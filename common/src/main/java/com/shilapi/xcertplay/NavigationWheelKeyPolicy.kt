@@ -29,8 +29,8 @@ internal class NavigationWheelKeyPolicy {
 }
 
 /** Stream 14 bypasses the public minimum validator on the verified head unit. */
-internal fun navigationWheelMinimum(stream: Int, publicMinimum: (Int) -> Int): Int =
-    if (stream == 14) 0 else publicMinimum(stream)
+internal fun navigationWheelMinimum(stream: Int, sdk: Int, publicMinimum: (Int) -> Int): Int =
+    if (stream == 14 || sdk < 28) 0 else publicMinimum(stream)
 
 internal fun navigationWheelTarget(current: Int, minimum: Int, maximum: Int, delta: Int): Int? {
     if (minimum > maximum || current !in minimum..maximum || delta !in listOf(-1, 1)) return null
