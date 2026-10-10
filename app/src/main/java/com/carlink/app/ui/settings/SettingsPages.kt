@@ -192,10 +192,9 @@ private fun CarEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
             { openSheet(SheetKey.of(EssentialSheet.DRIVING_SIDE)) },
             description = stringResource(R.string.carlink_settings_driving_side_detail), icon = R.drawable.carlink_ic_directions_car)
         GroupDivider()
-        ChoiceRow(stringResource(R.string.carlink_settings_car_brand), vehicleLabel(ui.vehicle),
+        ChoiceRow(stringResource(R.string.carlink_settings_car_brand), carBrandLabel(ui.carBrand ?: ui.detectedBrand),
             { openSheet(SheetKey.of(EssentialSheet.CAR_BRAND)) },
-            description = stringResource(R.string.carlink_settings_car_brand_detail) + "\n" +
-                stringResource(R.string.carlink_settings_car_detected, vehicleLabel(ui.detectedVehicle)),
+            description = stringResource(R.string.carlink_settings_car_brand_detail) + "\n" + detectedCarLabel(ui.detectedBrand),
             icon = R.drawable.carlink_ic_directions_car_filled, tags = { NextConnectionTag() })
     }
 }

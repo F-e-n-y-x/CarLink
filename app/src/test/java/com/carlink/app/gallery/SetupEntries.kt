@@ -16,7 +16,7 @@ import com.carlink.core.core.LinkState
 import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.PairedPhone
-import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.CarBrand
 
 private object GallerySetupActions : SetupActions
 
@@ -30,14 +30,18 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
     val allGranted = permissions.map { it.copy(granted = it.item != SetupItem.VPN) }
     fun ui(step: SetupStep, pairing: PairingSession.State = PairingSession.State.Waiting(carName), visible: Boolean = true,
            link: LinkState = LinkState.Idle, phone: PairedPhone? = null, cable: Boolean = false,
-           known: List<PairedPhone> = emptyList(), perms: List<SetupPermission> = permissions) =
-        SetupUi(step, perms, VehicleProfile.GENERIC, VehicleProfile.GENERIC, pairing, carName, visible, link, phone, known, cable)
+           known: List<PairedPhone> = emptyList(), perms: List<SetupPermission> = permissions,
+           brand: CarBrand? = null, detected: CarBrand? = null) =
+        SetupUi(step, perms, brand, detected, pairing, carName, visible, link, phone, known, cable)
     fun entry(name: String, content: () -> SetupUi) = GalleryEntry("setup", name) { SetupContent(content(), GallerySetupActions) }
     val s25 = PairedPhone(unknown.address, "Ayush’s S25 Ultra", PhoneKind.UNKNOWN, connected = false)
     listOf(
         entry("welcome") { ui(SetupStep.WELCOME) },
         entry("permissions") { ui(SetupStep.PERMISSIONS) },
+        // Nothing chosen on a generic screen: "Other" is in effect.
         entry("car") { ui(SetupStep.CAR, perms = allGranted) },
+        // A BYD DiLink unit, detected; the BYD tile is in effect and the DiLink extras are explained.
+        entry("car-byd-detected") { ui(SetupStep.CAR, perms = allGranted, detected = CarBrand.BYD) },
         entry("pair-waiting") { ui(SetupStep.PAIR, visible = false, perms = allGranted, known = listOf(pixel)) },
         // Paired; the iPhone answered and is linking, slower than usual.
         entry("pair-found-iphone") {
@@ -57,6 +61,6 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
                 link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.USB, "iPhone", 2, 4))
         },
         entry("pair-bluetooth-off") { ui(SetupStep.PAIR, PairingSession.State.BluetoothOff, perms = allGranted) },
-        entry("done") { ui(SetupStep.DONE, perms = allGranted, phone = iphone) },
+        entry("done") { ui(SetupStep.DONE, perms = allGranted, phone = iphone, brand = CarBrand.MARUTI_SUZUKI) },
     )
 }

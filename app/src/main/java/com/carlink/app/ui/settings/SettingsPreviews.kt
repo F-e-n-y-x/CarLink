@@ -34,6 +34,8 @@ fun settingsPreviewUi(
     customPicture: Boolean = false,
     byd: Boolean = true,
     loading: Boolean = false,
+    /** The chosen car brand; by default BYD when [byd], else none chosen. */
+    carBrand: com.carlink.core.settings.CarBrand? = null,
 ): SettingsUi = SettingsUi(
     unified = UnifiedSettings(
         connectionMethod = ConnectionMethod.AUTOMATIC,
@@ -48,8 +50,8 @@ fun settingsPreviewUi(
     display = DisplayPrefs(ThemeMode.FOLLOW_SYSTEM, UiProfileMode.AUTO, 1f),
     joinedWifi = "Garage Wi-Fi",
     isByd = byd,
-    vehicle = if (byd) com.carlink.core.settings.VehicleProfile.BYD_DILINK else com.carlink.core.settings.VehicleProfile.GENERIC,
-    detectedVehicle = com.carlink.core.settings.VehicleProfile.GENERIC,
+    carBrand = carBrand ?: if (byd) com.carlink.core.settings.CarBrand.BYD else null,
+    detectedBrand = null,
     versionName = "1.0.0",
     advancedValues = if (loading) null else previewEngineValues,
 )

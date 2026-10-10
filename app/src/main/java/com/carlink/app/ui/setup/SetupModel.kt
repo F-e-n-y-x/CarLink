@@ -11,7 +11,7 @@ import com.carlink.core.connection.PairingSession
 import com.carlink.core.core.LinkState
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.PairedPhone
-import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.CarBrand
 import com.carlink.core.settings.WirelessPath
 
 /** The setup's steps, in order. */
@@ -81,8 +81,10 @@ object SetupPermissions {
 data class SetupUi(
     val step: SetupStep,
     val permissions: List<SetupPermission>,
-    val vehicle: VehicleProfile,
-    val detectedVehicle: VehicleProfile,
+    /** The driver's car brand; null until they choose. */
+    val carBrand: CarBrand?,
+    /** BYD on a BYD DiLink unit, else null. */
+    val detectedBrand: CarBrand?,
     val pairing: PairingSession.State,
     /** This screen's Bluetooth name, as phones list it; null while Bluetooth is off or unreadable. */
     val carName: String?,
@@ -109,7 +111,7 @@ interface SetupActions {
     fun exit() {}
     fun allowAll() {}
     fun allow(item: SetupItem) {}
-    fun setVehicle(profile: VehicleProfile) {}
+    fun setCarBrand(brand: CarBrand) {}
     fun makeVisible() {}
     fun turnOnBluetooth() {}
     fun setKind(kind: com.carlink.core.core.PhoneKind) {}

@@ -193,15 +193,22 @@
     <string name="carlink_settings_floating_switcher_detail">A small button over CarPlay and Android Auto to switch phones, open CarLink or disconnect</string>
     <string name="carlink_settings_floating_switcher_permission">Allow display over other apps</string>
     <string name="carlink_settings_floating_switcher_permission_detail">Android needs this before CarLink can show the button</string>
-    <!-- Settings › Car › Car brand (connection/VehicleProfile), also the setup's car step. -->
+    <!-- Settings › Car › Car brand (core settings/CarBrand), also the setup's car step. Brand names come from CarBrand.displayName. -->
     <string name="carlink_settings_car_brand">Car brand</string>
-    <string name="carlink_settings_car_brand_detail">Turns on features made for one brand of car</string>
-    <string name="carlink_settings_car_brand_sheet_body">Generic works in every car. Choose BYD only on a BYD DiLink screen.</string>
+    <string name="carlink_settings_car_brand_detail">BYD adds its DiLink extras; other brands only label this car</string>
+    <string name="carlink_settings_car_brand_sheet_body">Pick the make of this car. CarPlay and Android Auto work the same in every car.</string>
+    <!-- What the detection found: a generic screen, or a BYD DiLink unit. -->
     <string name="carlink_settings_car_generic">Generic</string>
-    <string name="carlink_settings_car_generic_detail">Any car stereo, tablet or phone. Nothing brand-specific runs.</string>
     <string name="carlink_settings_car_byd">BYD (DiLink)</string>
-    <string name="carlink_settings_car_byd_detail">Directions on the HUD and instrument cluster, BYD steering-wheel keys and BYD helpers.</string>
     <string name="carlink_settings_car_detected">Detected: %1$s</string>
+    <!-- The car brand when the driver never chose one and the screen is not a BYD. -->
+    <string name="carlink_settings_car_not_chosen">Other / Generic</string>
+    <string name="carlink_settings_car_other">Other / not listed</string>
+    <string name="carlink_settings_car_popular">Popular in India</string>
+    <string name="carlink_settings_car_luxury">Luxury</string>
+    <string name="carlink_settings_car_byd_extras">DiLink extras</string>
+    <string name="carlink_settings_car_explain_byd">BYD adds the DiLink extras: directions on the HUD and the instrument cluster, and BYD steering-wheel keys.</string>
+    <string name="carlink_settings_car_explain_other">CarPlay and Android Auto work the same as in any car. The brand only labels this car in CarLink.</string>
     <string name="carlink_settings_setup_again">Set up again</string>
     <string name="carlink_settings_setup_again_detail">Permissions, car brand and pairing a phone, step by step</string>
 </resources>

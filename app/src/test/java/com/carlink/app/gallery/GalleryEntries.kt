@@ -1,5 +1,6 @@
 package com.carlink.app.gallery
 
+import com.carlink.core.settings.CarBrand
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -235,13 +236,23 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(lab = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.GENERAL)
     },
-    // Settings › Car with the car brand row (Generic chosen, Generic detected).
+    // Settings › Car with the car brand row (Hyundai chosen on a generic screen).
     GalleryEntry("settings", "car-brand") {
-        SettingsContent(settingsPreviewUi(byd = false), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR)
+        SettingsContent(settingsPreviewUi(byd = false, carBrand = CarBrand.HYUNDAI), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CAR)
     },
     GalleryEntry("settings", "sheet-car-brand", opensWindow = true) {
-        SettingsContent(settingsPreviewUi(byd = false), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR,
-            initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
+        SettingsContent(settingsPreviewUi(byd = false, carBrand = CarBrand.HYUNDAI), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CAR, initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
+    },
+    // The brand sheet with BYD chosen: the DiLink extras explained.
+    GalleryEntry("settings", "sheet-car-brand-byd", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(byd = true), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CAR, initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
+    },
+    // Nothing chosen on a generic screen: the row reads "Other / Generic".
+    GalleryEntry("settings", "car-brand-not-chosen") {
+        SettingsContent(settingsPreviewUi(byd = false), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CAR)
     },
     GalleryEntry("settings", "navigation") {
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.NAVIGATION)

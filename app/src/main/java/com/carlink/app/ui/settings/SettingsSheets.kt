@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +62,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.carlink.app.R
 import com.carlink.core.settings.Applies
+import com.carlink.core.settings.CarBrand
+import com.carlink.core.settings.VehicleProfile
 import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.Control
 import com.carlink.core.settings.DayNight
@@ -229,30 +234,120 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
         EssentialSheet.CAR_BRAND -> SettingsSheet(onDismiss) {
             SheetTitle(stringResource(R.string.carlink_settings_car_brand), stringResource(R.string.carlink_settings_car_brand_sheet_body),
                 nextConnection = true)
-            CarBrandChoice(ui.vehicle, ui.detectedVehicle, onSelect = { actions.setVehicleProfile(it); onDismiss() })
+            CarBrandPicker(ui.carBrand, ui.detectedBrand, onSelect = { actions.setCarBrand(it); onDismiss() })
         }
     }
 }
 
 /**
- * Generic or BYD (DiLink) as two large tiles that say what each turns on, and what this screen
- * was detected as. Settings › Car › Car brand and the setup's car step.
+ * The car brand as a grid of large text tiles (no logos: they are trademarks): the makes popular
+ * in India by sales, then luxury makes, then "Other / not listed". Below it, what the choice does
+ * (only BYD changes anything) and what this screen was detected as. Settings › Car › Car brand and
+ * the setup's car step. Both hosts scroll, so the grid is a plain column of rows, not a lazy grid.
  */
 @Composable
-internal fun CarBrandChoice(selected: com.carlink.core.settings.VehicleProfile, detected: com.carlink.core.settings.VehicleProfile,
-                            onSelect: (com.carlink.core.settings.VehicleProfile) -> Unit) {
-    PresetGrid(
-        listOf(
-            Preset(com.carlink.core.settings.VehicleProfile.GENERIC, vehicleLabel(com.carlink.core.settings.VehicleProfile.GENERIC),
-                stringResource(R.string.carlink_settings_car_generic_detail), R.drawable.carlink_ic_devices),
-            Preset(com.carlink.core.settings.VehicleProfile.BYD_DILINK, vehicleLabel(com.carlink.core.settings.VehicleProfile.BYD_DILINK),
-                stringResource(R.string.carlink_settings_car_byd_detail), R.drawable.carlink_ic_directions_car),
-        ),
-        selected, onSelect,
-    )
-    Spacer(Modifier.height(CarLinkTokens.dimens.gutter))
-    Tag(stringResource(R.string.carlink_settings_car_detected, vehicleLabel(detected)), MaterialTheme.colorScheme.onSurfaceVariant,
-        R.drawable.carlink_ic_search)
+internal fun CarBrandPicker(selected: CarBrand?, detected: CarBrand?, onSelect: (CarBrand) -> Unit, note: Boolean = true) {
+    val dimens = CarLinkTokens.dimens
+    val current = brandInEffect(selected, detected)
+    val (luxury, popular) = CarBrand.entries.filter { it != CarBrand.OTHER }.partition { it.luxury }
+    Column(Modifier.selectableGroup()) {
+        com.carlink.app.ui.premium.Eyebrow(stringResource(R.string.carlink_settings_car_popular))
+        Spacer(Modifier.height(dimens.targetGap))
+        BrandGrid(popular, current, onSelect)
+        Spacer(Modifier.height(dimens.gutter))
+        com.carlink.app.ui.premium.Eyebrow(stringResource(R.string.carlink_settings_car_luxury))
+        Spacer(Modifier.height(dimens.targetGap))
+        BrandGrid(luxury, current, onSelect)
+        Spacer(Modifier.height(dimens.targetGap * 2))
+        BrandGrid(listOf(CarBrand.OTHER), current, onSelect)
+    }
+    if (note) {
+        Spacer(Modifier.height(dimens.gutter))
+        CarBrandNote(selected, detected)
+    }
+}
+
+/** Never chosen: what is in effect is the detected BYD, or a generic car ("Other"). */
+private fun brandInEffect(selected: CarBrand?, detected: CarBrand?) = selected ?: detected ?: CarBrand.OTHER
+
+/**
+ * What the car brand does, in plain words (only BYD changes anything), and what this screen was
+ * detected as. Under the grid in the sheet; beside it, under the step's words, in the setup.
+ */
+@Composable
+internal fun CarBrandNote(selected: CarBrand?, detected: CarBrand?, showChoice: Boolean = false) {
+    val dimens = CarLinkTokens.dimens
+    val scheme = MaterialTheme.colorScheme
+    val byd = brandInEffect(selected, detected).profile == VehicleProfile.BYD_DILINK
+    if (showChoice) {
+        // The setup's grid may scroll the lit tile out of view; its name stays here.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(painterResource(R.drawable.carlink_ic_check_circle_filled), null,
+                Modifier.size(dimens.iconTertiary + 6.dp), tint = scheme.primary)
+            Spacer(Modifier.width(if (isCar) 14.dp else 10.dp))
+            Text(carBrandLabel(selected ?: detected), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
+        }
+        Spacer(Modifier.height(dimens.targetGap * 1.5f))
+    }
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(painterResource(if (byd) R.drawable.carlink_ic_info_filled else R.drawable.carlink_ic_info), null,
+            Modifier.padding(top = 2.dp).size(dimens.iconTertiary + 4.dp), tint = if (byd) scheme.primary else scheme.onSurfaceVariant)
+        Spacer(Modifier.width(if (isCar) 14.dp else 10.dp))
+        Text(stringResource(if (byd) R.string.carlink_settings_car_explain_byd else R.string.carlink_settings_car_explain_other),
+            style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+    }
+    Spacer(Modifier.height(dimens.targetGap * 1.5f))
+    Tag(detectedCarLabel(detected), scheme.onSurfaceVariant, R.drawable.carlink_ic_search)
+}
+
+/** Rows of equal brand tiles; 2 to 5 columns by width, so a ⅓ split still gets two. */
+@Composable
+private fun BrandGrid(brands: List<CarBrand>, current: CarBrand, onSelect: (CarBrand) -> Unit) {
+    val gap = CarLinkTokens.dimens.targetGap
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val minTile = if (isCar) 250.dp else 150.dp
+        val columns = ((maxWidth + gap) / (minTile + gap)).toInt().coerceIn(2, 5)
+        // Two forced columns in a ⅓ split are narrow: the car's smallest title size (24sp) keeps names whole.
+        val narrow = (maxWidth - gap * (columns - 1)) / columns < minTile
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            brands.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    row.forEach { brand ->
+                        BrandTile(brand, brand == current, narrow, { onSelect(brand) }, Modifier.weight(1f).fillMaxHeight())
+                    }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+/** One make as text on glass, at least 56dp (76dp in a car) tall; the chosen one is lit and ticked. */
+@Composable
+private fun BrandTile(brand: CarBrand, selected: Boolean, narrow: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val car = isCar
+    SelectableGlass(selected, onClick, modifier.heightIn(min = if (car) 76.dp else 56.dp),
+        shape = RoundedCornerShape(if (car) 24.dp else 18.dp), role = Role.RadioButton) {
+        Row(Modifier.fillMaxSize().padding(horizontal = if (car) 18.dp else 14.dp, vertical = if (car) 12.dp else 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                // "Mercedes-Benz" may wrap after its hyphen, never inside a word.
+                Text(carBrandLabel(brand).replace("-", "-\u200B"),
+                    style = if (narrow) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                    color = if (selected) scheme.primary else scheme.onSurface)
+                if (brand.profile == VehicleProfile.BYD_DILINK) {
+                    Text(stringResource(R.string.carlink_settings_car_byd_extras), style = MaterialTheme.typography.labelMedium,
+                        color = scheme.onSurfaceVariant)
+                }
+            }
+            if (selected) {
+                Spacer(Modifier.width(8.dp))
+                Icon(painterResource(R.drawable.carlink_ic_check_circle_filled), null,
+                    Modifier.size(CarLinkTokens.dimens.iconTertiary + 6.dp), tint = scheme.primary)
+            }
+        }
+    }
 }
 
 @Composable

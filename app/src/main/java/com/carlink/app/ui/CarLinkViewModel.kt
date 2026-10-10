@@ -78,11 +78,17 @@ data class NetworkPreview(
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
 )
 
-/** The car-brand setting: the driver's choice (or the detected one until they choose) and what was detected. */
+/**
+ * The car-brand setting: the driver's [brand] (null until they choose) and what this screen was
+ * [detected] as (BYD on a BYD DiLink unit, else null). [profile] is what the engines see.
+ */
 data class VehicleChoice(
-    val profile: com.carlink.core.settings.VehicleProfile,
-    val detected: com.carlink.core.settings.VehicleProfile,
-)
+    val brand: com.carlink.core.settings.CarBrand?,
+    val detected: com.carlink.core.settings.CarBrand?,
+) {
+    val profile: com.carlink.core.settings.VehicleProfile
+        get() = (brand ?: detected)?.profile ?: com.carlink.core.settings.VehicleProfile.GENERIC
+}
 
 /** What Home's hero shows (DESIGN_SPEC §6.1.1 hero states). */
 data class HomeState(
@@ -148,14 +154,13 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     /** Settings › Car › Car brand, and the setup's car step. */
     val vehicle: StateFlow<VehicleChoice> = _vehicle.asStateFlow()
 
-    /** Stores the car brand; it applies from the next connection (the CarPlay hooks are re-installed at once). */
-    fun setVehicleProfile(profile: com.carlink.core.settings.VehicleProfile) {
-        Connection.setVehicleProfile(app, profile)
+    /** Stores the car brand; a change to or from BYD applies from the next connection (the CarPlay hooks are re-installed at once). */
+    fun setCarBrand(brand: com.carlink.core.settings.CarBrand) {
+        Connection.setCarBrand(app, brand)
         _vehicle.value = readVehicle()
     }
 
-    private fun readVehicle() = VehicleChoice(Connection.vehicleProfile(app),
-        com.carlink.core.settings.VehicleProfile.detect(app))
+    private fun readVehicle() = VehicleChoice(Connection.carBrand(app), com.carlink.core.settings.CarBrand.detect(app))
 
     /**
      * First-time setup runs at launch until it is finished or skipped once. A device that already

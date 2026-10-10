@@ -20,7 +20,7 @@
     <string name="carlink_setup_plan_access">Allow access</string>
     <string name="carlink_setup_plan_access_detail">Bluetooth, Wi-Fi and a few switches, all at once</string>
     <string name="carlink_setup_plan_car">Choose your car</string>
-    <string name="carlink_setup_plan_car_detail">Generic, or BYD for its HUD and wheel keys</string>
+    <string name="carlink_setup_plan_car_detail">Its brand; a BYD gets its DiLink extras</string>
     <string name="carlink_setup_plan_pair">Pair your phone</string>
     <string name="carlink_setup_plan_pair_detail">Once, from the phone’s Bluetooth settings</string>
 
@@ -56,7 +56,7 @@
     <!-- Car -->
     <string name="carlink_setup_car_eyebrow">Your car</string>
     <string name="carlink_setup_car_title">Which car is this screen in?</string>
-    <string name="carlink_setup_car_body">This turns on features made for one brand. You can change it later in Settings › Car.</string>
+    <string name="carlink_setup_car_body">Pick its brand. You can change it later in Settings › Car.</string>
 
     <!-- Pair a phone -->
     <string name="carlink_setup_pair_eyebrow">Pair your phone</string>

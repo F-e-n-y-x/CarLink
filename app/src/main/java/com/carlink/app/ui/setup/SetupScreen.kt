@@ -98,13 +98,14 @@ import com.carlink.app.ui.premium.IonButton
 import com.carlink.app.ui.premium.ProgressLine
 import com.carlink.app.ui.premium.RoundGlassIconButton
 import com.carlink.app.ui.premium.TellTale
-import com.carlink.app.ui.settings.CarBrandChoice
+import com.carlink.app.ui.settings.CarBrandNote
+import com.carlink.app.ui.settings.CarBrandPicker
 import com.carlink.app.ui.settings.GlassGroup
 import com.carlink.app.ui.settings.GroupDivider
 import com.carlink.app.ui.settings.SettingsRow
 import com.carlink.app.ui.settings.Tag
 import com.carlink.app.ui.settings.isCar
-import com.carlink.app.ui.settings.vehicleLabel
+import com.carlink.app.ui.settings.carBrandLabel
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
@@ -116,7 +117,7 @@ import com.carlink.core.core.LinkState
 import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.PairedPhone
-import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.CarBrand
 
 /**
  * First-time setup (design/RESEARCH_PLUG_AND_PLAY.md "Lessons"): welcome, one permission step
@@ -216,7 +217,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
                 GrantKind.VPN -> android.net.VpnService.prepare(context)?.let { launchOr(system, it) { } } ?: run { reads++ }
             }
         }
-        override fun setVehicle(profile: VehicleProfile) = vm.setVehicleProfile(profile)
+        override fun setCarBrand(brand: CarBrand) = vm.setCarBrand(brand)
         override fun makeVisible() = makeVisible()
         override fun turnOnBluetooth() {
             launchOr(system, Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)) { vm.openBluetoothSettings() }
@@ -242,8 +243,8 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     val ui = SetupUi(
         step = step,
         permissions = permissions,
-        vehicle = vehicle.profile,
-        detectedVehicle = vehicle.detected,
+        carBrand = vehicle.brand,
+        detectedBrand = vehicle.detected,
         pairing = pairState,
         carName = (pairState as? PairingSession.State.Waiting)?.carName ?: lastCarName,
         visible = now < visibleUntil,
@@ -474,6 +475,8 @@ private fun StepCopy(ui: SetupUi, actions: SetupActions) {
     val extra: (@Composable () -> Unit)? = when (ui.step) {
         SetupStep.PERMISSIONS -> ({ PermissionSummary(ui, actions) })
         SetupStep.PAIR -> ({ PairActions(ui, actions) })
+        // What the brand does stays in view while the grid on the other side scrolls.
+        SetupStep.CAR -> ({ Column { CarBrandNote(ui.carBrand, ui.detectedBrand, showChoice = true) } })
         else -> null
     }
     if (extra != null) {
@@ -609,7 +612,7 @@ private fun StepPanel(ui: SetupUi, actions: SetupActions) {
     when (ui.step) {
         SetupStep.WELCOME -> PlanCard()
         SetupStep.PERMISSIONS -> PermissionList(ui, actions)
-        SetupStep.CAR -> Column { CarBrandChoice(ui.vehicle, ui.detectedVehicle, actions::setVehicle) }
+        SetupStep.CAR -> Column { CarBrandPicker(ui.carBrand, ui.detectedBrand, actions::setCarBrand, note = false) }
         SetupStep.PAIR -> PairPanel(ui, actions)
         SetupStep.DONE -> DoneSummary(ui)
     }
@@ -831,7 +834,7 @@ private fun DoneSummary(ui: SetupUi) {
                 p.kind.engine?.let { engineName(it) } ?: "") } ?: stringResource(R.string.carlink_setup_done_phone_none))
         GroupDivider()
         SettingsRow(stringResource(R.string.carlink_setup_done_car), icon = R.drawable.carlink_ic_directions_car,
-            value = vehicleLabel(ui.vehicle))
+            value = carBrandLabel(ui.carBrand ?: ui.detectedBrand))
         GroupDivider()
         SettingsRow(stringResource(R.string.carlink_setup_done_access), icon = R.drawable.carlink_ic_lock,
             value = if (ui.missing == 0) stringResource(R.string.carlink_setup_done_access_all)

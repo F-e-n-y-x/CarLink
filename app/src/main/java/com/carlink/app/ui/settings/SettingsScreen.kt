@@ -124,7 +124,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setRenderingMode(mode: com.carlink.app.ui.theme.RenderingMode) = vm.setRenderingMode(mode)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun openAppSettings() = vm.openAppSettings()
-            override fun setVehicleProfile(profile: com.carlink.core.settings.VehicleProfile) = vm.setVehicleProfile(profile)
+            override fun setCarBrand(brand: com.carlink.core.settings.CarBrand) = vm.setCarBrand(brand)
             override fun navigate(route: Route) = goTo(route)
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
@@ -150,8 +150,8 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         versionName = AppInfo.versionName,
         advancedValues = engineValues.value,
         overlayAllowed = overlayAllowed,
-        vehicle = vehicle.profile,
-        detectedVehicle = vehicle.detected,
+        carBrand = vehicle.brand,
+        detectedBrand = vehicle.detected,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }

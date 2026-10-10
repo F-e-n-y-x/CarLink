@@ -22,6 +22,7 @@ import com.carlink.core.settings.Picture
 import com.carlink.core.settings.SettingsCategory
 import com.carlink.core.settings.Tier
 import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.CarBrand
 import com.carlink.core.settings.VehicleProfile
 import java.util.Locale
 import kotlin.math.abs
@@ -48,8 +49,10 @@ data class SettingsUi(
     /** Android lets CarLink draw over other apps (the floating switcher needs it). */
     val overlayAllowed: Boolean = true,
     /** Settings › Car › Car brand: the driver's choice, and what this screen looks like. */
-    val vehicle: VehicleProfile = VehicleProfile.GENERIC,
-    val detectedVehicle: VehicleProfile = VehicleProfile.GENERIC,
+    /** The driver's car brand; null until they choose. */
+    val carBrand: CarBrand? = null,
+    /** BYD on a BYD DiLink unit, else null. */
+    val detectedBrand: CarBrand? = null,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -72,7 +75,7 @@ interface SettingsActions {
     fun openBluetoothSettings() {}
     fun openAppSettings() {}
     /** Stores the car brand (applies from the next connection). */
-    fun setVehicleProfile(profile: VehicleProfile) {}
+    fun setCarBrand(brand: CarBrand) {}
     fun navigate(route: Route) {}
 }
 
@@ -173,6 +176,19 @@ internal fun vehicleLabel(profile: VehicleProfile): String = stringResource(
         VehicleProfile.BYD_DILINK -> R.string.carlink_settings_car_byd
     },
 )
+
+/** What a car brand reads as: its name, "Other / not listed", or "Other / Generic" when none was chosen or detected. */
+@Composable
+internal fun carBrandLabel(brand: CarBrand?): String = when (brand) {
+    null -> stringResource(R.string.carlink_settings_car_not_chosen)
+    CarBrand.OTHER -> stringResource(R.string.carlink_settings_car_other)
+    else -> brand.displayName
+}
+
+/** "Detected: BYD (DiLink)" or "Detected: Generic", the hint under the car brand. */
+@Composable
+internal fun detectedCarLabel(detected: CarBrand?): String =
+    stringResource(R.string.carlink_settings_car_detected, vehicleLabel(detected?.profile ?: VehicleProfile.GENERIC))
 
 @Composable
 internal fun pictureLabel(picture: Picture): String = stringResource(
