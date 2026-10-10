@@ -1,0 +1,85 @@
+name: Bug report
+description: CarLink does not connect, drops, shows something wrong or crashes.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. First check [Troubleshooting](https://github.com/F-e-n-y-x/CarLink/blob/main/docs/TROUBLESHOOTING.md): Home's message is usually explained there.
+        **Do not post Wi-Fi or hotspot passwords.** Security problems go to [SECURITY.md](https://github.com/F-e-n-y-x/CarLink/blob/main/SECURITY.md), not here.
+  - type: input
+    id: version
+    attributes:
+      label: CarLink version
+      description: Settings › About. Say if it is not the official release APK.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: screen
+    attributes:
+      label: Screen (head unit or tablet) and its Android version
+      placeholder: "Redmi Pad Pro 5G, Android 16 / generic 10-inch head unit (UIS7862), Android 12"
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and its iOS or Android version
+      placeholder: "iPhone 13, iOS 26.5 / Samsung Galaxy S25 Ultra, Android 16"
+    validations:
+      required: true
+  - type: dropdown
+    id: projection
+    attributes:
+      label: CarPlay or Android Auto
+      options:
+        - CarPlay
+        - Android Auto
+        - Both
+        - Neither (CarLink's own screens)
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection type
+      options:
+        - USB cable
+        - Wireless, Wi-Fi Direct (Automatic)
+        - Wireless, car hotspot
+        - Wireless, same Wi-Fi network
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: car_brand
+    attributes:
+      label: Car brand chosen in CarLink
+      description: Settings › Car › Car brand. Only BYD changes CarLink's behaviour.
+      placeholder: "Other / Generic"
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Quote Home's message if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open CarLink
+        2. Plug in the iPhone
+        3. ...
+  - type: textarea
+    id: log
+    attributes:
+      label: Connection log
+      description: Reproduce the problem, then Settings › General › Diagnostics › **Share log**. Drag the file here (or paste it). Addresses are hidden; look through it before posting.
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or photos
+      description: Optional. Drag images here.

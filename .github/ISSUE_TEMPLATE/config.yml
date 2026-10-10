@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting guide
+    url: https://github.com/F-e-n-y-x/CarLink/blob/main/docs/TROUBLESHOOTING.md
+    about: What each message on Home means and what to do.
+  - name: Report a security vulnerability
+    url: https://github.com/F-e-n-y-x/CarLink/security/advisories/new
+    about: Please report security problems privately, not as a public issue.

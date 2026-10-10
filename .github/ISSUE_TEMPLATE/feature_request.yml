@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest an improvement or a new feature for CarLink.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CarLink aims to be plug-and-play for beginners with every engine setting available under **Show advanced**. Please check that the feature is not already there, and search existing issues first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the situation in the car, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like CarLink to do
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CarPlay
+        - Android Auto
+        - Connecting (USB, Bluetooth, Wi-Fi)
+        - Home, Settings or other CarLink screens
+        - Floating switcher
+        - Updates
+        - Other
+  - type: input
+    id: setup
+    attributes:
+      label: Your screen and phone
+      description: Optional, if it matters for the request.
+      placeholder: "10-inch head unit, Android 12; iPhone 15"
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you have tried
