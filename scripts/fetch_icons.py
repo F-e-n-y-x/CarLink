@@ -40,6 +40,8 @@ ICONS = {
     "expand_more": False, "expand_less": False, "pause_circle": False,
     # Diagnostics and About
     "gavel": False, "groups": False, "description": False,
+    # Updates (update/UpdateDialog.kt)
+    "system_update": False, "download": False,
 }
 
 # Directional glyphs mirror in RTL layouts (DESIGN_SPEC §7.3); device and media glyphs do not.

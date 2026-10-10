@@ -56,11 +56,35 @@ import com.carlink.app.ui.settings.rowPadding
 import com.carlink.app.ui.theme.CarLinkTheme
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.UiProfile
+import com.carlink.app.ui.settings.SwitchRow
+import com.carlink.app.update.UpdateState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Which parked-reading sheet About shows. */
 internal enum class AboutSheet { NONE, LICENSES, CREDITS }
+
+/** About › Updates: the updater's state as the row shows it (previews and the gallery supply their own). */
+internal data class AboutUpdatesUi(
+    /** The signed release build; other builds never check (update/Updates.kt). */
+    val supported: Boolean,
+    val state: UpdateState,
+    val autoCheck: Boolean,
+    /** Wall-clock time of the last check, 0 for never. */
+    val lastCheck: Long,
+    /** "Now" for the "last checked" text; fixed in the gallery. */
+    val now: Long = System.currentTimeMillis(),
+)
+
+internal interface AboutUpdateActions {
+    fun checkNow() {}
+    fun setAutoCheck(enabled: Boolean) {}
+}
+
+internal object NoUpdateActions : AboutUpdateActions
 
 /** Facts About shows; gathered once so previews can supply their own. */
 internal data class AboutFacts(
@@ -95,11 +119,33 @@ fun AboutScreen(onBack: () -> Unit) {
             screen = "$w×$h",
         )
     }
-    AboutContent(facts, onBack)
+    val updater = remember { com.carlink.app.update.Updates.get(context) }
+    val state by updater.state.collectAsStateWithLifecycle()
+    val autoCheck by updater.autoCheck.collectAsStateWithLifecycle()
+    val lastCheck by updater.lastCheck.collectAsStateWithLifecycle()
+    val actions = remember(updater) {
+        object : AboutUpdateActions {
+            override fun checkNow() = updater.checkNow()
+            override fun setAutoCheck(enabled: Boolean) = updater.setAutoCheck(enabled)
+        }
+    }
+    // Leaving About clears its "You're up to date" / "Couldn't reach GitHub" answer.
+    DisposableEffect(updater) {
+        onDispose { if (updater.state.value is UpdateState.UpToDate || updater.state.value is UpdateState.CheckFailed) updater.dismiss() }
+    }
+    AboutContent(facts, onBack,
+        updates = AboutUpdatesUi(updater.supported, state, autoCheck, lastCheck, System.currentTimeMillis()),
+        updateActions = actions)
 }
 
 @Composable
-internal fun AboutContent(facts: AboutFacts, onBack: () -> Unit, initialSheet: AboutSheet = AboutSheet.NONE) {
+internal fun AboutContent(
+    facts: AboutFacts,
+    onBack: () -> Unit,
+    initialSheet: AboutSheet = AboutSheet.NONE,
+    updates: AboutUpdatesUi = previewUpdates,
+    updateActions: AboutUpdateActions = NoUpdateActions,
+) {
     val dimens = CarLinkTokens.dimens
     var sheet by rememberSaveable { mutableStateOf(initialSheet) }
     var licenseText by rememberSaveable { mutableStateOf<String?>(null) }
@@ -125,6 +171,7 @@ internal fun AboutContent(facts: AboutFacts, onBack: () -> Unit, initialSheet: A
                         .padding(top = 8.dp, bottom = dimens.gutter),
                     verticalArrangement = Arrangement.spacedBy(gap),
                 ) {
+                    UpdatesCard(facts, updates, updateActions)
                     InfoCards(facts, openLicenses, openCredits)
                 }
             }
@@ -137,6 +184,7 @@ internal fun AboutContent(facts: AboutFacts, onBack: () -> Unit, initialSheet: A
                 ) {
                     Identity(facts, stacked = false)
                     Spacer(Modifier.height(4.dp))
+                    UpdatesCard(facts, updates, updateActions)
                     InfoCards(facts, openLicenses, openCredits, withLegal = false)
                     SourceCard()
                     LegalCard()
@@ -230,6 +278,71 @@ private fun SourceCard() {
         }
     }
 }
+
+// ---- Updates ------------------------------------------------------------------------------
+
+/** "Check for updates" with the answer under it, and the automatic-check switch. */
+@Composable
+private fun UpdatesCard(facts: AboutFacts, updates: AboutUpdatesUi, actions: AboutUpdateActions) {
+    val colors = CarLinkTokens.colors
+    val scheme = MaterialTheme.colorScheme
+    val state = updates.state
+    val version = ltr(facts.versionName)
+    val lastChecked = when {
+        updates.lastCheck <= 0L -> stringResource(R.string.carlink_about_updates_never, version)
+        else -> stringResource(R.string.carlink_about_updates_last_checked, version, relativeTime(updates.lastCheck, updates.now))
+    }
+    val available = when (state) {
+        is UpdateState.Available -> state.release
+        is UpdateState.Downloading -> state.release
+        is UpdateState.Verifying -> state.release
+        is UpdateState.NeedsPermission -> state.release
+        is UpdateState.Installing -> state.release
+        is UpdateState.Failed -> state.release
+        else -> null
+    }
+    val description = when {
+        !updates.supported -> stringResource(R.string.carlink_about_updates_unsupported)
+        state is UpdateState.Checking -> stringResource(R.string.carlink_about_updates_checking)
+        state is UpdateState.CheckFailed -> stringResource(
+            if (state.rateLimited) R.string.carlink_about_updates_rate_limited else R.string.carlink_about_updates_failed)
+        else -> lastChecked
+    }
+    GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_about_updates), icon = R.drawable.carlink_ic_system_update) }) {
+        SettingsRow(
+            stringResource(R.string.carlink_about_check_updates),
+            description = description,
+            icon = R.drawable.carlink_ic_refresh,
+            enabled = updates.supported && state !is UpdateState.Checking,
+            onClick = actions::checkNow,
+            role = androidx.compose.ui.semantics.Role.Button,
+            tags = when {
+                !updates.supported -> null
+                state is UpdateState.UpToDate -> {
+                    { Tag(stringResource(R.string.carlink_about_updates_up_to_date), colors.success, R.drawable.carlink_ic_check_circle) }
+                }
+                available != null -> {
+                    { Tag(stringResource(R.string.carlink_about_updates_available, ltr(available.version.toString())), scheme.primary,
+                        R.drawable.carlink_ic_download) }
+                }
+                else -> null
+            },
+            trailing = if (state is UpdateState.Checking) {
+                { CircularProgressIndicator(Modifier.size(CarLinkTokens.dimens.iconTertiary + 4.dp), color = scheme.primary, strokeWidth = 3.dp) }
+            } else null,
+        )
+        GroupDivider()
+        SwitchRow(stringResource(R.string.carlink_about_auto_updates), updates.autoCheck && updates.supported, actions::setAutoCheck,
+            description = stringResource(R.string.carlink_about_auto_updates_body), icon = R.drawable.carlink_ic_schedule,
+            enabled = updates.supported)
+    }
+}
+
+/** "just now", "5 minutes ago", "2 hours ago", "3 days ago" (Android's wording). */
+@Composable
+private fun relativeTime(time: Long, now: Long): String =
+    if (now - time in 0 until 60_000L) stringResource(R.string.carlink_about_updates_just_now)
+    else android.text.format.DateUtils.getRelativeTimeSpanString(time, now, android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
 
 // ---- Information --------------------------------------------------------------------------
 
@@ -347,7 +460,11 @@ private fun ColumnScope.LicenseText(path: String) {
 
 // ---- Previews -----------------------------------------------------------------------------
 
-internal val previewFacts = AboutFacts("0.1.0", 1, "0.2.15", "0.3.11", "BYD", "DiLink5", "10", "1920×1080")
+internal val previewFacts = AboutFacts("1.0.0", 10000, "0.2.15", "0.3.11", "BYD", "DiLink5", "10", "1920×1080")
+
+/** A release build that checked two hours ago. */
+internal val previewUpdates = AboutUpdatesUi(supported = true, state = UpdateState.Idle, autoCheck = true,
+    lastCheck = 1_760_000_000_000L - 2 * 60 * 60 * 1000L, now = 1_760_000_000_000L)
 
 @Preview(name = "Car landscape", widthDp = 1440, heightDp = 810)
 @Composable
