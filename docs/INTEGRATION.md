@@ -21,7 +21,7 @@ host keeps its own packages (CarLink's are `com.carlink.app.*`) and its own `app
 | `connection/aa/` | The Android Auto side: `AndroidAutoAdapter`'s peer in the `:aa` process (`AaCommandReceiver`, `AaCommandHandler`, `AaEngineHooks`, `AaEngineAccess`, `AaSessionSettings`, `AaSessionTracker`, `AaStartPolicy`, `AaProtocol`) |
 | `detect/` | `PhoneClassifier` (USB and Bluetooth evidence → iPhone / Android / unknown), `KnownPhones`, `PhonesRepository` (paired phones as a flow), `UsbPhoneNames`, `HeadUnitDetector` (car display or phone/tablet) |
 | `entry/` | `UsbRouterActivity` (the only USB-attach handler), `UsbWatcher` (USB attach/detach while the app runs), `SystemEventReceiver` (boot, Bluetooth ACL/SDP) |
-| `settings/` | `UnifiedSettings` + `UnifiedSettingsStore`, `CarLinkPreferences` (automatic starts and the driver's pause), `VehicleProfile`, `WifiEnvironment` (+ `WifiEnvironmentReader`), `WirelessRefusals`, `AdvancedSettings` (engine-only options and `EngineAccess`) |
+| `settings/` | `UnifiedSettings` + `UnifiedSettingsStore`, `CarLinkPreferences` (automatic starts and the driver's pause), `VehicleProfile`, `CarBrand` (+ `CarBrandStore`), `WifiEnvironment` (+ `WifiEnvironmentReader`), `WirelessRefusals`, `AdvancedSettings` (engine-only options and `EngineAccess`) |
 | `core/` | Shared value types: `Engine`, `Transport`, `PhoneKind`, `LinkState`, `LinkStage`, `LinkProblem`, `LinkNotice` |
 | `engine/` | `AndroidAutoSettingsProvider` + `AndroidAutoSettings` (DiAuto's preferences, read and written only in `:aa`), `WifiDirectReset` |
 | `diagnostics/` | `EventLog`: the backend's session log (ring buffer, addresses masked, mirrored to `files/logs/carlink.log`) |
@@ -140,8 +140,13 @@ stops or watches a session goes through it. Main thread. Also on `Connection`:
   2.5 s after start-up.
 - `onHomeShown(context)`: the host's main screen came to the front (call from `onResume`); starts
   the last-used phone wirelessly when the rules allow (see `SessionManager.onHomeShown`).
-- `vehicleProfile(context)` / `setVehicleProfile(context, profile)`. Setting a different profile
-  re-installs the CarPlay hooks, so it applies from the next connection without a restart.
+- `carBrand(context)` / `setCarBrand(context, brand)`: the driver's `CarBrand` (null when never
+  chosen). A brand whose profile differs from the current one re-installs the CarPlay hooks, so it
+  applies from the next connection without a restart; a brand with the same profile only relabels.
+- `vehicleProfile(context)`: what the engines see, the chosen brand's profile (only BYD is
+  `BYD_DILINK`), or `VehicleProfile.detect` when nothing was chosen. `setVehicleProfile` still
+  works but is deprecated: `BYD_DILINK` stores BYD, `GENERIC` keeps a chosen non-BYD brand and
+  otherwise stores Other.
 - `effectiveSettings(settings, wifi)`: the settings with the car's own hotspot filled in where
   the firmware lets it be read.
 
@@ -246,8 +251,15 @@ one-tap fix in the host's UI (`LinkProblem`).
   `app/.../ui/UiPreferences.kt`, in the same "carlink" preferences file).
 - `AdvancedSettings` / `EngineAccess`: each engine's own options, read and written in the
   engine's storage (`AndroidAutoSettings` goes through the provider in `:aa`).
-- `VehicleProfile`: `GENERIC` (default) or `BYD_DILINK` (detected, or chosen with
-  `Connection.setVehicleProfile`). It gates every BYD-only engine feature.
+- `VehicleProfile`: `GENERIC` (default) or `BYD_DILINK` (detected, or implied by choosing the BYD
+  `CarBrand`). It gates every BYD-only engine feature.
+- `CarBrand` + `CarBrandStore`: the makes sold in India (by 2025 sales, then luxury makes, then
+  `OTHER`), each with a `displayName` and the `VehicleProfile` it implies. Only `BYD` implies
+  `BYD_DILINK`; every other make is `GENERIC` and only labels the car. Stored in the
+  `carlink_vehicle` preferences under `car_brand`; an older `vehicle_profile` value is migrated
+  on first read (`BYD_DILINK` → `BYD`, `GENERIC` → `OTHER`). The brand never reaches the phone:
+  the CarPlay accessory name and manufacturer, the Android Auto car name and the Wi-Fi Direct
+  identity are unchanged, so phones keep treating the screen as the same car.
 
 ## Manifest
 

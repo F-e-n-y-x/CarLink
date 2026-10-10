@@ -10,6 +10,8 @@ import com.carlink.core.core.Engine
 import com.carlink.core.settings.WifiEnvironmentReader
 import com.carlink.core.settings.UnifiedSettings
 import com.carlink.core.settings.UnifiedSettingsStore
+import com.carlink.core.settings.CarBrand
+import com.carlink.core.settings.CarBrandStore
 import com.carlink.core.settings.VehicleProfile
 import com.carlink.core.settings.WifiEnvironment
 import com.carlink.core.settings.WirelessPath
@@ -23,8 +25,6 @@ import java.util.concurrent.Executors
  */
 object Connection {
     private const val TAG = "CarLink-Connection"
-    private const val PREFS = "carlink_vehicle"
-    private const val KEY_PROFILE = "vehicle_profile"
 
     @Volatile private var instance: SessionManager? = null
 
@@ -68,24 +68,38 @@ object Connection {
         get(app).onHomeShown(address, kind, name)
     }
 
-    /** The driver's car brand choice, or what this device looks like when they never chose. */
-    fun vehicleProfile(context: Context): VehicleProfile {
-        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PROFILE, null)
-        return stored?.let { runCatching { VehicleProfile.valueOf(it) }.getOrNull() } ?: VehicleProfile.detect(context)
+    /**
+     * What the engines may do in this car: the chosen [carBrand]'s profile (only BYD is
+     * [VehicleProfile.BYD_DILINK]), or what this device looks like when the driver never chose.
+     */
+    fun vehicleProfile(context: Context): VehicleProfile = CarBrandStore(context).profile()
+
+    /** The driver's car brand, or null when they never chose (then [CarBrand.detect] may still say BYD). */
+    fun carBrand(context: Context): CarBrand? = CarBrandStore(context).chosen()
+
+    /**
+     * Stores the driver's car brand. Only its [CarBrand.profile] reaches the engines; the brand is
+     * never sent to the phone (see [CarBrand]). Android Auto reads the profile at each session
+     * start; CarPlay's hooks read it at app start, so they are installed again here when the
+     * profile changes ([CarPlayAdapter.install] only sets DiPlay's host fields, so a second call is
+     * safe). The driver is told it applies from the next connection: Android Auto's session keeps
+     * its profile, and DiPlay reads the BYD switch each time it uses a BYD feature, so a running
+     * CarPlay session is consistent only after a reconnect.
+     */
+    fun setCarBrand(context: Context, brand: CarBrand) {
+        val app = context.applicationContext
+        if (CarBrandStore(app).set(brand)) CarPlayAdapter.install(app, brand.profile)
     }
 
     /**
-     * Stores the driver's car brand. Android Auto reads it at each session start; CarPlay's hooks
-     * read it at app start, so they are installed again here ([CarPlayAdapter.install] only sets
-     * DiPlay's host fields, so a second call is safe). The driver is told it applies from the next
-     * connection: Android Auto's session keeps its profile, and DiPlay reads the BYD switch each
-     * time it uses a BYD feature, so a running CarPlay session is consistent only after a reconnect.
+     * Before car brands: [VehicleProfile.BYD_DILINK] stores [CarBrand.BYD]; [VehicleProfile.GENERIC]
+     * keeps a chosen non-BYD brand and otherwise stores [CarBrand.OTHER].
      */
+    @Deprecated("Choose a car brand; its profile follows from it.", ReplaceWith("Connection.setCarBrand(context, brand)"))
     fun setVehicleProfile(context: Context, profile: VehicleProfile) {
-        val app = context.applicationContext
-        val previous = vehicleProfile(app)
-        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_PROFILE, profile.name).apply()
-        if (profile != previous) CarPlayAdapter.install(app, profile)
+        val current = carBrand(context)
+        val brand = if (current != null && current.profile == profile) current else CarBrand.fromProfile(profile)
+        setCarBrand(context, brand)
     }
 
     private fun create(app: Context): SessionManager {

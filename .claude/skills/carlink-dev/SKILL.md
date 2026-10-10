@@ -81,6 +81,10 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
   screen.
 - **Generic, not BYD.** `VehicleProfile.GENERIC` is the default; everything BYD-specific (HUD and
   cluster outputs, wheel codes, DiLink window claims) runs only with `BYD_DILINK`.
+  The driver picks a `CarBrand` (makes popular in India, then luxury, then Other;
+  `Connection.carBrand/setCarBrand`); only `CarBrand.BYD` implies `BYD_DILINK`, every other make is
+  just a label. The brand never reaches the phone (accessory name, Android Auto car name and Wi-Fi
+  Direct identity stay the same).
 - **Reusable backend: `:carlink-core`.** `connection/`, `detect/`, `settings/`, `core/`, the USB,
   boot and Bluetooth entry points (`entry/UsbRouterActivity`, `UsbWatcher`,
   `SystemEventReceiver`), `engine/AndroidAutoSettingsProvider`, `engine/WifiDirectReset` and
