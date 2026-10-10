@@ -60,13 +60,6 @@ jobs:
           :carplay-shared:testDebugUnitTest
           :carplay-common:testDebugUnitTest
 
-      - name: Lint and assemble
-        run: ./gradlew :app:lintDebug :app:assembleDebug
-
-      - name: Upload debug APK
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: carlink-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
+      # Release APKs are built and signed locally (scripts/release.sh), never here.
+      - name: Lint
+        run: ./gradlew :app:lintDebug
