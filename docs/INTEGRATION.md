@@ -170,7 +170,7 @@ All `StateFlow`s, updated on the main thread:
   as `FRESH_WIFI_DIRECT` or `TRY_CAR_HOTSPOT`, and a retry's `LinkProblem`), which the host words
   for the driver. `message` and `LinkState.detail` are log wording, not UI copy.
 - `pendingSwitch: StateFlow<SessionRequest?>`: a second phone was plugged in during a session;
-  the host asks "Switch to <phone>?" and calls `acceptSwitch()` or `declineSwitch()`.
+  the host asks "Switch to &lt;phone&gt;?" and calls `acceptSwitch()` or `declineSwitch()`.
 - `health: StateFlow<List<PhoneHealth>>`: each known phone's connection health, most recently
   used first: attempts, successes and success rate, median time to picture, the best path
   ("USB" or a `WirelessPath` name), per-path records and the last problems (`ProblemRecord`).

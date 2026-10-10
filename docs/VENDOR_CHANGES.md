@@ -25,7 +25,7 @@ git diff --stat a2119f48 HEAD:vendor/diauto      # DiAuto edits since the import
 grep -rn "CarLink" vendor/
 ```
 
-After a pull, run `python3 scripts/resource_collisions.py` and the checks in the README.
+After a pull, run `python3 scripts/resource_collisions.py` and the build and test checks in [BUILDING.md](BUILDING.md#build-and-test).
 
 ## DiPlay (`vendor/diplay`)
 

@@ -11,7 +11,7 @@ wirelessly. It is generic (any Android stereo or tablet), not BYD-specific. The 
 polished, single, fully integrated app: plug-and-play for beginners, every engine setting
 available to advanced users, and no trace of the two original apps.
 
-Read `README.md`, `design/REBUILD_V2.md` (the current connection design),
+Read `README.md`, `docs/ARCHITECTURE.md` (index: `docs/README.md`), `design/REBUILD_V2.md` (the current connection design),
 `docs/dissection/DIPLAY.md` / `DIAUTO.md` (how each engine works and fails; cited as DP§… / DA§…),
 `docs/VENDOR_CHANGES.md` and `docs/INTEGRATION.md` before a non-trivial change. The user's
 decisions recorded there override older documents (each `design/` file says at the top whether it
