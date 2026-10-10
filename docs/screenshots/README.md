@@ -13,8 +13,8 @@ echo "sdk.dir=$HOME/android-sdk" > local.properties   # once, if not already the
 ./gradlew --no-daemon :app:recordScreenshots
 ```
 
-This runs only the gallery test (about 15 minutes), deletes the old images of every registered area Images are half-size WebP to keep the public repository small.
-and writes new ones. `-Pcarlink.only=<regex>` renders only the images whose file name matches
+This runs only the gallery test (about 15 minutes), deletes the old images of every registered area
+and writes new ones (half-size WebP, to keep the public repository small). `-Pcarlink.only=<regex>` renders only the images whose file name matches
 (for example `-Pcarlink.only='^home_.*_tablet_'`) and deletes nothing; `-Pcarlink.gallery.areas=home`
 re-records whole areas. Ordinary `testDebugUnitTest` runs skip the gallery (it needs
 `-Dcarlink.screenshots=true`, which the task sets; `-Pcarlink.screenshots=true` works too). No
