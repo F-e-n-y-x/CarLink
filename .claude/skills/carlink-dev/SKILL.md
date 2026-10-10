@@ -132,7 +132,7 @@ $S install      # install on the emulator and launch
 $S shot home    # /tmp/carlink-shots/home.png — then LOOK at it with the Read tool
 $S size 1080x2400 420   # phone; "1920x1080 240" head unit; "reset" to restore
 $S logs
-./gradlew --no-daemon :app:recordScreenshots   # docs/screenshots gallery, no device needed
+./gradlew --no-daemon :app:recordScreenshots   # docs/screenshots gallery (half-size WebP), no device needed
 $S build-release                        # the shrunk (R8) release APK, com.carlink.app
 CARLINK_TARGET=tablet $S install-release   # install it on the tablet and launch it
 ```

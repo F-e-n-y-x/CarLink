@@ -119,8 +119,8 @@ leaves on Full). Unknown values (0 RAM, 0 cores, no ABIs) are not signals.
 The stepped animations use `derivedStateOf` over the running animation, so nothing is
 invalidated between steps and no frame is drawn. "Remove animations" still stops them entirely.
 
-Gallery: `docs/screenshots/*/*_headunit-1024x600_dark.png` (full) and
-`*_headunit-1024x600-lite_{dark,light}.png` (lite), for Ready, the same-Wi-Fi offer, Connecting,
+Gallery: `docs/screenshots/*/*_headunit-1024x600_dark.webp` (full) and
+`*_headunit-1024x600-lite_{dark,light}.webp` (lite), for Ready, the same-Wi-Fi offer, Connecting,
 Connected, a failure, the Phones sheet, Settings › General and the Visual effects sheet.
 
 ## Start-up

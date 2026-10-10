@@ -3,7 +3,7 @@
 > **Status: current** for Home, Settings, Diagnostics and About.
 
 October 2026. This records what was built from `RESEARCH_HOME_V2.md` and why. Where a decision
-differs from the research, the reason is given. Screens: `docs/screenshots/*/*_tablet_*.png`
+differs from the research, the reason is given. Screens: `docs/screenshots/*/*_tablet_*.webp`
 (the user's Redmi Pad Pro) first, then the car and phone configs.
 
 ## Home
