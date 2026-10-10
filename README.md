@@ -1,309 +1,222 @@
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/carlink-mark-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/carlink-mark-light.svg">
+  <img alt="CarLink logo" src="docs/assets/carlink-mark-light.svg" width="120">
+</picture>
+
 # CarLink
 
-**CarPlay and Android Auto in one app.** Install CarLink on an Android car stereo, or on an
-Android tablet or phone used as the car's display. Plug in or connect your phone: an **iPhone
-gets CarPlay**, an **Android phone gets Android Auto**, by cable (USB) or wirelessly. CarLink
-works out which phone it is; there is nothing to choose.
+**CarPlay and Android Auto in one app, for any Android car stereo or tablet.**
 
-CarLink is generic: it is meant for any Android head unit or tablet, not one car brand. The two
-engines it is built on were written for BYD DiLink head units; their BYD-only features stay off
-unless you pick the BYD car profile.
+[![Latest release](https://img.shields.io/github/v/release/F-e-n-y-x/CarLink?label=release)](https://github.com/F-e-n-y-x/CarLink/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/F-e-n-y-x/CarLink/total)](https://github.com/F-e-n-y-x/CarLink/releases)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![Android 7.1+](https://img.shields.io/badge/Android-7.1%2B%20(API%2025)-3DDC84?logo=android&logoColor=white)](#requirements)
 
-CarLink combines two open-source engines, imported with their full history:
+[**Download**](https://github.com/F-e-n-y-x/CarLink/releases/latest) ·
+[Install](#install) · [User guide](docs/USER_GUIDE.md) ·
+[Troubleshooting](docs/TROUBLESHOOTING.md) · [Docs](docs/README.md)
 
-- **DiPlay** (CarPlay) by shihabal3amri: `vendor/diplay`
-- **DiAuto** (Android Auto) by shihabal3amri, based on Headunit Revived and Open Headunit: `vendor/diauto`
+</div>
 
-> CarLink is not affiliated with or endorsed by Apple or Google. CarPlay is a trademark of
-> Apple Inc.; Android Auto is a trademark of Google LLC.
+Install CarLink on an Android car stereo, or on an Android tablet or phone used as the car's
+display. Plug in or connect your phone: an **iPhone gets CarPlay**, an **Android phone gets
+Android Auto**, by cable (USB) or wirelessly. CarLink works out which phone it is; there is
+nothing to choose.
+
+CarLink is generic: it is meant for any Android head unit or tablet, not one car brand. It
+combines two open-source engines, imported with their full history: **DiPlay** (CarPlay) and
+**DiAuto** (Android Auto), both written for BYD DiLink head units; their BYD-only features stay
+off unless you pick BYD as the car brand.
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/screenshots/home/home_ready-iphone-usual_tablet_dark.webp"><img src="docs/screenshots/home/home_ready-iphone-usual_tablet_dark.webp" alt="Home, ready to connect an iPhone"></a><br><sub>Home: one status, one action</sub></td>
+    <td width="50%"><a href="docs/screenshots/home/home_connecting-carplay-usb_tablet_dark.webp"><img src="docs/screenshots/home/home_connecting-carplay-usb_tablet_dark.webp" alt="Connecting CarPlay by cable, step by step"></a><br><sub>Connecting, step by step</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/switcher/switcher_panel_tablet_dark.webp"><img src="docs/screenshots/switcher/switcher_panel_tablet_dark.webp" alt="Floating switcher panel over CarPlay"></a><br><sub>Floating switcher over CarPlay and Android Auto</sub></td>
+    <td><a href="docs/screenshots/home/home_connected-android-auto-usb_tablet_dark.webp"><img src="docs/screenshots/home/home_connected-android-auto-usb_tablet_dark.webp" alt="Android Auto running over USB"></a><br><sub>A running session</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/setup/setup_car_tablet_dark.webp"><img src="docs/screenshots/setup/setup_car_tablet_dark.webp" alt="First-time setup: car brand picker"></a><br><sub>First-time setup: car brand</sub></td>
+    <td><a href="docs/screenshots/settings/settings_display-schedule_tablet_light.webp"><img src="docs/screenshots/settings/settings_display-schedule_tablet_light.webp" alt="Display settings, light theme"></a><br><sub>Settings (light theme)</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/update/update_available_tablet_dark.webp"><img src="docs/screenshots/update/update_available_tablet_dark.webp" alt="Update available popup"></a><br><sub>In-app update (sample release notes)</sub></td>
+    <td><a href="docs/screenshots/diagnostics/diagnostics_phones-card_tablet_dark.webp"><img src="docs/screenshots/diagnostics/diagnostics_phones-card_tablet_dark.webp" alt="Diagnostics: per-phone connection health"></a><br><sub>Diagnostics: each phone's connection health</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/home/home_ready-iphone-usual_car-landscape_dark.webp"><img src="docs/screenshots/home/home_ready-iphone-usual_car-landscape_dark.webp" alt="Home on a car display"></a><br><sub>On a car display: larger targets and text</sub></td>
+    <td><a href="docs/screenshots/home/home_connected-carplay_headunit-1024x600_dark.webp"><img src="docs/screenshots/home/home_connected-carplay_headunit-1024x600_dark.webp" alt="Home on a 1024x600 head unit"></a><br><sub>On a 1024×600 head unit</sub></td>
+  </tr>
+</table>
+
+Tablet screenshots above, car-display sizes in the last row. They are rendered from the app's
+screens with sample data, not captured from a phone. Every screen and state, on every size:
+[screenshot gallery](docs/screenshots/README.md).
+
+## Features
+
+- **Automatic detection.** iPhone → CarPlay, Android phone → Android Auto, from the USB device or
+  the phone's Bluetooth services. Nothing to choose.
+- **USB and wireless.** Wireless uses Wi-Fi Direct by default (no router or hotspot needed); the
+  car's own hotspot and the same Wi-Fi network are options.
+- **Plug and play.** Plugging in starts at once; the last phone reconnects by itself when CarLink
+  comes to the front.
+- **Switch phones.** A second phone asks "Switch to &lt;phone&gt;?" instead of taking over, and a
+  floating switcher over CarPlay and Android Auto changes phones or returns to CarLink.
+- **Simple by default, complete when you need it.** Home shows one status and one action, with a
+  one-tap fix when something is wrong; **Show advanced** in Settings has every engine option.
+- **Any Android head unit or tablet**, with car-display and phone/tablet layouts, dark and light.
+- **Low-end mode.** Lite rendering on head units with little memory or processor power.
+- **In-app updates** from GitHub Releases, checked before they are installed.
+- **Car brands.** Pick your make (popular Indian makes, luxury makes, or Other); only BYD changes
+  behaviour, turning on the DiLink extras.
+- **Diagnostics** with device checks and a shareable connection log.
+
+## Requirements
+
+- **The display:** Android 7.1 or newer on ARM (`arm64-v8a` or `armeabi-v7a`): a car stereo, a
+  tablet or a phone used as the car's display. Install CarLink there, not on your phone.
+- **iPhone (CarPlay)** or **Android phone (Android Auto)**, with a USB cable, or with Bluetooth and
+  Wi-Fi on for wireless. Wireless needs pairing once, started from the phone.
 
 ## Install
-
-CarLink runs on Android 7.1 or newer (ARM: `arm64-v8a` or `armeabi-v7a`), on a car stereo, a
-tablet or a phone used as the car's display. Install it on the display, not on your phone.
 
 1. Open [Releases](https://github.com/F-e-n-y-x/CarLink/releases/latest) on the display (or on a
    computer, then copy the file over by USB stick or cable).
 2. Download `CarLink-X.Y.Z.apk`. To check the file, compare its SHA-256 with the
-   `CarLink-X.Y.Z.apk.sha256` file of the same release.
+   `CarLink-X.Y.Z.apk.sha256` file of the same release (`sha256sum -c CarLink-X.Y.Z.apk.sha256`).
 3. Open the APK. Android asks you to allow installing apps from the browser or file manager you
    used ("Install unknown apps" › **Allow from this source**). Allow it, go back and tap
    **Install**.
-4. Open CarLink and follow the first-time setup (below).
+4. Open CarLink and follow the first-time setup.
 
 The release's package is `com.carlink.app`. It is signed with CarLink's own release key
-(certificate SHA-256 `03:74:68:CA:5B:EB:70:EA:5F:68:54:33:29:B0:33:68:24:7D:FB:39:3D:3F:62:6A:6B:47:2D:10:E5:65:7D:21`).
+(certificate SHA-256
+`03:74:68:CA:5B:EB:70:EA:5F:68:54:33:29:B0:33:68:24:7D:FB:39:3D:3F:62:6A:6B:47:2D:10:E5:65:7D:21`;
+how to check it with `apksigner`: [user guide](docs/USER_GUIDE.md#install)). An APK signed with
+another key is not an official build and cannot update it.
+
+## First-time setup
+
+1. **Allow access.** CarLink asks for what it needs (Bluetooth, nearby Wi-Fi devices, location,
+   microphone, notifications, display over other apps) with one **Allow all**.
+2. **Choose your car.** Pick its brand, or Other. Only BYD changes anything.
+3. **Pair from the phone.** On the phone, open Bluetooth settings and tap this display's name. A
+   tablet cannot start the car-kit side of pairing itself, so pairing is always started on the
+   phone. A cable works without pairing.
+4. **Connect.** Tap **Connect** on Home (or plug in the cable). On the phone, accept "Use CarPlay"
+   or Android Auto's prompt the first time. Keep the phone unlocked during the first connection.
+
+Details: [user guide › First-time setup](docs/USER_GUIDE.md#first-time-setup).
 
 ## Updates
 
-CarLink updates itself from this repository's Releases:
+CarLink checks this repository's Releases at most **every 6 hours**, only while its own screen is
+open and **no phone is connecting or connected**, and asks before downloading. Before installing,
+it checks the download's SHA-256, package, version and signing key, and deletes it if any check
+fails. **Settings › About** has **Check for updates** and turns the automatic checks off. Only
+the official release updates itself; the only data sent is the request to GitHub's public API.
+Details: [user guide › Updates](docs/USER_GUIDE.md#updates).
 
-- It checks GitHub at most **every 6 hours**, only while CarLink's own screen is open and **no
-  phone is connecting or connected**. It never interrupts CarPlay or Android Auto.
-- When a newer version exists, a popup shows **Update available — CarLink X.Y.Z** with the release
-  notes and three choices: **Ignore this version** (no more popups for it; a later version is
-  offered again), **Later** (asks again at the next check) and **Download & install**.
-- The download goes to CarLink's private storage with a progress bar and **Cancel**. Before
-  anything is installed, CarLink checks that the file matches the release's `.sha256` file, that
-  it is CarLink (`com.carlink.app`) with a higher version, and that it is signed with CarLink's
-  release key. If any check fails, it says why and deletes the file.
-- Android asks once to let CarLink install apps, then shows its own install confirmation.
-- **Settings › About › Check for updates** checks now ("You're up to date" or the popup);
-  **Automatically check for updates** in the same place turns the automatic checks off.
+## What works and what's tested
 
-Only the official release updates itself. Debug builds (`com.carlink.app.hudtest`) and builds you
-sign yourself never check or install updates. The only data sent is the request to GitHub's
-public API (with CarLink's version in the user agent).
-
-## What works
+What CarLink supports:
 
 | | Over USB | Wirelessly |
 |---|---|---|
 | **CarPlay** (iPhone) | yes | yes: Wi-Fi Direct (default), the car's own hotspot, or the same Wi-Fi network (opt-in) |
 | **Android Auto** (Android phone) | yes | yes: Wi-Fi Direct (default) or the same Wi-Fi network (opt-in) |
 
-CarLink is made for **any Android car stereo, tablet or phone** used as the car's display; it is
-not tied to one brand. BYD DiLink extras (head-up display, instrument cluster, steering-wheel
-keys) turn on only when you choose BYD as the car brand.
+Proven on a real device, so far one: a Redmi Pad Pro 5G (Android 16) with an iPhone and a
+Samsung Galaxy S25 Ultra, 2026-10-09:
 
-What has been proven on a real device, so far one: a Redmi Pad Pro 5G (Android 16) with an
-iPhone and a Samsung Galaxy S25 Ultra, 2026-10-09:
-
-- CarPlay over USB, Android Auto over USB, Android Auto over Wi-Fi Direct and CarPlay over
-  Wi-Fi Direct (the defaults), and Android Auto over the same Wi-Fi network;
+- CarPlay over USB (about 3.4 s from plug-in to picture), Android Auto over USB (about 3.8 s),
+  Android Auto over Wi-Fi Direct (about 5 s) and CarPlay over Wi-Fi Direct (about 16-20 s,
+  mostly paging the iPhone over Bluetooth), and Android Auto over the same Wi-Fi network;
 - CarPlay over the same Wi-Fi network failed on that router (it does not pass mDNS between
-  clients; see Known limits).
+  clients; see [known limits](docs/USER_GUIDE.md#known-limits)).
 
-Not tested yet: the car-hotspot path (the tablet has no car to join), other head units and
-tablets, and Android 7.1-9. **The signed 1.0.0 release build has not been tested on the device
-yet** (the results above come from development builds of the same code); this README will say so
-when it has been.
+**Not tested yet:** the car-hotspot path, other head units and tablets, and Android 7.1-9.
+**The signed 1.0.0 release build has not been tested on a device yet**; the results above come
+from development builds of the same code. This README will say so when it has been. Reports from
+other head units are very welcome.
+
+## FAQ
+
+**Which phone gets what?** An iPhone always gets CarPlay and an Android phone Android Auto.
+CarLink decides from the USB vendor ID or the phone's Bluetooth services, and remembers it.
+
+**Do I need a router or the car's hotspot for wireless?** No. Wi-Fi Direct links the phone and the
+display directly. During wireless Android Auto the phone's apps use mobile data, because that link
+has no internet.
+
+**Why doesn't my phone connect by itself when I get in?** A tablet is not a Bluetooth car kit, so
+the phone never connects to it on its own; CarLink starts the last phone when its Home comes to
+the front. A car head unit with hands-free roles is reconnected by the phone itself.
+
+**Home says "Your iPhone couldn't reach this screen".** Your Wi-Fi router blocks the link CarPlay
+needs. Tap **Use Wi-Fi Direct**, or use a cable.
+
+**Does the car brand matter?** Only BYD changes anything (head-up display, instrument cluster,
+steering-wheel keys). The brand never reaches the phone.
+
+**Something doesn't work.** See [troubleshooting](docs/TROUBLESHOOTING.md) for every message
+Home shows. To report a bug, use **Settings › General › Diagnostics › Share log** and
+[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose).
 
 ## CarPlay notice
 
-CarLink is **not an Apple-certified product**. As in DiPlay's releases, the release APK bundles an
-experimental accessory identity recovered from public Carlinkit firmware, not a newly provisioned
-MFi identity for CarLink. A bundled private key is extractable. Acceptance after future iOS
-updates, reliability across head units and suitability of that identity for general distribution
-are unresolved: **there is no guarantee that CarPlay keeps working after an iOS update.** Builds
-from this source contain no accessory identity (see Build). Android Auto does not depend on it.
+> [!WARNING]
+> CarLink is **not an Apple-certified product**. As in DiPlay's releases, the release APK bundles
+> an experimental accessory identity recovered from public Carlinkit firmware, not a newly
+> provisioned MFi identity for CarLink. A bundled private key is extractable. Acceptance after
+> future iOS updates, reliability across head units and suitability of that identity for general
+> distribution are unresolved: **there is no guarantee that CarPlay keeps working after an iOS
+> update.** Builds from this source contain no accessory identity
+> ([building](docs/BUILDING.md#carplay-authentication-files-not-in-git)). Android Auto does not
+> depend on it.
 
-## What you get
+## For developers
 
-- **One Home screen.** One status and one action: a permission or Bluetooth fix when one is
-  needed, "Connect <phone>?", a step-by-step Connecting view, the running session with its timer,
-  or a plain-language problem with its one-tap fix. A Phones sheet lists paired phones.
-- **Native settings.** Every screen is CarLink's own, never an engine's settings app. Settings
-  shared by both engines (picture, interface size, day/night, driving side, sound routing,
-  location, connection method) are one setting written into each engine before each session.
-  **Show advanced** adds every engine-only option inside its category; **Lab** (seven taps on the
-  version) holds experimental and debug options.
-- **A floating switcher** over CarPlay and Android Auto: a small bubble that opens a panel to
-  switch to another paired phone or open CarLink's Home.
-- **Diagnostics.** Device checks with one-tap fixes, the live session, and a connection log
-  that merges CarPlay, Android Auto and CarLink's own decisions (addresses hidden), shareable.
-- **One identity.** Engine notifications, media sessions, the name the phone shows for the car
-  and the projection screens' own chrome say CarLink.
+Building, architecture, the reusable `:carlink-core` library (for a launcher or another app),
+releasing and the engine changes are in the [documentation index](docs/README.md):
+[building](docs/BUILDING.md) · [architecture](docs/ARCHITECTURE.md) ·
+[integration](docs/INTEGRATION.md) · [releasing](docs/RELEASING.md) ·
+[contributing](CONTRIBUTING.md) · [security](SECURITY.md) · [changelog](CHANGELOG.md).
+The project uses no GitHub Actions: tests run locally, and `scripts/release.sh` runs them before
+every release.
 
-Screenshots of every screen and state: [docs/screenshots](docs/screenshots/README.md).
+## Credits
 
-## How connections work
+CarLink is built on two engines, both by [shihabal3amri](https://github.com/shihabal3amri), kept
+with their full history:
 
-| The phone… | CarLink decides | Engine |
-|---|---|---|
-| is plugged in and has Apple's USB vendor ID (0x05AC) | iPhone | CarPlay over USB |
-| is plugged in and exposes Android interfaces (accessory, MTP, PTP, ADB, RNDIS) | Android phone | Android Auto over USB |
-| connects over Bluetooth and publishes the iAP2 service, or is named "iPhone"/"iPad" | iPhone | wireless CarPlay |
-| connects over Bluetooth and publishes phone services without iAP2 | Android phone | wireless Android Auto |
-| was identified before (a successful session or the driver's choice) | as remembered | |
+- **[DiPlay](https://github.com/shihabal3amri/DiPlay)** (CarPlay), based on
+  [xcertplay](https://github.com/shilapi/xcertplay) by shilapi: `vendor/diplay`.
+- **[DiAuto](https://github.com/shihabal3amri/DiAuto)** (Android Auto), a fork of
+  [Open Headunit](https://github.com/andreknieriem/open-headunit), based on Headunit Revived and
+  [Michael Reid's headunit](https://github.com/mikereidis/headunit): `vendor/diauto`.
 
-USB flash drives and other peripherals are ignored. A phone without enough evidence is queried
-over Bluetooth SDP first; nothing starts until CarLink is sure.
-
-- **Wi-Fi Direct by default.** Wireless sessions use a Wi-Fi Direct link between the phone and
-  the display, which needs no router and no hotspot. On a car head unit whose own hotspot
-  details are known, wireless CarPlay tries that hotspot first. The path that worked last time
-  for a phone is tried first next time; only a network-related failure moves on to the next path.
-- **Same Wi-Fi is opt-in.** Settings › Connection (or the card Home offers once) can use the Wi-Fi
-  network the display is already on. It needs that network's password once. It is never chosen
-  automatically (see Known limits).
-- **Plugging in starts at once.** A cable is a deliberate act, so a USB phone starts its engine
-  straight away when nothing else runs.
-- **The last phone connects by itself.** When Home comes to the front (the app opens, the screen
-  wakes), CarLink starts the last-used phone wirelessly, as a car stereo does when the car starts.
-  It does this at most once a minute and not right after a session ended. After you press
-  Disconnect or Cancel, automatic starts pause until you connect again or for 10 minutes.
-- **A second phone asks first.** Plugging in another phone while a session runs shows
-  "Switch to <phone>?" (Switch / Not now) instead of taking over.
-- **Unplugging ends a wired session** and brings Home back; the engines' own USB re-enumeration
-  while connecting is not mistaken for an unplug.
-- **One engine at a time.** A new session starts only after the previous one has fully stopped,
-  so the two engines never share the Wi-Fi Direct group, VPN slot, audio focus or media session.
-
-### First-time setup
-
-1. Open CarLink and allow the permissions it asks for (nearby devices, location, microphone,
-   notifications, display over other apps).
-2. **Pair from the phone.** On the phone, open Bluetooth settings and pair with this display
-   ("Pair a phone" on Home opens the display's Bluetooth settings so it is visible). A tablet
-   cannot start the car-kit side of pairing itself, so pairing is always started on the phone.
-3. Tap **Connect** on Home (or plug in the cable). On the phone, accept "Use CarPlay" or
-   Android Auto's prompt the first time. Keep the phone unlocked during the first connection.
-
-A cable works without pairing.
-
-### Connection times
-
-Measured on the test tablet (Redmi Pad Pro 5G, Android 16) with the user's iPhone and Samsung
-Galaxy S25 Ultra, from plug-in or Connect to the first picture, 2026-10-09:
-
-| Connection | Measured on the test tablet |
-|---|---|
-| CarPlay over USB | about 3.4 s |
-| Android Auto over USB | about 3.8 s |
-| Android Auto, wireless (Wi-Fi Direct) | about 5 s |
-| CarPlay, wireless (Wi-Fi Direct) | about 16-20 s, dominated by paging the iPhone over Bluetooth |
-
-Other head units, tablets and phones are expected to be in the same range but have not been
-measured. Each engine writes always-on timing lines (`WIRED_TIMING`, `WIRELESS_TIMING`) to its
-log, so any device can be measured; see the `carlink-device` skill.
-
-### Known limits
-
-- **During wireless Android Auto the phone uses mobile data.** The phone joins the display's
-  Wi-Fi link, which has no internet, so its apps go over mobile data. Allow Android Auto to use
-  mobile data on the phone. No app on the display can change this.
-- **Same Wi-Fi CarPlay needs a router that passes mDNS (Bonjour).** Many home and mobile routers
-  block it between clients; then the iPhone authenticates over Bluetooth but never reaches the
-  display, and Home suggests Wi-Fi Direct. It does not work on the user's router. Same Wi-Fi
-  Android Auto needs the network's password and the router's exact address (BSSID), so both
-  stay opt-in.
-- **A tablet is not a Bluetooth car kit.** It has no hands-free or car-audio role, so the phone
-  never connects to it by itself when you get in. CarLink starts the connection instead (Home
-  shown, Connect, plug-in). A car head unit with those roles is reconnected by the phone itself.
-- **CarPlay needs authentication files** that are not part of this repository (see Build). Without
-  them Android Auto still works and Home says why CarPlay cannot sign in.
-
-## Architecture
-
-```
-                ┌──────────────────── com.carlink.app (one APK) ─────────────────────┐
-                │ main process                                    │ ":aa" process     │
- USB ──────────▶│ UsbRouterActivity / UsbWatcher ─┐                │                   │
- Bluetooth ────▶│ SystemEventReceiver ─▶ Home ────┼─▶ SessionManager                    │
- Home / Connect▶│ HomeActivity, switcher ─────────┘   │  WirelessPolicy, DevicePreflight │
-                │                                     ├─▶ CarPlayAdapter ─▶ DiPlay       │
-                │                                     │    (CarPlayHostActivity)         │
-                │                                     └─▶ AndroidAutoAdapter ── broadcasts ─▶ AaCommandReceiver
-                │                                                 │   ◀── events ──── AaEngineHooks
-                │                                                 │      AapService (DiAuto)
-                └────────────────────────────────────────────────────────────────────┘
-```
-
-Modules:
-
-| Module | Directory | Holds |
-|---|---|---|
-| `:app` | `app/` | The APK: `CarLinkApplication`, Home and the other screens (`ui/`), the floating switcher (`switcher/`), `entry/HomeLauncher`, Diagnostics, `engine/EngineChrome`, UI copy and theme |
-| `:carlink-core` | `carlink-core/` | The connection backend as a library: `connection/` (`CarLinkCore`, `SessionManager`, adapters, `aa/`), `detect/`, `settings/`, `core/`, the USB/boot/Bluetooth entry points, `EventLog`, and the engines' manifest overrides |
-| `:carplay-shared`, `:carplay-common` | `vendor/diplay/` | The CarPlay engine (DiPlay), main process |
-| `:androidauto`, `:androidauto-contract` | `vendor/diauto/` | The Android Auto engine (DiAuto), `:aa` process |
-
-- `carlink-core/src/main/java/com/carlink/core/connection/` is the connection layer:
-  `SessionManager` (one state machine, one engine at a time), `WirelessPolicy` (which paths, in
-  which order), `DevicePreflight` and `CarPlayPreflight` (problems with a one-tap fix before
-  anything opens), `CarPlayAdapter` and `AndroidAutoAdapter` (drive each engine through small
-  hooks), and `connection/aa/` (the Android Auto side that runs in `:aa`). The library's
-  packages are `com.carlink.core.*`; the app's stay `com.carlink.app.*`.
-- `detect/` tells iPhones from Android phones; `entry/` holds the USB, boot and Bluetooth entry
-  points; `settings/` the unified settings (all in `:carlink-core`); `ui/` and `switcher/` the
-  screens (in `:app`).
-- **Process isolation.** Android Auto runs in its own `:aa` process, so DiAuto's singletons, car
-  mode, Conscrypt and its "kill process on disconnect" option cannot affect a CarPlay session.
-- **Minimal engine changes.** Every edit inside `vendor/` is a small, documented hook:
-  [docs/VENDOR_CHANGES.md](docs/VENDOR_CHANGES.md). Engines update with `git subtree pull`.
-- **Reusable backend.** `:carlink-core` (with the engines) is a library another app, such as a
-  car-stereo launcher, can depend on: [docs/INTEGRATION.md](docs/INTEGRATION.md).
-
-Design and engineering references: [design/REBUILD_V2.md](design/REBUILD_V2.md) (the current
-connection design), [docs/dissection/DIPLAY.md](docs/dissection/DIPLAY.md) and
-[docs/dissection/DIAUTO.md](docs/dissection/DIAUTO.md) (how each engine works and fails),
-[design/HOME_V2_RATIONALE.md](design/HOME_V2_RATIONALE.md) (the current UI). CarLink ships in
-**English only**, including the engines' screens (`androidResources.localeFilters` in
-`app/build.gradle.kts`). It picks a size profile automatically (Settings › General › Layout):
-**Car display** (large touch targets and text, sized from the panel's pixels) or **Phone or
-tablet** (Material 3 sizes).
-
-## Build
-
-Requirements: JDK 25 for the Gradle daemon, Android SDK platforms 36 and 37, build-tools 35 and 36,
-NDK `29.0.14206865` (Android Auto engine) and `28.2.13676358` (CarPlay engine), CMake `3.22.1`.
-Set `ANDROID_HOME` (and no conflicting `ANDROID_SDK_ROOT`) or put `sdk.dir=...` in an untracked
-`local.properties`.
-
-```sh
-python3 scripts/resource_collisions.py --check
-./gradlew :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
-          :carplay-shared:testDebugUnitTest :carplay-common:testDebugUnitTest
-./gradlew :app:assembleDebug
-```
-
-The debug APK (`com.carlink.app.hudtest`) is in `app/build/outputs/apk/debug/`. It installs
-alongside DiAuto and DiPlay. Run one projection app at a time.
-
-Releases are built, signed and published from the maintainer's computer with
-`scripts/release.sh`; the project uses no GitHub Actions:
-[docs/RELEASING.md](docs/RELEASING.md). Versions and changes: [CHANGELOG.md](CHANGELOG.md).
-
-### CarPlay authentication files (not in git)
-
-Ordinary source builds contain **no CarPlay accessory identity**, exactly like DiPlay's. CarPlay
-cannot connect without the two files DiPlay's releases use (`offline-mfi/identity.pk8` and
-`offline-mfi/certificate.p7b`). They are never committed (`.gitignore` blocks `*.pk8` and
-`*.p7b`). Provide them only for a local car-test build:
-
-```sh
-DIPLAY_AUTH_ASSETS_DIR=/path/to/dir-containing-offline-mfi ./gradlew :app:assembleDebug
-```
-
-Read DiPlay's README about what this identity is and its limits before distributing such a
-build. Android Auto does not need these files. Diagnostics shows whether they are present.
-
-## Development
-
-Work in this repository follows two project skills:
-
-- [.claude/skills/carlink-dev](.claude/skills/carlink-dev/SKILL.md): architecture rules, the
-  build and test loop (`scripts/dev.sh build|test|install|shot|size|logs`), UI checks on the
-  emulator, vendor-hook rules and commit rules.
-- [.claude/skills/carlink-device](.claude/skills/carlink-device/SKILL.md): testing connections
-  on a real tablet or head unit and reading the merged CarLink / DiPlay / DiAuto logs
-  (`scripts/report.py`). The emulator has no Bluetooth or real Wi-Fi, so a connection change is
-  only done once it is verified on a device.
-
-The screenshot gallery renders every screen state without any device or emulator:
-
-```sh
-./gradlew --no-daemon :app:recordScreenshots   # rewrites docs/screenshots
-```
+Thank you to the authors of both engines and of the projects they build on. CarLink's About
+screen lists the other components and shows the full license texts.
 
 ## License
 
 CarLink as a whole is distributed under the **GNU Affero General Public License v3.0**
-(AGPL-3.0). If you distribute CarLink, or let people use it over a network, you must offer its
-complete source code; every release is tagged in this repository (`vX.Y.Z`).
+([LICENSE](LICENSE)). If you distribute CarLink, or let people use it over a network, you must
+offer its complete source code; every release is tagged in this repository (`vX.Y.Z`).
 
-It is built on two engines, both by [shihabal3amri](https://github.com/shihabal3amri), kept with
-their full history and their own licenses:
+The engines keep their own licenses: DiPlay is GNU GPL v3.0 (`vendor/diplay/LICENSE`, as is
+xcertplay) and DiAuto is GNU AGPL v3.0 (`vendor/diauto/LICENSE`). GPL v3 §13 allows combining
+GPL-3.0 and AGPL-3.0 code; the combination is distributed under the AGPL-3.0.
 
-- **[DiPlay](https://github.com/shihabal3amri/DiPlay)** (CarPlay), GNU GPL v3.0, based on
-  [xcertplay](https://github.com/shilapi/xcertplay) (GPL-3.0): `vendor/diplay`,
-  `vendor/diplay/LICENSE`.
-- **[DiAuto](https://github.com/shihabal3amri/DiAuto)** (Android Auto), GNU AGPL v3.0, a fork of
-  [Open Headunit](https://github.com/andreknieriem/open-headunit), based on work by its
-  contributors and [Michael Reid's headunit](https://github.com/mikereidis/headunit):
-  `vendor/diauto`, `vendor/diauto/LICENSE`.
+## Trademarks
 
-GPL v3 §13 allows combining GPL-3.0 and AGPL-3.0 code; the combination is distributed under the
-AGPL-3.0. CarLink's About screen lists the other components and shows the full license texts.
-Thank you to the authors of both engines and of the projects they build on.
+CarLink is not affiliated with or endorsed by Apple, Google or BYD. CarPlay is a trademark of
+Apple Inc.; Android Auto is a trademark of Google LLC. BYD and DiLink belong to their owner. Other
+car makes are named only to identify the car.
