@@ -21,6 +21,23 @@ published exactly as `scripts/release.sh` produces it.
 - `CHANGELOG.md` gets a `## [X.Y.Z] - YYYY-MM-DD` section, written for drivers. Its text becomes
   the release notes that the update popup shows (unless you pass `--notes-file`).
 
+## The release page
+
+The GitHub release page is the changelog text, then a line that is exactly `<!-- more -->`,
+then `scripts/release-notes-footer.md` with its placeholders filled in (`{{TAG}}`, `{{APK}}`,
+`{{SIZE}}`, `{{SHA256}}`, `{{CERT}}`): screenshots, download and install steps, the checksum
+and signing certificate, the CarPlay notice, and source and license. `scripts/release.sh`
+refuses to publish a page that still contains a `{{placeholder}}`.
+
+- **The in-app popup shows only the text above `<!-- more -->`** (`ReleaseInfo.MORE_MARKER`), so
+  keep everything a driver should read in the popup above it, and the install material below.
+- If your notes file already contains a `<!-- more -->` line, the script adds no footer: you
+  then write the whole page yourself.
+- Keep the footer consistent with the README: the same CarPlay notice, the same "Android 7.1 or
+  newer", the same certificate fingerprint and the same Diagnostics path. When you change one,
+  change the other. A published page can be edited on GitHub (or with `gh release edit`)
+  without touching its assets.
+
 ## The signing key
 
 | File | Holds |
@@ -83,7 +100,8 @@ Never commit any of these files. `.gitignore` blocks `*.jks`, `*.keystore`, `*.p
    (the release's source must be public under the AGPL), that the tag does not exist yet, and
    that `gh` is logged in. It then creates the annotated tag `v1.0.0`, pushes it, and runs
    `gh release create v1.0.0 dist/CarLink-1.0.0.apk dist/CarLink-1.0.0.apk.sha256 --title
-   "CarLink 1.0.0" --notes-file … --latest` (a full release, not a pre-release, marked latest).
+   "CarLink 1.0.0" --notes-file … --latest` (a full release, not a pre-release, marked latest),
+   with the notes followed by `<!-- more -->` and the footer (see "The release page").
    Installed copies see it within six hours.
 
 A rehearsal on another branch: `CARLINK_RELEASE_ALLOW_BRANCH=1 scripts/release.sh 1.0.0`. It runs

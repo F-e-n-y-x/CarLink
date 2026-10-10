@@ -16,7 +16,7 @@ More in the [screenshot gallery](https://github.com/F-e-n-y-x/CarLink/tree/{{TAG
 After that, CarLink finds new releases itself and asks before installing them (Settings ›
 About › Check for updates).
 
-**Needs:** Android 7.1 or newer on the stereo or tablet. An iPhone gets CarPlay, an Android
+**Needs:** Android 7.1 or newer (ARM) on the stereo or tablet. An iPhone gets CarPlay, an Android
 phone gets Android Auto. Wireless needs Bluetooth and Wi-Fi on both sides; USB needs only the cable.
 
 ## Verify the download
@@ -29,10 +29,12 @@ signed with it. Check with `sha256sum {{APK}}` and `apksigner verify --print-cer
 
 ## CarPlay notice
 
-CarLink is **not an Apple-certified product**. Like DiPlay, the APK bundles an experimental
-accessory identity recovered from public Carlinkit firmware, not a newly provisioned MFi identity.
-A bundled private key is extractable. CarPlay may stop working after an iOS update, and
-compatibility across head units is not guaranteed.
+CarLink is **not an Apple-certified product**. As in DiPlay's releases, the release APK bundles an
+experimental accessory identity recovered from public Carlinkit firmware, not a newly provisioned
+MFi identity for CarLink. A bundled private key is extractable. Acceptance after future iOS
+updates, reliability across head units and suitability of that identity for general distribution
+are unresolved: **there is no guarantee that CarPlay keeps working after an iOS update.** Android
+Auto does not depend on it.
 
 ## Source and license
 
@@ -42,5 +44,6 @@ GPL-3.0) and [DiAuto](https://github.com/shihabal3amri/DiAuto) (Android Auto, AG
 CarLink is not affiliated with Apple or Google; CarPlay is a trademark of Apple Inc. and Android
 Auto a trademark of Google LLC.
 
-Found a problem? [Open an issue](https://github.com/F-e-n-y-x/CarLink/issues) and attach the
-log from Diagnostics › Share.
+Found a problem? See [troubleshooting](https://github.com/F-e-n-y-x/CarLink/blob/main/docs/TROUBLESHOOTING.md),
+or [open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose) and attach the log from
+Settings › General › Diagnostics › Share log.

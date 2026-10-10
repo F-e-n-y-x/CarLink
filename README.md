@@ -95,6 +95,9 @@ screens with sample data, not captured from a phone. Every screen and state, on 
    **Install**.
 4. Open CarLink and follow the first-time setup.
 
+Each [release page](https://github.com/F-e-n-y-x/CarLink/releases) repeats these steps with the
+APK's own SHA-256 and the signing certificate.
+
 The release's package is `com.carlink.app`. It is signed with CarLink's own release key
 (certificate SHA-256
 `03:74:68:CA:5B:EB:70:EA:5F:68:54:33:29:B0:33:68:24:7D:FB:39:3D:3F:62:6A:6B:47:2D:10:E5:65:7D:21`;
