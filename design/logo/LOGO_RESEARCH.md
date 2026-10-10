@@ -1,7 +1,8 @@
 # CarLink logo: research, concepts and recommendation
 
-Status: four concepts designed; **"Orbit" is implemented in the app** as the recommendation. The
-user picks the final one, and swapping takes a few minutes (see "How to swap").
+Status: four concepts designed. Orbit was the first recommendation; the user chose **"Cast"**,
+which is the logo the app ships (commit 42295f29). The README header and the social preview
+(`docs/assets/`) use the Cast mark; `tools/social_preview.html` renders the preview.
 
 ![Overview](previews/overview_board.png)
 
