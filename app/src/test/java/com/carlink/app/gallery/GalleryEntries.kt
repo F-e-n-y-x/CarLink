@@ -39,7 +39,7 @@ import com.carlink.app.ui.settings.settingsPreviewUi
 /**
  * One screen state in the gallery. [content] is a stateless screen fed with fake state; the
  * harness wraps it in CarLinkTheme for every [GalleryConfig], so do not add a theme here.
- * The PNG lands at docs/screenshots/[area]/[area]_[name]_<config>_<theme>.png.
+ * The image lands at docs/screenshots/[area]/[area]_[name]_<config>_<theme>.webp (half size).
  *
  * Set [opensWindow] when the state shows a dialog or bottom sheet: those are separate windows
  * that span the whole panel, so the emulated split-screen configs cannot place them and skip

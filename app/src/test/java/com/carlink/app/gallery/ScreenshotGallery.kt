@@ -107,7 +107,7 @@ class ScreenshotGallery {
         val only = System.getProperty("carlink.screenshots.only").orEmpty().takeIf { it.isNotBlank() }?.toRegex()
         if (only == null) {
             entries.map { it.area }.distinct().forEach { area ->
-                File(out, area).listFiles { file -> file.extension == "png" }?.forEach { it.delete() }
+                File(out, area).listFiles { file -> file.extension == "png" || file.extension == "webp" }?.forEach { it.delete() }
             }
         }
         val written = mutableListOf<String>()
@@ -119,11 +119,14 @@ class ScreenshotGallery {
                     if (config.entries != null) {
                         if ("${entry.area}/${entry.name}" !in config.entries) continue
                     } else if (entry.configs?.contains(config.name) == false || (config.optIn && entry.configs == null)) continue
-                    val file = File(out, "${entry.area}/${entry.area}_${entry.name}_${config.name}_${theme.fileName}.png")
+                    val file = File(out, "${entry.area}/${entry.area}_${entry.name}_${config.name}_${theme.fileName}.webp")
                     if (only != null && !only.containsMatchIn(file.name)) continue
                     val bitmap = render(config, theme, entry)
                     file.parentFile!!.mkdirs()
-                    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    // Half-size lossy WebP: ~1% of a full PNG and still sharp for reading the layout. The
+                    // public repository would otherwise grow by gigabytes with every full re-record.
+                    val small = Bitmap.createScaledBitmap(bitmap, bitmap.width / 2, bitmap.height / 2, true)
+                    file.outputStream().use { small.compress(Bitmap.CompressFormat.WEBP_LOSSY, 85, it) }
                     written += file.relativeTo(out).path
                 }
             }
