@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Diagnostics asks to keep CarLink ready when the car wakes (DESIGN_SPEC §6.4). -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- The in-app updater (update/): asks GitHub for the latest release and installs a verified
+         APK with PackageInstaller. Both are also declared by the engines; listed here for CarLink. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".CarLinkApplication"
@@ -52,6 +56,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- PackageInstaller's answer for an update session (update/UpdateInstaller.kt). -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
 
         <!-- Shares Diagnostics' connection log (cache/shared only); independent of the engines' providers. -->
         <provider
