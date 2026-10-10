@@ -17,6 +17,77 @@ CarLink combines two open-source engines, imported with their full history:
 > CarLink is not affiliated with or endorsed by Apple or Google. CarPlay is a trademark of
 > Apple Inc.; Android Auto is a trademark of Google LLC.
 
+## Install
+
+CarLink runs on Android 7.1 or newer (ARM: `arm64-v8a` or `armeabi-v7a`), on a car stereo, a
+tablet or a phone used as the car's display. Install it on the display, not on your phone.
+
+1. Open [Releases](https://github.com/F-e-n-y-x/CarLink/releases/latest) on the display (or on a
+   computer, then copy the file over by USB stick or cable).
+2. Download `CarLink-X.Y.Z.apk`. To check the file, compare its SHA-256 with the
+   `CarLink-X.Y.Z.apk.sha256` file of the same release.
+3. Open the APK. Android asks you to allow installing apps from the browser or file manager you
+   used ("Install unknown apps" › **Allow from this source**). Allow it, go back and tap
+   **Install**.
+4. Open CarLink and follow the first-time setup (below).
+
+The release's package is `com.carlink.app`. It is signed with CarLink's own release key
+(certificate SHA-256 `03:74:68:CA:5B:EB:70:EA:5F:68:54:33:29:B0:33:68:24:7D:FB:39:3D:3F:62:6A:6B:47:2D:10:E5:65:7D:21`).
+
+## Updates
+
+CarLink updates itself from this repository's Releases:
+
+- It checks GitHub at most **every 6 hours**, only while CarLink's own screen is open and **no
+  phone is connecting or connected**. It never interrupts CarPlay or Android Auto.
+- When a newer version exists, a popup shows **Update available — CarLink X.Y.Z** with the release
+  notes and three choices: **Ignore this version** (no more popups for it; a later version is
+  offered again), **Later** (asks again at the next check) and **Download & install**.
+- The download goes to CarLink's private storage with a progress bar and **Cancel**. Before
+  anything is installed, CarLink checks that the file matches the release's `.sha256` file, that
+  it is CarLink (`com.carlink.app`) with a higher version, and that it is signed with CarLink's
+  release key. If any check fails, it says why and deletes the file.
+- Android asks once to let CarLink install apps, then shows its own install confirmation.
+- **Settings › About › Check for updates** checks now ("You're up to date" or the popup);
+  **Automatically check for updates** in the same place turns the automatic checks off.
+
+Only the official release updates itself. Debug builds (`com.carlink.app.hudtest`) and builds you
+sign yourself never check or install updates. The only data sent is the request to GitHub's
+public API (with CarLink's version in the user agent).
+
+## What works
+
+| | Over USB | Wirelessly |
+|---|---|---|
+| **CarPlay** (iPhone) | yes | yes: Wi-Fi Direct (default), the car's own hotspot, or the same Wi-Fi network (opt-in) |
+| **Android Auto** (Android phone) | yes | yes: Wi-Fi Direct (default) or the same Wi-Fi network (opt-in) |
+
+CarLink is made for **any Android car stereo, tablet or phone** used as the car's display; it is
+not tied to one brand. BYD DiLink extras (head-up display, instrument cluster, steering-wheel
+keys) turn on only when you choose BYD as the car brand.
+
+What has been proven on a real device, so far one: a Redmi Pad Pro 5G (Android 16) with an
+iPhone and a Samsung Galaxy S25 Ultra, 2026-10-09:
+
+- CarPlay over USB, Android Auto over USB, Android Auto over Wi-Fi Direct and CarPlay over
+  Wi-Fi Direct (the defaults), and Android Auto over the same Wi-Fi network;
+- CarPlay over the same Wi-Fi network failed on that router (it does not pass mDNS between
+  clients; see Known limits).
+
+Not tested yet: the car-hotspot path (the tablet has no car to join), other head units and
+tablets, and Android 7.1-9. **The signed 1.0.0 release build has not been tested on the device
+yet** (the results above come from development builds of the same code); this README will say so
+when it has been.
+
+## CarPlay notice
+
+CarLink is **not an Apple-certified product**. As in DiPlay's releases, the release APK bundles an
+experimental accessory identity recovered from public Carlinkit firmware, not a newly provisioned
+MFi identity for CarLink. A bundled private key is extractable. Acceptance after future iOS
+updates, reliability across head units and suitability of that identity for general distribution
+are unresolved: **there is no guarantee that CarPlay keeps working after an iOS update.** Builds
+from this source contain no accessory identity (see Build). Android Auto does not depend on it.
+
 ## What you get
 
 - **One Home screen.** One status and one action: a permission or Bluetooth fix when one is
@@ -180,6 +251,10 @@ python3 scripts/resource_collisions.py --check
 The debug APK (`com.carlink.app.hudtest`) is in `app/build/outputs/apk/debug/`. It installs
 alongside DiAuto and DiPlay. Run one projection app at a time.
 
+Releases are built, signed and published from the maintainer's computer with
+`scripts/release.sh` (never by GitHub Actions, which only runs the tests and lint):
+[docs/RELEASING.md](docs/RELEASING.md). Versions and changes: [CHANGELOG.md](CHANGELOG.md).
+
 ### CarPlay authentication files (not in git)
 
 Ordinary source builds contain **no CarPlay accessory identity**, exactly like DiPlay's. CarPlay
@@ -212,9 +287,23 @@ The screenshot gallery renders every screen state without any device or emulator
 ./gradlew --no-daemon :app:recordScreenshots   # rewrites docs/screenshots
 ```
 
-## Licence
+## License
 
-DiAuto is licensed under the GNU AGPL v3 and DiPlay under the GNU GPL v3. GPL v3 §13 allows
-combining them; CarLink as a whole is distributed under the **GNU Affero General Public
-License v3** (see `vendor/diauto/LICENSE` and `vendor/diplay/LICENSE`). If you distribute CarLink,
-or let people use it over a network, you must offer its complete source code.
+CarLink as a whole is distributed under the **GNU Affero General Public License v3.0**
+(AGPL-3.0). If you distribute CarLink, or let people use it over a network, you must offer its
+complete source code; every release is tagged in this repository (`vX.Y.Z`).
+
+It is built on two engines, both by [shihabal3amri](https://github.com/shihabal3amri), kept with
+their full history and their own licenses:
+
+- **[DiPlay](https://github.com/shihabal3amri/DiPlay)** (CarPlay), GNU GPL v3.0, based on
+  [xcertplay](https://github.com/shilapi/xcertplay) (GPL-3.0): `vendor/diplay`,
+  `vendor/diplay/LICENSE`.
+- **[DiAuto](https://github.com/shihabal3amri/DiAuto)** (Android Auto), GNU AGPL v3.0, a fork of
+  [Open Headunit](https://github.com/andreknieriem/open-headunit), based on work by its
+  contributors and [Michael Reid's headunit](https://github.com/mikereidis/headunit):
+  `vendor/diauto`, `vendor/diauto/LICENSE`.
+
+GPL v3 §13 allows combining GPL-3.0 and AGPL-3.0 code; the combination is distributed under the
+AGPL-3.0. CarLink's About screen lists the other components and shows the full license texts.
+Thank you to the authors of both engines and of the projects they build on.

@@ -155,6 +155,14 @@ frames, `configuration.txt`, `usage.txt`, `seeds.txt`); `./gradlew :app:analyzeR
 for the keep-rule report. Any R8 change is verified on the tablet with the device matrix in the
 research note, not only by a green build.
 
+**Releases and the in-app updater.** Versions are `versionName` only (`versionCode` = major·10000
++ minor·100 + patch). Releases are built and signed locally with `scripts/release.sh X.Y.Z`
+(stops at `dist/`; `--publish` tags and uploads; never in CI; `docs/RELEASING.md`), with the key
+in `~/.carlink-private/release/`. The updater (`app/.../update/`, UI-free, and
+`ui/update/UpdateDialog.kt`) reads GitHub's `releases/latest`, only in the release package signed
+with the pinned key, never during a session, and installs only after the SHA-256, package/version
+and signer checks pass. Do not publish or tag unless the user asks.
+
 `SmoothVideoHostLifecycleTest` (DiPlay) is a known flaky timing test: rerun when it is the only
 failure. Environment facts: the Gradle daemon needs JDK 25 (registered in
 `~/.gradle/gradle.properties`); the SDK is the writable overlay `~/android-sdk` (if the shell

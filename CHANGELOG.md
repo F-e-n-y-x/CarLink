@@ -1,0 +1,26 @@
+# Changelog
+
+CarLink's releases, newest first. Versions follow `major.minor.patch`; each one is a release on
+[GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
+is what the in-app update popup shows.
+
+## [1.0.0] - 2026-10-10
+
+The first public release of CarLink: CarPlay and Android Auto in one app for Android car
+stereos, tablets and phones used as the car's display.
+
+- Plug in or connect your phone: an iPhone gets CarPlay, an Android phone gets Android Auto.
+  CarLink tells them apart by itself.
+- Works over USB and wirelessly. Wireless connections use Wi-Fi Direct by default, with no router
+  or hotspot needed; the car's own hotspot and the same Wi-Fi network are options.
+- One Home screen with one status and one action, a step-by-step view while connecting, and a
+  plain-language explanation with a one-tap fix when something is wrong.
+- Settings shared by both engines (picture, interface size, day and night, driving side, sound,
+  connection method), plus every engine option under Show advanced.
+- A floating switcher over CarPlay and Android Auto to change phones or return to CarLink.
+- Diagnostics with device checks and a shareable connection log.
+- Large, glanceable controls on car screens; phone and tablet sizes elsewhere; dark and light.
+- Updates itself from GitHub Releases: it asks before downloading and checks every download
+  before installing it.
+
+CarPlay is experimental and not Apple-certified: it may stop working after an iOS update.
