@@ -18,8 +18,12 @@ stereos, tablets and phones used as the car's display.
 - Settings shared by both engines (picture, interface size, day and night, driving side, sound,
   connection method), plus every engine option under Show advanced.
 - A floating switcher over CarPlay and Android Auto to change phones or return to CarLink.
+- First-time setup that walks through permissions, your car's brand (popular makes sold in India,
+  and more; BYD adds its DiLink extras) and pairing your phone.
 - Diagnostics with device checks and a shareable connection log.
 - Large, glanceable controls on car screens; phone and tablet sizes elsewhere; dark and light.
+  A lighter look for slow head units.
+- A 16 MB download that starts quickly on low-end stereos.
 - Updates itself from GitHub Releases: it asks before downloading and checks every download
   before installing it.
 

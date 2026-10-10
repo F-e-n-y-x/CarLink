@@ -155,7 +155,21 @@ fi
 step "8/8 Publishing $TAG"
 git tag -a "$TAG" -m "CarLink $VERSION" || die "cannot create tag $TAG"
 git push origin "refs/tags/$TAG" || die "cannot push tag $TAG (delete the local tag with: git tag -d $TAG)"
+# The release page: the changelog text (all the in-app popup shows), then "<!-- more -->" and
+# scripts/release-notes-footer.md (screenshots, install, checksums, notices) filled in.
+PAGE_FILE="$(mktemp)"
+{
+  cat "$NOTES_FILE"
+  if ! grep -qx '[[:space:]]*<!-- more -->[[:space:]]*' "$NOTES_FILE"; then
+    printf '\n<!-- more -->\n\n'
+    sed -e "s|{{TAG}}|$TAG|g" -e "s|{{APK}}|$APK_NAME|g" \
+        -e "s|{{SIZE}}|$(du -h "dist/$APK_NAME" | cut -f1 | sed 's/\([KMG]\)$/ \1B/')|g" \
+        -e "s|{{SHA256}}|$(cut -d' ' -f1 "dist/$APK_NAME.sha256")|g" \
+        -e "s|{{CERT}}|$PIN|g" scripts/release-notes-footer.md
+  fi
+} > "$PAGE_FILE"
+grep -q '{{' "$PAGE_FILE" && die "release page still has an unfilled {{placeholder}}"
 gh release create "$TAG" "dist/$APK_NAME" "dist/$APK_NAME.sha256" \
-  --verify-tag --title "CarLink $VERSION" --notes-file "$NOTES_FILE" --latest \
+  --verify-tag --title "CarLink $VERSION" --notes-file "$PAGE_FILE" --latest \
   || die "gh release create failed; the tag $TAG is pushed, finish the release on GitHub or delete the tag"
 echo "published: $(gh release view "$TAG" --json url --jq .url)"

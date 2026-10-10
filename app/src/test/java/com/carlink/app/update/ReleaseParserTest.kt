@@ -65,6 +65,14 @@ class ReleaseParserTest {
         assertTrue(ReleaseNotes.plain("x".repeat(5000)).endsWith("…"))
     }
 
+    @Test fun popupStopsAtTheMoreMarker() {
+        val body = "## What's new\r\n\r\n- Faster CarPlay\r\n\r\n<!-- more -->\r\n\r\n## Install\r\n![shot](x.webp)"
+        assertEquals("What's new\n\n• Faster CarPlay", ReleaseNotes.plain(body))
+        // An indented marker counts; text that merely mentions it does not cut.
+        assertEquals("a", ReleaseNotes.plain("a\n  <!-- more -->  \nb"))
+        assertEquals("a <!-- more --> b", ReleaseNotes.plain("a <!-- more --> b"))
+    }
+
     @Test fun gitHubSourceAnswers() {
         val current = AppVersion(1, 0, 0)
         fun source(answer: HttpText) = GitHubReleaseSource(FakeHttp(answer), current).latest()

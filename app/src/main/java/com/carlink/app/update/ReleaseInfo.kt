@@ -83,10 +83,18 @@ object ReleaseParser {
         text.trim().split(Regex("\\s+")).firstOrNull()?.lowercase()?.takeIf { it.matches(Regex("[0-9a-f]{64}")) }
 }
 
-/** Release notes as plain text for the update dialog: Markdown marks removed, lists as bullets. */
+/**
+ * Release notes as plain text for the update dialog: Markdown marks removed, lists as bullets.
+ * Only the part before a line that is exactly [MORE_MARKER] is shown, so the release page can
+ * carry install steps, screenshots and checksums below it.
+ */
 object ReleaseNotes {
+    const val MORE_MARKER = "<!-- more -->"
+
     fun plain(markdown: String, maxChars: Int = 4_000): String {
-        val lines = markdown.replace("\r\n", "\n").lines().map { raw ->
+        val all = markdown.replace("\r\n", "\n").lines()
+        val cut = all.indexOfFirst { it.trim() == MORE_MARKER }
+        val lines = (if (cut < 0) all else all.take(cut)).map { raw ->
             var line = raw.trimEnd()
             line = line.replace(Regex("""^\s{0,3}#{1,6}\s+"""), "")
             line = line.replace(Regex("""^(\s*)[-*+]\s+"""), "$1• ")
