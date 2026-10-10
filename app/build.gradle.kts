@@ -33,6 +33,13 @@ abstract class CarLinkLicenseAssets : DefaultTask() {
     }
 }
 
+/** `major.minor.patch` → major * 10000 + minor * 100 + patch (see defaultConfig). */
+fun carLinkVersionCode(name: String): Int {
+    val parts = Regex("""(\d{1,4})\.(\d{1,2})\.(\d{1,2})""").matchEntire(name)?.destructured?.toList()
+        ?: error("versionName must be major.minor.patch with minor and patch below 100: $name")
+    return parts[0].toInt() * 10_000 + parts[1].toInt() * 100 + parts[2].toInt()
+}
+
 androidComponents {
     onVariants { variant ->
         val licenses = tasks.register<CarLinkLicenseAssets>("${variant.name}CarLinkLicenseAssets") {
@@ -53,8 +60,11 @@ android {
         applicationId = providers.gradleProperty("carlink.applicationId").get()
         minSdk = 25
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // Releases: change versionName only. versionCode = major * 10000 + minor * 100 + patch
+        // (1.0.0 → 10000, 1.2.3 → 10203), so minor and patch stay below 100. The in-app updater
+        // (update/AppVersion.kt) and scripts/release.sh rely on it; docs/RELEASING.md.
+        versionName = "1.0.0"
+        versionCode = carLinkVersionCode(versionName!!)
         buildConfigField("String", "DIPLAY_VERSION_NAME", "\"$diPlayVersionName\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
