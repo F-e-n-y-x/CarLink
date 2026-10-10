@@ -144,7 +144,8 @@ Samsung Galaxy S25 Ultra, 2026-10-09:
 - CarPlay over the same Wi-Fi network failed on that router (it does not pass mDNS between
   clients; see [known limits](docs/USER_GUIDE.md#known-limits)).
 
-**Not tested yet:** the car-hotspot path, other head units and tablets, and Android 7.1-9.
+**Not tested yet:** the car-hotspot path (the tablet has no car to join), other head units and
+tablets, and Android 7.1-9.
 **The signed 1.0.0 release build has not been tested on a device yet**; the results above come
 from development builds of the same code. This README will say so when it has been. Reports from
 other head units are very welcome.
