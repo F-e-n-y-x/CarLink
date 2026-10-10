@@ -44,3 +44,6 @@ release-signing.properties
 /.claude/worktrees/
 /.claude/settings.local.json
 /.claude/device-logs/
+
+# Local release output (scripts/release.sh)
+/dist/
