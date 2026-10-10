@@ -252,7 +252,7 @@ The debug APK (`com.carlink.app.hudtest`) is in `app/build/outputs/apk/debug/`. 
 alongside DiAuto and DiPlay. Run one projection app at a time.
 
 Releases are built, signed and published from the maintainer's computer with
-`scripts/release.sh` (never by GitHub Actions, which only runs the tests and lint):
+`scripts/release.sh`; the project uses no GitHub Actions:
 [docs/RELEASING.md](docs/RELEASING.md). Versions and changes: [CHANGELOG.md](CHANGELOG.md).
 
 ### CarPlay authentication files (not in git)

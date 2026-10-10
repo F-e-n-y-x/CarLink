@@ -2,8 +2,8 @@
 
 CarLink releases are built, signed and uploaded **on the maintainer's computer**, never by GitHub
 Actions. Two things exist only on that computer: the release signing key and the CarPlay
-accessory identity (`offline-mfi/`). GitHub Actions runs only the unit tests and lint for pull
-requests (`.github/workflows/android.yml`).
+accessory identity (`offline-mfi/`). The project uses no GitHub Actions at all: tests run locally
+(`dev.sh test`, and `scripts/release.sh` runs them before every release).
 
 Installed copies of CarLink find new versions through GitHub's "latest release" API and install
 them only after checking them (see "What the app checks" below). A release is therefore
