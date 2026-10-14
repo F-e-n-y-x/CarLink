@@ -36,6 +36,7 @@ object Connection {
      * Starts Android Auto's ":aa" process ahead of time (reading one setting starts the process
      * but not the engine), so a phone plugged in later does not wait for a cold process start:
      * 4.5 s from plug-in to the engine on the tablet (2026-10-09). Cheap when it already runs.
+     * Skipped on a memory-tight unit that knows no Android phone ([EnginePrewarmPolicy]).
      */
     fun prewarm(context: Context) {
         val app = context.applicationContext
@@ -43,6 +44,11 @@ object Connection {
         if (!prewarming.compareAndSet(false, true)) return
         Thread({
             try {
+                val known = runCatching { com.carlink.core.detect.KnownPhones(app).all().values }.getOrDefault(emptyList())
+                if (!EnginePrewarmPolicy.shouldPrewarm(DeviceCapabilities.signals(app), known)) {
+                    logPrewarmSkipped()
+                    return@Thread
+                }
                 val started = android.os.SystemClock.uptimeMillis()
                 runCatching { com.carlink.core.engine.AndroidAutoSettings.read(app, listOf("wifi-connection-mode")) }
                 val took = android.os.SystemClock.uptimeMillis() - started
@@ -54,6 +60,14 @@ object Connection {
     }
 
     private val prewarming = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val prewarmSkipLogged = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun logPrewarmSkipped() {
+        if (prewarmSkipLogged.compareAndSet(false, true)) {
+            com.carlink.core.diagnostics.EventLog.add("CarLink",
+                "Android Auto engine not prewarmed: little memory and no Android phone known (it starts when one connects)")
+        }
+    }
 
     /** Home is in front: start the last-used phone wirelessly when the rules allow (see [SessionManager.onHomeShown]). */
     @android.annotation.SuppressLint("MissingPermission") // The name is read only when the permission allows.

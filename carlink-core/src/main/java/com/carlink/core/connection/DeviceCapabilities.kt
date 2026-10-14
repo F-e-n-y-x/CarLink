@@ -51,6 +51,12 @@ data class DeviceSignals(
     val lowRamDevice: Boolean,
     val cpuCores: Int,
     val supportedAbis: List<String>,
+    /** The fastest core's top clock (`cpuinfo_max_freq`), or 0 when unreadable. */
+    val cpuMaxMhz: Int = 0,
+    /** `GL_RENDERER` from [GpuProbe] ("PowerVR Rogue GE8322"), or null until it has run once. */
+    val gpuRenderer: String? = null,
+    /** `ActivityManager.memoryClass` (the per-app heap limit), in MB; recorded, not a signal (it follows RAM). */
+    val memoryClassMb: Int = 0,
 ) {
     val has64BitAbi: Boolean get() = supportedAbis.any { it == "arm64-v8a" || it == "x86_64" }
 
@@ -65,6 +71,19 @@ data class DeviceSignals(
 
     val lowEnd: Boolean get() = lowEndReasons.isNotEmpty()
 
+    /**
+     * Why CarLink's own screens should draw lite here: [lowEndReasons], or a GPU or processor too
+     * weak for full-screen gradients even with enough memory (an 8-core, 4 GB UIS8581A with a
+     * PowerVR GE8322). Rendering only: the picture rules ([PicturePolicy]) keep using [lowEnd].
+     */
+    val liteReasons: List<String>
+        get() = lowEndReasons + buildList {
+            if (gpuRenderer != null && GpuClass.weak(gpuRenderer)) add("GPU $gpuRenderer")
+            if (cpuMaxMhz in 1..SLOW_CPU_MHZ) add("CPU at most $cpuMaxMhz MHz")
+        }
+
+    val liteRendering: Boolean get() = liteReasons.isNotEmpty()
+
     companion object {
         /**
          * "3 GB or less". A 3 GB head unit reports about 2.7-2.9 GB to apps (the kernel and the
@@ -73,6 +92,30 @@ data class DeviceSignals(
         const val LOW_END_RAM_MB = 3_300L
         /** Quad-core A7/A53 head units (MT8163, MT8227, Allwinner T3); current SoCs have 8 cores. */
         const val LOW_END_CORES = 4
+        /**
+         * No core above 1.7 GHz: all-little-core SoCs (8× Cortex-A55 at 1.6 GHz in the UIS8581A /
+         * SC9863A, 8× A53 at 1.5 GHz in MT6762-class units). Big-core SoCs reach 1.8-2.0 GHz or more.
+         */
+        const val SLOW_CPU_MHZ = 1_700
+    }
+}
+
+/** GPUs too weak for CarLink's full-screen gradients and grain at 60 fps (by their `GL_RENDERER`). */
+object GpuClass {
+    private val weakPatterns = listOf(
+        // Imagination: Rogue GE8100/8300/8320/8322 (Unisoc SC9863A/UIS8581A, MT6762/MT8768), G6xxx, SGX.
+        Regex("""powervr (rogue )?ge8\d{3}"""), Regex("""powervr rogue g6\d{3}"""), Regex("""powervr sgx"""),
+        // Arm: Mali-400/450 (Allwinner T3, old Rockchip), Mali-T6xx/T7xx/T8xx (MT8163's T720), G31, G51.
+        Regex("""mali-4\d\d"""), Regex("""mali-t[678]\d\d"""), Regex("""mali-g[35]1\b"""),
+        // Qualcomm: Adreno 3xx and 50x.
+        Regex("""adreno \(tm\) (3\d\d|50\d)\b"""),
+        // Vivante GC (i.MX, some Allwinner) and software renderers (no GPU at all; also the emulator's).
+        Regex("""vivante|\bgc\d{3,4}\b"""), Regex("""swiftshader|llvmpipe|softpipe"""),
+    )
+
+    fun weak(renderer: String): Boolean {
+        val name = renderer.lowercase(java.util.Locale.ROOT)
+        return weakPatterns.any { it.containsMatchIn(name) }
     }
 }
 
@@ -92,7 +135,7 @@ data class DeviceCapabilities(
         @Volatile private var signalsCache: DeviceSignals? = null
         @Volatile private var cache: DeviceCapabilities? = null
 
-        /** Memory, cores and ABIs. Cheap; cached for the process. */
+        /** Memory, processor, ABIs and the cached GPU name. Cheap (a few small file reads); cached for the process. */
         fun signals(context: Context): DeviceSignals = signalsCache ?: run {
             val am = context.applicationContext.getSystemService(ActivityManager::class.java)
             val memory = ActivityManager.MemoryInfo().also { runCatching { am?.getMemoryInfo(it) } }
@@ -101,8 +144,26 @@ data class DeviceCapabilities(
                 lowRamDevice = runCatching { am?.isLowRamDevice == true }.getOrDefault(false),
                 cpuCores = Runtime.getRuntime().availableProcessors(),
                 supportedAbis = Build.SUPPORTED_ABIS.toList(),
+                cpuMaxMhz = cpuMaxMhz(),
+                gpuRenderer = GpuProbe.cached(context),
+                memoryClassMb = runCatching { am?.memoryClass ?: 0 }.getOrDefault(0),
             ).also { signalsCache = it }
         }
+
+        /** Forgets the cached signals, so the next [signals] re-reads them (after [GpuProbe] learned the GPU). */
+        internal fun invalidateSignals() { signalsCache = null }
+
+        /** Drops the decoder probe (memory pressure); the next session start probes again. */
+        fun trimCaches() { cache = null }
+
+        /** The fastest core's `cpuinfo_max_freq` in MHz, 0 when sysfs is not readable. */
+        private fun cpuMaxMhz(): Int = runCatching {
+            (0 until Runtime.getRuntime().availableProcessors().coerceAtMost(16)).maxOfOrNull { cpu ->
+                runCatching {
+                    java.io.File("/sys/devices/system/cpu/cpu$cpu/cpufreq/cpuinfo_max_freq").readText().trim().toLong() / 1000
+                }.getOrDefault(0L)
+            }?.toInt() ?: 0
+        }.getOrDefault(0)
 
         /**
          * Everything, including the decoders. Scans MediaCodecList (tens to hundreds of ms on a

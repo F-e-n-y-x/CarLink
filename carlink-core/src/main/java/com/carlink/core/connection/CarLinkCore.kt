@@ -89,6 +89,7 @@ object CarLinkCore {
             CarPlayAdapter.install(app, Connection.vehicleProfile(app))
             CarPlayWaitingView.register(config.waitingView)
             UsbWatcher.get(app).start()
+            app.registerComponentCallbacks(MemoryTrimmer)
             deferStartupWork(app)
         }
     }
@@ -110,7 +111,30 @@ object CarLinkCore {
             Thread({ runCatching { DeviceCapabilities.read(app) } }, "carlink-capabilities").apply {
                 priority = Thread.MIN_PRIORITY
             }.start()
+            // The GPU's name for Automatic visual effects, once per firmware.
+            GpuProbe.ensure(app)
         }, STARTUP_DEFER_MILLIS)
+    }
+
+    /**
+     * The main process's answer to memory pressure (Android 10-13 still deliver every level; 14+
+     * only UI_HIDDEN and BACKGROUND). CarLink's caches are small: the decoder probe goes when
+     * CarLink is in the background and is read again at the next session start. Compose drops its
+     * own images and text layouts with the screens; the cached ":aa" process is the system's to
+     * reclaim (it holds no service between sessions).
+     */
+    private object MemoryTrimmer : android.content.ComponentCallbacks2 {
+        override fun onTrimMemory(level: Int) {
+            @Suppress("DEPRECATION") // RUNNING_LOW is still delivered on the Android 10-13 stereos.
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN ||
+                level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+                level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) {
+                DeviceCapabilities.trimCaches()
+            }
+        }
+        override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {}
+        @Deprecated("Deprecated in Java")
+        override fun onLowMemory() { DeviceCapabilities.trimCaches() }
     }
 
     /**

@@ -18,18 +18,19 @@ val LocalLiteRendering = staticCompositionLocalOf { false }
 
 object RenderingPolicy {
     /**
-     * Automatic picks lite on low-end hardware ([DeviceSignals.lowEnd]: a low-RAM build, 3 GB of
-     * RAM or less, a 32-bit-only processor or four cores or fewer), the cheap head units whose
-     * GPUs are the weakest part. Panel size is not a signal: a small panel is cheap to fill.
+     * Automatic picks lite on low-end hardware ([DeviceSignals.liteRendering]: a low-RAM build, 3 GB
+     * of RAM or less, a 32-bit-only processor, four cores or fewer, a weak GPU by its GL renderer
+     * name, or no core above 1.7 GHz), the cheap head units whose GPUs are the weakest part. Panel
+     * size is not a signal: a small panel is cheap to fill.
      */
     fun lite(mode: RenderingMode, signals: DeviceSignals): Boolean = when (mode) {
         RenderingMode.FULL -> false
         RenderingMode.LITE -> true
-        RenderingMode.AUTO -> signals.lowEnd
+        RenderingMode.AUTO -> signals.liteRendering
     }
 
     /** What Automatic resolves to on this device. */
-    fun autoIsLite(context: Context): Boolean = DeviceCapabilities.signals(context).lowEnd
+    fun autoIsLite(context: Context): Boolean = DeviceCapabilities.signals(context).liteRendering
 
     fun lite(context: Context, mode: RenderingMode): Boolean = lite(mode, DeviceCapabilities.signals(context))
 }

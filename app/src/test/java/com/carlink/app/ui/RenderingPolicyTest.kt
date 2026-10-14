@@ -36,6 +36,14 @@ class RenderingPolicyTest {
         assertFalse(RenderingPolicy.lite(RenderingMode.AUTO, tablet.copy(totalRamMb = 0, cpuCores = 0, supportedAbis = emptyList())))
     }
 
+    @Test fun automaticIsLiteOnAWeakGpuOrSlowCpuWithEnoughMemory() {
+        // The user's FYT stereo: UIS8581A, 8× A55 at 1.6 GHz, PowerVR GE8322, 4 GB.
+        val uis8581a = uis7862With4Gb.copy(cpuMaxMhz = 1_600, gpuRenderer = "PowerVR Rogue GE8322")
+        assertTrue(RenderingPolicy.lite(RenderingMode.AUTO, uis8581a))
+        assertFalse(RenderingPolicy.lite(RenderingMode.FULL, uis8581a))
+        assertFalse(RenderingPolicy.lite(RenderingMode.AUTO, uis7862With4Gb.copy(cpuMaxMhz = 1_800, gpuRenderer = "Mali-G52")))
+    }
+
     @Test fun theDriversChoiceWins() {
         assertTrue(RenderingPolicy.lite(RenderingMode.LITE, tablet))
         assertFalse(RenderingPolicy.lite(RenderingMode.FULL, t3))
