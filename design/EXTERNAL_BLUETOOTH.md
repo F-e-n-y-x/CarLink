@@ -156,6 +156,8 @@ no emulator stand-in for these modules.
 - **A USB wireless Android Auto (or CarPlay) dongle.** The dongle pairs with the phone over its own
   Bluetooth and Wi-Fi and presents itself to the stereo as a wired phone on USB, so CarLink's USB
   path serves it. Not yet tested with CarLink.
-- **Headunit Server.** A phone-side companion app takes the place of the head unit's Bluetooth
-  handshake, so wireless Android Auto can start without it. Android Auto only, it needs an extra
-  app on the phone, and it has not been evaluated with CarLink.
+- **Headunit Server.** On the phone, Android Auto's developer settings offer "Start head unit
+  server"; the head unit then connects to the phone over Wi-Fi (TCP port 5277), with no Bluetooth
+  handshake. The vendored engine already has this client mode (`NetworkDiscovery`, `CommManager`).
+  Android Auto only, the phone and stereo must share a Wi-Fi network, and the driver has to start the
+  server on the phone for every drive. Not yet exposed or evaluated in CarLink.
