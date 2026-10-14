@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.baselineprofile)
 }
 
 // Optional local-only CarPlay accessory identity (see vendor/diplay docs). Ordinary builds
@@ -166,6 +167,16 @@ composeCompiler {
     }
 }
 
+// Baseline and startup profiles recorded by :baselineprofile on a CarLink emulator
+// (docs/LOW_END_PERFORMANCE.md "Round 2"). The generated files are committed under
+// src/release/generated/baselineProfiles/ and merged with the hand-written src/main/baseline-prof.txt
+// and :carlink-core's; a normal build never runs the generator.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    // The startup profile lets R8 put start-up classes first in classes.dex (dex layout).
+    dexLayoutOptimization = true
+}
+
 // Screenshot gallery (docs/screenshots): `./gradlew :app:recordScreenshots` renders every
 // registered screen state with Robolectric and rewrites the PNGs. Ordinary test runs skip it.
 val recordingScreenshots = gradle.startParameter.taskNames.any { it.substringAfterLast(':') == "recordScreenshots" } ||
@@ -205,6 +216,10 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    // Hands the APK's baseline profile to ART on a sideloaded install (no Play Store to do it);
+    // declared explicitly rather than relying on Compose pulling it in.
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     debugImplementation(libs.androidx.compose.ui.tooling)
     // QR codes for source and project links in About (same version the Android Auto engine uses).

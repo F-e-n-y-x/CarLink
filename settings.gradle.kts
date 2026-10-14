@@ -32,6 +32,10 @@ rootProject.name = "CarLink"
 // The shipped APK: CarLink's screens, the floating switcher and the app wiring.
 include(":app")
 
+// Generates the app's baseline and startup profiles and benchmarks them (Macrobenchmark,
+// docs/LOW_END_PERFORMANCE.md "Round 2"). Runs on a CarLink emulator; never part of the APK.
+include(":baselineprofile")
+
 // The connection backend as a reusable library (detection, sessions, engine adapters, settings).
 include(":carlink-core")
 

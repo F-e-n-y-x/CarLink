@@ -66,6 +66,10 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets Macrobenchmark and Perfetto trace the release build from adb (no debugging, no
+             data access); Android's recommended setting for measuring release builds. -->
+        <profileable android:shell="true" tools:targetApi="29" />
+
         <!-- PackageInstaller's answer for an update session (update/UpdateInstaller.kt). -->
         <receiver
             android:name=".update.UpdateInstallReceiver"
