@@ -153,6 +153,19 @@ android {
     }
 }
 
+// Stability: see compose-stability.conf.
+// `-Pcarlink.composeReports=true`: the Compose compiler's stability reports and metrics in
+// app/build/compose_compiler/ (which composables skip, which classes are unstable). A debugging
+// aid only; ordinary builds do not write them.
+composeCompiler {
+    // Immutable value classes from :carlink-core and read-only collections count as stable.
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf"))
+    if (providers.gradleProperty("carlink.composeReports").orNull == "true") {
+        reportsDestination = layout.buildDirectory.dir("compose_compiler")
+        metricsDestination = layout.buildDirectory.dir("compose_compiler")
+    }
+}
+
 // Screenshot gallery (docs/screenshots): `./gradlew :app:recordScreenshots` renders every
 // registered screen state with Robolectric and rewrites the PNGs. Ordinary test runs skip it.
 val recordingScreenshots = gradle.startParameter.taskNames.any { it.substringAfterLast(':') == "recordScreenshots" } ||

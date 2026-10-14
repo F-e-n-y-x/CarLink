@@ -77,13 +77,18 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
     val progress by animateFloatAsState(reading.progress, tween(if (reduceMotion) 0 else 700, easing = CarMotion.Standard),
         label = "progress")
     // The step in progress charges its slot over and over; a still image shows it half charged.
-    val pulse = when {
+    // The charge is read only while drawing (the Canvas below), so it redraws the dial without
+    // recomposing it on every frame.
+    val charge = when {
+        reading.segments == 0 || reading.still || reduceMotion -> null
+        // Lite rendering charges in eight steps (5 redraws a second instead of 60).
+        else -> loopingState(0.06f, 1f, infiniteRepeatable(tween(1600, easing = CarMotion.Standard), RepeatMode.Restart),
+            label = "charge", liteSteps = 8)
+    }
+    val restingPulse = when {
         reading.segments == 0 -> 1f
         reading.still -> 0f
-        reduceMotion -> 0.55f
-        // Lite rendering charges in eight steps (5 redraws a second instead of 60).
-        else -> loopingValue(0.06f, 1f, infiniteRepeatable(tween(1600, easing = CarMotion.Standard), RepeatMode.Restart),
-            label = "charge", liteSteps = 8)
+        else -> 0.55f
     }
     val lite = LocalLiteRendering.current
     val ink = scheme.onSurface
@@ -95,7 +100,7 @@ fun LinkDial(reading: DialReading, modifier: Modifier = Modifier, core: @Composa
     Layout(
         content = {
             Canvas(Modifier.fillMaxSize()) {
-                drawDial(reading, color, progress, pulse, ink, coreLift, coreBase, strokeTop, strokeBottom, dark, lite)
+                drawDial(reading, color, progress, charge?.value ?: restingPulse, ink, coreLift, coreBase, strokeTop, strokeBottom, dark, lite)
             }
             // The core disc's content area: a square inside the disc, so text never touches its edge.
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center, content = core)

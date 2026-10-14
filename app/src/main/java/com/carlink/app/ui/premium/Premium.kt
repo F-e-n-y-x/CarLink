@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -99,7 +101,7 @@ fun Atmosphere(modifier: Modifier = Modifier, glow: Color = Color.Transparent, g
         Box(modifier.background(base), content = content)
         return
     }
-    val animatedGlow by animateColorAsState(glow, tween(if (LocalReduceMotion.current) 0 else 600), label = "glow")
+    val animatedGlow = animateColorAsState(glow, tween(if (LocalReduceMotion.current) 0 else 600), label = "glow")
     val noise = rememberNoise()
     val floorColor = if (base.luminance() < 0.5f) Color.Black.copy(alpha = 0.45f) else colors.atmosphereFill
     Box(
@@ -111,29 +113,41 @@ fun Atmosphere(modifier: Modifier = Modifier, glow: Color = Color.Transparent, g
     )
 }
 
-private fun Modifier.atmosphere(light: Color, fill: Color, glow: Color, glowCenter: Offset, glowRadius: Float?,
+/**
+ * The brushes are built once per size (drawWithCache) instead of on every draw, and the glow is
+ * read inside the cache block, so its 600 ms change rebuilds them without recomposing the screen.
+ */
+private fun Modifier.atmosphere(light: Color, fill: Color, glowState: State<Color>, glowCenter: Offset, glowRadius: Float?,
                                 lightCenter: Offset, floor: Color, noise: ImageBitmap) =
-    drawBehind {
+    drawWithCache {
         val diagonal = kotlin.math.hypot(size.width, size.height)
         // The single key light, like a cabin light on graphite.
-        drawRect(Brush.radialGradient(listOf(light, light.copy(alpha = 0f)),
-            center = Offset(size.width * lightCenter.x, size.height * lightCenter.y), radius = diagonal * 0.75f))
+        val key = Brush.radialGradient(listOf(light, light.copy(alpha = 0f)),
+            center = Offset(size.width * lightCenter.x, size.height * lightCenter.y), radius = diagonal * 0.75f)
         // A broad, faint fill from the bottom-end for depth.
-        drawRect(Brush.radialGradient(listOf(fill.copy(alpha = 0.7f), fill.copy(alpha = 0f)),
-            center = Offset(size.width, size.height * 1.1f), radius = diagonal * 0.6f))
-        if (glow.alpha > 0f) {
-            // The state's light behind the focal object; three stops so it falls off softly, not as a disc.
+        val depth = Brush.radialGradient(listOf(fill.copy(alpha = 0.7f), fill.copy(alpha = 0f)),
+            center = Offset(size.width, size.height * 1.1f), radius = diagonal * 0.6f)
+        val glow = glowState.value
+        // The state's light behind the focal object; three stops so it falls off softly, not as a disc.
+        val stateLight = if (glow.alpha > 0f) {
             val strength = glow.alpha * 0.45f
-            drawRect(Brush.radialGradient(
+            Brush.radialGradient(
                 0f to glow.copy(alpha = strength), 0.45f to glow.copy(alpha = strength * 0.4f), 1f to glow.copy(alpha = 0f),
                 center = Offset(size.width * glowCenter.x, size.height * glowCenter.y),
-                radius = glowRadius ?: (size.minDimension * 0.62f)))
+                radius = glowRadius ?: (size.minDimension * 0.62f))
+        } else null
+        // The floor: a ground under the docked status bar, so the stage does not float.
+        val ground = if (floor.alpha > 0f) {
+            Brush.verticalGradient(listOf(floor.copy(alpha = 0f), floor), startY = size.height * 0.5f, endY = size.height)
+        } else null
+        val grain = ShaderBrush(ImageShader(noise, TileMode.Repeated, TileMode.Repeated))
+        onDrawBehind {
+            drawRect(key)
+            drawRect(depth)
+            stateLight?.let { drawRect(it) }
+            ground?.let { drawRect(it) }
+            drawRect(grain, alpha = 0.035f)
         }
-        if (floor.alpha > 0f) {
-            // The floor: a ground under the docked status bar, so the stage does not float.
-            drawRect(Brush.verticalGradient(listOf(floor.copy(alpha = 0f), floor), startY = size.height * 0.5f, endY = size.height))
-        }
-        drawRect(ShaderBrush(ImageShader(noise, TileMode.Repeated, TileMode.Repeated)), alpha = 0.035f)
     }
 
 @Composable
@@ -187,18 +201,21 @@ fun glassBorder(width: Dp = 1.dp): BorderStroke {
  * An endless animation between [from] and [to]. In lite rendering it moves in [liteSteps] steps
  * per cycle, so the screen is redrawn a few times a second instead of on every vsync; the value
  * still reads the same (a charging slot, a pulse).
+ *
+ * It is a [State] to be read in the draw phase (a draw lambda): read there, each animation frame
+ * only redraws the one layer, while a read in composition recomposes the caller on every frame
+ * (docs/LOW_END_PERFORMANCE.md, round 2).
  */
 @Composable
-internal fun loopingValue(from: Float, to: Float, spec: InfiniteRepeatableSpec<Float>, label: String, liteSteps: Int = 6): Float {
+internal fun loopingState(from: Float, to: Float, spec: InfiniteRepeatableSpec<Float>, label: String, liteSteps: Int = 6): State<Float> {
     val raw = rememberInfiniteTransition(label = label).animateFloat(from, to, spec, label = label)
-    if (!LocalLiteRendering.current) return raw.value
-    val stepped = remember(raw, liteSteps) {
+    if (!LocalLiteRendering.current) return raw
+    return remember(raw, liteSteps) {
         derivedStateOf {
             val t = ((raw.value - from) / (to - from)).coerceIn(0f, 1f)
             from + (to - from) * (kotlin.math.round(t * liteSteps) / liteSteps)
         }
     }
-    return stepped.value
 }
 
 /** Tracked-caps label for glass chip headers only ("CONNECTION", "NETWORK"); never a sentence. */
@@ -342,7 +359,8 @@ fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Mo
     val colors = CarLinkTokens.colors
     val style = MaterialTheme.typography.labelMedium
     val measurer = rememberTextMeasurer()
-    val pulse = if (LocalReduceMotion.current || failed || still) 1f else loopingValue(
+    // Read only while drawing the active segment: the pulse redraws that bar, nothing recomposes.
+    val pulse: State<Float>? = if (LocalReduceMotion.current || failed || still) null else loopingState(
         0.45f, 1f, infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse), label = "pulse", liteSteps = 3)
     val gap = 12.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -363,8 +381,11 @@ fun ProgressLine(steps: List<String>, active: Int, failed: Boolean, modifier: Mo
                         else -> scheme.outline.copy(alpha = 0.45f)
                     }
                     Column(Modifier.weight(1f)) {
+                        val pulsing = current && !failed && pulse != null
                         Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
-                            .background(color.copy(alpha = if (current && !failed) pulse else 1f)))
+                            .then(if (pulsing) Modifier.drawBehind { drawRect(color.copy(alpha = pulse!!.value)) }
+                                // Not pulsing: alpha 1, as before (it also makes the pending track opaque).
+                                else Modifier.background(color.copy(alpha = 1f))))
                         if (labelsFit) {
                             Spacer(Modifier.height(10.dp))
                             Text(label, style = style, maxLines = 1,
