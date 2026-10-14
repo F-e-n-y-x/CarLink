@@ -9,6 +9,7 @@ import com.carlink.core.settings.VehicleProfile
 import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.AirPlayPersistence
+import com.shilapi.xcertplay.AppAppearance
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.CarPlayNightMode
 import com.shilapi.xcertplay.CarPlayNightSchedule
@@ -36,6 +37,8 @@ data class CarPlayEngineSettings(
     val nightModeKey: String,
     val nightStartMinute: Int,
     val nightEndMinute: Int,
+    /** DiPlay's `app_appearance` key (dark, light or auto): its own screens follow CarLink's theme. */
+    val appearanceKey: String = AppAppearance.DARK.key,
     val rightHandDrive: Boolean,
     val carBluetoothAudio: Boolean,
     /** iAP2 location; only with the permission, so the host never asks before a start (F17). */
@@ -64,8 +67,21 @@ data class CarPlayVehicleSettings(
     val replaceableOemLabels: Set<String>,
 )
 
+/**
+ * CarLink's colour theme. The app owns it (its own screen preferences), so it reaches the backend
+ * through [CarPlaySettingsPolicy.appearance].
+ */
+enum class CarLinkAppearance { FOLLOW_SYSTEM, DARK, LIGHT }
+
 /** Pure translation from CarLink's settings to DiPlay's, so every rule is unit tested. */
 object CarPlaySettingsPolicy {
+    /**
+     * CarLink's theme at the time of a write; the app sets it at start-up. The default, dark,
+     * is DiPlay's own default, so a host that never sets it changes nothing.
+     */
+    @Volatile
+    var appearance: () -> CarLinkAppearance = { CarLinkAppearance.DARK }
+
     /** DiPlay's own default OEM label (AirPlayPersistence.DEFAULT_OEM_LABEL, DIPLAY.md §12 row 15). */
     const val DIPLAY_DEFAULT_OEM_LABEL = "BYD"
 
@@ -76,6 +92,7 @@ object CarPlaySettingsPolicy {
         fineLocationGranted: Boolean,
         brandName: String = "CarLink",
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
+        appearance: CarLinkAppearance = runCatching { this.appearance() }.getOrDefault(CarLinkAppearance.DARK),
     ): CarPlayEngineSettings {
         // Picture and size: v1's settings mapping (verified correct, F17); Automatic follows the
         // device's decoder ([PicturePolicy]: DiPlay's own 100 % / 30 fps unless the decoder needs less).
@@ -112,6 +129,14 @@ object CarPlaySettingsPolicy {
             },
             nightStartMinute = settings.nightStartMinute,
             nightEndMinute = settings.nightEndMinute,
+            // DiPlay's chrome (the CarPlay menu, waiting screen and panels) in CarLink's theme.
+            // "Auto" follows the car's day/night as CarPlay does: the live CarPlay night mode,
+            // else the night mode above, which is the system's under CarLink's Automatic.
+            appearanceKey = when (appearance) {
+                CarLinkAppearance.FOLLOW_SYSTEM -> AppAppearance.AUTO.key
+                CarLinkAppearance.DARK -> AppAppearance.DARK.key
+                CarLinkAppearance.LIGHT -> AppAppearance.LIGHT.key
+            },
             rightHandDrive = settings.rightHandDrive,
             carBluetoothAudio = settings.soundThroughCarBluetooth,
             // F17: CarLink defaults this on, DiPlay off; without the permission the host would ask
@@ -141,6 +166,7 @@ object CarPlaySettingsPolicy {
         values.hevc?.let { AirPlayPersistence.saveHevcEnabled(context, it) }
         values.widthPhysicalMm?.let { AirPlayPersistence.saveWidthPhysicalMm(context, it) }
         AirPlayPersistence.saveCarPlayNightMode(context, CarPlayNightMode.fromKey(values.nightModeKey))
+        AirPlayPersistence.saveAppAppearance(context, AppAppearance.fromKey(values.appearanceKey))
         runCatching {
             AirPlayPersistence.saveCarPlayNightSchedule(context, CarPlayNightSchedule(values.nightStartMinute, values.nightEndMinute))
         }

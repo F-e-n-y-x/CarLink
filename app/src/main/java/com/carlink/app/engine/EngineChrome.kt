@@ -34,8 +34,11 @@ import androidx.core.content.res.ResourcesCompat
 import com.andrerinas.openheadunit.HostIntegration
 import com.carlink.app.R
 import com.carlink.app.ui.UiPreferences
+import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfile
 import com.carlink.app.ui.theme.UiProfileDetector
+import com.carlink.core.connection.CarLinkAppearance
+import com.carlink.core.connection.CarPlaySettingsPolicy
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.CarPlayHostIntegration.MenuItem
 import com.shilapi.xcertplay.DiPlayPalette
@@ -116,6 +119,13 @@ object EngineChrome {
         CarPlayHostIntegration.palette = { night -> if (night) carPlayDark else carPlayLight }
         CarPlayHostIntegration.menuItems = carPlayMenu
         CarPlayHostIntegration.chromeStyler = { root, chrome, night -> styleCarPlay(root, chrome, tokens(night)) }
+        // DiPlay's chrome is dark unless told otherwise; written before every session in CarLink's theme.
+        CarPlaySettingsPolicy.appearance = {
+            when (UiPreferences(app).themeMode) {
+                ThemeMode.FOLLOW_SYSTEM -> CarLinkAppearance.FOLLOW_SYSTEM
+                ThemeMode.DARK -> CarLinkAppearance.DARK
+                ThemeMode.LIGHT -> CarLinkAppearance.LIGHT
+            }
         }
         // Android Auto's Quick Settings is DiAuto's own settings screen; CarLink Settings owns them.
         HostIntegration.exitMenuHomeLabel = app.getString(R.string.carlink_engine_open_carlink)

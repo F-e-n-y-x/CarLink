@@ -9,6 +9,7 @@ import com.carlink.core.settings.VehicleProfile
 import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.AirPlayPersistence
+import com.shilapi.xcertplay.AppAppearance
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.hud.BydOutputSettings
 import com.shilapi.xcertplay.orchestration.ManualHotspotBand
@@ -30,7 +31,10 @@ import org.robolectric.annotation.Config
 class CarPlaySettingsTest {
     private val app: Application get() = RuntimeEnvironment.getApplication()
 
-    @After fun restoreHooks() { CarPlayHostIntegration.vehicleIntegrations = true }
+    @After fun restoreHooks() {
+        CarPlayHostIntegration.vehicleIntegrations = true
+        CarPlaySettingsPolicy.appearance = { CarLinkAppearance.DARK }
+    }
 
     private fun map(settings: UnifiedSettings = UnifiedSettings(), path: WirelessPath? = null,
                     profile: VehicleProfile = VehicleProfile.GENERIC, location: Boolean = true) =
@@ -112,5 +116,25 @@ class CarPlaySettingsTest {
         CarPlaySettingsPolicy.apply(app, map(profile = VehicleProfile.BYD_DILINK))
         assertEquals("BYD", AirPlayPersistence.loadOemLabel(app))
         assertTrue(CarPlayHostIntegration.vehicleIntegrations)
+    }
+
+    @Test fun diPlayChromeFollowsCarLinksTheme() {
+        // DiPlay's menu was always dark: CarLink never wrote its appearance (default dark).
+        val keys = CarLinkAppearance.entries.associateWith {
+            CarPlaySettingsPolicy.map(UnifiedSettings(), null, VehicleProfile.GENERIC, true, appearance = it).appearanceKey
+        }
+        assertEquals(mapOf(CarLinkAppearance.FOLLOW_SYSTEM to "auto", CarLinkAppearance.DARK to "dark",
+            CarLinkAppearance.LIGHT to "light"), keys)
+
+        // Without an explicit argument the app's hook decides, and apply writes it into DiPlay.
+        CarPlaySettingsPolicy.appearance = { CarLinkAppearance.LIGHT }
+        CarPlaySettingsPolicy.apply(app, map())
+        assertEquals(AppAppearance.LIGHT, AirPlayPersistence.loadAppAppearance(app))
+        CarPlaySettingsPolicy.appearance = { CarLinkAppearance.FOLLOW_SYSTEM }
+        CarPlaySettingsPolicy.apply(app, map())
+        assertEquals(AppAppearance.AUTO, AirPlayPersistence.loadAppAppearance(app))
+        // A failing hook falls back to DiPlay's own default rather than failing the session start.
+        CarPlaySettingsPolicy.appearance = { error("no preferences") }
+        assertEquals("dark", map().appearanceKey)
     }
 }
