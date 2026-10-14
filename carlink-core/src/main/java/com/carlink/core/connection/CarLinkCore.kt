@@ -81,6 +81,9 @@ object CarLinkCore {
             AaEngineHooks.install(app)
         } else {
             EventLog.attachFile(java.io.File(app.filesDir, "logs"))
+            // Once per app start: what this stereo's Bluetooth is (its own thread; ~300 ms at most
+            // for the port check). Its block goes into carlink.log; pre-flight reads it.
+            com.carlink.core.detect.ExternalBluetoothProbe.start(app)
             nameCarForIphone(app, config.accessoryName)
             // The car's name, the vehicle profile's BYD gate, the waiting view (DIPLAY.md §12, F2).
             CarPlayAdapter.install(app, Connection.vehicleProfile(app))

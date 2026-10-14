@@ -28,6 +28,17 @@ class KnownPhones(context: Context) {
         prefs.edit().putString(normalize(address), kind.name).apply()
     }
 
+    /** Every phone CarLink knows, by normalized address (stored kinds, then the engines' own choices). */
+    fun all(): Map<String, PhoneKind> {
+        val out = linkedMapOf<String, PhoneKind>()
+        prefs.all.forEach { (key, value) ->
+            runCatching { PhoneKind.valueOf(value as String) }.getOrNull()?.let { out[normalize(key)] = it }
+        }
+        carPlayPhone()?.let { out.putIfAbsent(it, PhoneKind.IPHONE) }
+        androidAutoPhones().forEach { out.putIfAbsent(it, PhoneKind.ANDROID) }
+        return out
+    }
+
     fun forget(address: String) {
         prefs.edit().remove(normalize(address)).apply()
     }

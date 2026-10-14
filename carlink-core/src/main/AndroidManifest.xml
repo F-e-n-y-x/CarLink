@@ -28,6 +28,19 @@
          docs/dissection/DIPLAY.md F4). Requested at runtime; checked by connection/CarPlayPreflight. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
+    <!-- detect/ExternalBluetoothProbe names the vendor projection apps a stereo with an external
+         Bluetooth module ships (versions only), for the shared log. Android 11+ hides other apps'
+         packages unless they are named here or reachable through a declared intent; vendor
+         projection apps all have a launcher entry. The stereos in question run Android 10. -->
+    <queries>
+        <package android:name="com.syu.carlink" />
+        <package android:name="com.zjinnova.zlink" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application>
 
         <!-- ============================== Backend ============================== -->
