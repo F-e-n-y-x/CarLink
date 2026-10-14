@@ -103,8 +103,9 @@ Phase 2 (left on purpose):
   need retrace (or the class-identity rules extended into `-keeppackagenames`).
 - Revisit the class-identity rules if a stable R8 option to restrict merging appears.
 
-Phase 3: baseline + startup profiles generated on the tablet (none exists yet, so R8 has no
-startup profile to lay out the dex).
+Phase 3: **done 2026-10-15 on CarLink's emulator** (`:baselineprofile`; docs/LOW_END_PERFORMANCE.md
+"Round 2"): generated baseline and startup profiles, R8 lays out a start-up dex. Phase 2's protobuf
+keep was measured (1.21 MB of 10.1 MB dex) and left as is.
 
 Original audit notes (2026-10-10, before phase 1):
 
