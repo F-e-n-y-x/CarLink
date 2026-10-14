@@ -17,6 +17,7 @@ import com.shilapi.xcertplay.airplay.AudioCodecKind
 import com.shilapi.xcertplay.airplay.AudioFormat
 import com.shilapi.xcertplay.airplay.AudioStreamId
 import com.shilapi.xcertplay.airplay.MediaSink
+import com.shilapi.xcertplay.telecom.PhoneAudioRoute
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
 import com.shilapi.xcertplay.airplay.VideoCodec
 import com.shilapi.xcertplay.airplay.toHexString
@@ -187,6 +188,7 @@ class AndroidMediaSink(
     private val audioFocusAutoYield: Boolean = true,
     private val mediaChannel: Int = 0,
     private val navigationChannel: Int = 0,
+    navigationAttenuationDb: Int = 0,
     context: Context? = null,
     private val navigationStreamType: Int = AudioChannelMapper.DEFAULT_NAVIGATION_STREAM_TYPE,
     onScreenStreamActiveChanged: ((Int, Boolean) -> Unit)? = null,
@@ -198,6 +200,8 @@ class AndroidMediaSink(
     private val callEchoCancellation: Boolean = false,
     /** Cut the bass that head units add when they play a call as music. */
     private val callVoiceFilter: Boolean = false,
+    /** Read at each call: a phone or tablet used as the head unit plays calls on its loudspeaker (#701). */
+    private val callSpeakerphone: () -> Boolean = { false },
     /**
      * Smooth video: show main-screen frames at the iPhone's frame time plus a delay that starts here and
      * then follows how late the decoder releases frames ([PacingDelay]); 0 shows each as soon as it is
@@ -211,6 +215,8 @@ class AndroidMediaSink(
      * and hand decoded frames to the screen from a thread of their own.
      */
     private val vendorLowLatencyDecoder: Boolean = false,
+    /** Opt-in MTK ACodec low-latency/no-reorder modes, with per-session automatic fallback. */
+    private val mtkDecoderTuningEnabled: Boolean = false,
 ) : MediaSink {
     // Each downlink publishes its own reference; a mic must match that stream and sample rate.
     private val callEchoReferences = ConcurrentHashMap<AudioStreamId, EchoReference>()
@@ -249,10 +255,18 @@ class AndroidMediaSink(
     internal var detachGraceNanos = 500_000_000L
     private val mediaAudioTypes = mutableSetOf<AudioStreamId>()
     private val audioRenderers = ConcurrentHashMap<AudioStreamId, AudioRenderer>()
+    @Volatile private var navigationAttenuationDb = NavigationAudioGain.clamp(navigationAttenuationDb)
+
+    /** Apply a saved Audio setting to existing navigation tracks without reconnecting CarPlay. */
+    fun setNavigationAttenuationDb(db: Int) {
+        navigationAttenuationDb = NavigationAudioGain.clamp(db)
+        audioRenderers.values.forEach { it.setNavigationAttenuationDb(navigationAttenuationDb) }
+    }
     private val microphoneUplinks = ConcurrentHashMap<AudioStreamId, MicrophoneUplink>()
     private val audioModeLock = Any()
     private var communicationModeStream: AudioStreamId? = null
     private var savedAudioMode = AudioManager.MODE_NORMAL
+    private var callSpeaker: CallSpeaker? = null // guarded by audioModeLock
     private val pendingVideoCodec = ConcurrentHashMap<Int, VideoCodec>()
     private val videoRecoveryHandlers = ConcurrentHashMap<Int, () -> Unit>()
     private val videoDiagnosticHandlers = ConcurrentHashMap<Int, (String) -> Unit>()
@@ -554,13 +568,16 @@ class AndroidMediaSink(
             savedAudioMode = manager.mode
             manager.mode = AudioManager.MODE_IN_COMMUNICATION
             communicationModeStream = id
+            val speakerRequested = runCatching(callSpeakerphone).getOrDefault(false)
+            if (speakerRequested) callSpeaker = CallSpeaker.on(manager)
             Log.i("xcertplay-usb", "audio mode $savedAudioMode -> ${manager.mode} for telephony stream=$id")
             // The report, not just logcat: a head unit left in the voice path plays no media,
             // and that cannot be diagnosed from a car without adb. A failing report must not
             // disturb the mode, so it is the last thing done and it cannot throw out of here.
             runCatching {
                 onAudioDiagnostic("Audio: mode entered communication from=$savedAudioMode" +
-                    " now=${manager.mode} stream=$id")
+                    " now=${manager.mode} stream=$id" +
+                    if (speakerRequested) " loudspeaker=${callSpeaker != null}" else "")
             }
         }
     }
@@ -571,6 +588,8 @@ class AndroidMediaSink(
             val active = communicationModeStream ?: return
             if (id != null && id != active) return
             communicationModeStream = null
+            callSpeaker?.restore()
+            callSpeaker = null
             // The report is built inside the try but sent outside it: reporting from in there
             // would let a failing callback be caught as a failed restore.
             val line = try {
@@ -648,6 +667,9 @@ class AndroidMediaSink(
         vendorLowLatency = vendorLowLatencyDecoder,
         dedicatedOutputThread = vendorLowLatencyDecoder,
         framesAtOnce = type == MAIN_SCREEN_TYPE && statsLabel == null && videoPacingDelayMillis > 0,
+        // Keep the experimental MTK mode on the main CarPlay picture only. Mirrors and the
+        // cluster have separate timing and must retain their established decoder configuration.
+        mtkDecoderTuningEnabled = mtkDecoderTuningEnabled && type == MAIN_SCREEN_TYPE && statsLabel == null,
     ).also { if (startImmediately) it.start() }
 
     @Synchronized
@@ -656,7 +678,9 @@ class AndroidMediaSink(
         if (existing?.format == format) return existing
         existing?.close()
         // A replacement owns a fresh ring: the old worker can still finish a blocking write.
-        val echoReference = if (callEchoCancellation && format.audioType == TELEPHONY_AUDIO_TYPE && format.sampleRate > 0) {
+        // The car's phone audio state cancels the echo itself; a second canceller would work against it.
+        val echoReference = if (callEchoCancellation && format.audioType == TELEPHONY_AUDIO_TYPE && format.sampleRate > 0 &&
+            !PhoneAudioRoute.carPlayCallsUseCarAudio()) {
             EchoReference(format.sampleRate).also { callEchoReferences[id] = it }
         } else {
             callEchoReferences.remove(id)
@@ -677,7 +701,12 @@ class AndroidMediaSink(
                 appContext != null && BydBluetoothSuspend.isSuspendedByUs(appContext),
             echoReference = echoReference,
             voiceFilter = callVoiceFilter && format.audioType == TELEPHONY_AUDIO_TYPE,
-        ).also { audioRenderers[id] = it }
+        ).also {
+            it.setNavigationAttenuationDb(navigationAttenuationDb)
+            audioRenderers[id] = it
+            // Cover a Settings change made while this renderer was being prepared.
+            it.setNavigationAttenuationDb(navigationAttenuationDb)
+        }
     }
 
     private companion object {
@@ -742,7 +771,12 @@ internal class ParkingOutput(width: Int, height: Int) {
 internal fun videoOperatingRate(type: Int, statsLabel: String?, frameRate: Int): Int =
     if (type == MAIN_SCREEN_TYPE && statsLabel == null && frameRate > 0) frameRate else 0
 
-internal data class DecoderAttempt(val codecName: String?, val tuned: Boolean, val operatingRate: Int = 0)
+internal data class DecoderAttempt(
+    val codecName: String?,
+    val tuned: Boolean,
+    val operatingRate: Int = 0,
+    val mtkMode: MtkDecoderMode = MtkDecoderMode.NONE,
+)
 
 /**
  * Configure attempts in order. Some vendor decoders (e.g. MediaTek c2.mtk.avc.decoder) reject the tuned
@@ -754,14 +788,18 @@ internal fun videoDecoderAttempts(
     operatingRate: Int,
     softwareDecoder: String?,
     lowLatencyDecoder: String? = null,
-): List<DecoderAttempt> = listOfNotNull(
-    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 } },
-    lowLatencyDecoder?.let { DecoderAttempt(it, tuned = true) },
-    DecoderAttempt(codecName = null, tuned = true, operatingRate = operatingRate).takeIf { operatingRate > 0 },
-    DecoderAttempt(codecName = null, tuned = true),
-    DecoderAttempt(codecName = null, tuned = false),
-    softwareDecoder?.let { DecoderAttempt(it, tuned = false) },
-)
+    maximumMtkMode: MtkDecoderMode = MtkDecoderMode.NONE,
+): List<DecoderAttempt> = buildList {
+    if (operatingRate > 0) lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true, operatingRate)) }
+    lowLatencyDecoder?.let { add(DecoderAttempt(it, tuned = true)) }
+    val mtkModes = maximumMtkMode.attempts()
+    if (operatingRate > 0) {
+        mtkModes.forEach { add(DecoderAttempt(null, tuned = true, operatingRate, it)) }
+    }
+    mtkModes.forEach { add(DecoderAttempt(null, tuned = true, mtkMode = it)) }
+    add(DecoderAttempt(codecName = null, tuned = false))
+    softwareDecoder?.let { add(DecoderAttempt(it, tuned = false)) }
+}
 
 /**
  * The operating rate to ask for at the next configure: none once a later attempt ([used]) worked after
@@ -830,6 +868,7 @@ private class VideoDecoder(
      * ask decoders that list it for [PICTURE_ORDER_PARAMETER], so each frame leaves the decoder as soon as it can.
      */
     private val framesAtOnce: Boolean = false,
+    private val mtkDecoderTuningEnabled: Boolean = false,
 ) : Closeable {
     private val pacer = FramePacer()
     private val pacingDelay = if (pacingDelayNanos > 0) PacingDelay(pacingDelayNanos) else null
@@ -860,6 +899,11 @@ private class VideoDecoder(
     // the current codec was configured with.
     private var operatingRate = operatingRate
     private var configuredRate = 0
+    private var maximumMtkMode = if (mtkDecoderTuningEnabled) {
+        MtkDecoderMode.LOW_LATENCY_NO_REORDER
+    } else MtkDecoderMode.NONE
+    private var configuredMtkMode = MtkDecoderMode.NONE
+    private var configuredMtkCodec2LowLatency = false
     // Whether the vendor low-latency parameters were set on the codec being configured.
     private var configuredVendorLowLatency = false
     // Likewise the low-latency decoder, not tried again once another decoder had to take over; and what the
@@ -1021,6 +1065,12 @@ private class VideoDecoder(
     private fun onJobFailure(stage: String, error: Exception) {
         if (running) Log.e(TAG, "video decoder job failed: $stage", error)
         if (running) reportFailure("stage=$stage", error)
+        // MTK vendor failures may surface as CodecException or the broader IllegalStateException.
+        // Retire the active experimental mode before recreating the decoder.
+        if (error is IllegalStateException) {
+            dropMtkTuning("codec failed during $stage")
+            dropMtkCodec2LowLatency("codec failed during $stage")
+        }
         // A codec can accept the rate and still fail once it runs (start errors may surface on
         // later calls): one that failed before its first frame with it is not given it again.
         if (configuredRate > 0 && !renderedFrameLogged && error is MediaCodec.CodecException) {
@@ -1104,14 +1154,25 @@ private class VideoDecoder(
         }
         val requestedRate = operatingRate
         val atOnce = framesAtOnce && codec == VideoCodec.H264
-        val requestedLowLatency = if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
-        var next: MediaCodec? = null
+        val requestedMtkCodec2 = if (mtkDecoderTuningEnabled && !lowLatencyDecoderRefused) {
+            MtkDecoderTuning.codec2LowLatencyDecoderName(mime)
+        } else null
+        val requestedLowLatency = requestedMtkCodec2
+            ?: if (atOnce && !lowLatencyDecoderRefused) findLowLatencyDecoder(mime) else null
+        val requestedMtkMode = if (mtkDecoderTuningEnabled &&
+            MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
+        var configured: ConfiguredVideoDecoder? = null
         var used: DecoderAttempt? = null
-        for (attempt in videoDecoderAttempts(requestedRate, softwareDecoderName(mime), requestedLowLatency)) {
-            next = tryConfigure(mime, csd, surface, attempt, atOnce)
-            if (next != null) { used = attempt; break }
+        for (attempt in videoDecoderAttempts(
+            requestedRate,
+            softwareDecoderName(mime),
+            requestedLowLatency,
+            requestedMtkMode,
+        )) {
+            configured = tryConfigure(mime, csd, surface, attempt, atOnce)
+            if (configured != null) { used = attempt; break }
         }
-        if (next == null) {
+        if (configured == null) {
             queue.discardCurrentChain()
             report("decoder configuration failed mime=$mime size=${width}x$height")
         }
@@ -1123,19 +1184,35 @@ private class VideoDecoder(
         renderedFrameLogged = false
         submittedFrameLogged = false
         synchronized(outputLock) {
-            decoder = next
+            decoder = configured?.codec
             outputLock.notifyAll()
         }
         configuredRate = used?.operatingRate ?: 0
-        if (next != null) {
+        configuredMtkMode = configured?.mtkMode ?: MtkDecoderMode.NONE
+        configuredMtkCodec2LowLatency = configured != null && requestedMtkCodec2 != null &&
+            configured.codecName.equals(requestedMtkCodec2, ignoreCase = true)
+        if (configured != null && MtkDecoderTuning.supportsLegacyAcodecKeys(configured.codecName) &&
+            configuredMtkMode.ordinal < requestedMtkMode.ordinal) {
+            report("MTK decoder tuning fell back at configure from=${requestedMtkMode.diagnosticName} " +
+                "to=${configuredMtkMode.diagnosticName}")
+            maximumMtkMode = configuredMtkMode
+        }
+        if (configured != null) {
             val rate = if (requestedRate > 0) " operatingRate=$configuredRate" else ""
             val lowLatency = if (vendorLowLatency) " vendorLowLatency=$configuredVendorLowLatency" else ""
             val output = if (outputThread != null) " outputThread=true" else ""
             val atOnceReport = if (atOnce) " lowLatency=$startedLowLatency pictureOrder=$startedPictureOrder" else ""
-            report("decoder=${next.name} mime=$mime size=${width}x$height$rate$lowLatency$output$atOnceReport")
+            val mtk = when {
+                configuredMtkCodec2LowLatency -> " mtkTuning=codec2-low-latency"
+                MtkDecoderTuning.isDecoderName(configured.codecName) ->
+                    " mtkTuning=${configuredMtkMode.diagnosticName}"
+                else -> ""
+            }
+            report("decoder=${configured.codecName} mime=$mime size=${width}x$height" +
+                "$rate$lowLatency$output$atOnceReport$mtk")
             Log.i(
                 TAG,
-                "video decoder configured name=${next.name} mime=$mime size=${width}x$height",
+                "video decoder configured name=${configured.codecName} mime=$mime size=${width}x$height$mtk",
             )
         }
     }
@@ -1145,15 +1222,43 @@ private class VideoDecoder(
         operatingRate = 0
     }
 
-    private fun buildFormat(mime: String, csd: List<ByteArray>, attempt: DecoderAttempt): MediaFormat =
+    private fun dropMtkTuning(reason: String) {
+        val previous = configuredMtkMode
+        if (previous == MtkDecoderMode.NONE) return
+        val fallback = previous.fallback()
+        if (fallback.ordinal < maximumMtkMode.ordinal) maximumMtkMode = fallback
+        report("MTK decoder tuning ${previous.diagnosticName} dropped: $reason; " +
+            "next=${fallback.diagnosticName}")
+    }
+
+    private fun dropMtkCodec2LowLatency(reason: String) {
+        if (!configuredMtkCodec2LowLatency) return
+        configuredMtkCodec2LowLatency = false
+        lowLatencyDecoderRefused = true
+        report("MTK Codec2 low-latency decoder dropped: $reason; next=default")
+    }
+
+    private fun buildFormat(
+        mime: String,
+        csd: List<ByteArray>,
+        attempt: DecoderAttempt,
+        mtkMode: MtkDecoderMode,
+    ): MediaFormat =
         MediaFormat.createVideoFormat(mime, width, height).apply {
             if (attempt.tuned) {
                 setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
                 setInteger(MediaFormat.KEY_PRIORITY, 0)
                 if (attempt.operatingRate > 0) setInteger(MediaFormat.KEY_OPERATING_RATE, attempt.operatingRate)
             }
+            mtkMode.formatKeys().forEach { setInteger(it, 1) }
             csd.forEachIndexed { index, bytes -> setByteBuffer("csd-$index", ByteBuffer.wrap(bytes)) }
         }
+
+    private data class ConfiguredVideoDecoder(
+        val codec: MediaCodec,
+        val codecName: String,
+        val mtkMode: MtkDecoderMode,
+    )
 
     private fun tryConfigure(
         mime: String,
@@ -1162,17 +1267,20 @@ private class VideoDecoder(
         attempt: DecoderAttempt,
         /** Ask for [PICTURE_ORDER_PARAMETER] when the decoder lists it ([framesAtOnce], H.264). */
         atOnce: Boolean = false,
-    ): MediaCodec? {
+    ): ConfiguredVideoDecoder? {
         var candidate: MediaCodec? = null
+        var mtkMode = MtkDecoderMode.NONE
         var codecName = attempt.codecName ?: "default"
         var phase = "create"
         var phaseStartNs = System.nanoTime()
         val startedNs = phaseStartNs
         return try {
-            val format = buildFormat(mime, csd, attempt)
             val codec = attempt.codecName?.let { MediaCodec.createByCodecName(it) } ?: createDecoder(mime)
             candidate = codec
-            codecName = runCatching { codec.name }.getOrDefault(codecName)
+            val createdName = runCatching { codec.name }.getOrNull().orEmpty()
+            codecName = createdName.ifEmpty { codecName }
+            mtkMode = appliedMtkDecoderMode(attempt.mtkMode, createdName)
+            val format = buildFormat(mime, csd, attempt, mtkMode)
             phase = "configure"
             phaseStartNs = System.nanoTime()
             val lowLatency = attempt.tuned && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
@@ -1189,18 +1297,24 @@ private class VideoDecoder(
             codec.start()
             startedLowLatency = lowLatency
             startedPictureOrder = pictureOrder
-            codec
+            val configuredName = runCatching { codec.name }.getOrNull().orEmpty()
+                .ifEmpty { createdName }
+                .ifEmpty { attempt.codecName ?: "default" }
+            ConfiguredVideoDecoder(codec, configuredName, mtkMode)
         } catch (error: Exception) {
             val phaseMs = (System.nanoTime() - phaseStartNs) / 1_000_000
             val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
             runCatching { candidate?.release() }.onFailure {
                 Log.w(TAG, "video decoder candidate release failed name=$codecName", it)
             }
-            reportFailure("stage=configure tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} mime=$mime", error)
+            reportFailure("stage=configure phase=$phase phaseMs=$phaseMs elapsedMs=$elapsedMs " +
+                "tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} " +
+                "mtkTuning=${mtkMode.diagnosticName} mime=$mime", error)
             Log.w(
                 TAG,
                 "video decoder configure failed name=$codecName phase=$phase phaseMs=$phaseMs elapsedMs=$elapsedMs " +
-                    "tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} mime=$mime size=${width}x$height",
+                    "tuned=${attempt.tuned} operatingRate=${attempt.operatingRate} " +
+                    "mtkTuning=${mtkMode.diagnosticName} mime=$mime size=${width}x$height",
                 error,
             )
             null
@@ -1348,11 +1462,16 @@ private class VideoDecoder(
                 "video decoder first input avcc=${nalus.size} annexB=${annexB.size}",
             )
         }
-        val index = VideoInputPump.acquire(
+        val index = DecoderInputPump.acquire(
             running = { running }, drain = { if (outputThread == null) drainOutput(codec) },
             dequeue = { codec.dequeueInputBuffer(INPUT_TIMEOUT_US) },
         )
-        if (index < 0) { recover("video decoder input stalled"); return }
+        if (index < 0) {
+            dropMtkTuning("video decoder input stalled")
+            dropMtkCodec2LowLatency("video decoder input stalled")
+            recover("video decoder input stalled")
+            return
+        }
         val input = checkNotNull(codec.getInputBuffer(index)) { "Decoder input buffer unavailable" }
         input.clear()
         if (annexB.size <= input.remaining()) {
@@ -1505,6 +1624,8 @@ private class VideoDecoder(
             awaitNotDequeuing(codec)
         }
         configuredRate = 0
+        configuredMtkMode = MtkDecoderMode.NONE
+        configuredMtkCodec2LowLatency = false
         if (codec != null) {
             try {
                 codec.stop()
@@ -1615,6 +1736,11 @@ private class AudioRenderer(
     @Volatile private var started = false
     private var codec: MediaCodec? = null
     private var track: AudioTrack? = null
+    @Volatile private var navigationAttenuationDb = 0
+    private var appliedNavigationAttenuationDb: Int? = null
+    private var lastNavigationGainAttemptDb: Int? = null
+    private var lastNavigationGainFailureNs = 0L
+    private var reportedNavigationGainFailureDb: Int? = null
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -1652,8 +1778,12 @@ private class AudioRenderer(
     private var bytesPerSecond = 0
     private val bufferProgress = AudioBufferProgress(if (format.channels >= 2) 4 else 2)
     private var underrunsAtPlaybackStart = 0
+    private var clockTrim: MediaClockTrim? = null
     private var lastPcmWriteNs = 0L
     private var rebufferCount = 0
+    private var rebufferPauseReportCount = 0
+    private var rebufferRecoverReportCount = 0
+    private var queueFullReportCount = 0
     private var diagnosticStage = "starting"
     private var lastDecoderOutputMetadata: String? = null
     private var decoderOutputReports = 0
@@ -1677,7 +1807,10 @@ private class AudioRenderer(
             if (started && !droppedPacketsLogged) {
                 droppedPacketsLogged = true
                 Log.w(TAG, "audio queue full; dropping newest packets to bound latency")
-                report("Audio: queue full audioType=${format.audioType}")
+                if (queueFullReportCount < MAX_QUEUE_FULL_REPORTS) {
+                    queueFullReportCount++
+                    report("Audio: queue full audioType=${format.audioType} count=$queueFullReportCount")
+                }
             }
         }
     }
@@ -1690,6 +1823,7 @@ private class AudioRenderer(
     }
 
     private fun run() {
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO) }
         try {
             runCatching { report("Audio: starting api=${Build.VERSION.SDK_INT} " +
                 "audioType=${format.audioType} codec=${format.codec} rate=${format.sampleRate} channels=${format.channels} " +
@@ -1704,6 +1838,9 @@ private class AudioRenderer(
             diagnosticStage = "focus"
             requestAudioFocus()
             while (running) {
+                // Apply pending Settings changes on this worker, never on the UI thread.
+                // Also handles quiet navigation tracks with no incoming PCM.
+                applyNavigationAttenuation()
                 diagnosticStage = "packet"
                 queue.poll(AUDIO_POLL_MILLIS, TimeUnit.MILLISECONDS)?.let(::handle)
                 // Output becomes ready asynchronously, including after the last packet of a burst.
@@ -1836,6 +1973,7 @@ private class AudioRenderer(
             )
         }
         track = built
+        applyNavigationAttenuation()
         if (ambientMedia) {
             ambientRendererToken = AmbientMusicController.openRenderer(ambientSinkToken, ambientEnvelope) {
                 built.playbackHeadPosition to (running && built.playState == AudioTrack.PLAYSTATE_PLAYING)
@@ -1846,6 +1984,8 @@ private class AudioRenderer(
         diagnosticStage = "track-capacity"
         val capacityBytes = built.bufferSizeInFrames * frameBytes
         startThresholdBytes = MediaAudioBuffer.startBytesFor(plan.startBytes, capacityBytes, PREBUFFER_WRITE_CHUNK_BYTES)
+        // Only music plays long enough for the clocks to drift apart; calls keep their echo reference exact.
+        clockTrim = if (mappedChannel == AudioChannel.MEDIA) MediaClockTrim(format.sampleRate, (startThresholdBytes / frameBytes).toLong()) else null
         val trackMetadata = runCatching {
             "api=${Build.VERSION.SDK_INT} trackState=${built.state} trackRate=${built.sampleRate} " +
                 "usage=${trackAttributes?.usage} contentType=${trackAttributes?.contentType} " +
@@ -1880,6 +2020,41 @@ private class AudioRenderer(
         AudioChannel.MEDIA -> mediaChannel
         AudioChannel.NAVIGATION -> navigationChannel
         else -> 0
+    }
+
+    fun setNavigationAttenuationDb(db: Int) {
+        // The Settings callback must never wait for release(), which may be blocked in
+        // vendor MediaCodec.stop()/release() while holding the renderer monitor.
+        navigationAttenuationDb = NavigationAudioGain.clamp(db)
+    }
+
+    /** Worker-thread only: never call AudioTrack APIs from a Settings callback. */
+    private fun applyNavigationAttenuation() {
+        if (mappedChannel != AudioChannel.NAVIGATION) return
+        val playingTrack = track ?: return
+        val requestedDb = navigationAttenuationDb
+        // Leave default playback exactly as it was before this setting existed.
+        if (requestedDb == 0 && appliedNavigationAttenuationDb == null) return
+        if (appliedNavigationAttenuationDb == requestedDb) return
+        // Some head units reject setVolume for an entire stream. Avoid retrying on every
+        // 10 ms poll/PCM write and flooding diagnostics, but recover from transient failures.
+        if (lastNavigationGainAttemptDb == requestedDb && lastNavigationGainFailureNs != 0L &&
+            System.nanoTime() - lastNavigationGainFailureNs < NAVIGATION_GAIN_RETRY_NS) return
+        val gain = NavigationAudioGain.linear(requestedDb)
+        val success = runCatching { playingTrack.setVolume(gain) == AudioTrack.SUCCESS }.getOrDefault(false)
+        lastNavigationGainAttemptDb = requestedDb
+        if (success) {
+            appliedNavigationAttenuationDb = requestedDb
+            lastNavigationGainFailureNs = 0L
+            reportedNavigationGainFailureDb = null
+            runCatching { report("Audio: navigation attenuation=" + requestedDb + "dB applied=true") }
+        } else {
+            lastNavigationGainFailureNs = System.nanoTime()
+            if (reportedNavigationGainFailureDb != requestedDb) {
+                reportedNavigationGainFailureDb = requestedDb
+                runCatching { report("Audio: navigation attenuation=" + requestedDb + "dB applied=false") }
+            }
+        }
     }
 
     private fun audioAttributesFor(
@@ -2013,6 +2188,9 @@ private class AudioRenderer(
             .array()
 
     private fun handle(packet: AudioPacket) {
+        if (queue.isEmpty()) {
+            droppedPacketsLogged = false
+        }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
         when (format.codec) {
@@ -2057,7 +2235,18 @@ private class AudioRenderer(
     private fun feedCodec(payload: ByteArray, presentationTimeUs: Long) {
         val codec = codec ?: run { decoderUnavailablePackets++; return }
         diagnosticStage = "decoder-input"
-        val index = codec.dequeueInputBuffer(INPUT_TIMEOUT_US)
+        // While a blocking track write holds this thread, decoded output fills up and the decoder
+        // stops taking input. Dropping the packet after one 10 ms wait cut ~21 ms of music every
+        // 10-20 s on DiLink 3.0 (#381); drain the output and wait again instead. One drain and
+        // retry is enough for that, and the pump always makes it. Waiting the video's 500 ms
+        // for every packet let a slowed decoder fall ever further behind instead: with the
+        // CarPlay screen in the background, the queue grew to 190 packets and the track
+        // underran every few seconds (#649).
+        val index = DecoderInputPump.acquire(
+            running = { running }, drain = { drainCodec(codec) },
+            dequeue = { codec.dequeueInputBuffer(INPUT_TIMEOUT_US) },
+            timeoutNs = AUDIO_INPUT_WAIT_NS,
+        )
         if (index < 0) {
             inputDropped++
             if (inputDropped == 1) {
@@ -2164,6 +2353,8 @@ private class AudioRenderer(
         }
         var written = 0
         while (written < length && running) {
+            // Long-running PCM writes may span several slider adjustments.
+            applyNavigationAttenuation()
             val writeLength = if (playbackStarted) {
                 length - written
             } else {
@@ -2195,6 +2386,7 @@ private class AudioRenderer(
             bufferProgress.written(count)
             lastPcmWriteNs = System.nanoTime()
             if (playbackStarted) reportNavigationPlayback(track)
+            if (playbackStarted) trimClock(track)
             if (!playbackStarted) {
                 prebufferBytes += count
                 if (prebufferBytes >= startThresholdBytes) {
@@ -2219,6 +2411,10 @@ private class AudioRenderer(
         track.play()
         playbackStarted = true
         reportNavigationPlayback(track)
+        if (rebufferCount > 0 && rebufferRecoverReportCount < MAX_REBUFFER_REPORTS) {
+            rebufferRecoverReportCount++
+            report("Audio: rebuffer recovered audioType=${format.audioType} rebufferCount=$rebufferCount")
+        }
     }
 
     private fun reportNavigationPlayback(track: AudioTrack) {
@@ -2230,6 +2426,19 @@ private class AudioRenderer(
             val pendingFrames = bufferProgress.queuedBytes(track.playbackHeadPosition) / frameBytes
             val bufferedMillis = (pendingFrames * 1000L + format.sampleRate - 1L) / format.sampleRate
             NavigationPlayback.played(navigationPlaybackToken, actualLegacyStreamType, bufferedMillis, priorityVoice)
+        }
+    }
+
+    private fun trimClock(track: AudioTrack) {
+        val trim = clockTrim ?: return
+        val now = System.nanoTime()
+        trim.sample(bufferProgress.queuedBytes(track.playbackHeadPosition) / frameBytes, now)
+        val rate = trim.rateDue(now) ?: return
+        val result = runCatching { track.setPlaybackRate(rate) }.getOrDefault(AudioTrack.ERROR)
+        if (result != AudioTrack.SUCCESS) {
+            // The track keeps its rate; music then plays as it did before the trim.
+            clockTrim = null
+            report("Audio: clock trim off audioType=${format.audioType} rate=$rate result=$result")
         }
     }
 
@@ -2248,6 +2457,11 @@ private class AudioRenderer(
                 .coerceAtMost(startThresholdBytes.toLong()).toInt()
             lastPcmWriteNs = System.nanoTime()
             rebufferCount++
+            if (rebufferPauseReportCount < MAX_REBUFFER_REPORTS) {
+                rebufferPauseReportCount++
+                val retainedMs = if (bytesPerSecond > 0) prebufferBytes * 1000L / bytesPerSecond else 0L
+                report("Audio: rebuffer paused audioType=${format.audioType} rebufferCount=$rebufferCount retainedMs=$retainedMs")
+            }
         }
         // A short final burst may never reach the start threshold. Play it after a bounded wait.
         if (!playbackStarted && prebufferBytes > 0 && queue.isEmpty() &&
@@ -2272,7 +2486,10 @@ private class AudioRenderer(
             previous?.let { (current - it) and 0xffff_ffffL }
         }
         val queuedFrames = playbackHeadFrames?.let { (totalWrittenFrames - it).coerceAtLeast(0L) }
-        val line = "audio stats audioType=${format.audioType} channel=$mappedChannel " +
+        // "PHONE " marks the iPhone's own log lines, which the report drops, and it dropped every
+        // call's playback line with it (#647).
+        val channelName = if (mappedChannel == AudioChannel.PHONE) "CALL" else mappedChannel?.name
+        val line = "audio stats audioType=${format.audioType} channel=$channelName " +
             "routeType=${currentTrack?.routedDevice?.type ?: -1} codec=${format.codec} " +
             "trackState=${currentTrack?.state ?: -1} playState=${currentTrack?.playState ?: -1} " +
             "sampleRate=${currentTrack?.sampleRate ?: format.sampleRate} " +
@@ -2286,7 +2503,8 @@ private class AudioRenderer(
             "estimatedQueuedFrames=${queuedFrames ?: -1} writeErrors=$writeErrorsThisWindow " +
             "lastWriteError=${lastWriteErrorCode ?: "none"} zeroWrites=$zeroWritesThisWindow " +
             "partialWrites=$partialWritesThisWindow " +
-            "decoderDroppedTotal=$inputDropped outputBuffersTotal=$outputBuffers rebuffers=$rebufferCount ended=$force"
+            "decoderDroppedTotal=$inputDropped outputBuffersTotal=$outputBuffers rebuffers=$rebufferCount " +
+            "playbackRate=${clockTrim?.rate ?: -1} ended=$force"
         Log.i(STATS_TAG, line)
         report(line)
         if (format.codec != AudioCodecKind.LPCM) {
@@ -2382,7 +2600,9 @@ private class AudioRenderer(
         const val OPUS_CODEC_DELAY_NANOS = 6_500_000L
         const val OPUS_SEEK_PRE_ROLL_NANOS = 80_000_000L
         const val INPUT_TIMEOUT_US = 10_000L
+        const val AUDIO_INPUT_WAIT_NS = 100_000_000L
         const val AUDIO_POLL_MILLIS = 10L
+        const val NAVIGATION_GAIN_RETRY_NS = 500_000_000L
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
         // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
         const val MAX_QUEUED_PACKETS = 192
@@ -2390,5 +2610,7 @@ private class AudioRenderer(
         const val STATS_TAG = "DiPlay-AudioStats"
         const val STATS_WINDOW_NS = 5_000_000_000L
         const val DECODED_BUFFER_LOG_INTERVAL = 50
+        const val MAX_REBUFFER_REPORTS = 5
+        const val MAX_QUEUE_FULL_REPORTS = 5
     }
 }

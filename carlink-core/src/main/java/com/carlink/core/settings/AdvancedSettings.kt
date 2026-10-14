@@ -148,7 +148,12 @@ object AdvancedSettings {
         AdvancedSetting("cp_buffer", Engine.CARPLAY, SettingsCategory.SOUND, Tier.ADVANCED,
             "Music buffer", "A longer buffer rides out Wi-Fi hiccups but adds delay.",
             Applies.NEXT_CONNECTION, carPlayIntChoice(options(300 to "Short (300 ms)", 500 to "Medium (500 ms)", 1000 to "Long (1 s)"),
-                AirPlayPersistence::loadMediaBufferMillis, AirPlayPersistence::saveMediaBufferMillis)),
+                // DiPlay 0.2.19 keeps separate wired and wireless buffers; this one setting sets both.
+                { c -> AirPlayPersistence.loadMediaBufferMillis(c, wireless = true) },
+                { c, v ->
+                    AirPlayPersistence.saveMediaBufferMillis(c, wireless = true, millis = v)
+                    AirPlayPersistence.saveMediaBufferMillis(c, wireless = false, millis = v)
+                })),
         AdvancedSetting("cp_focus", Engine.CARPLAY, SettingsCategory.SOUND, Tier.ADVANCED,
             "Take audio focus", "Pause the car's own audio while CarPlay plays.",
             Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadAudioFocusEnabled, AirPlayPersistence::saveAudioFocusEnabled)),

@@ -124,7 +124,8 @@ object CarPlayEventMapping {
             WirelessStartupFailure.HOTSPOT_NOT_READY -> return result(FailureReason.WIFI_SETUP_FAILED, hard = false)
             // Hotspot off or details missing: DiPlay stops at once (§3.3).
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
-            null -> Unit
+            // DiPlay 0.2.19's new category; classified by message and stage until it is mapped.
+            WirelessStartupFailure.BLUETOOTH_UNUSABLE, null -> Unit
         }
         if (HARD_BLUETOOTH.any { message.contains(it, ignoreCase = true) }) return result(FailureReason.BLUETOOTH, hard = true)
         if (message.contains("MFi", ignoreCase = true) || message.contains("CH341", ignoreCase = true)) {

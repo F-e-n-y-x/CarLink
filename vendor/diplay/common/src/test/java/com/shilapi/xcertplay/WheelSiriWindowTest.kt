@@ -97,6 +97,19 @@ class WheelSiriWindowTest {
         verify(controller, times(3)).requestSiri()
     }
 
+    @Test fun longPressOnlyMakesTheShortVoiceKeyDoNothingAndKeepsTheLongOne() {
+        WheelZoomSettings.setSiriKey(host, false)
+        WheelZoomSettings.setSiriLongPressOnly(host, true)
+        val short = CarPlayMediaButton.KEYCODE_BYD_AUTO_MEDIA_VOICE
+        assertTrue(host.dispatchKeyEvent(key(short, true)))
+        assertTrue(host.dispatchKeyEvent(key(short, false)))
+        verify(controller, never()).requestSiri()
+        val long = CarPlayMediaButton.KEYCODE_BYD_AUTO_MEDIA_VOICE_LONG
+        assertTrue(host.dispatchKeyEvent(key(long, true)))
+        assertTrue(host.dispatchKeyEvent(key(long, false)))
+        verify(controller, times(1)).requestSiri()
+    }
+
     @Test fun assigningALegacyVoiceKeyBetweenDownAndUpKeepsTheOriginalAction() {
         val code = KeyEvent.KEYCODE_VOICE_ASSIST
         WheelZoomSettings.setSiriKey(host, false)

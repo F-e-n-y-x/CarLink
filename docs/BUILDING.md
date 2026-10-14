@@ -92,6 +92,7 @@ measured.
 
 ## Engines
 
-`vendor/diplay` and `vendor/diauto` are git subtrees. Edit them only through small, marked hooks
+`vendor/diplay` and `vendor/diauto` were imported as git subtrees (DiPlay is now updated by
+applying the upstream diff, not by `git subtree pull`; see VENDOR_CHANGES.md). Edit them only through small, marked hooks
 and record every edit in [VENDOR_CHANGES.md](VENDOR_CHANGES.md); see
 [CONTRIBUTING.md](../CONTRIBUTING.md#changing-the-engines).

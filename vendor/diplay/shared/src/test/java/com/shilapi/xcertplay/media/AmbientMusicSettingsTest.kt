@@ -29,6 +29,7 @@ class AmbientMusicSettingsTest {
         prefs.edit().putInt("color", 12).putInt("brightness", 4).commit()
         val values = AmbientMusicSettings.load(context)
         assertFalse(values.enabled)
+        assertEquals(AmbientColorSource.SELECTED, values.colorSource)
         assertEquals(listOf(12), values.selectedColors)
         assertEquals(AmbientColorMode.BEAT, values.colorMode)
         assertEquals(AmbientColorSpeed.STANDARD, values.speed)
@@ -38,14 +39,23 @@ class AmbientMusicSettingsTest {
         prefs.edit().putString("enabled", "true").putString("music", "false")
             .putInt("color", 90).putInt("brightness", -2).putInt("area", 8)
             .putInt("selectedColors", 8).putString("colorMode", "UNKNOWN")
-            .putString("speed", "UNKNOWN").commit()
+            .putString("speed", "UNKNOWN").putString("colorSource", "UNKNOWN").commit()
         val values = AmbientMusicSettings.load(context)
         assertFalse(values.enabled)
         assertTrue(values.music)
+        assertEquals(AmbientColorSource.SELECTED, values.colorSource)
         assertEquals(listOf(31), values.selectedColors)
         assertEquals(0, values.brightness)
         assertEquals(3, values.area)
         assertEquals(AmbientColorMode.BEAT, values.colorMode)
         assertEquals(AmbientColorSpeed.STANDARD, values.speed)
+        assertEquals(AmbientIdleBehavior.STEADY, values.idle)
+    }
+
+    @Test fun idleChoiceRoundTripsAndUnknownValuesFallBackToTheSteadyGlow() {
+        AmbientMusicSettings.save(context, AmbientMusicSettings.Values(idle = AmbientIdleBehavior.CAR))
+        assertEquals(AmbientIdleBehavior.CAR, AmbientMusicSettings.load(context).idle)
+        prefs.edit().putString("idle", "UNKNOWN").commit()
+        assertEquals(AmbientIdleBehavior.STEADY, AmbientMusicSettings.load(context).idle)
     }
 }

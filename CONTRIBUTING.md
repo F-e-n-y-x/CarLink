@@ -41,8 +41,13 @@ known flaky timing test; rerun it when it is the only failure.
 
 ## Changing the engines
 
-`vendor/diplay` (CarPlay, DiPlay) and `vendor/diauto` (Android Auto, DiAuto) are **git subtrees**
-of the upstream projects, kept with their history so upstream fixes can be pulled in.
+`vendor/diplay` (CarPlay, DiPlay) and `vendor/diauto` (Android Auto, DiAuto) were imported as
+**git subtrees** of the upstream projects, kept with their history so upstream fixes can be pulled
+in. DiAuto is still updated with `git subtree pull`. DiPlay is not: a history rewrite upstream
+cost the subtree its merge base, so DiPlay is updated by applying the upstream diff since the
+recorded upstream commit (`git fetch https://github.com/shihabal3amri/DiPlay main`,
+`git diff --binary <recorded> FETCH_HEAD > p.patch`, `git apply -3 --directory=vendor/diplay p.patch`;
+details in [docs/VENDOR_CHANGES.md](docs/VENDOR_CHANGES.md)).
 
 - Prefer a host hook (`CarPlayHostIntegration`, DiAuto's `HostIntegration`) or a change in
   `carlink-core` over editing engine logic.
@@ -50,7 +55,7 @@ of the upstream projects, kept with their history so upstream fixes can be pulle
   files say so in their header).
 - Add a row to [docs/VENDOR_CHANGES.md](docs/VENDOR_CHANGES.md) for every edit: every edit needs
   a row, every row an edit. The audit commands are at the top of that file.
-- Do not run `git subtree pull` in a feature change; engine updates are their own pull request,
+- Do not update an engine (`git subtree pull`, or the DiPlay patch above) in a feature change; engine updates are their own pull request,
   followed by `python3 scripts/resource_collisions.py` and the full test run.
 
 ## Commits and pull requests

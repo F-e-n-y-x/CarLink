@@ -42,7 +42,7 @@ Modules:
 - **Process isolation.** Android Auto runs in its own `:aa` process, so DiAuto's singletons, car
   mode, Conscrypt and its "kill process on disconnect" option cannot affect a CarPlay session.
 - **Minimal engine changes.** Every edit inside `vendor/` is a small, documented hook:
-  [VENDOR_CHANGES.md](VENDOR_CHANGES.md). Engines update with `git subtree pull`.
+  [VENDOR_CHANGES.md](VENDOR_CHANGES.md). DiAuto updates with `git subtree pull`, DiPlay by applying the upstream diff since the recorded upstream commit.
 - **Reusable backend.** `:carlink-core` (with the engines) is a library another app, such as a
   car-stereo launcher, can depend on: [INTEGRATION.md](INTEGRATION.md).
 

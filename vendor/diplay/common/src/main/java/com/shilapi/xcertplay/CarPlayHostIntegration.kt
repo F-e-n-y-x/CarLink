@@ -104,7 +104,7 @@ object CarPlayHostIntegration {
 
         /**
          * DiPlay stopped retrying a wireless startup failure: its budget is spent ([exhausted]),
-         * or the failure is a configuration DiPlay never retries (HOTSPOT_CONFIGURATION). The host
+         * or the failure is one DiPlay never retries (HOTSPOT_CONFIGURATION, BLUETOOTH_UNUSABLE). The host
          * stays open and shows its Retry button until the host stops the session.
          */
         data class RetriesStopped(
