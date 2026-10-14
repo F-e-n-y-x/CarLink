@@ -77,7 +77,10 @@ body:
     id: log
     attributes:
       label: Connection log
-      description: Reproduce the problem, then Settings › General › Diagnostics › **Share log**. Drag the file here (or paste it). Addresses are hidden; look through it before posting.
+      # No `render:` on purpose: CarLink's Report on GitHub button prefills this field with its own
+      # ```text fence (app/.../diagnostics/GitHubIssueReport.kt), and `render` would stop people from
+      # dragging the Share log file in here.
+      description: Reproduce the problem, then Settings › General › Diagnostics › **Share log**. Drag the file here (or paste it). **Report on GitHub** in CarLink fills in an excerpt; attach the full file too if you can. Addresses and passwords are hidden; look through it before posting.
   - type: textarea
     id: screenshots
     attributes:

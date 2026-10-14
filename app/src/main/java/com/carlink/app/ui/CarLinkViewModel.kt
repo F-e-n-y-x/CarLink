@@ -124,6 +124,18 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val link: StateFlow<LinkState> = session.state.map { it.toLinkState() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState())
 
+    private val _lastSession = MutableStateFlow(session.state.value.takeIf { it != SessionState.Idle }
+        ?.let { com.carlink.app.diagnostics.LastSession(it, System.currentTimeMillis()) })
+    /** The current or last session of this process (Idle never replaces it): the issue report describes it. */
+    val lastSession: StateFlow<com.carlink.app.diagnostics.LastSession?> = _lastSession.asStateFlow()
+
+    /** The car brand's name for the issue report ("Other / Generic" until one is chosen). */
+    fun carBrandName(): String? = vehicle.value.let { it.brand ?: it.detected }?.displayName
+
+    /** Saved Wi-Fi and hotspot passwords, which the issue report removes wherever they appear. */
+    fun savedSecrets(): List<String> = _unified.value.let { listOf(it.carHotspot.password, it.homeWifi.password) } +
+        listOfNotNull(runCatching { WifiEnvironmentReader.read(app, _unified.value).systemHotspot?.password }.getOrNull())
+
     private val _connectedSince = MutableStateFlow<Long?>(null)
     /** When the current attempt started (for the Connecting timer), or null. */
     private val _attemptStartedAt = MutableStateFlow<Long?>(null)
@@ -218,6 +230,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
                 addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_ATTACHED)
                 addAction(android.hardware.usb.UsbManager.ACTION_USB_DEVICE_DETACHED)
             }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        }
+        viewModelScope.launch {
+            session.state.collect { state ->
+                if (state != SessionState.Idle) _lastSession.value = com.carlink.app.diagnostics.LastSession(state, System.currentTimeMillis())
+            }
         }
         viewModelScope.launch {
             link.collect { state ->

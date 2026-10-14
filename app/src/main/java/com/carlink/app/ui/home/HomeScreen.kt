@@ -157,6 +157,8 @@ internal interface HomeActions {
     /** The one-tap fix for [problem]: turn a radio on, open a permission screen, switch path. */
     fun fix(problem: LinkProblem) {}
     fun navigate(route: Route) {}
+    /** "Report a problem on GitHub", offered on the failure states. */
+    fun reportProblem() {}
 }
 
 @Composable
@@ -167,6 +169,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val permissionsNeeded by vm.permissionsNeeded.collectAsStateWithLifecycle()
     val usual by vm.usual.collectAsStateWithLifecycle()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refreshPhones() }
+    val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
     val actions = remember(vm) {
         object : HomeActions {
             override fun requestPermissions() = launcher.launch(vm.missingPermissions().toTypedArray())
@@ -184,6 +187,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun fix(problem: LinkProblem) =
                 if (problem == LinkProblem.PERMISSIONS) requestPermissions() else vm.fix(problem)
             override fun navigate(route: Route) = navigate(route)
+            override fun reportProblem() = reportProblem()
         }
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual), actions)
@@ -583,7 +587,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                     icon = R.drawable.carlink_ic_play_arrow_filled)
                 GlassButton(stringResource(R.string.carlink_home_disconnect), actions::disconnect, icon = R.drawable.carlink_ic_link_off)
             }
-            HomeMode.FAILED -> FailureActions(link, actions)
+            HomeMode.FAILED -> {
+                FailureActions(link, actions)
+                // The log and the error go straight into a GitHub issue (no copying from the stereo).
+                TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
+            }
         }
     }
     val offerSameWifi = ui.network?.canOfferSameWifi == true && ui.home.phones.any { it.kind != PhoneKind.UNKNOWN } &&
@@ -602,33 +610,37 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     }
 }
 
+/**
+ * Home's headline and sentence for a failure, as string resources (the issue report quotes them
+ * too). The engine sentence takes the engine's name as its argument.
+ */
+internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (problem) {
+    LinkProblem.CARPLAY_AUTH_MISSING -> R.string.carlink_home_error_auth_title to R.string.carlink_home_error_auth_body
+    LinkProblem.NO_IPHONE_SELECTED -> R.string.carlink_home_error_iphone_title to R.string.carlink_home_error_iphone_body
+    LinkProblem.CAR_HOTSPOT_DETAILS_MISSING -> R.string.carlink_home_error_hotspot_details_title to R.string.carlink_home_error_hotspot_details_body
+    LinkProblem.CAR_HOTSPOT_OFF -> R.string.carlink_home_error_hotspot_off_title to R.string.carlink_home_error_hotspot_off_body
+    LinkProblem.SAME_WIFI_DETAILS_MISSING -> R.string.carlink_home_error_wifi_details_title to R.string.carlink_home_error_wifi_details_body
+    LinkProblem.BLUETOOTH_OFF -> R.string.carlink_home_error_bt_off_title to R.string.carlink_home_error_bt_off_body
+    LinkProblem.PHONE_NOT_PAIRED -> R.string.carlink_home_error_not_paired_title to R.string.carlink_home_error_not_paired_body
+    LinkProblem.WIFI_OFF -> R.string.carlink_home_error_wifi_off_title to R.string.carlink_home_error_wifi_off_body
+    LinkProblem.LOCATION_OFF -> R.string.carlink_home_error_location_off_title to R.string.carlink_home_error_location_off_body
+    LinkProblem.PERMISSIONS -> R.string.carlink_home_error_permissions_title to R.string.carlink_home_error_permissions_body
+    LinkProblem.OVERLAY -> R.string.carlink_home_error_overlay_title to R.string.carlink_home_error_overlay_body
+    LinkProblem.VPN_CONSENT -> R.string.carlink_home_error_vpn_title to R.string.carlink_home_error_vpn_body
+    LinkProblem.PHONE_REFUSED_WIFI -> R.string.carlink_home_error_refused_title to R.string.carlink_home_error_refused_body
+    LinkProblem.PHONE_NEVER_REACHED_CAR -> R.string.carlink_home_error_unreached_title to R.string.carlink_home_error_unreached_body
+    LinkProblem.LINK_TOO_WEAK -> R.string.carlink_home_error_weak_title to R.string.carlink_home_error_weak_body
+    LinkProblem.PHONE_DID_NOT_ANSWER -> R.string.carlink_home_error_no_answer_title to R.string.carlink_home_error_no_answer_body
+    LinkProblem.BLUETOOTH -> R.string.carlink_home_error_bluetooth_title to R.string.carlink_home_error_bluetooth_body
+    LinkProblem.USB -> R.string.carlink_home_error_usb_title to R.string.carlink_home_error_usb_body
+    LinkProblem.EXTERNAL_BLUETOOTH -> R.string.carlink_home_error_external_bt_title to R.string.carlink_home_error_external_bt_body
+    LinkProblem.ENGINE, null -> R.string.carlink_home_error_engine_title to R.string.carlink_home_error_engine_body
+}
+
 @Composable
-private fun failureCopy(link: LinkState): Pair<String, String> = when (link.problem) {
-    LinkProblem.CARPLAY_AUTH_MISSING -> stringResource(R.string.carlink_home_error_auth_title) to stringResource(R.string.carlink_home_error_auth_body)
-    LinkProblem.NO_IPHONE_SELECTED -> stringResource(R.string.carlink_home_error_iphone_title) to stringResource(R.string.carlink_home_error_iphone_body)
-    LinkProblem.CAR_HOTSPOT_DETAILS_MISSING -> stringResource(R.string.carlink_home_error_hotspot_details_title) to
-        stringResource(R.string.carlink_home_error_hotspot_details_body)
-    LinkProblem.CAR_HOTSPOT_OFF -> stringResource(R.string.carlink_home_error_hotspot_off_title) to
-        stringResource(R.string.carlink_home_error_hotspot_off_body)
-    LinkProblem.SAME_WIFI_DETAILS_MISSING -> stringResource(R.string.carlink_home_error_wifi_details_title) to
-        stringResource(R.string.carlink_home_error_wifi_details_body)
-    LinkProblem.BLUETOOTH_OFF -> stringResource(R.string.carlink_home_error_bt_off_title) to stringResource(R.string.carlink_home_error_bt_off_body)
-    LinkProblem.PHONE_NOT_PAIRED -> stringResource(R.string.carlink_home_error_not_paired_title) to stringResource(R.string.carlink_home_error_not_paired_body)
-    LinkProblem.WIFI_OFF -> stringResource(R.string.carlink_home_error_wifi_off_title) to stringResource(R.string.carlink_home_error_wifi_off_body)
-    LinkProblem.LOCATION_OFF -> stringResource(R.string.carlink_home_error_location_off_title) to stringResource(R.string.carlink_home_error_location_off_body)
-    LinkProblem.PERMISSIONS -> stringResource(R.string.carlink_home_error_permissions_title) to stringResource(R.string.carlink_home_error_permissions_body)
-    LinkProblem.OVERLAY -> stringResource(R.string.carlink_home_error_overlay_title) to stringResource(R.string.carlink_home_error_overlay_body)
-    LinkProblem.VPN_CONSENT -> stringResource(R.string.carlink_home_error_vpn_title) to stringResource(R.string.carlink_home_error_vpn_body)
-    LinkProblem.PHONE_REFUSED_WIFI -> stringResource(R.string.carlink_home_error_refused_title) to stringResource(R.string.carlink_home_error_refused_body)
-    LinkProblem.PHONE_NEVER_REACHED_CAR -> stringResource(R.string.carlink_home_error_unreached_title) to stringResource(R.string.carlink_home_error_unreached_body)
-    LinkProblem.LINK_TOO_WEAK -> stringResource(R.string.carlink_home_error_weak_title) to stringResource(R.string.carlink_home_error_weak_body)
-    LinkProblem.PHONE_DID_NOT_ANSWER -> stringResource(R.string.carlink_home_error_no_answer_title) to stringResource(R.string.carlink_home_error_no_answer_body)
-    LinkProblem.BLUETOOTH -> stringResource(R.string.carlink_home_error_bluetooth_title) to stringResource(R.string.carlink_home_error_bluetooth_body)
-    LinkProblem.USB -> stringResource(R.string.carlink_home_error_usb_title) to stringResource(R.string.carlink_home_error_usb_body)
-    LinkProblem.EXTERNAL_BLUETOOTH -> stringResource(R.string.carlink_home_error_external_bt_title) to
-        stringResource(R.string.carlink_home_error_external_bt_body)
-    LinkProblem.ENGINE, null -> stringResource(R.string.carlink_home_error_engine_title) to
-        stringResource(R.string.carlink_home_error_engine_body, link.engine?.let { engineName(it) } ?: "")
+private fun failureCopy(link: LinkState): Pair<String, String> {
+    val (title, body) = failureCopyRes(link.problem)
+    return stringResource(title) to stringResource(body, link.engine?.let { engineName(it) } ?: "")
 }
 
 @Composable

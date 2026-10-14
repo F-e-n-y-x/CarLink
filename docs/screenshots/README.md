@@ -4,7 +4,7 @@ An index of every CarLink screen state, rendered by
 `app/src/test/java/com/carlink/app/gallery/ScreenshotGallery.kt` (Robolectric, native graphics)
 from each screen's stateless content (`HomeContent`, `SettingsContent`, `DiagnosticsContent`,
 `AboutContent`, `SetupContent`) with fake state. Nothing here comes from a real phone or head unit. Files are named
-`<area>/<area>_<state>_<config>_<theme>.png`; 730 images in total.
+`<area>/<area>_<state>_<config>_<theme>.png`; 750 images in total.
 
 ## Regenerate
 
@@ -42,7 +42,12 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 
 ## Screens
 
-### Home — `home/` (261 images)
+### Home — `home/` (264 images)
+
+Every `failed-*` state offers **Report on GitHub** under its actions. The low-end head-unit configs
+also render `failed-engine`
+([headunit-1024x600 dark](home/home_failed-engine_headunit-1024x600_dark.webp)) and the other
+states listed in `lowEndEntries` (`ScreenshotGallery.kt`).
 
 | State | tablet dark | tablet light | car-landscape dark | car-landscape light | car-1080p dark | car-split-third dark | phone-portrait dark | phone-portrait light | phone-landscape dark | tablet-portrait dark |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -93,7 +98,14 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 | `sheet-car-brand` — Sheet: car brand picker (makes popular in India, luxury, Other), Hyundai chosen | [img](settings/settings_sheet-car-brand_tablet_dark.webp) | [img](settings/settings_sheet-car-brand_tablet_light.webp) | [img](settings/settings_sheet-car-brand_car-landscape_dark.webp) | [img](settings/settings_sheet-car-brand_car-landscape_light.webp) | [img](settings/settings_sheet-car-brand_car-1080p_dark.webp) | — | [img](settings/settings_sheet-car-brand_phone-portrait_dark.webp) | [img](settings/settings_sheet-car-brand_phone-portrait_light.webp) | [img](settings/settings_sheet-car-brand_phone-landscape_dark.webp) | [img](settings/settings_sheet-car-brand_tablet-portrait_dark.webp) |
 | `sheet-car-brand-byd` — Sheet: car brand picker with BYD chosen; the DiLink extras explained | [img](settings/settings_sheet-car-brand-byd_tablet_dark.webp) | [img](settings/settings_sheet-car-brand-byd_tablet_light.webp) | [img](settings/settings_sheet-car-brand-byd_car-landscape_dark.webp) | [img](settings/settings_sheet-car-brand-byd_car-landscape_light.webp) | [img](settings/settings_sheet-car-brand-byd_car-1080p_dark.webp) | — | [img](settings/settings_sheet-car-brand-byd_phone-portrait_dark.webp) | [img](settings/settings_sheet-car-brand-byd_phone-portrait_light.webp) | [img](settings/settings_sheet-car-brand-byd_phone-landscape_dark.webp) | [img](settings/settings_sheet-car-brand-byd_tablet-portrait_dark.webp) |
 
-### Diagnostics — `diagnostics/` (73 images)
+### Diagnostics — `diagnostics/` (90 images)
+
+The connection log card carries **Report on GitHub** next to Share log. The low-end head-unit configs
+(`headunit-1024x600` dark, `headunit-1024x600-lite` dark and light) also render `idle`,
+`stereo-bluetooth-external`, `report-confirm` and `report-qr`, for example
+[report-confirm](diagnostics/diagnostics_report-confirm_headunit-1024x600_dark.webp),
+[report-qr](diagnostics/diagnostics_report-qr_headunit-1024x600_dark.webp) and
+[idle](diagnostics/diagnostics_idle_headunit-1024x600_dark.webp).
 
 | State | tablet dark | tablet light | car-landscape dark | car-landscape light | car-1080p dark | car-split-third dark | phone-portrait dark | phone-portrait light | phone-landscape dark | tablet-portrait dark |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -104,6 +116,8 @@ captured. Sheets and dialogs (`sheet-*`) are not rendered in `car-split-third` (
 | `phones-health` — Connecting with a notice in the session card; the Phones section is below the fold | [img](diagnostics/diagnostics_phones-health_tablet_dark.webp) | [img](diagnostics/diagnostics_phones-health_tablet_light.webp) | [img](diagnostics/diagnostics_phones-health_car-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-health_car-landscape_light.webp) | [img](diagnostics/diagnostics_phones-health_car-1080p_dark.webp) | [img](diagnostics/diagnostics_phones-health_car-split-third_dark.webp) | [img](diagnostics/diagnostics_phones-health_phone-portrait_dark.webp) | [img](diagnostics/diagnostics_phones-health_phone-portrait_light.webp) | [img](diagnostics/diagnostics_phones-health_phone-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-health_tablet-portrait_dark.webp) |
 | `phones-card` — The Phones card alone: success gauge, usual time, best path, recent problems | [img](diagnostics/diagnostics_phones-card_tablet_dark.webp) | [img](diagnostics/diagnostics_phones-card_tablet_light.webp) | [img](diagnostics/diagnostics_phones-card_car-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-card_car-landscape_light.webp) | [img](diagnostics/diagnostics_phones-card_car-1080p_dark.webp) | [img](diagnostics/diagnostics_phones-card_car-split-third_dark.webp) | [img](diagnostics/diagnostics_phones-card_phone-portrait_dark.webp) | [img](diagnostics/diagnostics_phones-card_phone-portrait_light.webp) | [img](diagnostics/diagnostics_phones-card_phone-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-card_tablet-portrait_dark.webp) |
 | `phones-empty` — No phone has connected yet | [img](diagnostics/diagnostics_phones-empty_tablet_dark.webp) | [img](diagnostics/diagnostics_phones-empty_tablet_light.webp) | [img](diagnostics/diagnostics_phones-empty_car-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-empty_car-landscape_light.webp) | [img](diagnostics/diagnostics_phones-empty_car-1080p_dark.webp) | [img](diagnostics/diagnostics_phones-empty_car-split-third_dark.webp) | [img](diagnostics/diagnostics_phones-empty_phone-portrait_dark.webp) | [img](diagnostics/diagnostics_phones-empty_phone-portrait_light.webp) | [img](diagnostics/diagnostics_phones-empty_phone-landscape_dark.webp) | [img](diagnostics/diagnostics_phones-empty_tablet-portrait_dark.webp) |
+| `report-confirm` — Report on GitHub: the confirmation sheet (what is included, public-issue and sign-in notes, Open GitHub / Cancel) | [img](diagnostics/diagnostics_report-confirm_tablet_dark.webp) | [img](diagnostics/diagnostics_report-confirm_tablet_light.webp) | [img](diagnostics/diagnostics_report-confirm_car-landscape_dark.webp) | [img](diagnostics/diagnostics_report-confirm_car-landscape_light.webp) | — | — | — | — | — | — |
+| `report-qr` — Report on GitHub on a screen with no browser: QR code of the short report, Share log | [img](diagnostics/diagnostics_report-qr_tablet_dark.webp) | [img](diagnostics/diagnostics_report-qr_tablet_light.webp) | [img](diagnostics/diagnostics_report-qr_car-landscape_dark.webp) | [img](diagnostics/diagnostics_report-qr_car-landscape_light.webp) | — | — | — | — | — | — |
 
 ### About — `about/` (26 images)
 

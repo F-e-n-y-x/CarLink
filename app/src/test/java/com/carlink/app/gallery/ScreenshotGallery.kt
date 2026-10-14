@@ -59,7 +59,9 @@ private val lowEndEntries = setOf("home/ready-no-phone", "home/ready-iphone-same
     "home/connected-carplay", "home/failed-wifi-off", "home/sheet-phones", "settings/general-lab", "settings/sheet-rendering",
     "home/connecting-notice-wifi", "setup/permissions", "setup/pair-waiting", "setup/pair-found-iphone",
     // A stereo whose Bluetooth is an external module (the user's FYT unit is a 1280×720 cheap head unit).
-    "home/failed-external-bluetooth", "diagnostics/stereo-bluetooth-external", "setup/pair-external-bluetooth")
+    "home/failed-external-bluetooth", "diagnostics/stereo-bluetooth-external", "setup/pair-external-bluetooth",
+    // Report on GitHub from the stereo itself (Diagnostics, Home's failure state).
+    "diagnostics/idle", "diagnostics/report-confirm", "diagnostics/report-qr", "home/failed-engine")
 
 val galleryConfigs = listOf(
     // The user's Redmi Pad Pro: 2560×1600px at 281dpi, about 1460×914dp in landscape (HANDHELD).

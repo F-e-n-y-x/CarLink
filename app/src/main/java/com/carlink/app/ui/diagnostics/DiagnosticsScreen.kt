@@ -70,7 +70,6 @@ import com.carlink.core.core.LinkStage
 import com.carlink.core.core.LinkState
 import com.carlink.core.core.Transport
 import com.carlink.app.diagnostics.AppInfo
-import com.carlink.app.diagnostics.CarLinkFileProvider
 import com.carlink.app.diagnostics.CarPlayAuthSource
 import com.carlink.app.diagnostics.CheckFix
 import com.carlink.app.diagnostics.CheckId
@@ -132,6 +131,8 @@ internal interface DiagnosticsActions {
     fun fix(fix: CheckFix) {}
     fun openSettings(category: SettingsCategory) {}
     fun shareLog() {}
+    /** "Report a problem on GitHub" ([rememberReportProblem]). */
+    fun reportProblem() {}
     fun back() {}
 }
 
@@ -177,10 +178,7 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
         vm.refreshPhones()
     }
     val scope = rememberCoroutineScope()
-    val shareSubject = stringResource(R.string.carlink_diag_log_share_subject)
-    val shareChooser = stringResource(R.string.carlink_diag_log_share_chooser)
-    val shareHeader = stringResource(R.string.carlink_diag_log_report_header, AppInfo.versionName, AppInfo.versionCode,
-        AppInfo.carPlayEngineVersion, AppInfo.androidAutoEngineVersion, AppInfo.manufacturer, AppInfo.model, AppInfo.androidRelease)
+    val reportProblem = rememberReportProblem(vm)
     val actions = remember(vm) {
         object : DiagnosticsActions {
             override fun fix(fix: CheckFix) = when (fix) {
@@ -198,11 +196,9 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
             }
             override fun openSettings(category: SettingsCategory) = openSettings(category)
             override fun shareLog() {
-                scope.launch {
-                    val file = withContext(Dispatchers.IO) { runCatching { ConnectionLog.export(context, shareHeader) }.getOrNull() }
-                    if (file != null) CarLinkFileProvider.shareText(context, file, shareSubject, shareChooser)
-                }
+                scope.launch { shareConnectionLog(context) }
             }
+            override fun reportProblem() = reportProblem()
             override fun back() = onBack()
         }
     }
@@ -261,7 +257,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     if (!checksFirst) ChecksCard(ui.checks, actions)
                 }
                 Spacer(Modifier.width(dimens.gutter * 1.5f))
-                LogPanel(ui.log, filter, { filter = it }, actions::shareLog,
+                LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::reportProblem,
                     Modifier.weight(0.53f).fillMaxHeight().padding(top = 8.dp, bottom = dimens.gutter))
             }
         } else {
@@ -278,7 +274,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     } else {
                         SessionCard(ui); PhonesHealthCard(ui.health); ChecksCard(ui.checks, actions)
                     }
-                    LogPanel(ui.log, filter, { filter = it }, actions::shareLog, Modifier.fillMaxWidth().height(logHeight))
+                    LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::reportProblem, Modifier.fillMaxWidth().height(logHeight))
                 }
             }
         }
@@ -543,20 +539,25 @@ private fun StatusGlyph(status: CheckStatus, size: Dp) {
 // ---- Connection log -----------------------------------------------------------------------
 
 @Composable
-private fun LogPanel(log: List<LogLine>?, filter: LogFilter, onFilter: (LogFilter) -> Unit, onShare: () -> Unit, modifier: Modifier) {
+private fun LogPanel(log: List<LogLine>?, filter: LogFilter, onFilter: (LogFilter) -> Unit, onShare: () -> Unit, onReport: () -> Unit,
+                     modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     val shown = remember(log, filter) { log?.let { lines -> filter.source?.let { s -> lines.filter { it.source == s } } ?: lines } }
     GlassCard(modifier, contentPadding = PaddingValues(0.dp)) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.padding(start = rowPadding, end = rowPadding, top = if (isCar) 24.dp else 16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { GroupHeader(stringResource(R.string.carlink_diag_log_title), icon = R.drawable.carlink_ic_terminal) }
-                    Spacer(Modifier.width(12.dp))
-                    GlassButton(stringResource(R.string.carlink_diag_log_share), onShare, icon = R.drawable.carlink_ic_ios_share)
-                }
+                GroupHeader(stringResource(R.string.carlink_diag_log_title), icon = R.drawable.carlink_ic_terminal)
                 Spacer(Modifier.height(if (isCar) 4.dp else 2.dp))
                 Text(stringResource(R.string.carlink_diag_log_body), style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant)
+                Spacer(Modifier.height(if (isCar) 14.dp else 10.dp))
+                // Share log and the GitHub report side by side; they wrap on a narrow pane.
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap),
+                    verticalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap)) {
+                    GlassButton(stringResource(R.string.carlink_report_action), onReport, icon = R.drawable.carlink_ic_bug_report)
+                    GlassButton(stringResource(R.string.carlink_diag_log_share), onShare, icon = R.drawable.carlink_ic_ios_share)
+                }
                 Spacer(Modifier.height(if (isCar) 18.dp else 12.dp))
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = rowPadding),

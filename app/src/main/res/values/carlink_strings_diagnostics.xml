@@ -160,6 +160,39 @@
          "CarLink 0.1.0 (1) · DiPlay 0.2.15 · DiAuto 0.3.11 · BYD DiLink5 · Android 10". -->
     <string name="carlink_diag_log_report_header">CarLink %1$s (%2$d) · DiPlay %3$s · DiAuto %4$s · %5$s %6$s · Android %7$s</string>
 
+    <!-- ===== Report a problem on GitHub (Diagnostics, Home's failure states) ===== -->
+    <string name="carlink_report_action">Report on GitHub</string>
+    <string name="carlink_report_title">Report a problem on GitHub</string>
+    <string name="carlink_report_intro">CarLink opens a new issue on GitHub with these details filled in. Check it in the browser, then tap Submit.</string>
+    <string name="carlink_report_preparing">Preparing the report…</string>
+    <string name="carlink_report_included">What is included</string>
+    <string name="carlink_report_field_title">Title</string>
+    <string name="carlink_report_field_version">CarLink version</string>
+    <string name="carlink_report_field_screen">This screen</string>
+    <string name="carlink_report_field_phone">Phone</string>
+    <string name="carlink_report_field_projection">CarPlay or Android Auto</string>
+    <string name="carlink_report_field_connection">Connection</string>
+    <string name="carlink_report_field_car_brand">Car brand</string>
+    <string name="carlink_report_field_what_happened">What happened</string>
+    <!-- %1$d lines of the connection log are in the report; the plural below says how many stay out. -->
+    <plurals name="carlink_report_log_lines">
+        <item quantity="one">Connection log: %1$d line</item>
+        <item quantity="other">Connection log: %1$d lines</item>
+    </plurals>
+    <plurals name="carlink_report_log_more">
+        <item quantity="one">%1$d more line is only in Share log.</item>
+        <item quantity="other">%1$d more lines are only in Share log.</item>
+    </plurals>
+    <string name="carlink_report_public">This opens a public issue that anyone can read. Addresses and passwords are removed.</string>
+    <string name="carlink_report_sign_in">The browser must be signed in to GitHub. Sign in once; it stays signed in.</string>
+    <string name="carlink_report_open">Open GitHub</string>
+    <string name="carlink_report_cancel">Cancel</string>
+    <string name="carlink_report_qr_title">Report from your phone</string>
+    <string name="carlink_report_qr_body">This screen has no web browser. Scan the code with your phone: it opens the report on GitHub with the version, this screen and the error filled in.</string>
+    <string name="carlink_report_qr_log">The log does not fit in the code. Share log saves it so you can attach it to the issue.</string>
+    <string name="carlink_report_qr_a11y">QR code that opens the problem report on GitHub</string>
+    <string name="carlink_report_done">Done</string>
+
     <!-- ===== About ===== -->
     <string name="carlink_about_title">About</string>
     <string name="carlink_about_tagline">CarPlay and Android Auto in one app.</string>
