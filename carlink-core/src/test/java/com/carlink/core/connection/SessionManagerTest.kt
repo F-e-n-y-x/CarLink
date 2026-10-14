@@ -73,6 +73,7 @@ class SessionManagerTest {
         override var autoConnectUsb = true
         override var autoConnectBluetooth = true
         override var autoConnectPaused = false
+        override var wirelessUnavailable = false
         override fun preflight(request: SessionRequest, path: WirelessPath?) = problems(request, path)
         override fun wirelessPaths(request: SessionRequest) = paths
         override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) { remembered += phoneAddress to path }
@@ -215,6 +216,75 @@ class SessionManagerTest {
         m.disconnect(); idle()
         m.onBluetoothPhone("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
         assertEquals(1, starts.size)
+    }
+
+    // --- A stereo whose Bluetooth is an external module ------------------------------------------
+
+    @Test fun wirelessIsBlockedForBothEnginesBeforeAnyEngineStarts() {
+        env.wirelessUnavailable = true
+        env.warmUpAvailable = true
+        val m = manager()
+        for (kind in listOf(PhoneKind.IPHONE, PhoneKind.ANDROID)) {
+            m.connect("AA:BB", kind, "Phone"); idle()
+            val blocked = m.state.value as SessionState.Blocked
+            assertEquals(kind.engine, blocked.request.engine)
+            assertEquals(listOf(Problem.EXTERNAL_BLUETOOTH), blocked.problems)
+            assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, m.state.value.toLinkState().problem)
+        }
+        // No engine, no settings write (no Wi-Fi Direct group), no Bluetooth warm-up.
+        assertTrue(starts.isEmpty())
+        assertTrue(applied.isEmpty())
+        assertEquals(0, env.warmUps)
+        // Try again stays blocked; it does not loop through the engines.
+        m.retry(); idle()
+        assertTrue(starts.isEmpty())
+        assertTrue(m.state.value is SessionState.Blocked)
+    }
+
+    @Test fun usbIsNeverBlockedOnAStereoWithAnExternalModule() {
+        env.wirelessUnavailable = true
+        val m = manager()
+        m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
+        assertEquals(listOf("ANDROID_AUTO start USB null"), starts)
+        m.stop(); idle()
+        m.connect(null, PhoneKind.IPHONE, "iPhone", Transport.USB); idle()
+        assertEquals("CARPLAY start USB null", starts.last())
+        assertTrue(m.state.value is SessionState.Active)
+    }
+
+    @Test fun automaticWirelessStartsAreSkippedOnAStereoWithAnExternalModule() {
+        env.wirelessUnavailable = true
+        val m = manager()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.onBluetoothPhone("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        assertTrue(starts.isEmpty())
+        // Skipped, not blocked: Home keeps its ready state instead of showing a failure on its own.
+        assertEquals(SessionState.Idle, m.state.value)
+        // And a USB session gets no wireless switch offer.
+        m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
+        m.onBluetoothPhone("EE:FF", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(null, m.pendingSwitch.value)
+    }
+
+    @Test fun theDriversOverrideLetsWirelessStartAgain() {
+        // DeviceEnvironment: blocked only for the three external classifications, and never with the override on.
+        for (stereo in com.carlink.core.detect.StereoBluetooth.entries) {
+            val expected = stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON ||
+                stereo == com.carlink.core.detect.StereoBluetooth.FYT_MODULE ||
+                stereo == com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN
+            assertEquals(stereo.name, expected, DeviceEnvironment.wirelessBlocked(stereo, override = false))
+            assertEquals(stereo.name, false, DeviceEnvironment.wirelessBlocked(stereo, override = true))
+        }
+        env.wirelessUnavailable = DeviceEnvironment.wirelessBlocked(com.carlink.core.detect.StereoBluetooth.FYT_MODULE, override = true)
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals(listOf("ANDROID_AUTO start WIRELESS WIFI_DIRECT"), starts)
+        // The engine may still refuse: its own report then shows the same problem.
+        androidAuto.emit(AdapterEvent.Failed(FailureReason.EXTERNAL_BLUETOOTH, "this unit's Bluetooth is an external module")); idle()
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(FailureReason.EXTERNAL_BLUETOOTH, failed.reason)
+        assertEquals("not path-related: no second path", 1, starts.size)
+        assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, failed.toLinkState().problem)
     }
 
     @Test fun usbSessionEndsWhenThePhoneStaysUnplugged() {

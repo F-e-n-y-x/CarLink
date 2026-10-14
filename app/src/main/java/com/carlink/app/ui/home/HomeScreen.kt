@@ -215,6 +215,19 @@ private fun SwitchPhoneDialog(phoneName: String, running: Engine?, newEngine: En
     )
 }
 
+/** "How to connect" on a stereo where wireless cannot start: the cable, step by step. */
+@Composable
+private fun CableHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(painterResource(R.drawable.carlink_ic_usb), null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text(stringResource(R.string.carlink_home_cable_title)) },
+        text = { Text(stringResource(R.string.carlink_home_cable_body), style = MaterialTheme.typography.bodyLarge) },
+        confirmButton = { IonButton(stringResource(R.string.carlink_home_cable_ok), onDismiss) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
+}
+
 /** The state's light: Ion while ready or connecting, Live when connected, Fault, Caution, or neutral. */
 @Composable
 private fun modeColor(mode: HomeMode): Color = when (mode) {
@@ -612,6 +625,8 @@ private fun failureCopy(link: LinkState): Pair<String, String> = when (link.prob
     LinkProblem.PHONE_DID_NOT_ANSWER -> stringResource(R.string.carlink_home_error_no_answer_title) to stringResource(R.string.carlink_home_error_no_answer_body)
     LinkProblem.BLUETOOTH -> stringResource(R.string.carlink_home_error_bluetooth_title) to stringResource(R.string.carlink_home_error_bluetooth_body)
     LinkProblem.USB -> stringResource(R.string.carlink_home_error_usb_title) to stringResource(R.string.carlink_home_error_usb_body)
+    LinkProblem.EXTERNAL_BLUETOOTH -> stringResource(R.string.carlink_home_error_external_bt_title) to
+        stringResource(R.string.carlink_home_error_external_bt_body)
     LinkProblem.ENGINE, null -> stringResource(R.string.carlink_home_error_engine_title) to
         stringResource(R.string.carlink_home_error_engine_body, link.engine?.let { engineName(it) } ?: "")
 }
@@ -633,6 +648,14 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
+        // No Try again: nothing on this stereo changes between attempts. The cable is the way.
+        LinkProblem.EXTERNAL_BLUETOOTH -> {
+            var cableHelp by rememberSaveable { mutableStateOf(false) }
+            IonButton(stringResource(R.string.carlink_home_how_to_connect), { cableHelp = true }, icon = R.drawable.carlink_ic_usb)
+            GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
+                icon = R.drawable.carlink_ic_monitor_heart)
+            if (cableHelp) CableHelpDialog { cableHelp = false }
+        }
         LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
             IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(problem) }, icon = R.drawable.carlink_ic_p2p)
             GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)

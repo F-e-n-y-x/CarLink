@@ -136,6 +136,13 @@
     <string name="carlink_home_error_no_answer_body">Unlock your phone, make sure its Bluetooth is on and connected to this screen, then try again.</string>
     <string name="carlink_home_error_bluetooth_title">Bluetooth connection failed</string>
     <string name="carlink_home_error_bluetooth_body">On your phone, turn Bluetooth off and on, then try again. If it keeps failing, forget this screen and pair again.</string>
+    <!-- The stereo's Bluetooth is an external module apps cannot use (detect/ExternalBluetoothProbe). -->
+    <string name="carlink_home_error_external_bt_title">Wireless isn\'t available on this stereo yet</string>
+    <string name="carlink_home_error_external_bt_body">This stereo\'s Bluetooth is a separate module that apps can\'t use, so CarPlay and Android Auto can\'t start wirelessly. Connect your phone with a USB cable\u00A0— it works the same.</string>
+    <string name="carlink_home_how_to_connect">How to connect</string>
+    <string name="carlink_home_cable_title">Connect with a USB cable</string>
+    <string name="carlink_home_cable_body">1. Plug your phone into the stereo\'s USB port with a cable that carries data (not a charge-only cable).\n2. iPhone: CarPlay starts by itself. Android phone: unlock it and allow Android Auto if it asks.\n\nWireless needs the stereo\'s Bluetooth, which apps can\'t reach on this stereo yet.</string>
+    <string name="carlink_home_cable_ok">Got it</string>
     <string name="carlink_home_error_usb_title">USB connection failed</string>
     <string name="carlink_home_error_usb_body">Unlock your phone and accept its prompt. Try another cable if it keeps failing.</string>
     <string name="carlink_home_fix_turn_on">Turn on</string>

@@ -53,6 +53,8 @@ data class SettingsUi(
     val carBrand: CarBrand? = null,
     /** BYD on a BYD DiLink unit, else null. */
     val detectedBrand: CarBrand? = null,
+    /** This stereo's Bluetooth looks like an external module (detect/ExternalBluetoothProbe found signs of one). */
+    val stereoBluetoothExternal: Boolean = false,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -63,6 +65,8 @@ interface SettingsActions {
     fun setAutoConnectUsb(on: Boolean) {}
     fun setStartOnBoot(on: Boolean) {}
     fun setFloatingSwitcher(on: Boolean) {}
+    /** "Try wireless on this stereo anyway": CarLink stops blocking wireless on an external Bluetooth module. */
+    fun setWirelessOnExternalBluetooth(on: Boolean) {}
     /** Android's "Display over other apps" screen for CarLink. */
     fun openOverlayPermission() {}
     fun resumeAutoConnect() {}

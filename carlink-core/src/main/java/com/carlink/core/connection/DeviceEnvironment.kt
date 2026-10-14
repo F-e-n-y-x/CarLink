@@ -7,7 +7,9 @@ import android.hardware.usb.UsbManager
 import android.util.Log
 import com.carlink.core.core.Engine
 import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.ExternalBluetoothProbe
 import com.carlink.core.detect.HeadUnitDetector
+import com.carlink.core.detect.StereoBluetooth
 import com.carlink.core.detect.KnownPhones
 import com.carlink.core.detect.PhoneClassifier
 import com.carlink.core.diagnostics.EventLog
@@ -36,6 +38,9 @@ class DeviceEnvironment(
     override var autoConnectPaused: Boolean
         get() = preferences.autoConnectPaused
         set(value) { preferences.autoConnectPaused = value }
+
+    override val wirelessUnavailable: Boolean
+        get() = wirelessBlocked(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth)
 
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()
@@ -95,6 +100,9 @@ class DeviceEnvironment(
     companion object {
         private const val TAG = "CarLink-Session"
         private const val KEY_LAST_PHONE = "address"
+
+        /** Whether CarLink blocks wireless on a stereo classified [stereo]; [override] is the driver's "Try wireless anyway". */
+        fun wirelessBlocked(stereo: StereoBluetooth, override: Boolean): Boolean = stereo.blocksWireless && !override
 
         private fun lastPhone(context: Context) = context.getSharedPreferences("carlink_last_phone", Context.MODE_PRIVATE)
 

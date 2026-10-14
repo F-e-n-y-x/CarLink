@@ -87,6 +87,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val display by vm.display.collectAsStateWithLifecycle()
     val network by vm.network.collectAsStateWithLifecycle()
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
+    val stereoBluetooth by vm.stereoBluetooth.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val access = remember { EngineAccess(context.applicationContext) }
     val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
@@ -116,6 +117,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setAutoConnectUsb(on: Boolean) = vm.setAutoConnectUsb(on)
             override fun setStartOnBoot(on: Boolean) = vm.setStartOnBoot(on)
             override fun setFloatingSwitcher(on: Boolean) = vm.setFloatingSwitcher(on)
+            override fun setWirelessOnExternalBluetooth(on: Boolean) = vm.setWirelessOnExternalBluetooth(on)
             override fun openOverlayPermission() = vm.fix(com.carlink.core.core.LinkProblem.OVERLAY)
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun setThemeMode(mode: ThemeMode) = vm.setThemeMode(mode)
@@ -152,6 +154,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         overlayAllowed = overlayAllowed,
         carBrand = vehicle.brand,
         detectedBrand = vehicle.detected,
+        stereoBluetoothExternal = stereoBluetooth?.classification?.hasSignals == true,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }

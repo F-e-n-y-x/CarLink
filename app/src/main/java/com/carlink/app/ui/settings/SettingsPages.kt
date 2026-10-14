@@ -101,6 +101,13 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
                 { openSheet(SheetKey.of(EssentialSheet.SAME_WIFI)) },
                 description = stringResource(R.string.carlink_settings_same_wifi_detail), icon = R.drawable.carlink_ic_wifi)
         }
+        // Advanced, and only on a stereo whose Bluetooth looks like an external module.
+        if (ui.unified.showAdvanced && ui.stereoBluetoothExternal) {
+            GroupDivider()
+            SwitchRow(stringResource(R.string.carlink_settings_external_bt), c.wirelessOnExternalBluetooth,
+                actions::setWirelessOnExternalBluetooth, description = stringResource(R.string.carlink_settings_external_bt_detail),
+                icon = R.drawable.carlink_ic_bluetooth)
+        }
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_phones)) }) {
         LinkRow(stringResource(R.string.carlink_settings_bluetooth), actions::openBluetoothSettings,

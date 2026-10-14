@@ -128,6 +128,11 @@ enum class FailureReason(val pathRelated: Boolean) {
     WIFI_SETUP_FAILED(true),
     /** Bluetooth: phone not reachable / not paired / RFCOMM failed. */
     BLUETOOTH(false),
+    /**
+     * This head unit's Bluetooth is an external module the app cannot reach
+     * (detect/ExternalBluetoothProbe); no wireless path can work until a module route is ported.
+     */
+    EXTERNAL_BLUETOOTH(false),
     /** The phone never answered within the engine's time budget. */
     PHONE_DID_NOT_ANSWER(false),
     /** USB permission denied, interface claim failed, accessory switch failed. */

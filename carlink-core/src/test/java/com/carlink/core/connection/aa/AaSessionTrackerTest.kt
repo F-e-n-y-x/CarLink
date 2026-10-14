@@ -3,6 +3,7 @@ package com.carlink.core.connection.aa
 import com.andrerinas.openheadunit.HostIntegration.EngineEvent
 import com.carlink.core.connection.AdapterEvent
 import com.carlink.core.connection.FailureReason
+import com.carlink.core.connection.toLinkProblem
 import com.carlink.core.connection.ProgressStage
 import com.carlink.core.core.Transport
 import com.carlink.core.connection.aa.AaProtocol as P
@@ -155,7 +156,15 @@ class AaSessionTrackerTest {
 
     @Test fun bluetoothDeadEndsAreBluetoothFailures() {
         assertEquals(FailureReason.BLUETOOTH, wireless().event(EngineEvent.HANDSHAKE_BACKOFF, "failures=5").failure().reason)
-        assertEquals(FailureReason.BLUETOOTH, wireless().event(EngineEvent.EXTERNAL_BLUETOOTH, "evidence=/dev/rf_serial").failure().reason)
+    }
+
+    @Test fun anExternalBluetoothModuleIsItsOwnFailureWithTheEvidence() {
+        // Not "Bluetooth failed, re-pair the phone": the stereo's own Bluetooth is out of reach.
+        val failure = wireless().event(EngineEvent.EXTERNAL_BLUETOOTH, "evidence=/dev/rf_serial exists").failure()
+        assertEquals(FailureReason.EXTERNAL_BLUETOOTH, failure.reason)
+        assertFalse(failure.reason.pathRelated)
+        assertTrue(failure.detail!!.contains("/dev/rf_serial exists"))
+        assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, failure.reason.toLinkProblem())
     }
 
     @Test fun aDfsChannelIsNamedInTheLaterFailure() {

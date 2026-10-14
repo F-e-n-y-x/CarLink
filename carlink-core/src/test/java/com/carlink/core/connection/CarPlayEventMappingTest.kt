@@ -207,6 +207,23 @@ class CarPlayEventMappingTest {
         assertEquals(WirelessStartupFailure.BLUETOOTH_UNUSABLE, tracker.lastFailure?.startupFailure)
     }
 
+    @Test fun unusableBluetoothOnAStereoWithAnExternalModuleIsTheExternalBluetoothProblem() {
+        val unusable = CarPlayStatus.Failed("Android Bluetooth on this head unit connects without reaching a phone",
+            startupFailure = WirelessStartupFailure.BLUETOOTH_UNUSABLE)
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS, externalBluetooth = true)
+        tracker.started()
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        assertEquals(listOf(AdapterEvent.Failed(FailureReason.EXTERNAL_BLUETOOTH, unusable.message)),
+            tracker.onHostState(HostState.RetriesStopped(unusable, WirelessStartupFailure.BLUETOOTH_UNUSABLE, 0, exhausted = false)))
+        assertTrue(tracker.lastFailure!!.hard)
+        assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, FailureReason.EXTERNAL_BLUETOOTH.toLinkProblem())
+        // Without the probe's signals it stays the ordinary Bluetooth problem.
+        assertEquals(FailureReason.BLUETOOTH, CarPlayEventMapping.classify(unusable, CarPlayStatus.ConnectingBluetooth, Transport.WIRELESS).reason)
+        // Other Bluetooth failures on such a stereo keep their own meaning.
+        assertEquals(FailureReason.BLUETOOTH, CarPlayEventMapping.classify(CarPlayStatus.Failed("Bluetooth is not enabled"),
+            CarPlayStatus.WaitingForPairedIphone, Transport.WIRELESS, externalBluetooth = true).reason)
+    }
+
     @Test fun unusableBluetoothIsNotAPathProblem() {
         // Bluetooth starts every wireless path, so trying the next Wi-Fi path cannot help.
         val failure = CarPlayEventMapping.classify(

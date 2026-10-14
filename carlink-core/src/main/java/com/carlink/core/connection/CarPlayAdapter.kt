@@ -32,9 +32,13 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 class CarPlayAdapter internal constructor(
     private val hooks: CarPlayEngineHooks,
+    /** Signs of an external Bluetooth module on this stereo (detect/ExternalBluetoothProbe). */
+    private val externalBluetooth: () -> Boolean = { false },
 ) : EngineAdapter {
 
-    constructor(context: Context) : this(DiPlayEngineHooks(context.applicationContext))
+    constructor(context: Context) : this(DiPlayEngineHooks(context.applicationContext), {
+        com.carlink.core.detect.ExternalBluetoothProbe.current(context.applicationContext).classification.hasSignals
+    })
 
     override val engine: Engine = Engine.CARPLAY
 
@@ -60,7 +64,8 @@ class CarPlayAdapter internal constructor(
             return
         }
         detach()
-        val tracker = CarPlaySessionTracker(plan.transport)
+        val tracker = CarPlaySessionTracker(plan.transport,
+            externalBluetooth = plan.transport == Transport.WIRELESS && runCatching(externalBluetooth).getOrDefault(false))
         this.tracker = tracker
         this.plan = plan
         this.listener = listener

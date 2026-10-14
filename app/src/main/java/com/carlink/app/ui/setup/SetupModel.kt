@@ -98,6 +98,8 @@ data class SetupUi(
     val knownPhones: List<PairedPhone> = emptyList(),
     /** "Plug in with a cable instead" was chosen. */
     val cable: Boolean = false,
+    /** This stereo's Bluetooth is an external module apps cannot use: wireless cannot start here yet. */
+    val wirelessUnavailable: Boolean = false,
 ) {
     val missingRequired: Int get() = permissions.count { !it.granted && !it.item.optional }
     val missing: Int get() = permissions.count { !it.granted }

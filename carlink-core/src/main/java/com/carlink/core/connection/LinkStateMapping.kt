@@ -103,6 +103,7 @@ fun Problem.toLinkProblem(): LinkProblem = when (this) {
     Problem.SAME_WIFI_DETAILS -> LinkProblem.SAME_WIFI_DETAILS_MISSING
     Problem.CAR_HOTSPOT_DETAILS -> LinkProblem.CAR_HOTSPOT_DETAILS_MISSING
     Problem.CAR_HOTSPOT_OFF -> LinkProblem.CAR_HOTSPOT_OFF
+    Problem.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH
 }
 
 fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
@@ -111,6 +112,7 @@ fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
     FailureReason.LINK_TOO_WEAK -> LinkProblem.LINK_TOO_WEAK
     FailureReason.WIFI_SETUP_FAILED -> LinkProblem.ENGINE
     FailureReason.BLUETOOTH -> LinkProblem.BLUETOOTH
+    FailureReason.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH
     FailureReason.PHONE_DID_NOT_ANSWER -> LinkProblem.PHONE_DID_NOT_ANSWER
     FailureReason.USB -> LinkProblem.USB
     FailureReason.BLOCKED -> LinkProblem.PERMISSIONS

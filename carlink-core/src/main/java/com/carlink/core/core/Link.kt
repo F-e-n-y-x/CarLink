@@ -73,6 +73,11 @@ enum class LinkProblem {
     BLUETOOTH,
     USB,
     ENGINE,
+    /**
+     * This stereo's Bluetooth is a separate module apps cannot use, so wireless CarPlay and
+     * Android Auto cannot start (pre-flight or engine-reported); a USB cable works.
+     */
+    EXTERNAL_BLUETOOTH,
 }
 
 /**

@@ -25,6 +25,15 @@ class CarLinkPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_START_ON_BOOT, value).apply()
 
     /**
+     * Start wireless sessions even where this stereo's Bluetooth looks like an external module
+     * (detect/ExternalBluetoothProbe). Off by default; the Android Auto engine has its own check
+     * and may still refuse.
+     */
+    var wirelessOnExternalBluetooth: Boolean
+        get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, false)
+        set(value) = prefs.edit().putBoolean(KEY_WIRELESS_EXTERNAL_BT, value).apply()
+
+    /**
      * Set when the driver cancels or disconnects; cleared when they connect again, and on its own
      * after [PAUSE_MILLIS]. Keeps automatic starts from reconnecting right after the driver
      * stopped, without leaving a "paused · Resume" state behind (user feedback, 2026-10-09).
@@ -42,6 +51,7 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_USB = "auto_connect_usb"
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
+        private const val KEY_WIRELESS_EXTERNAL_BT = "wireless_on_external_bluetooth"
         private const val KEY_PAUSED_AT = "auto_connect_paused_at"
         const val PAUSE_MILLIS = 10 * 60_000L
         private const val KEY_PAUSED = "auto_connect_paused"

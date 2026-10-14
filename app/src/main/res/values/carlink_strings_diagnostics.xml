@@ -58,6 +58,21 @@
     <string name="carlink_diag_bt_on">Bluetooth is on</string>
     <string name="carlink_diag_bt_off">Bluetooth is off</string>
     <string name="carlink_diag_bt_off_body">Wireless connections and phone detection need Bluetooth.</string>
+    <!-- Car stereo Bluetooth check (detect/ExternalBluetoothProbe). -->
+    <string name="carlink_diag_stereo_bt_ok">Car stereo Bluetooth</string>
+    <string name="carlink_diag_stereo_bt_ok_body">Built in. Wireless CarPlay and Android Auto can use it.</string>
+    <string name="carlink_diag_stereo_bt_external">Car stereo Bluetooth is a separate module</string>
+    <!-- %1$s: the evidence, e.g. "a Bluetooth module service is running, the module's serial port". -->
+    <string name="carlink_diag_stereo_bt_external_body">Found: %1$s. Apps can\'t use this module, so wireless CarPlay and Android Auto can\'t start on this stereo yet. A USB cable works.</string>
+    <string name="carlink_diag_stereo_bt_maybe">Car stereo Bluetooth may be a separate module</string>
+    <string name="carlink_diag_stereo_bt_maybe_body">Found: %1$s. Your phone is paired with this stereo\'s Android Bluetooth, so wireless may still work. If it doesn\'t, a USB cable works.</string>
+    <string name="carlink_diag_stereo_bt_override_note">“Try wireless on this stereo anyway” is on in Settings.</string>
+    <string name="carlink_diag_stereo_signal_service">a Bluetooth module service is running</string>
+    <string name="carlink_diag_stereo_signal_fyt_setting">the stereo\'s settings name an external Bluetooth module</string>
+    <string name="carlink_diag_stereo_signal_fyt_port">the FYT module\'s serial port</string>
+    <string name="carlink_diag_stereo_signal_module_port">a Bluetooth module\'s serial port</string>
+    <string name="carlink_diag_stereo_signal_module_setting">the stereo\'s settings mark its Bluetooth as external</string>
+    <string name="carlink_diag_stereo_signal_separator">",\u0020"</string>
     <string name="carlink_diag_bt_absent">This device has no Bluetooth</string>
     <string name="carlink_diag_bt_absent_body">Connect phones by USB.</string>
 
@@ -242,6 +257,7 @@
     <string name="carlink_diag_time_yesterday">Yesterday %1$s</string>
     <string name="carlink_diag_problem_no_answer">Phone didn’t answer</string>
     <string name="carlink_diag_problem_bluetooth">Bluetooth link failed</string>
+    <string name="carlink_diag_problem_external_bt">Stereo Bluetooth out of reach</string>
     <string name="carlink_diag_problem_refused_wifi">Phone refused the car’s Wi-Fi</string>
     <string name="carlink_diag_problem_unreached">Phone didn’t reach the car’s Wi-Fi</string>
     <string name="carlink_diag_problem_dropped">Connection dropped</string>

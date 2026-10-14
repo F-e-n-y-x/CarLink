@@ -64,6 +64,8 @@ data class ConnectionPrefs(
     val autoConnectPaused: Boolean,
     /** The floating switcher over the projection (Settings › General). */
     val floatingSwitcher: Boolean = true,
+    /** "Try wireless on this stereo anyway" (Settings › Connection, advanced). */
+    val wirelessOnExternalBluetooth: Boolean = false,
 )
 
 /** The wireless path the next session would use, for Home's Network chip. */
@@ -188,6 +190,15 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     /** The one set of settings both engines use. */
     val unified: StateFlow<UnifiedSettings> = _unified.asStateFlow()
 
+    private val _stereoBluetooth = MutableStateFlow(com.carlink.core.detect.ExternalBluetoothProbe.cached())
+    /** What this stereo's Bluetooth is (Diagnostics, Settings, the setup); null until the probe finished. */
+    val stereoBluetooth: StateFlow<com.carlink.core.detect.StereoBluetoothReport?> = _stereoBluetooth.asStateFlow()
+
+    /** Wireless cannot start on this stereo (external Bluetooth module, and the driver did not override it). */
+    val wirelessUnavailable: StateFlow<Boolean> = combine(_stereoBluetooth, _connection) { report, prefs ->
+        report != null && com.carlink.core.connection.DeviceEnvironment.wirelessBlocked(report.classification, prefs.wirelessOnExternalBluetooth)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val _network = MutableStateFlow<NetworkPreview?>(null)
     val network: StateFlow<NetworkPreview?> = _network.asStateFlow()
 
@@ -196,6 +207,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val permissionsNeeded: StateFlow<Boolean> = _permissionsNeeded.asStateFlow()
 
     init {
+        if (_stereoBluetooth.value == null) viewModelScope.launch {
+            _stereoBluetooth.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.carlink.core.detect.ExternalBluetoothProbe.await(app)
+            }
+        }
         phonesRepository.start()
         runCatching {
             androidx.core.content.ContextCompat.registerReceiver(app, usbReceiver, android.content.IntentFilter().apply {
@@ -364,6 +380,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setAutoConnectBluetooth(on: Boolean) { preferences.autoConnectBluetooth = on; _connection.value = readConnection() }
     fun setStartOnBoot(on: Boolean) { preferences.startOnBoot = on; _connection.value = readConnection() }
     fun resumeAutoConnect() { preferences.autoConnectPaused = false; _connection.value = readConnection() }
+    fun setWirelessOnExternalBluetooth(on: Boolean) {
+        preferences.wirelessOnExternalBluetooth = on
+        _connection.value = readConnection()
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Try wireless on this stereo anyway: ${if (on) "on" else "off"}")
+    }
     fun setFloatingSwitcher(on: Boolean) {
         uiPreferences.floatingSwitcher = on
         _connection.value = readConnection()
@@ -404,5 +425,5 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     // The short pause after a Disconnect is silent: Home shows its normal ready state, no "Resume".
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
-        floatingSwitcher = uiPreferences.floatingSwitcher)
+        floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth)
 }

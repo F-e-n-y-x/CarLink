@@ -162,6 +162,7 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
         phones = home.phones,
         autoConnectPaused = connection.autoConnectPaused,
         autoConnectEnabled = connection.autoConnectUsb || connection.autoConnectBluetooth,
+        wirelessOnExternalBluetooth = connection.wirelessOnExternalBluetooth,
     )
     val checks by produceState<List<CheckResult>?>(null, inputs, resumes) {
         value = withContext(Dispatchers.Default) { Checks.sorted(Checks.evaluate(context, inputs)) }
@@ -243,6 +244,9 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
     PremiumScreen(stringResource(R.string.carlink_diag_title), onBack = actions::back) { margin ->
         val gap = if (isCar) 24.dp else 16.dp
         val twoPane = maxWidth >= 840.dp && maxHeight >= 420.dp
+        // With no session to watch, what needs attention comes first (on a 1280×720 stereo it
+        // would otherwise sit below the fold under two empty cards).
+        val checksFirst = ui.link.stage == LinkStage.IDLE && (ui.checks?.let(Checks::problemCount) ?: 0) > 0
         if (twoPane) {
             Row(Modifier.fillMaxSize().padding(horizontal = margin)) {
                 Column(
@@ -251,9 +255,10 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     verticalArrangement = Arrangement.spacedBy(gap),
                 ) {
                     Summary(ui.checks)
+                    if (checksFirst) ChecksCard(ui.checks, actions)
                     SessionCard(ui)
                     PhonesHealthCard(ui.health)
-                    ChecksCard(ui.checks, actions)
+                    if (!checksFirst) ChecksCard(ui.checks, actions)
                 }
                 Spacer(Modifier.width(dimens.gutter * 1.5f))
                 LogPanel(ui.log, filter, { filter = it }, actions::shareLog,
@@ -268,7 +273,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     verticalArrangement = Arrangement.spacedBy(gap),
                 ) {
                     Summary(ui.checks)
-                    if (compact) {
+                    if (compact || checksFirst) {
                         ChecksCard(ui.checks, actions); SessionCard(ui); PhonesHealthCard(ui.health)
                     } else {
                         SessionCard(ui); PhonesHealthCard(ui.health); ChecksCard(ui.checks, actions)
@@ -670,6 +675,33 @@ internal val previewChecks = listOf(
     CheckResult(CheckId.H264_DECODER, CheckStatus.PASS, decoder = DecoderInfo("c2.qti.avc.decoder", 4096, 2176)),
     CheckResult(CheckId.WIFI_DIRECT, CheckStatus.INFO),
 )
+
+/**
+ * A stereo whose Bluetooth is an external module (the user's FYT unit): every other check passes.
+ * [likely] false shows the doubtful case (the phone is bonded to Android's own adapter).
+ */
+internal fun previewStereoChecks(likely: Boolean = true): List<CheckResult> {
+    val signals = listOf(com.carlink.core.detect.StereoBluetoothSignal.MODULE_SERIAL_PORT,
+        com.carlink.core.detect.StereoBluetoothSignal.MODULE_SETTING)
+    val report = com.carlink.core.detect.StereoBluetoothReport(
+        classification = if (likely) com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN
+            else com.carlink.core.detect.StereoBluetooth.LIKELY_FALSE_POSITIVE,
+        signals = signals, diAutoEvidence = "/dev/rf_serial exists", properties = emptyMap(), nodes = emptyMap(),
+        daemonPort = com.carlink.core.detect.PortState.CLOSED, packages = emptyList(),
+        adapter = com.carlink.core.detect.AdapterFacts(present = true, enabled = true, addressReal = !likely),
+        bondedCount = 1, knownPhones = emptyList(),
+    )
+    return Checks.sorted(listOf(
+        CheckResult(CheckId.CARPLAY_AUTHENTICATION, CheckStatus.PASS, authSource = CarPlayAuthSource.BUNDLED),
+        CheckResult(CheckId.BLUETOOTH, CheckStatus.PASS),
+        Checks.stereoBluetooth(report, overridden = false),
+        CheckResult(CheckId.PAIRED_PHONES, CheckStatus.PASS, count = 1),
+        CheckResult(CheckId.AUTO_CONNECT, CheckStatus.PASS),
+        CheckResult(CheckId.USB_HOST, CheckStatus.PASS),
+        CheckResult(CheckId.H264_DECODER, CheckStatus.PASS, decoder = DecoderInfo("OMX.sprd.h264.decoder", 1920, 1088)),
+        CheckResult(CheckId.WIFI_DIRECT, CheckStatus.PASS),
+    ))
+}
 
 internal val previewLink = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, "Sara’s iPhone", 3, 5,
     "Starting video")

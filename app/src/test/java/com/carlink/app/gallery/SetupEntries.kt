@@ -31,8 +31,8 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
     fun ui(step: SetupStep, pairing: PairingSession.State = PairingSession.State.Waiting(carName), visible: Boolean = true,
            link: LinkState = LinkState.Idle, phone: PairedPhone? = null, cable: Boolean = false,
            known: List<PairedPhone> = emptyList(), perms: List<SetupPermission> = permissions,
-           brand: CarBrand? = null, detected: CarBrand? = null) =
-        SetupUi(step, perms, brand, detected, pairing, carName, visible, link, phone, known, cable)
+           brand: CarBrand? = null, detected: CarBrand? = null, wirelessUnavailable: Boolean = false) =
+        SetupUi(step, perms, brand, detected, pairing, carName, visible, link, phone, known, cable, wirelessUnavailable)
     fun entry(name: String, content: () -> SetupUi) = GalleryEntry("setup", name) { SetupContent(content(), GallerySetupActions) }
     val s25 = PairedPhone(unknown.address, "Ayush’s S25 Ultra", PhoneKind.UNKNOWN, connected = false)
     listOf(
@@ -44,6 +44,8 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
         entry("car-byd-detected") { ui(SetupStep.CAR, perms = allGranted, detected = CarBrand.BYD) },
         entry("pair-waiting") { ui(SetupStep.PAIR, visible = false, perms = allGranted, known = listOf(pixel)) },
         // Paired; the iPhone answered and is linking, slower than usual.
+        // A stereo whose Bluetooth is an external module: wireless cannot start yet, the cable can.
+        entry("pair-external-bluetooth") { ui(SetupStep.PAIR, visible = false, perms = allGranted, wirelessUnavailable = true) },
         entry("pair-found-iphone") {
             ui(SetupStep.PAIR, PairingSession.State.Paired(iphone.address, iphone.name, PhoneKind.IPHONE), perms = allGranted,
                 phone = iphone, link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 3, 4,

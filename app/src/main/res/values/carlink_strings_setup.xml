@@ -83,6 +83,8 @@
     <string name="carlink_setup_pair_bt_off_body">Phones find this screen over Bluetooth. Turn it on to pair.</string>
     <string name="carlink_setup_pair_bt_on">Turn on Bluetooth</string>
     <string name="carlink_setup_pair_cable">Plug in with a cable instead</string>
+    <!-- Pairing step on a stereo whose Bluetooth is an external module apps cannot use. -->
+    <string name="carlink_setup_pair_external_bt">Wireless isn\'t available on this stereo yet. Plug your phone in with a USB cable\u00A0— it works the same.</string>
     <string name="carlink_setup_pair_wireless">Pair over Bluetooth instead</string>
     <string name="carlink_setup_pair_skip">Skip</string>
     <string name="carlink_setup_pair_cable_title">Plug your phone into this screen</string>

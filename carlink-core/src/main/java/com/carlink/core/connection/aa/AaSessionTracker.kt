@@ -138,7 +138,8 @@ internal class AaSessionTracker(
             EngineEvent.BLUETOOTH_UNAVAILABLE.name ->
                 fail(FailureReason.BLOCKED, if (d["cause"] == "permission") "Bluetooth permission missing" else "Bluetooth is off")
             EngineEvent.EXTERNAL_BLUETOOTH.name ->
-                fail(FailureReason.BLUETOOTH, "this unit's Bluetooth is an external module the app cannot reach")
+                fail(FailureReason.EXTERNAL_BLUETOOTH, "this unit's Bluetooth is an external module the app cannot reach" +
+                    (d["evidence"]?.let { " ($it)" } ?: ""))
             EngineEvent.BT_CHANNEL_ACCEPTED.name -> {
                 accepted = true
                 nextRepokeAt = null

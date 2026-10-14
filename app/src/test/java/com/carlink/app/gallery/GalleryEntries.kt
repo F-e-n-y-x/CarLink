@@ -156,6 +156,10 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
         HomeContent(ui(link = LinkState(LinkStage.CONNECTED, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 6, 6),
             phones = listOf(pixel.copy(connected = true), iphone), connectedSince = since), actions)
     },
+    // The stereo's Bluetooth is an external module apps cannot use (ExternalBluetoothProbe): cable advice, no Try again.
+    home("failed-external-bluetooth") {
+        HomeContent(ui(link = failed(LinkProblem.EXTERNAL_BLUETOOTH, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
+    },
     home("failed-engine") {
         HomeContent(ui(link = failed(LinkProblem.ENGINE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel, iphone)), actions)
     },
@@ -174,6 +178,15 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
 private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("diagnostics", "idle") {
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
+    },
+    // An FYT-type stereo whose Bluetooth is a ZLink-type module: the warning keeps the summary from "Everything looks ready".
+    GalleryEntry("diagnostics", "stereo-bluetooth-external") {
+        DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, com.carlink.app.ui.diagnostics.previewStereoChecks(),
+            previewLog()), GalleryDiagnosticsActions)
+    },
+    GalleryEntry("diagnostics", "stereo-bluetooth-maybe") {
+        DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, com.carlink.app.ui.diagnostics.previewStereoChecks(likely = false),
+            previewLog()), GalleryDiagnosticsActions)
     },
     GalleryEntry("diagnostics", "connecting") {
         val started = remember { SystemClock.elapsedRealtime() - 12_000 }

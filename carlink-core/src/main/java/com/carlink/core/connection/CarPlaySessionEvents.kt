@@ -103,11 +103,14 @@ object CarPlayEventMapping {
     /**
      * Classifies a failure from DiPlay's startup category, its message and the stage it happened
      * in. [failure] is null for losses of an established session (AirPlay ended, transport error).
+     * [externalBluetooth] is true when detect/ExternalBluetoothProbe found signs of an external
+     * Bluetooth module on this stereo: DiPlay's "Android's Bluetooth is unusable" is then that.
      */
     fun classify(
         failure: CarPlayStatus.Failed?,
         lastStage: CarPlayStatus?,
         transport: Transport,
+        externalBluetooth: Boolean = false,
     ): CarPlayFailure {
         val stageName = lastStage?.javaClass?.simpleName
         if (failure == null) {
@@ -128,7 +131,9 @@ object CarPlayEventMapping {
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
             // DiPlay 0.2.19: this unit's Android Bluetooth has no adapter, no socket manager, or
             // "connects" without reaching a phone. No retry or other Wi-Fi path can change it.
-            WirelessStartupFailure.BLUETOOTH_UNUSABLE -> return result(FailureReason.BLUETOOTH, hard = true)
+            // On a stereo whose Bluetooth is an external module, that is the reason (and the fix is USB).
+            WirelessStartupFailure.BLUETOOTH_UNUSABLE -> return result(
+                if (externalBluetooth) FailureReason.EXTERNAL_BLUETOOTH else FailureReason.BLUETOOTH, hard = true)
             null -> Unit
         }
         if (HARD_BLUETOOTH.any { message.contains(it, ignoreCase = true) }) return result(FailureReason.BLUETOOTH, hard = true)
@@ -186,6 +191,8 @@ class CarPlaySessionTracker(
      * row cost 28.6 s). Two take about 13 s.
      */
     private val maxDialFailures: Int = MAX_DIAL_FAILURES,
+    /** Signs of an external Bluetooth module on this stereo ([CarPlayEventMapping.classify]). */
+    private val externalBluetooth: Boolean = false,
 ) {
     private val stages = CarPlayEventMapping.stages(transport)
     private var lastStage: CarPlayStatus? = null
@@ -220,7 +227,7 @@ class CarPlaySessionTracker(
             null -> emptyList()
             is CarPlayStatus.Failed -> if (status.wifiResetRequired) {
                 // No host state follows: DiPlay waits for "Reset CarPlay Wi-Fi" (§2.3).
-                finish(failed(CarPlayEventMapping.classify(status, lastStage, transport)))
+                finish(failed(CarPlayEventMapping.classify(status, lastStage, transport, externalBluetooth)))
             } else emptyList() // decided by the HostState that preceded it
             // DiPlay does not retry ControlEnded (F10). Wireless, it only comes when the Bluetooth
             // bootstrap timed out without CarPlay going active (CarPlayController ~1433).
@@ -244,7 +251,7 @@ class CarPlaySessionTracker(
             is HostState.Retrying -> onRetrying(state)
             is HostState.RetriesStopped -> {
                 // F1: only now is FIRST_TCP_TIMEOUT a failure (DiPlay's own budget is spent).
-                val failure = CarPlayEventMapping.classify(state.failure, lastStage, transport)
+                val failure = CarPlayEventMapping.classify(state.failure, lastStage, transport, externalBluetooth)
                     .let { if (state.failure == null) it.copy(startupFailure = state.startupFailure) else it }
                 finish(failed(failure))
             }
@@ -274,7 +281,7 @@ class CarPlaySessionTracker(
     private fun onRetrying(state: HostState.Retrying): List<AdapterEvent> {
         projecting = false
         lastProgress = null
-        val failure = CarPlayEventMapping.classify(state.failure, lastStage, transport)
+        val failure = CarPlayEventMapping.classify(state.failure, lastStage, transport, externalBluetooth)
         lastFailure = failure
         val dialMissed = transport == Transport.WIRELESS && failure.reason == FailureReason.BLUETOOTH &&
             (lastStage == CarPlayStatus.ConnectingBluetooth || CarPlayEventMapping.isDialFailure(state.reason) ||

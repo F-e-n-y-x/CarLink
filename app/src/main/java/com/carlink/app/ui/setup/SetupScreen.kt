@@ -145,6 +145,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     val permissions = remember(reads) { readPermissions(context) }
 
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
+    val wirelessUnavailable by vm.wirelessUnavailable.collectAsStateWithLifecycle()
     val home by vm.home.collectAsStateWithLifecycle()
     val pairing = remember { PairingSession(context) }
     DisposableEffect(step == SetupStep.PAIR) {
@@ -252,6 +253,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         phone = found,
         knownPhones = home.phones.filter { it.kind != PhoneKind.UNKNOWN }.take(3),
         cable = cable,
+        wirelessUnavailable = wirelessUnavailable,
     )
     SetupContent(ui, actions)
 }
@@ -519,6 +521,10 @@ private fun pairCopy(ui: SetupUi): Copy {
         session?.stage == LinkStage.CONNECTED -> Copy(stringResource(R.string.carlink_home_eyebrow_connected), colors.success,
             plain(stringResource(R.string.carlink_setup_pair_connected_title, phoneName)),
             stringResource(R.string.carlink_setup_pair_connected_body, engine?.let { engineName(it) } ?: ""))
+        // Home's words: retrying cannot help, the cable can.
+        session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH ->
+            Copy(stringResource(R.string.carlink_home_eyebrow_problem), colors.warning,
+                plain(stringResource(R.string.carlink_home_error_external_bt_title)), stringResource(R.string.carlink_home_error_external_bt_body))
         session?.stage == LinkStage.FAILED -> Copy(stringResource(R.string.carlink_home_eyebrow_problem), scheme.error,
             plain(stringResource(R.string.carlink_setup_pair_failed_title)), stringResource(R.string.carlink_setup_pair_failed_body))
         ui.cable -> Copy(eyebrow, scheme.primary, plain(stringResource(R.string.carlink_setup_pair_cable_title)),
@@ -578,10 +584,12 @@ private fun PermissionSummary(ui: SetupUi, actions: SetupActions) {
 private fun PairActions(ui: SetupUi, actions: SetupActions) {
     val dimens = CarLinkTokens.dimens
     val session = sessionOf(ui)
+    val externalFailure = session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH
     FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap), verticalArrangement = Arrangement.spacedBy(dimens.targetGap),
         itemVerticalAlignment = Alignment.CenterVertically) {
         when {
             session?.stage == LinkStage.CONNECTED -> Unit
+            externalFailure -> Unit
             session?.stage == LinkStage.FAILED ->
                 IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
             ui.cable -> Unit
@@ -685,6 +693,11 @@ private fun PairPanel(ui: SetupUi, actions: SetupActions) {
     val session = sessionOf(ui)
     Column(verticalArrangement = Arrangement.spacedBy(dimens.gutter)) {
         if (ui.cable) CableCard(session) else NameCard(ui, actions)
+        // On a stereo whose Bluetooth apps cannot use, say so before the driver pairs (the failure copy says it after).
+        val externalFailure = session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH
+        if (ui.wirelessUnavailable && !ui.cable && !externalFailure && session?.stage != LinkStage.CONNECTED) {
+            NoticeLine(stringResource(R.string.carlink_setup_pair_external_bt), R.drawable.carlink_ic_usb)
+        }
         if (ui.phone != null || session != null) FoundCard(ui, session)
         if (!ui.cable && ui.phone == null && ui.knownPhones.isNotEmpty()) KnownPhones(ui.knownPhones, actions)
     }

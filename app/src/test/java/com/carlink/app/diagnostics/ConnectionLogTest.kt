@@ -77,4 +77,14 @@ class ConnectionLogTest {
         assertTrue(text.startsWith("header"))
         assertTrue(text.indexOf("aa first") < text.indexOf("aa second"))
     }
+
+    @Test fun theSharedLogCarriesTheStereoBluetoothBlockAfterTheHeader() {
+        val file = ConnectionLog.export(context, "CarLink connection log")
+        val text = file.readText()
+        assertTrue(text.startsWith("CarLink connection log\n\nExternal Bluetooth probe: classification="))
+        for (part in listOf("diauto.evidence=", "prop sys.fyt.bluetooth_type=", "node /dev/auto_serial=", "port 127.0.0.1:3152=",
+            "packages=", "adapter present=", "bonded=", "knownPhones=")) {
+            assertTrue("missing $part", part in text)
+        }
+    }
 }

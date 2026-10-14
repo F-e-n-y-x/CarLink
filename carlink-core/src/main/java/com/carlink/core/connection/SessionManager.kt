@@ -37,6 +37,11 @@ enum class Problem {
     SAME_WIFI_DETAILS,
     CAR_HOTSPOT_DETAILS,
     CAR_HOTSPOT_OFF,
+    /**
+     * Wireless only: this stereo's Bluetooth is an external module the app cannot reach
+     * ([SessionManager.Environment.wirelessUnavailable]); USB works. No one-tap fix.
+     */
+    EXTERNAL_BLUETOOTH,
 }
 
 
@@ -144,6 +149,15 @@ class SessionManager(
         val autoConnectUsb: Boolean
         val autoConnectBluetooth: Boolean
         var autoConnectPaused: Boolean
+
+        /**
+         * True when wireless cannot start on this device at all: its Bluetooth is an external
+         * module the app cannot reach (detect/ExternalBluetoothProbe) and the driver did not ask
+         * to try anyway. Wireless requests are then [Problem.EXTERNAL_BLUETOOTH] before any
+         * engine starts, and automatic wireless starts are skipped. USB is never affected.
+         */
+        val wirelessUnavailable: Boolean get() = false
+
         /** Problems that prevent [request] on [path] (pre-flight; does not open anything). */
         fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem>
         /** Wireless paths to try for [request], in order (see [WirelessPolicy]). */
@@ -339,6 +353,8 @@ class SessionManager(
         val engine = kind.engine ?: return
         when {
             !environment.autoConnectBluetooth -> note("Bluetooth $engine phone: automatic start is off")
+            // Nothing wireless can start here; neither a start nor a switch offer would help.
+            environment.wirelessUnavailable -> note("Bluetooth $engine phone: wireless is not available on this stereo")
             environment.autoConnectPaused -> note("Bluetooth $engine phone: paused by the driver")
             _state.value.isActive -> {
                 // Another phone reached the car while one is projecting: offer it, never take over
@@ -369,6 +385,8 @@ class SessionManager(
         when {
             !environment.autoConnectBluetooth || environment.autoConnectPaused -> return
             _state.value !is SessionState.Idle -> return
+            // No Bluetooth attempt and no Wi-Fi Direct churn on a stereo where wireless cannot start.
+            environment.wirelessUnavailable -> return note("Home shown: wireless is not available on this stereo; not connecting")
             now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS -> return
             // Home coming back because a session just ended is not "the car started".
             now - lastSessionEndedAt < HOME_AUTO_START_COOLDOWN_MILLIS -> return
@@ -442,6 +460,12 @@ class SessionManager(
         stop()
         recoveries.clear()
         everConnected = false
+        // Before any engine, warm-up or path: a wireless start cannot work on this stereo.
+        if (request.transport == Transport.WIRELESS && environment.wirelessUnavailable) {
+            note("${request.engine} blocked: wireless is not available on this stereo (external Bluetooth module)")
+            _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
+            return
+        }
         if (stopping > 0) warmUp(request)
         val paths = if (request.transport == Transport.WIRELESS) {
             val policy = environment.wirelessPaths(request)
@@ -803,6 +827,7 @@ fun FailureReason.retryText(engine: Engine): String {
         FailureReason.LINK_TOO_WEAK -> "the connection dropped"
         FailureReason.WIFI_SETUP_FAILED -> "the car's Wi-Fi link could not be set up"
         FailureReason.BLUETOOTH -> "the $phone did not answer over Bluetooth"
+        FailureReason.EXTERNAL_BLUETOOTH -> "this stereo's Bluetooth cannot be used for wireless"
         FailureReason.PHONE_DID_NOT_ANSWER -> "the $phone did not answer"
         FailureReason.USB -> "the USB link restarted"
         FailureReason.BLOCKED -> "a permission or switch is missing"

@@ -45,6 +45,8 @@
     <string name="carlink_settings_resume">Resume</string>
 
     <string name="carlink_settings_group_wireless">Wireless</string>
+    <string name="carlink_settings_external_bt">Try wireless on this stereo anyway</string>
+    <string name="carlink_settings_external_bt_detail">This stereo\'s Bluetooth looks like a separate module apps can\'t use, so CarLink doesn\'t start wireless here. Turn on to try anyway; the Android Auto engine may still refuse. Applies from the next connection.</string>
     <string name="carlink_settings_method">Connection method</string>
     <string name="carlink_settings_method_detail">How the phone and the car share Wi-Fi</string>
     <string name="carlink_settings_method_auto">Automatic</string>

@@ -11,6 +11,9 @@ import android.os.PowerManager
 import android.provider.Settings
 import com.carlink.core.core.PhoneKind
 import com.carlink.core.detect.BluetoothAvailability
+import com.carlink.core.detect.ExternalBluetoothProbe
+import com.carlink.core.detect.StereoBluetooth
+import com.carlink.core.detect.StereoBluetoothReport
 import com.carlink.core.detect.PairedPhone
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.orchestration.MfiTarget
@@ -22,6 +25,8 @@ enum class CheckStatus { PASS, WARN, FAIL, INFO }
 enum class CheckId {
     CARPLAY_AUTHENTICATION,
     BLUETOOTH,
+    /** Whether the stereo's Bluetooth is an external module apps cannot use (detect/ExternalBluetoothProbe). */
+    STEREO_BLUETOOTH,
     BLUETOOTH_PERMISSION,
     PAIRED_PHONES,
     AUTO_CONNECT,
@@ -80,6 +85,10 @@ data class CheckResult(
     val decoder: DecoderInfo? = null,
     val authSource: CarPlayAuthSource? = null,
     val mfiTarget: MfiTarget? = null,
+    /** [CheckId.STEREO_BLUETOOTH]: what the probe found. */
+    val stereo: StereoBluetoothReport? = null,
+    /** [CheckId.STEREO_BLUETOOTH]: the driver turned on "Try wireless on this stereo anyway". */
+    val overridden: Boolean = false,
 )
 
 /** What the checks need from CarLink's own state (from CarLinkViewModel.home / .connection). */
@@ -88,6 +97,8 @@ data class CheckInputs(
     val phones: List<PairedPhone>,
     val autoConnectPaused: Boolean,
     val autoConnectEnabled: Boolean,
+    /** "Try wireless on this stereo anyway" is on. */
+    val wirelessOnExternalBluetooth: Boolean = false,
 )
 
 /**
@@ -107,6 +118,7 @@ object Checks {
 
         results += carPlayAuthentication(app)
         results += bluetooth(app, inputs)
+        results += stereoBluetooth(ExternalBluetoothProbe.await(app), inputs.wirelessOnExternalBluetooth)
         if (Build.VERSION.SDK_INT >= 31 && Manifest.permission.BLUETOOTH_CONNECT in requested) {
             results += permission(app, CheckId.BLUETOOTH_PERMISSION, CheckStatus.FAIL,
                 Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
@@ -198,6 +210,18 @@ object Checks {
         return CheckResult(CheckId.BLUETOOTH, status,
             fix = CheckFix.OpenBluetoothSettings.takeIf { status == CheckStatus.FAIL })
     }
+
+    /**
+     * Green when nothing points to an external Bluetooth module; otherwise an amber warning (the
+     * doubtful [StereoBluetooth.LIKELY_FALSE_POSITIVE] too, in less certain words), so the summary
+     * never says "Everything looks ready" while wireless cannot start.
+     */
+    fun stereoBluetooth(report: StereoBluetoothReport, overridden: Boolean): CheckResult = CheckResult(
+        CheckId.STEREO_BLUETOOTH,
+        if (report.classification == StereoBluetooth.NONE) CheckStatus.PASS else CheckStatus.WARN,
+        stereo = report,
+        overridden = overridden && report.classification.hasSignals,
+    )
 
     /** [CheckResult.count] is the number of paired phones; [CheckResult.unknownCount] those not yet identified. */
     private fun pairedPhones(phones: List<PairedPhone>): CheckResult =

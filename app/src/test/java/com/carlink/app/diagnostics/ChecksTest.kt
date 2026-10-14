@@ -67,4 +67,32 @@ class ChecksTest {
         val text = "GNU AFFERO\n  Version 3\n\nPreamble line one\nline two\r\n\r\n\n"
         assertEquals(listOf("GNU AFFERO Version 3", "Preamble line one line two"), AppInfo.paragraphs(text))
     }
+
+    private fun stereo(classification: com.carlink.core.detect.StereoBluetooth) = com.carlink.core.detect.StereoBluetoothReport(
+        classification = classification,
+        signals = if (classification == com.carlink.core.detect.StereoBluetooth.NONE) emptyList()
+            else listOf(com.carlink.core.detect.StereoBluetoothSignal.MODULE_SERIAL_PORT),
+        diAutoEvidence = null, properties = emptyMap(), nodes = emptyMap(), daemonPort = com.carlink.core.detect.PortState.CLOSED,
+        packages = emptyList(), adapter = com.carlink.core.detect.AdapterFacts(true, true, false), bondedCount = 0, knownPhones = emptyList(),
+    )
+
+    @Test fun aBuiltInStereoBluetoothStaysGreen() {
+        val result = Checks.stereoBluetooth(stereo(com.carlink.core.detect.StereoBluetooth.NONE), overridden = false)
+        assertEquals(CheckId.STEREO_BLUETOOTH, result.id)
+        assertEquals(CheckStatus.PASS, result.status)
+        assertEquals(0, Checks.problemCount(listOf(result)))
+    }
+
+    @Test fun anExternalModuleIsAWarningSoTheSummaryIsNeverAllReady() {
+        for (c in com.carlink.core.detect.StereoBluetooth.entries.filter { it.hasSignals }) {
+            val result = Checks.stereoBluetooth(stereo(c), overridden = false)
+            assertEquals(c.name, CheckStatus.WARN, result.status)
+            assertEquals(c.name, null, result.fix)
+            // The Diagnostics summary reads problemCount: one warning means not "Everything looks ready".
+            assertEquals(1, Checks.problemCount(listOf(result, CheckResult(CheckId.BLUETOOTH, CheckStatus.PASS))))
+            assertEquals(CheckId.STEREO_BLUETOOTH, Checks.sorted(listOf(CheckResult(CheckId.BLUETOOTH, CheckStatus.PASS), result)).first().id)
+        }
+        assertTrue(Checks.stereoBluetooth(stereo(com.carlink.core.detect.StereoBluetooth.FYT_MODULE), overridden = true).overridden)
+        assertFalse(Checks.stereoBluetooth(stereo(com.carlink.core.detect.StereoBluetooth.NONE), overridden = true).overridden)
+    }
 }

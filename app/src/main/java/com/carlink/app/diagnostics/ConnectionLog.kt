@@ -1,6 +1,7 @@
 package com.carlink.app.diagnostics
 
 import android.content.Context
+import com.carlink.core.detect.ExternalBluetoothProbe
 import com.carlink.core.diagnostics.EventLog
 import com.carlink.core.diagnostics.LogMasking
 import java.io.File
@@ -136,18 +137,26 @@ object ConnectionLog {
         }
     }
 
+    /** The shared log's header followed by the probe's block. */
+    fun withProbe(header: String, probeBlock: String): String = "$header\n\n$probeBlock"
+
     fun sourceTag(source: LogSource): String = when (source) {
         LogSource.CARPLAY -> "CP"
         LogSource.ANDROID_AUTO -> "AA"
         LogSource.CARLINK -> "CL"
     }
 
-    /** Writes the combined log into the shared cache folder and returns it (see CarLinkFileProvider). */
+    /**
+     * Writes the combined log into the shared cache folder and returns it (see CarLinkFileProvider).
+     * The car stereo's Bluetooth probe follows the header as one block: it says which external
+     * module route a stereo needs (design/EXTERNAL_BLUETOOTH.md).
+     */
     fun export(context: Context, header: String): File {
         val dir = File(context.cacheDir, CarLinkFileProvider.SHARED_DIR).apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-        return File(dir, "carlink-connection-log-$stamp.txt").apply { writeText(format(read(context), header)) }
+        val stereo = runCatching { ExternalBluetoothProbe.await(context).format() }.getOrElse { "External Bluetooth probe: failed (${it.message})" }
+        return File(dir, "carlink-connection-log-$stamp.txt").apply { writeText(format(read(context), withProbe(header, stereo))) }
     }
 
     private fun headerFormat() = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)

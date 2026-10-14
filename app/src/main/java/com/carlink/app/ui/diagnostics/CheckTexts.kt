@@ -11,6 +11,8 @@ import com.carlink.app.diagnostics.CheckResult
 import com.carlink.app.diagnostics.CheckStatus
 import com.carlink.app.diagnostics.DecoderInfo
 import com.carlink.app.ui.components.ltr
+import com.carlink.core.detect.StereoBluetooth
+import com.carlink.core.detect.StereoBluetoothSignal
 import com.shilapi.xcertplay.orchestration.MfiTarget
 
 /** What a check row says: title, supporting line, an optional note, and the Fix label. */
@@ -44,6 +46,7 @@ fun checkText(result: CheckResult): CheckText {
             CheckStatus.INFO -> CheckText(s(R.string.carlink_diag_bt_absent), s(R.string.carlink_diag_bt_absent_body))
             else -> CheckText(s(R.string.carlink_diag_bt_off), s(R.string.carlink_diag_bt_off_body))
         }
+        CheckId.STEREO_BLUETOOTH -> stereoText(result)
         CheckId.BLUETOOTH_PERMISSION -> if (ok) CheckText(s(R.string.carlink_diag_bt_perm_ok))
             else CheckText(s(R.string.carlink_diag_bt_perm_missing), s(R.string.carlink_diag_bt_perm_body))
         CheckId.PAIRED_PHONES -> {
@@ -83,6 +86,33 @@ fun checkText(result: CheckResult): CheckText {
             else CheckText(s(R.string.carlink_diag_hevc_missing), s(R.string.carlink_diag_hevc_missing_body))
     }
     return text.copy(fixLabel = fixLabel)
+}
+
+/** The car stereo's Bluetooth: built in, an external module (with the evidence in plain words), or maybe one. */
+@Composable
+private fun stereoText(result: CheckResult): CheckText {
+    val report = result.stereo
+    val classification = report?.classification ?: StereoBluetooth.NONE
+    if (classification == StereoBluetooth.NONE) {
+        return CheckText(stringResource(R.string.carlink_diag_stereo_bt_ok), stringResource(R.string.carlink_diag_stereo_bt_ok_body))
+    }
+    val evidence = report!!.signals.map { stringResource(signalText(it)) }
+        .joinToString(stringResource(R.string.carlink_diag_stereo_signal_separator))
+    val note = if (result.overridden) stringResource(R.string.carlink_diag_stereo_bt_override_note) else null
+    return if (classification == StereoBluetooth.LIKELY_FALSE_POSITIVE) {
+        CheckText(stringResource(R.string.carlink_diag_stereo_bt_maybe), stringResource(R.string.carlink_diag_stereo_bt_maybe_body, evidence), note)
+    } else {
+        CheckText(stringResource(R.string.carlink_diag_stereo_bt_external),
+            stringResource(R.string.carlink_diag_stereo_bt_external_body, evidence), note)
+    }
+}
+
+private fun signalText(signal: StereoBluetoothSignal): Int = when (signal) {
+    StereoBluetoothSignal.MODULE_SERVICE_ANSWERS -> R.string.carlink_diag_stereo_signal_service
+    StereoBluetoothSignal.FYT_SETTING -> R.string.carlink_diag_stereo_signal_fyt_setting
+    StereoBluetoothSignal.FYT_SERIAL_PORT -> R.string.carlink_diag_stereo_signal_fyt_port
+    StereoBluetoothSignal.MODULE_SERIAL_PORT -> R.string.carlink_diag_stereo_signal_module_port
+    StereoBluetoothSignal.MODULE_SETTING -> R.string.carlink_diag_stereo_signal_module_setting
 }
 
 @Composable
