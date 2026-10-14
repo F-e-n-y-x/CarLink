@@ -2969,6 +2969,7 @@ class CarPlayHostActivity : ComponentActivity() {
         )
 
         val preview = menuText("", 17f, MENU_SECONDARY)
+            .menuItem(CarPlayHostIntegration.MenuItem.SETTINGS_SUMMARY) // CarLink
         content.addView(
             preview,
             LinearLayout.LayoutParams(

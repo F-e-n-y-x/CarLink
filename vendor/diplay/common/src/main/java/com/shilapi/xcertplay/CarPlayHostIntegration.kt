@@ -49,6 +49,7 @@ object CarPlayHostIntegration {
         VEHICLE_IDENTITY, CAR_BUTTON_ICON, DRIVING_SIDE, DOCK, RESOLUTION, FRAME_RATE, PHYSICAL_SIZE_BASIS,
         PHYSICAL_LENGTH, HEVC, SAFE_AREA, SYSTEM_BARS, DEBUG_LOGS, EXIT_APPLICATION, LANGUAGE, GESTURE_FINGERS,
         HOME,
+        SETTINGS_SUMMARY, // CarLink: the Display page's read-only summary of the session settings
     }
 
     @Volatile

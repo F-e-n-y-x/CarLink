@@ -90,19 +90,25 @@ object EngineChrome {
      * - WIRELESS, WIFI_METHOD, LOCATION, DRIVING_SIDE, RESOLUTION, FRAME_RATE, PHYSICAL_LENGTH:
      *   CarLink writes these into DiPlay before every session (CarPlaySettingsPolicy in
      *   connection/CarPlaySettings.kt, applied from Connection), so an edit here would silently come undone; they live in CarLink Settings.
+     * - PHYSICAL_SIZE_BASIS: CarLink's Interface size writes a screen width in millimetres; with
+     *   "Longest height" DiPlay would read that number as the height and CarPlay would change size.
+     * - MFI_TARGET: CarLink always signs with the offline identity; USB/CH341 needs an MFi chip
+     *   on a serial adapter, and picking it breaks CarPlay.
+     * - HOTSPOT_STATUS: DiPlay's own Wi-Fi state line; CarLink's Home shows the connection.
+     * - SETTINGS_SUMMARY: DiPlay's read-only summary of its handshake values (resolution, OEM
+     *   label, physical size, transport), engine detail rather than something to act on.
      * - DOCK, HEVC, SYSTEM_BARS, DEBUG_LOGS, GESTURE_FINGERS: CarLink Settings › Advanced has them.
      * - AUTO_START: DiPlay's boot receiver is not used; CarLink's own auto-start applies.
      * - LANGUAGE: CarLink ships in English only.
      * - EXIT_APPLICATION: kills the whole CarLink process (Home and the SessionManager with it);
      *   CarLink's Disconnect ends a session.
-     * Kept: the side panel, picture safe area, MFi source, audio channel mapping, the car's name
-     * and button icon and the size basis (no CarLink setting yet), the hotspot status (live), and
-     * the button back to CarLink.
+     * Kept: the side panel, audio channel mapping, the car's name (CarPlaySettingsPolicy keeps a
+     * name typed here) and button icon, the picture safe area, and the button back to CarLink.
+     * The Connection page is left empty and DiPlay then drops it from the rail and chips.
      */
     private val carPlayMenu = setOf(
-        MenuItem.SIDE_PANEL, MenuItem.MFI_TARGET, MenuItem.HOTSPOT_STATUS, MenuItem.AUDIO_MAPPING,
-        MenuItem.VEHICLE_IDENTITY, MenuItem.CAR_BUTTON_ICON, MenuItem.PHYSICAL_SIZE_BASIS, MenuItem.SAFE_AREA,
-        MenuItem.HOME,
+        MenuItem.SIDE_PANEL, MenuItem.AUDIO_MAPPING, MenuItem.VEHICLE_IDENTITY, MenuItem.CAR_BUTTON_ICON,
+        MenuItem.SAFE_AREA, MenuItem.HOME,
     )
 
     fun install(context: Context) {
@@ -110,6 +116,7 @@ object EngineChrome {
         CarPlayHostIntegration.palette = { night -> if (night) carPlayDark else carPlayLight }
         CarPlayHostIntegration.menuItems = carPlayMenu
         CarPlayHostIntegration.chromeStyler = { root, chrome, night -> styleCarPlay(root, chrome, tokens(night)) }
+        }
         // Android Auto's Quick Settings is DiAuto's own settings screen; CarLink Settings owns them.
         HostIntegration.exitMenuHomeLabel = app.getString(R.string.carlink_engine_open_carlink)
         HostIntegration.chromeStyler = { root, chrome -> styleAndroidAuto(root, chrome, tokens(night = true)) }
