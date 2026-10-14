@@ -61,10 +61,16 @@ object EventLog {
     }
 }
 
-/** Masks hardware addresses the way DiAuto's report does ("[address]"). */
+/**
+ * Masks hardware addresses the way DiAuto's report does ("[address]"), and the value of anything
+ * written as `password=…`, `passphrase: …` or `psk=…` ("[hidden]"). The engines already drop such
+ * lines when they write them; this covers CarLink's own log and older files.
+ */
 object LogMasking {
     // `[-:]`, not `[:-]`: Android's ICU regex reads `[:` as a POSIX class and fails to compile.
     private val mac = Regex("(?i)(?<![0-9a-f:])(?:[0-9a-f]{2}[-:]){5}[0-9a-f]{2}(?![0-9a-f:])")
+    private val secret = Regex("(?i)\\b(password|passphrase|passwd|psk|pre.?shared.?key|wpa.?key)(\\s*(?:=|:)\\s*)(\"[^\"]*\"|'[^']*'|[^\\s,;)]+)")
 
     fun mask(text: String): String = text.replace(mac, "[address]")
+        .replace(secret) { "${it.groupValues[1]}${it.groupValues[2]}[hidden]" }
 }

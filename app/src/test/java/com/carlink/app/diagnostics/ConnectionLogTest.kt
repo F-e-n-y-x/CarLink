@@ -29,6 +29,13 @@ class ConnectionLogTest {
         assertEquals("12:04:33.120 v1.2.3", LogMasking.mask("12:04:33.120 v1.2.3"))
     }
 
+    @Test fun masksPasswordValues() {
+        assertEquals("joined password=[hidden], psk: [hidden]", LogMasking.mask("joined password=s3cret!, psk: abc123"))
+        assertEquals("passphrase=[hidden] ok", LogMasking.mask("passphrase=\"two words\" ok"))
+        // Words alone are left alone.
+        assertEquals("wrong password, try again", LogMasking.mask("wrong password, try again"))
+    }
+
     @Test fun eventLogMasksAndKeepsOnlyTheNewestEntries() {
         repeat(EventLog.CAPACITY + 5) { EventLog.add("Test", "event $it") }
         EventLog.add("Bluetooth", "11:22:33:44:55:66 bonded")
