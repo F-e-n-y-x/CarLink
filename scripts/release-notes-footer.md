@@ -45,5 +45,4 @@ CarLink is not affiliated with Apple or Google; CarPlay is a trademark of Apple 
 Auto a trademark of Google LLC.
 
 Found a problem? See [troubleshooting](https://github.com/F-e-n-y-x/CarLink/blob/main/docs/TROUBLESHOOTING.md),
-or [open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose) and attach the log from
-Settings › General › Diagnostics › Share log.
+or tap **Report on GitHub** in CarLink (Home or Diagnostics) to open an issue with the log and the error filled in.

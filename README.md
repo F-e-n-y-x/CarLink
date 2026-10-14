@@ -174,8 +174,11 @@ module apps can't use (common on FYT and ZLink-type stereos). Use a USB cable; s
 steering-wheel keys). The brand never reaches the phone.
 
 **Something doesn't work.** See [troubleshooting](docs/TROUBLESHOOTING.md) for every message
-Home shows. To report a bug, use **Settings › General › Diagnostics › Share log** and
-[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose).
+Home shows. To report a bug from the stereo itself, tap **Report on GitHub** (on Home when it
+couldn't connect, or in **Settings › General › Diagnostics**): the stereo's browser opens a new
+issue with the version, the screen, the error and a log excerpt filled in, and you tap Submit
+(the browser must be signed in to GitHub). Or use **Share log** and
+[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose) yourself.
 
 ## CarPlay notice
 

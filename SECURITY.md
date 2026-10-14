@@ -39,3 +39,8 @@ release.
   An APK signed with another key is not an official build.
 - **The connection log** hides phone addresses, but it describes your devices and networks. Look
   through it before you post it publicly.
+- **Report on GitHub posts in public.** The button opens a new issue on this public repository
+  with a log excerpt, the device and the phone's name filled in. Anyone can read a submitted
+  issue. CarLink removes hardware addresses and Wi-Fi or hotspot passwords before the browser
+  opens, and nothing is sent until you tap Submit; edit out anything else you do not want to
+  publish.

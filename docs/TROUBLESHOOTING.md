@@ -29,9 +29,9 @@ run by the stereo's own firmware (common on FYT and ZLink-type units), and apps 
 neither CarPlay nor Android Auto can start wirelessly. Re-pairing or turning Bluetooth off and on
 does not help. Connect the phone with a USB cable (**How to connect** shows how); it works the
 same. Diagnostics shows **Car stereo Bluetooth is a separate module** with what was found. To help
-add wireless for your stereo, tap **Share log** in Diagnostics and
-[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose): the log says which kind of
-module it is. Settings › Connection (with **Show advanced**) has **Try wireless on this stereo
+add wireless for your stereo, tap **Report on GitHub** in Diagnostics (or **Share log** and
+[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose)): the report says which kind
+of module it is. Settings › Connection (with **Show advanced**) has **Try wireless on this stereo
 anyway**, for when Diagnostics only says the module *may* be separate; Android Auto may still
 refuse. Details: [design/EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md).
 
@@ -91,6 +91,29 @@ popup says why; only the official release (`com.carlink.app`, signed with CarLin
 itself.
 
 ## Reporting a problem
+
+**From the stereo, in one step: Report on GitHub.** Reproduce the problem, then tap **Report on
+GitHub** on Home (it is there when Home says it couldn't connect) or in **Settings › General ›
+Diagnostics**, next to Share log. A sheet shows what goes into the report; **Open GitHub** opens
+the stereo's browser on a new bug report with everything filled in:
+
+- the title (for example "Android Auto · wireless · couldn't connect: Your phone didn't answer");
+- the CarLink version, the screen (maker, model, chip, Android version, size), the phone's name
+  and whether it is an iPhone or an Android phone, CarPlay or Android Auto, the connection type
+  and the car brand;
+- what happened: Home's message and the technical detail (the problem and failure codes, the
+  engine's own message, the session number, the time, and what the stereo Bluetooth check found);
+- a log excerpt: the last session's CarLink lines first, then the engines' errors from the last
+  10 minutes, the timing lines and the newest lines, as much as fits in a link (about 7,500
+  characters). It ends with how many more lines only **Share log** has.
+
+Addresses and Wi-Fi or hotspot passwords are removed before anything leaves the stereo. Add what
+you did and what you expected, look it over, and tap **Submit**. The browser must be signed in to
+GitHub (once; it stays signed in). If the stereo has no browser, CarLink shows a QR code instead:
+scan it with your phone to open a shorter report (title, version, screen and the error) and attach
+the file from **Share log**.
+
+**By hand:**
 
 1. Reproduce it, then open **Settings › General › Diagnostics** and tap **Share log**. The log
    merges CarPlay, Android Auto and CarLink's own decisions, with addresses hidden.
