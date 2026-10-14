@@ -4,6 +4,19 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.1] - 2026-10-15
+
+- Stereos whose Bluetooth is a separate module (common on FYT and similar units) are now
+  recognised. CarLink says plainly that wireless isn't available there yet and to use a USB
+  cable, instead of asking you to re-pair, and Diagnostics shows what it found.
+- Report on GitHub: one tap in Diagnostics, or on a failed connection, opens a new issue with
+  the error, device details and the relevant log lines already filled in.
+- CarPlay engine updated (DiPlay 0.2.19): H.264 video on stereos without a hardware HEVC
+  decoder, steadier music, clearer Bluetooth errors.
+- The CarPlay menu matches CarLink's light or dark theme, has larger buttons and no longer shows
+  settings CarLink manages for you.
+- Passwords are now removed from shared logs as well as addresses.
+
 ## [1.0.0] - 2026-10-10
 
 The first public release of CarLink: CarPlay and Android Auto in one app for Android car
