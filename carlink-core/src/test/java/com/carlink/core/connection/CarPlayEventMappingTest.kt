@@ -3,6 +3,8 @@ package com.carlink.core.connection
 import com.carlink.core.core.Transport
 import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
+import com.shilapi.xcertplay.transport.BluetoothLinkCheck
+import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
 import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import org.junit.Assert.assertEquals
@@ -152,6 +154,8 @@ class CarPlayEventMappingTest {
     @Test fun hardFailuresAreReportedAtOnce() {
         val cases = listOf(
             Triple(CarPlayStatus.Failed("Bluetooth is not enabled"), CarPlayStatus.WaitingForPairedIphone, FailureReason.BLUETOOTH),
+            // DiPlay 0.2.19 (BluetoothRadioCheck.RADIO_OFF), thrown before the Wi-Fi is changed.
+            Triple(CarPlayStatus.Failed(BluetoothRadioCheck.RADIO_OFF), CarPlayStatus.MfiReady, FailureReason.BLUETOOTH),
             Triple(CarPlayStatus.Failed("The selected iPhone is no longer paired. Choose it again in DiPlay."),
                 CarPlayStatus.WaitingForPairedIphone, FailureReason.BLUETOOTH),
             Triple(CarPlayStatus.Failed("iPhone USB permission was denied"), CarPlayStatus.RequestingIphonePermission, FailureReason.USB),
@@ -187,6 +191,30 @@ class CarPlayEventMappingTest {
         tracker.onStatus(CarPlayStatus.StartingHotspot)
         assertEquals(listOf(AdapterEvent.Failed(FailureReason.WIFI_SETUP_FAILED, off.message)),
             tracker.onHostState(HostState.RetriesStopped(off, WirelessStartupFailure.HOTSPOT_CONFIGURATION, 0, exhausted = false)))
+    }
+
+    @Test fun unusableHeadUnitBluetoothStopsAtOnce() {
+        // DiPlay 0.2.19: no adapter, no socket manager, or links that reach no phone; never retried.
+        val unusable = CarPlayStatus.Failed(
+            "Android Bluetooth on this head unit ${BluetoothLinkCheck.NO_SOCKETS_MARK}: its Bluetooth service has no socket manager",
+            startupFailure = WirelessStartupFailure.BLUETOOTH_UNUSABLE)
+        val tracker = CarPlaySessionTracker(Transport.WIRELESS)
+        tracker.started()
+        tracker.onStatus(CarPlayStatus.ConnectingBluetooth)
+        assertEquals(listOf(AdapterEvent.Failed(FailureReason.BLUETOOTH, unusable.message)),
+            tracker.onHostState(HostState.RetriesStopped(unusable, WirelessStartupFailure.BLUETOOTH_UNUSABLE, 0, exhausted = false)))
+        assertTrue(tracker.lastFailure!!.hard)
+        assertEquals(WirelessStartupFailure.BLUETOOTH_UNUSABLE, tracker.lastFailure?.startupFailure)
+    }
+
+    @Test fun unusableBluetoothIsNotAPathProblem() {
+        // Bluetooth starts every wireless path, so trying the next Wi-Fi path cannot help.
+        val failure = CarPlayEventMapping.classify(
+            CarPlayStatus.Failed("no adapter", startupFailure = WirelessStartupFailure.BLUETOOTH_UNUSABLE),
+            CarPlayStatus.MfiReady, Transport.WIRELESS)
+        assertEquals(FailureReason.BLUETOOTH, failure.reason)
+        assertTrue(failure.hard)
+        assertFalse(failure.reason.pathRelated)
     }
 
     @Test fun hotspotNotReadyIsAWifiSetupRetry() {

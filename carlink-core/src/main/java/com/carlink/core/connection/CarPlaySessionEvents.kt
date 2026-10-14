@@ -6,6 +6,7 @@ import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupPolicy
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
 import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
+import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 
 /** What CarLink concluded about one DiPlay failure. */
 data class CarPlayFailure(
@@ -91,6 +92,7 @@ object CarPlayEventMapping {
     /** DiPlay messages (CarPlayController.kt, ExistingWifiManager.kt) that no retry can fix. */
     private val HARD_BLUETOOTH = listOf(
         "Bluetooth is not enabled", "Bluetooth adapter is unavailable", "no longer paired",
+        BluetoothRadioCheck.RADIO_OFF_MARK, // DiPlay 0.2.19's "Bluetooth is not enabled"
         "No unambiguous bonded iPhone", "Multiple connected iPhones", "Multiple bonded iPhones",
     )
     private val HARD_SAME_WIFI = listOf(
@@ -124,8 +126,10 @@ object CarPlayEventMapping {
             WirelessStartupFailure.HOTSPOT_NOT_READY -> return result(FailureReason.WIFI_SETUP_FAILED, hard = false)
             // Hotspot off or details missing: DiPlay stops at once (§3.3).
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
-            // DiPlay 0.2.19's new category; classified by message and stage until it is mapped.
-            WirelessStartupFailure.BLUETOOTH_UNUSABLE, null -> Unit
+            // DiPlay 0.2.19: this unit's Android Bluetooth has no adapter, no socket manager, or
+            // "connects" without reaching a phone. No retry or other Wi-Fi path can change it.
+            WirelessStartupFailure.BLUETOOTH_UNUSABLE -> return result(FailureReason.BLUETOOTH, hard = true)
+            null -> Unit
         }
         if (HARD_BLUETOOTH.any { message.contains(it, ignoreCase = true) }) return result(FailureReason.BLUETOOTH, hard = true)
         if (message.contains("MFi", ignoreCase = true) || message.contains("CH341", ignoreCase = true)) {
