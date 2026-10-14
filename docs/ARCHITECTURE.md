@@ -36,7 +36,8 @@ Modules:
   anything opens), `CarPlayAdapter` and `AndroidAutoAdapter` (drive each engine through small
   hooks), and `connection/aa/` (the Android Auto side that runs in `:aa`). The library's
   packages are `com.carlink.core.*`; the app's stay `com.carlink.app.*`.
-- `detect/` tells iPhones from Android phones; `entry/` holds the USB, boot and Bluetooth entry
+- `detect/` tells iPhones from Android phones and probes whether the stereo's Bluetooth is an
+  external module apps cannot use (`ExternalBluetoothProbe`, [EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md)); `entry/` holds the USB, boot and Bluetooth entry
   points; `settings/` the unified settings (all in `:carlink-core`); `ui/` and `switcher/` the
   screens (in `:app`).
 - **Process isolation.** Android Auto runs in its own `:aa` process, so DiAuto's singletons, car

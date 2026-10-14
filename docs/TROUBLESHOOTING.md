@@ -24,6 +24,17 @@ again. **"USB connection failed"**: try another cable.
 sure its Bluetooth is on and connected to this screen. On the phone, turn Bluetooth off and on.
 If it keeps failing, forget this screen in the phone's Bluetooth settings and pair again.
 
+**"Wireless isn't available on this stereo yet".** This stereo's Bluetooth is a separate module
+run by the stereo's own firmware (common on FYT and ZLink-type units), and apps cannot use it, so
+neither CarPlay nor Android Auto can start wirelessly. Re-pairing or turning Bluetooth off and on
+does not help. Connect the phone with a USB cable (**How to connect** shows how); it works the
+same. Diagnostics shows **Car stereo Bluetooth is a separate module** with what was found. To help
+add wireless for your stereo, tap **Share log** in Diagnostics and
+[open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose): the log says which kind of
+module it is. Settings › Connection (with **Show advanced**) has **Try wireless on this stereo
+anyway**, for when Diagnostics only says the module *may* be separate; Android Auto may still
+refuse. Details: [design/EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md).
+
 **"Pair your iPhone first" / "This phone isn't paired".** Wireless needs pairing once, started on
 the phone (its Bluetooth settings, tap this screen's name). A cable works without pairing.
 

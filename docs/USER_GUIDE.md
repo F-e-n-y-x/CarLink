@@ -153,6 +153,14 @@ log, so any device can be measured; see [BUILDING.md › Testing on a device](BU
 
 ## Known limits
 
+- **Some stereos cannot connect wirelessly yet.** On many FYT and ZLink-type stereos the
+  Bluetooth is a separate module that apps cannot use; the phone pairs with that module, not with
+  Android. Wireless CarPlay and Android Auto both start over Bluetooth, so CarLink does not try
+  wireless there: Home says "Wireless isn't available on this stereo yet" and Diagnostics names
+  what it found. A USB cable works the same. See
+  [troubleshooting](TROUBLESHOOTING.md#while-connecting) and
+  [design/EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md).
+
 - **During wireless Android Auto the phone uses mobile data.** The phone joins the display's
   Wi-Fi link, which has no internet, so its apps go over mobile data. Allow Android Auto to use
   mobile data on the phone. No app on the display can change this.

@@ -166,6 +166,10 @@ the front. A car head unit with hands-free roles is reconnected by the phone its
 **Home says "Your iPhone couldn't reach this screen".** Your Wi-Fi router blocks the link CarPlay
 needs. Tap **Use Wi-Fi Direct**, or use a cable.
 
+**My stereo says "Wireless isn't available on this stereo yet".** Its Bluetooth is a separate
+module apps can't use (common on FYT and ZLink-type stereos). Use a USB cable; see
+[troubleshooting](docs/TROUBLESHOOTING.md#while-connecting).
+
 **Does the car brand matter?** Only BYD changes anything (head-up display, instrument cluster,
 steering-wheel keys). The brand never reaches the phone.
 
