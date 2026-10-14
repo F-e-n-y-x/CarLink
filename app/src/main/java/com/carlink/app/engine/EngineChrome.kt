@@ -33,6 +33,9 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.andrerinas.openheadunit.HostIntegration
 import com.carlink.app.R
+import com.carlink.app.ui.UiPreferences
+import com.carlink.app.ui.theme.UiProfile
+import com.carlink.app.ui.theme.UiProfileDetector
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.CarPlayHostIntegration.MenuItem
 import com.shilapi.xcertplay.DiPlayPalette
@@ -179,8 +182,11 @@ object EngineChrome {
             }
             CarPlayHostIntegration.Chrome.MENU -> {
                 root.background = atmosphere(t)
-                // DiPlay's centred column paints its own flat background over the canvas.
-                ((root as? ViewGroup)?.getChildAt(0))?.background = null
+                // Since DiPlay 0.2.19 the menu is a floating panel (header, category rail or chips,
+                // page, footer) over a scrim. The panel keeps a surface, CarLink's glass, so the page
+                // between the header and the footer does not open onto the canvas.
+                ((root as? ViewGroup)?.getChildAt(0))?.background = glass(t, root.dp(MENU_PANEL_RADIUS_DP).toFloat())
+                enlargeMenuTargets(root)
             }
             CarPlayHostIntegration.Chrome.SIDE_PANEL, CarPlayHostIntegration.Chrome.SAFE_AREA_EDITOR ->
                 root.setBackgroundColor(t.base)
@@ -202,6 +208,22 @@ object EngineChrome {
         }
         styleTree(root, t, primary, skipFirstTitle = chrome == CarPlayHostIntegration.Chrome.WAITING ||
             chrome == CarPlayHostIntegration.Chrome.PICTURE_PANEL)
+    }
+
+    /**
+     * DiPlay sizes its menu for handhelds: 48dp category buttons and about 32dp radio rows. The
+     * menu is used while parked, but often on a head unit at arm's length, so every control gets
+     * at least 48dp, and 64dp on a car display (CarLink's car profile). DiPlay's buttons repaint
+     * their corners from their new height.
+     */
+    private fun enlargeMenuTargets(root: View) {
+        val context = root.context
+        val car = runCatching {
+            UiProfileDetector.detect(context, UiPreferences(context).uiProfileMode) == UiProfile.CAR
+        }.getOrDefault(false)
+        val target = root.dp(if (car) MENU_CAR_TARGET_DP else MENU_MIN_TARGET_DP)
+        // Radio buttons and switches are Buttons too.
+        root.walk().filterIsInstance<Button>().forEach { if (it.minHeight < target) it.minHeight = target }
     }
 
     // ---------------------------------------------------------------- Android Auto (DiAuto)
@@ -459,4 +481,8 @@ object EngineChrome {
     }
 
     private const val MARK_TAG = "carlink_mark"
+    /** DiPlay's own SWIPE_PANEL_RADIUS_DP, so the glass follows the panel's clip. */
+    private const val MENU_PANEL_RADIUS_DP = 28f
+    private const val MENU_MIN_TARGET_DP = 48f
+    private const val MENU_CAR_TARGET_DP = 64f
 }
