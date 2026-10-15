@@ -4,6 +4,16 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.2] - 2026-10-15
+
+- Faster and smoother on low-end stereos: CarLink now also checks the graphics chip and CPU speed,
+  so stereos with a weak GPU get the lighter look automatically (cold start about 35% faster on a
+  test setup like a Unisoc UIS8581A stereo).
+- Pre-compiled start-up code for a quicker first launch.
+- The connecting animations redraw without rebuilding the screen.
+- On stereos with little memory and no Android phone set up, the Android Auto engine is no longer
+  started in advance, saving memory.
+
 ## [1.0.1] - 2026-10-15
 
 - Stereos whose Bluetooth is a separate module (common on FYT and similar units) are now
