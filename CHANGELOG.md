@@ -4,6 +4,18 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.4] - 2026-10-19
+
+- CarPlay on iOS 27 with sound but a black screen: CarLink now offers "Direct video output" (also in
+  Settings › Display › Advanced) and can turn it on and reconnect in one tap.
+- Wireless Android Auto on stereos whose Bluetooth is a separate module (FYT, ZLink and similar),
+  as an experimental option under Settings › Connection › Show advanced.
+- CarLink opens when the car's ignition wakes the stereo, not only after a full reboot.
+- Android 17: Android Auto keeps its sound and microphone when it starts while another app is open.
+- Both engines updated (CarPlay engine DiPlay 0.2.21, Android Auto engine DiAuto 0.3.12): wired
+  CarPlay retries by itself, music controls respond on time again, steadier Wi-Fi Direct, and
+  exiting Android Auto on the phone no longer reconnects it.
+
 ## [1.0.3] - 2026-10-19
 
 - CarLink no longer refuses to connect when "Display over other apps" isn't allowed. That
