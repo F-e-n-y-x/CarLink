@@ -1047,7 +1047,12 @@ class AapService : Service(), UsbReceiver.Listener {
         }
 
         val canOverlay = AppPermissions.isOverlayGranted(this)
-        when (ActivityLaunchPolicy.chooseLaunchStrategy(Build.VERSION.SDK_INT, canOverlay)) {
+        // CarLink: one of this app's processes has a resumed activity (CarLink's Home or the USB router).
+        val appVisible = (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).runningAppProcesses.orEmpty()
+            .any { it.importance == android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
+        val strategy = ActivityLaunchPolicy.chooseLaunchStrategy(Build.VERSION.SDK_INT, canOverlay, appVisible)
+        AppLog.i("Projection launch: strategy=$strategy overlay=$canOverlay appVisible=$appVisible") // CarLink
+        when (strategy) {
             ActivityLaunchPolicy.LaunchStrategy.DIRECT -> {
                 try { startActivity(intent) }
                 catch (e: Exception) { AppLog.e("Projection launch failed: ${e.message}") }
