@@ -31,7 +31,7 @@ import com.carlink.core.settings.CarLinkPreferences
 class SystemEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, ACTION_QUICKBOOT ->
+            in BOOT_ACTIONS ->
                 if (CarLinkPreferences(context).startOnBoot) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
             BluetoothDevice.ACTION_ACL_CONNECTED -> onPhoneLink(context, intent, sdpDone = false)
             // Only delivered here on Android 7.x: since 8.0 an implicit ACTION_UUID never reaches
@@ -145,7 +145,24 @@ class SystemEventReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "CarLink-BT"
-        private const val ACTION_QUICKBOOT = "android.intent.action.QUICKBOOT_POWERON"
+
+        /**
+         * Boot, and the wake-ups of head units that sleep at ignition off instead of shutting down
+         * (FYT, GLSX, MediaTek IPO, Microntek/MTCD): the list DiAuto's BootCompleteReceiver had.
+         * Each must also be in the manifest's intent filter (SystemEventReceiverTest).
+         */
+        internal val BOOT_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            "android.intent.action.QUICKBOOT_POWERON",
+            "com.htc.intent.action.QUICKBOOT_POWERON",
+            "com.mediatek.intent.action.QUICKBOOT_POWERON",
+            "com.mediatek.intent.action.BOOT_IPO",
+            "com.fyt.boot.ACCON",
+            "com.glsx.boot.ACCON",
+            "android.intent.action.ACTION_MT_COMMAND_SLEEP_OUT",
+            "com.cayboy.action.ACC_ON",
+            "com.carboy.action.ACC_ON",
+        )
         private const val DEBOUNCE_MILLIS = 15_000L
 
         /** SDP usually answers in 1–5 s; stays well inside a background broadcast's 60 s limit. */

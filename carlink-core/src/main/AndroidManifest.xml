@@ -68,6 +68,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+                <!-- MediaTek IPO (Instant Power On) -->
+                <action android:name="com.mediatek.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.mediatek.intent.action.BOOT_IPO" />
+                <!-- Ignition (ACC) wake on stereos that sleep: FYT, GLSX, MediaTek, Microntek/MTCD -->
+                <action android:name="com.fyt.boot.ACCON" />
+                <action android:name="com.glsx.boot.ACCON" />
+                <action android:name="android.intent.action.ACTION_MT_COMMAND_SLEEP_OUT" />
+                <action android:name="com.cayboy.action.ACC_ON" />
+                <action android:name="com.carboy.action.ACC_ON" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
