@@ -305,7 +305,7 @@ class AaCommandHandlerTest {
         assertEquals(AaProtocol.KIND_AOA_RESWITCH, events.last().first)
         assertTrue(events.last().second!!.startsWith("result=reset=true"))
         assertEquals(1, engine.resets)
-        assertEquals(0, engine.switched) // the phone never came back
+        assertEquals(1, engine.switched) // still an accessory after the reset: a fresh handshake
         engine.busy = true
         handler.reswitchStaleAccessory()
         assertTrue(events.last().second!!.startsWith("result=busy"))

@@ -189,11 +189,15 @@ internal class AaCommandHandler(
         // The phone comes back in its normal USB mode; the engine leaves the switch to CarLink and
         // the session treats the re-attach as the engine's, so switch it here (tablet, 2026-10-20:
         // nobody did, and the session failed 3 s later).
-        if (!waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }) {
+        // Some resets keep the phone in accessory mode with no re-attach at all (03:17:21): the old
+        // session is gone either way, so a fresh handshake on the same accessory then works.
+        waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }
+        val phone = engine.plainAndroidPhone() ?: engine.accessoryDevice()
+        if (phone == null) {
             Log.w(TAG, "the phone did not come back after the USB reset")
             return
         }
-        val phone = engine.plainAndroidPhone() ?: return
+        Log.i(TAG, "after the USB reset: ${if (engine.isAccessory(phone)) "still an accessory; new handshake" else "plain phone; switching"}")
         if (engine.hasUsbPermission(phone)) switchToAccessory(phone) else engine.requestUsbPermission(phone)
     }
 
@@ -324,7 +328,7 @@ internal class AaCommandHandler(
         const val SETTLE_MAX_MILLIS = 2_000L
         const val RETRY_SWITCH_MILLIS = 700L
         const val STALE_ACCESSORY_MILLIS = 3_000L
-        const val RESET_RETURN_MILLIS = 5_000L
+        const val RESET_RETURN_MILLIS = 2_000L
         const val FRONT_MILLIS = 3_000L
     }
 }

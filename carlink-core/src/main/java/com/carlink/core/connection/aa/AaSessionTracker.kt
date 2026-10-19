@@ -47,7 +47,7 @@ internal class AaSessionTracker(
          * re-switched once; with no new session by this long after, the phone needs a re-plug
          * (RELIABILITY_AUDIT K2: it used to wait 60 s, then blamed a locked phone).
          */
-        val staleReplugMillis: Long = 5_000,
+        val staleReplugMillis: Long = 8_000, // reset (~0.8 s) + return or fresh handshake (≤2 s) + projection
         /** USB, no frame yet: SESSION_ENDED only follows a session that connected, so wait less for it. */
         val noVideoEndDebounceMillis: Long = 500,
     )
