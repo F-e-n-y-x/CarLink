@@ -16,7 +16,6 @@ import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.network.CarHotspotSettings
 import com.shilapi.xcertplay.network.CarHotspotStatus
 import com.shilapi.xcertplay.network.CarHotspotTethering
-import com.shilapi.xcertplay.network.CarPlayVpnService
 import com.shilapi.xcertplay.orchestration.ManualHotspotValidation
 
 /** Something that keeps a CarPlay session from starting, with what the fix needs to know. */
@@ -199,8 +198,8 @@ object CarPlayPreflight {
             sdkInt = sdk,
             authenticationReady = CarPlayHostIntegration.authenticationError(app) == null,
             grantedPermissions = permissions,
-            vpnConsentGranted = plan.transport != Transport.USB ||
-                runCatching { CarPlayVpnService.prepare(app) == null }.getOrDefault(false),
+            // Allowed silently over the stereo's own adb where it can be, so the dialog never shows there.
+            vpnConsentGranted = plan.transport != Transport.USB || AdbVpnConsent.ensure(app),
             bluetoothOn = adapter?.let { runCatching { it.isEnabled }.getOrDefault(false) },
             bondedAddresses = bonded,
             iphoneAddress = plan.phoneAddress ?: CarPlayHostIntegration.selectedPhoneAddress(app),
