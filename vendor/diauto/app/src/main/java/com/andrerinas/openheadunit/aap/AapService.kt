@@ -848,7 +848,13 @@ class AapService : Service(), UsbReceiver.Listener {
         serviceScope.launch {
             commManager.connectionState.collect { state ->
                 when (state) {
-                    is CommManager.ConnectionState.Connected -> onConnected()
+                    is CommManager.ConnectionState.Connected -> {
+                        onConnected()
+                        // CarLink: open the projection while the handshake runs, so its surface is
+                        // ready when the phone sets up video (~170 ms on the S25); HandshakeComplete
+                        // below only brings the same singleTask activity to the front.
+                        launchAapProjectionActivity()
+                    }
                     is CommManager.ConnectionState.HandshakeComplete -> {
                         launchAapProjectionActivity()
                     }

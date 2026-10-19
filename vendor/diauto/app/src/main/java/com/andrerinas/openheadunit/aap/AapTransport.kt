@@ -617,12 +617,9 @@ class AapTransport(
         lastHandshakeFailure = HandshakeFailure.OTHER
         try {
             val isUsb = connection !is SocketAccessoryConnection && !connection.isSingleMessage
-            // Increased delay for AA 16.4+ stability on USB - skip for Sockets
-            // CarLink: 100 ms, not 500: the drain below clears stale bytes and the version request is
-            // retried, so the extra 400 ms only delayed every USB start (S25/AA 17.8 measured).
-            if (isUsb) {
-                SystemClock.sleep(100)
-            }
+            // CarLink: no pre-handshake sleep (upstream: 500 ms "for AA 16.4+ stability"). The drain
+            // below clears stale bytes, the version request is retried, and a phone left in an old
+            // session is reset by CarLink before this runs (S25/AA 17.8 measured).
 
             val buffer = ByteArray(Messages.DEF_BUFFER_LENGTH)
 

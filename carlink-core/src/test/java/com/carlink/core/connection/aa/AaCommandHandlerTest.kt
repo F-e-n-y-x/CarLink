@@ -78,7 +78,12 @@ class AaCommandHandlerTest {
         override fun hasUsbPermission(device: UsbDevice) = permission.also { if (grantedAfterFirstCheck) permission = true }
         override fun requestUsbPermission(device: UsbDevice) { permissionRequested = true }
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
-        override fun resetUsb(device: UsbDevice): Boolean { resets++; plainPhone = phoneAfterReset; return true }
+        override fun resetUsb(device: UsbDevice): Boolean {
+            resets++
+            plainPhone = phoneAfterReset
+            if (phoneAfterReset != null) accessory = false // back in its normal USB mode
+            return true
+        }
         var plainPhone: UsbDevice? = null
         var phoneAfterReset: UsbDevice? = null
         override fun plainAndroidPhone() = plainPhone
@@ -243,6 +248,15 @@ class AaCommandHandlerTest {
         assertEquals(phone, engine.targets)
     }
 
+    @Test fun aStaleAccessoryAtStartIsResetBeforeAnyHandshake() {
+        engine.accessory = true
+        engine.phoneAfterReset = device()
+        handler.startUsb(device(), null, VehicleProfile.GENERIC)
+        assertEquals(1, engine.resets)
+        assertFalse(AapService.ACTION_CHECK_USB in actions()) // no doomed handshake on the old stream
+        assertEquals(1, engine.switched)
+    }
+
     @Test fun aPhoneBackFromTheResetIsSwitchedToAccessory() {
         engine.accessoryOnBus = device()
         engine.phoneAfterReset = device()
@@ -277,12 +291,15 @@ class AaCommandHandlerTest {
         assertEquals(AaProtocol.KIND_AOA_SWITCH_FAILED, events.last().first)
     }
 
-    @Test fun anAccessoryOrUnknownDeviceIsLeftToTheEnginesCheck() {
+    @Test fun anAccessoryThisProcessSwitchedOrAnUnknownDeviceIsLeftToTheEnginesCheck() {
+        handler.startUsb(device(), null, VehicleProfile.GENERIC) // switched here
         engine.accessory = true
+        engine.started.clear()
         handler.startUsb(device(), null, VehicleProfile.GENERIC)
         handler.startUsb(null, null, VehicleProfile.GENERIC)
         assertEquals(listOf(AapService.ACTION_CHECK_USB, AapService.ACTION_CHECK_USB), actions())
-        assertEquals(0, engine.switched)
+        assertEquals(1, engine.switched)
+        assertEquals(0, engine.resets)
     }
 
     @Test fun pokeOnlyAnIdleRunningEngine() {

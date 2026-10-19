@@ -115,6 +115,20 @@ internal class AaCommandHandler(
         engine.setUsbOnlySession(true)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         if (address != null) engine.setPokeTargets(address)
+        // A phone already in accessory mode that this process never switched is still in the session
+        // of a CarLink that is gone (restart, update, crash): its handshake can only fail on the old
+        // stream (2 s, tablet 2026-10-20). Reset it before the engine starts, then switch it fresh.
+        if (device != null && engine.isAccessory(device) && !switchedHere) {
+            Log.i(TAG, "phone already an accessory at start; resetting its USB link first")
+            emit(AaProtocol.KIND_AOA_RESWITCH, "result=reset=${engine.resetUsb(device)};device=${engine.deviceName(device)}")
+            if (!engine.isServiceRunning()) {
+                if (!start(null)) return emit(AaProtocol.KIND_START_REFUSED, "action=start")
+                waitUntil(SERVICE_START_MILLIS) { engine.isServiceRunning() }
+            }
+            report()
+            switchAfterReset()
+            return
+        }
         if (device == null || engine.isAccessory(device)) {
             // Already an accessory (or re-enumerated): the engine's own check finds and connects it.
             if (!start(AapService.ACTION_CHECK_USB)) {
@@ -185,12 +199,16 @@ internal class AaCommandHandler(
         }
         Log.i(TAG, "stale accessory re-switch result=$result")
         emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))
-        if (result != "reset=true") return
-        // The phone comes back in its normal USB mode; the engine leaves the switch to CarLink and
-        // the session treats the re-attach as the engine's, so switch it here (tablet, 2026-10-20:
-        // nobody did, and the session failed 3 s later).
-        // Some resets keep the phone in accessory mode with no re-attach at all (03:17:21): the old
-        // session is gone either way, so a fresh handshake on the same accessory then works.
+        if (result == "reset=true") switchAfterReset()
+    }
+
+    /**
+     * The phone comes back in its normal USB mode; the engine leaves the switch to CarLink and the
+     * session treats the re-attach as the engine's, so switch it here (tablet, 2026-10-20: nobody
+     * did, and the session failed 3 s later). Some resets keep the phone in accessory mode with no
+     * re-attach at all (03:17:21): the old session is gone either way, so a fresh handshake works.
+     */
+    private fun switchAfterReset() {
         waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }
         val phone = engine.plainAndroidPhone() ?: engine.accessoryDevice()
         if (phone == null) {
@@ -210,7 +228,11 @@ internal class AaCommandHandler(
         }
     }
 
+    /** This process switched a phone to accessory mode (its accessory is ours, not a stale one). */
+    private var switchedHere = false
+
     private fun switchToAccessory(device: UsbDevice) {
+        switchedHere = true
         if (engine.isAccessory(device)) {
             start(AapService.ACTION_CHECK_USB)
             return

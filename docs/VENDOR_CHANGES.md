@@ -92,7 +92,8 @@ Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 
 | File | Change | Why |
 |---|---|---|
-| `aap/AapTransport.kt` (`handshake`) | USB pre-handshake sleep 500 → 100 ms | The drain clears stale bytes and the version request is retried; the extra 400 ms delayed every USB start. |
+| `aap/AapTransport.kt` (`handshake`) | No USB pre-handshake sleep (upstream 500 ms) | The drain clears stale bytes, the version request is retried, and CarLink resets a phone left in an old session first; the sleep delayed every USB start. |
+| `aap/AapService.kt` (`observeConnectionState`) | Opens the projection on `Connected` as well as `HandshakeComplete` | Its surface is ready when the phone sets up video (~170 ms sooner on the S25). |
 | `aap/AapControl.kt` (`ID_VID` config) | Sends `VideoFocusEvent(gain, solicited)` with the video config | The phone waited for the first-frame watchdog (~900 ms) before streaming (openauto grants focus with the config). |
 | `connection/NativeAaHandshakeManager.kt` (`SendInfoResponse`) | Credentials (Type 3) after 100 ms instead of 1000 ms | The phone asked for them; the second delayed every wireless start (WirelessAndroidAutoDongle answers at once). |
 | `aap/AapMessageIncoming.kt` | `minimumPayload(flags)`: only a first or single fragment needs the 2-byte type; a middle or last fragment may be 1 byte | A 1-byte last video fragment was rejected, truncating the frame and glitching the picture until the next keyframe. |
