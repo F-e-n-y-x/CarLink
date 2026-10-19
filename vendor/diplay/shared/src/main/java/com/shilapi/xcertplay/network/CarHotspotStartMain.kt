@@ -87,7 +87,8 @@ object CarHotspotStartMain {
         }
         val builderType = builder.javaClass
         val saved = current?.javaClass?.methods?.firstOrNull { it.name == "getSsid" }?.invoke(current) as? String
-        val effective = saved?.takeIf { it.isNotEmpty() } ?: ssid
+        // CarLink: "rename" replaces the car's saved name too.
+        val effective = if (args.getOrNull(2) == "rename") ssid else saved?.takeIf { it.isNotEmpty() } ?: ssid
         builderType.getMethod("setSsid", String::class.java).invoke(builder, effective)
         val security = current?.javaClass?.methods?.firstOrNull { it.name == "getSecurityType" }?.invoke(current) as? Int
         // An open hotspot from DiPlay must not strip the car's saved password; if the car's security
@@ -256,7 +257,8 @@ object CarHotspotStartMain {
 
     fun apConfigCommand(apk: String, credentials: HotspotCredentials): String {
         fun quoted(value: String) = "'" + value.replace("'", "'\"'\"'") + "'"
-        return "${command(apk)} $APCONFIG_COMMAND ${quoted(credentials.ssid)} ${credentials.band.name}"
+        return "${command(apk)} $APCONFIG_COMMAND ${quoted(credentials.ssid)} ${credentials.band.name}" +
+            if (credentials.rename) " rename" else "" // CarLink
     }
 
     fun apConfigReadCommand(apk: String): String = "${command(apk)} $APCONFIG_READ_COMMAND"

@@ -128,6 +128,9 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun openAppSettings() = vm.openAppSettings()
             override fun setCarBrand(brand: com.carlink.core.settings.CarBrand) = vm.setCarBrand(brand)
             override fun navigate(route: Route) = goTo(route)
+            override suspend fun readCarHotspot() = vm.readCarHotspot()
+            override suspend fun readSavedWifiPassword(ssid: String) = vm.readSavedWifiPassword(ssid)
+            override fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = vm.saveCarHotspot(details)
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
                 // An exact per-engine value replaces the unified preset: mark it Custom first so

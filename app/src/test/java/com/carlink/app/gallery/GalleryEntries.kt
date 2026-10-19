@@ -339,6 +339,11 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CONNECTION,
             initialSheet = SheetKey.of(EssentialSheet.SAME_WIFI))
     },
+    // The car hotspot, filled from the stereo, with "Read from the car".
+    GalleryEntry("settings", "sheet-car-hotspot", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CONNECTION,
+            initialSheet = SheetKey.of(EssentialSheet.CAR_HOTSPOT))
+    },
     GalleryEntry("settings", "sheet-picture-custom", opensWindow = true) {
         SettingsContent(settingsPreviewUi(customPicture = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.DISPLAY, initialSheet = SheetKey.of(EssentialSheet.PICTURE))

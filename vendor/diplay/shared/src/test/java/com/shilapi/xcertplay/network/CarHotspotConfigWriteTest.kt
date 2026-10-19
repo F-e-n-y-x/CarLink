@@ -92,6 +92,21 @@ class CarHotspotConfigWriteTest {
         assertEquals("password1", written?.preSharedKey)
     }
 
+    // CarLink: rename replaces the car's saved name, in the app write and in the shell command.
+    @Test fun renameReplacesTheCarSsid() {
+        val existing = WifiConfiguration().apply { SSID = "Car-Original" }
+        var written: WifiConfiguration? = null
+        var reads = 0
+        val outcome = CarHotspotConfigWrite.writeApp(credentials.copy(rename = true),
+            newConfig = { WifiConfiguration() },
+            write = { written = it; true },
+            readBack = { reads++; if (reads == 1) existing else written },
+            log = ::log)
+        assertEquals(CarHotspotConfigWrite.WriteOutcome(Result.WRITTEN, "DiPlay"), outcome)
+        assertTrue(CarHotspotStartMain.apConfigCommand("/a.apk", credentials.copy(rename = true)).endsWith(" 'DiPlay' AUTO rename"))
+        assertTrue(CarHotspotStartMain.apConfigCommand("/a.apk", credentials).endsWith(" 'DiPlay' AUTO"))
+    }
+
     @Test fun appWriteUsesTheGeneratedSsidWithoutAReadableConfiguration() {
         var written: WifiConfiguration? = null
         val outcome = CarHotspotConfigWrite.writeApp(credentials,
