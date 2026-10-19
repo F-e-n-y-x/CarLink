@@ -446,6 +446,13 @@ class SessionManager(
         val engine = kind.engine ?: return
         environment.autoConnectPaused = false
         address?.let { environment.rememberPhone(it, kind) }
+        // The same phone asked again (a second tap, Home's automatic start racing the tap): restarting
+        // threw away an attempt 2 s from connected and paid a 6 s Bluetooth warm-up (tablet, 2026-10-20).
+        val current = (_state.value as? SessionState.Active)?.request
+        if (current != null && current.engine == engine && current.transport == transport &&
+            current.phoneAddress.equals(address, ignoreCase = true)) {
+            return note("$engine already running for this phone; not restarting")
+        }
         start(SessionRequest(engine, transport, address, phoneName))
     }
 

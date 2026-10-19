@@ -122,6 +122,15 @@ class SessionManagerTest {
         assertEquals(listOf("AA:BB" to WirelessPath.WIFI_DIRECT), remembered)
     }
 
+    @Test fun connectingTheSamePhoneAgainKeepsTheRunningAttempt() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.connect("aa:bb", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(1, starts.size)
+        m.connect("CC:DD", PhoneKind.IPHONE, "Other"); idle()
+        assertEquals(2, starts.size)
+    }
+
     @Test fun blockedRequestsNeverOpenAnEngine() {
         problems = { _, _ -> listOf(Problem.BLUETOOTH_OFF) }
         val m = manager()
