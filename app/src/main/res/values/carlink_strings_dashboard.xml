@@ -55,7 +55,9 @@
     <string name="carlink_home_error_hotspot_off_title">The car hotspot is off</string>
     <string name="carlink_home_error_hotspot_off_body">Turn it on in the car\'s settings, or plug your phone in with a cable.</string>
     <string name="carlink_home_error_wifi_details_title">Add your Wi-Fi password</string>
-    <string name="carlink_home_error_wifi_details_body">To connect over your Wi-Fi, CarLink needs its password once.</string>
+    <string name="carlink_home_error_wifi_details_body">Same Wi-Fi is chosen in Settings › Connection. CarLink needs the network\'s name and password once.</string>
+    <string name="carlink_home_error_wifi_not_joined_title">This screen isn\'t on your Wi-Fi</string>
+    <string name="carlink_home_error_wifi_not_joined_body">Same Wi-Fi needs this screen on the network saved in Settings › Connection. Join that network, or use Wi-Fi Direct.</string>
     <string name="carlink_home_error_engine_title">Couldn\'t connect</string>
     <string name="carlink_home_error_engine_body">%1$s stopped the connection. Unlock your phone and try again.</string>
 
@@ -94,10 +96,10 @@
     <string name="carlink_home_path_direct">Wi-Fi Direct</string>
     <string name="carlink_home_path_usb">USB</string>
 
-    <string name="carlink_home_same_wifi_title">Use %1$s for wireless?</string>
-    <string name="carlink_home_same_wifi_body">The fastest wireless link. CarLink needs its password once.</string>
+    <string name="carlink_home_same_wifi_title">Password for %1$s</string>
+    <string name="carlink_home_same_wifi_body">This screen is on it now. CarLink needs its password once.</string>
     <string name="carlink_home_same_wifi_password">Wi-Fi password</string>
-    <string name="carlink_home_same_wifi_save">Use this Wi-Fi</string>
+    <string name="carlink_home_same_wifi_save">Save</string>
     <string name="carlink_home_same_wifi_enter">Add password</string>
     <string name="carlink_home_same_wifi_invalid">Wi-Fi passwords have 8 to 63 characters.</string>
     <string name="carlink_home_same_wifi_show">Show password</string>
@@ -126,7 +128,7 @@
     <string name="carlink_home_error_wifi_off_title">Wi-Fi is off</string>
     <string name="carlink_home_error_wifi_off_body">The picture travels over Wi-Fi. Turn Wi-Fi on here; it doesn’t need to be connected to a network.</string>
     <string name="carlink_home_error_location_off_title">Location is off</string>
-    <string name="carlink_home_error_location_off_body">Android needs Location switched on to set up the wireless link.</string>
+    <string name="carlink_home_error_location_off_body">While Location is off, Android hides Wi-Fi names and nearby devices, so the wireless link can\'t start. Turn it on, then come back.</string>
     <string name="carlink_home_error_permissions_title">Permissions needed</string>
     <string name="carlink_home_error_permissions_body">CarLink needs Nearby devices, Location and Microphone to connect your phone.</string>
     <string name="carlink_home_error_overlay_title">Allow CarLink to open over other apps</string>
@@ -158,6 +160,7 @@
     <string name="carlink_home_fix_allow">Allow</string>
     <string name="carlink_home_fix_open_settings">Open settings</string>
     <string name="carlink_home_fix_use_direct">Use Wi-Fi Direct</string>
+    <string name="carlink_home_fix_open_wifi">Open Wi-Fi</string>
     <string name="carlink_switch_title">Switch to %1$s?</string>
     <string name="carlink_switch_body">%1$s will stop.</string>
     <string name="carlink_switch_confirm">Switch</string>

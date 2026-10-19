@@ -1,5 +1,6 @@
 package com.carlink.core.settings
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,6 +12,15 @@ class WifiDetailsTest {
         assertFalse(WifiDetails("", "12345678").isValid())
         assertFalse(WifiDetails("Net", "short").isValid())
         assertFalse(WifiDetails("N".repeat(33), "12345678").isValid())
+    }
+
+    @Test fun aNameTypedWithAnotherCaseOrSpacesTakesTheJoinedSpelling() {
+        assertEquals(WifiDetails("Home", "homepassword"), WifiDetails("home ", "homepassword").matchedTo("Home"))
+        assertEquals(WifiDetails("Home", "homepassword"), WifiDetails(" HOME", "homepassword").matchedTo("Home"))
+        // Another network, an unreadable name, or nothing saved: unchanged.
+        assertEquals(WifiDetails("Office", "x"), WifiDetails("Office", "x").matchedTo("Home"))
+        assertEquals(WifiDetails("home", "x"), WifiDetails("home", "x").matchedTo(null))
+        assertEquals(WifiDetails(), WifiDetails().matchedTo("Home"))
     }
 
     @Test fun ssidLimitIsInUtf8Bytes() {

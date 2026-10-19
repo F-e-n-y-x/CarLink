@@ -81,10 +81,6 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
         HomeContent(ui(bluetooth = BluetoothAvailability.OFF, phones = emptyList()), actions)
     },
     home("ready-no-phone") { HomeContent(ui(phones = emptyList(), network = null), actions) },
-    // A known iPhone, plus the one-time offer to use the car's current Wi-Fi.
-    home("ready-iphone-same-wifi-offer") {
-        HomeContent(ui(phones = listOf(iphone, pixel), network = sameWifiOffer), actions)
-    },
     home("connecting-carplay-usb") {
         HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.USB, iphone.name, 2, 6,
             "Authenticating"), phones = listOf(iphoneConnected)), actions)
@@ -147,6 +143,15 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-car-hotspot-off") { HomeContent(ui(link = failed(LinkProblem.CAR_HOTSPOT_OFF)), actions) },
     // Connection v2 problems with one-tap fixes: a radio switch, and a path switch with a second action.
     home("failed-wifi-off") { HomeContent(ui(link = failed(LinkProblem.WIFI_OFF)), actions) },
+    // Same Wi-Fi chosen in Settings, its password missing: the card completes it (Home never advertises Same Wi-Fi).
+    home("failed-same-wifi-password") {
+        HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_DETAILS_MISSING), phones = listOf(iphone, pixel),
+            network = sameWifiNoPassword), actions)
+    },
+    // Same Wi-Fi chosen, but this screen is on another network (or none): join it, or use Wi-Fi Direct.
+    home("failed-same-wifi-not-joined") {
+        HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_NOT_JOINED), network = sameWifi), actions)
+    },
     home("failed-pairing-lost") { HomeContent(ui(link = failed(LinkProblem.PAIRING_LOST)), actions) },
     home("failed-iphone-unreached") {
         HomeContent(ui(link = failed(LinkProblem.PHONE_NEVER_REACHED_CAR), network = sameWifi), actions)

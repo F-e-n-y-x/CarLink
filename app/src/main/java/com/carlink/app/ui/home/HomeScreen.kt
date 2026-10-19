@@ -170,14 +170,11 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val network by vm.network.collectAsStateWithLifecycle()
     val permissionsNeeded by vm.permissionsNeeded.collectAsStateWithLifecycle()
     val usual by vm.usual.collectAsStateWithLifecycle()
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refreshPhones() }
-    // Android's VPN dialog only stays open when started for a result from an activity.
-    val vpnConsent = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.retry() }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val fixProblem = rememberProblemFix(vm)
     val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
     val actions = remember(vm) {
         object : HomeActions {
-            override fun requestPermissions() = launcher.launch(vm.missingPermissions().toTypedArray())
+            override fun requestPermissions() = fixProblem(LinkProblem.PERMISSIONS)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun pairPhone() = navigate(Route.SETUP_PAIR)
             override fun connect(phone: PairedPhone) = vm.connect(phone)
@@ -189,11 +186,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
             override fun setConnectionMethod(method: ConnectionMethod) = vm.updateSettings { it.copy(connectionMethod = method) }
-            override fun fix(problem: LinkProblem) = when (problem) {
-                LinkProblem.PERMISSIONS -> requestPermissions()
-                LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(context)?.let { vpnConsent.launch(it) } ?: vm.retry()
-                else -> vm.fix(problem)
-            }
+            override fun fix(problem: LinkProblem) = fixProblem(problem)
             override fun navigate(route: Route) = navigate(route)
             override fun reportProblem() = reportProblem()
             override fun turnOnDirectVideo() = vm.turnOnDirectVideo()
@@ -209,6 +202,41 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, request.engine, request.transport, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
         }
     }
+}
+
+/**
+ * The one-tap fix for a [LinkProblem], shared by Home and the setup's pairing step: the
+ * permission dialog, Android's VPN consent (which only stays open when started for a result from
+ * an activity), or the system screen from [CarLinkViewModel.fixIntent]. Coming back checks again,
+ * so the driver does not have to tap Try again after fixing it.
+ */
+@Composable
+internal fun rememberProblemFix(vm: CarLinkViewModel): (LinkProblem) -> Unit {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        vm.refreshPhones()
+        vm.recheckAfterFix()
+    }
+    val screen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.recheckAfterFix() }
+    return remember(vm) {
+        { problem: LinkProblem ->
+            when (problem) {
+                LinkProblem.PERMISSIONS -> permissions.launch(vm.missingPermissions().toTypedArray())
+                LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(context)?.let { screen.launch(it) } ?: vm.retry()
+                else -> vm.fixIntent(problem)?.let { intent -> runCatching { screen.launch(intent) }.onFailure { vm.fix(problem) } }
+                    ?: vm.fix(problem)
+            }
+        }
+    }
+}
+
+/** The label and icon of [problem]'s one-tap fix (a switch, a permission, a system screen), or null when it has none. */
+internal fun oneTapFix(problem: LinkProblem?): Pair<Int, Int>? = when (problem) {
+    LinkProblem.BLUETOOTH_OFF, LinkProblem.WIFI_OFF -> R.string.carlink_home_fix_turn_on to R.drawable.carlink_ic_check
+    LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT -> R.string.carlink_home_fix_allow to R.drawable.carlink_ic_check
+    LinkProblem.LOCATION_OFF -> R.string.carlink_home_fix_open_settings to R.drawable.carlink_ic_settings
+    LinkProblem.SAME_WIFI_NOT_JOINED -> R.string.carlink_home_fix_open_wifi to R.drawable.carlink_ic_wifi
+    else -> null
 }
 
 @Composable
@@ -607,9 +635,9 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             }
         }
     }
-    val offerSameWifi = ui.network?.canOfferSameWifi == true && ui.home.phones.any { it.kind != PhoneKind.UNKNOWN } &&
-        (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY ||
-            (mode == HomeMode.FAILED && link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING))
+    // Same Wi-Fi is opt-in (Settings › Connection): the card only completes it once chosen, never advertises it.
+    val offerSameWifi = ui.network?.canOfferSameWifi == true && mode == HomeMode.FAILED &&
+        link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING
     if (offerSameWifi) {
         Spacer(Modifier.height(sectionGap))
         SameWifiCard(ui.network!!.joinedSsid!!, actions, dense)
@@ -633,6 +661,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.CAR_HOTSPOT_DETAILS_MISSING -> R.string.carlink_home_error_hotspot_details_title to R.string.carlink_home_error_hotspot_details_body
     LinkProblem.CAR_HOTSPOT_OFF -> R.string.carlink_home_error_hotspot_off_title to R.string.carlink_home_error_hotspot_off_body
     LinkProblem.SAME_WIFI_DETAILS_MISSING -> R.string.carlink_home_error_wifi_details_title to R.string.carlink_home_error_wifi_details_body
+    LinkProblem.SAME_WIFI_NOT_JOINED -> R.string.carlink_home_error_wifi_not_joined_title to R.string.carlink_home_error_wifi_not_joined_body
     LinkProblem.BLUETOOTH_OFF -> R.string.carlink_home_error_bt_off_title to R.string.carlink_home_error_bt_off_body
     LinkProblem.PHONE_NOT_PAIRED -> R.string.carlink_home_error_not_paired_title to R.string.carlink_home_error_not_paired_body
     LinkProblem.PAIRING_LOST -> R.string.carlink_home_error_pairing_lost_title to R.string.carlink_home_error_pairing_lost_body
@@ -653,7 +682,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
 }
 
 @Composable
-private fun failureCopy(link: LinkState): Pair<String, String> {
+internal fun failureCopy(link: LinkState): Pair<String, String> {
     val (title, body) = failureCopyRes(link.problem)
     // Only the pairing-lost title takes an argument (the phone); the others ignore it.
     val phone = link.phoneName ?: stringResource(R.string.carlink_home_error_pairing_lost_phone)
@@ -662,19 +691,24 @@ private fun failureCopy(link: LinkState): Pair<String, String> {
 
 @Composable
 private fun FailureActions(link: LinkState, actions: HomeActions) {
-    when (val problem = link.problem) {
+    val problem = link.problem
+    val fix = oneTapFix(problem)
+    if (problem != null && fix != null) {
+        IonButton(stringResource(fix.first), { actions.fix(problem) }, icon = fix.second)
+        // Or leave Same Wi-Fi for the default.
+        if (problem == LinkProblem.SAME_WIFI_NOT_JOINED) {
+            GlassButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.setConnectionMethod(ConnectionMethod.WIFI_DIRECT) },
+                icon = R.drawable.carlink_ic_p2p)
+        }
+        return
+    }
+    when (problem) {
         LinkProblem.CARPLAY_AUTH_MISSING -> IonButton(stringResource(R.string.carlink_home_diagnostics),
             { actions.navigate(Route.DIAGNOSTICS) }, icon = R.drawable.carlink_ic_monitor_heart)
         LinkProblem.NO_IPHONE_SELECTED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> IonButton(
             stringResource(R.string.carlink_home_open_settings), { actions.navigate(Route.SETTINGS) }, icon = R.drawable.carlink_ic_settings)
-        LinkProblem.BLUETOOTH_OFF, LinkProblem.WIFI_OFF -> IonButton(stringResource(R.string.carlink_home_fix_turn_on),
-            { actions.fix(problem) }, icon = R.drawable.carlink_ic_check)
-        LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT -> IonButton(stringResource(R.string.carlink_home_fix_allow),
-            { actions.fix(problem) }, icon = R.drawable.carlink_ic_check)
-        LinkProblem.LOCATION_OFF -> IonButton(stringResource(R.string.carlink_home_fix_open_settings),
-            { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PAIRING_LOST -> IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings),
@@ -788,9 +822,9 @@ private fun HomeStage(
 }
 
 /**
- * One-time offer to use the car's current Wi-Fi for wireless CarPlay (the fastest path), as a
- * compact banner; the password is entered in a dialog, so the keyboard never reflows Home.
- * [dense] drops the explanation line.
+ * Completes Same Wi-Fi once the driver chose it and its password is missing: the network this
+ * screen is on, as a compact banner; the password is entered in a dialog, so the keyboard never
+ * reflows Home. [dense] drops the explanation line.
  */
 @Composable
 private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {

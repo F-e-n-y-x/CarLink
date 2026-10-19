@@ -53,9 +53,18 @@ the phone (its Bluetooth settings, tap this screen's name). A cable works withou
 
 ## Wi-Fi and networks
 
-**"Wi-Fi is off" / "Location is off".** The picture travels over Wi-Fi, and Android needs
-Location on to set up the wireless link. Turn Wi-Fi on here; it does not need to be connected
-to a network.
+**"Wi-Fi is off" / "Location is off".** The picture travels over Wi-Fi, and while Location is
+off Android hides Wi-Fi names and nearby devices, so the wireless link cannot start. Tap the
+button to turn it on; CarLink checks again when you come back. Wi-Fi does not need to be
+connected to a network.
+
+**"Add your Wi-Fi password".** Same Wi-Fi is chosen in Settings › Connection and CarLink does not
+have the network's name or password yet. Add the password on the card (or in Settings ›
+Connection); CarLink checks again as soon as it is saved.
+
+**"This screen isn't on your Wi-Fi".** Same Wi-Fi is chosen, but this screen is on another network
+than the one saved in Settings › Connection, or on none. Tap **Open Wi-Fi** and join it, or **Use
+Wi-Fi Direct**.
 
 **"Your iPhone couldn't reach this screen".** You are using Same Wi-Fi and the router blocks the
 link CarPlay needs (mDNS/Bonjour between clients; many home and mobile routers do). Tap **Use

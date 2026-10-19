@@ -41,6 +41,15 @@ fun WifiDetails.isValid(): Boolean {
     return ssidBytes in 1..32 && (password.isEmpty() || password.length in 8..63)
 }
 
+/**
+ * These details with the name spelled as [joinedSsid] when they differ only in case or surrounding
+ * spaces ("home " typed for "Home"): the phone joins by the exact name, and pre-flight compares it
+ * exactly, so a near-miss would block Same Wi-Fi with a password that is right.
+ */
+fun WifiDetails.matchedTo(joinedSsid: String?): WifiDetails =
+    if (joinedSsid != null && ssid != joinedSsid && ssid.trim().equals(joinedSsid.trim(), ignoreCase = true)) copy(ssid = joinedSsid)
+    else this
+
 /** Reads the car's current Wi-Fi state for [com.carlink.core.connection.WirelessPolicy] and pre-flight. */
 object WifiEnvironmentReader {
     /**

@@ -62,6 +62,11 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
             ui(SetupStep.PAIR, perms = allGranted, cable = true,
                 link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.USB, "iPhone", 2, 4))
         },
+        // Tablet 2026-10-20: the first connection was blocked because Location was off; Home's words and its fix.
+        entry("pair-location-off") {
+            ui(SetupStep.PAIR, PairingSession.State.Paired(iphone.address, iphone.name, PhoneKind.IPHONE), perms = allGranted,
+                phone = iphone, link = failed(com.carlink.core.core.LinkProblem.LOCATION_OFF))
+        },
         entry("pair-bluetooth-off") { ui(SetupStep.PAIR, PairingSession.State.BluetoothOff, perms = allGranted) },
         entry("done") { ui(SetupStep.DONE, perms = allGranted, phone = iphone, brand = CarBrand.MARUTI_SUZUKI) },
     )

@@ -57,9 +57,26 @@ class DevicePreflightTest {
         val saved = UnifiedSettings(homeWifi = WifiDetails("Home", "homepassword"))
         assertEquals(emptyList<Problem>(), check(path = WirelessPath.SAME_WIFI, settings = saved))
         assertEquals(listOf(Problem.SAME_WIFI_DETAILS), check(path = WirelessPath.SAME_WIFI, settings = UnifiedSettings(homeWifi = WifiDetails("Home", ""))))
-        assertEquals(listOf(Problem.SAME_WIFI_DETAILS), check(path = WirelessPath.SAME_WIFI, settings = saved, wifi = WifiEnvironment(1, null, null)))
+        assertEquals(listOf(Problem.SAME_WIFI_DETAILS), check(path = WirelessPath.SAME_WIFI))
         assertEquals(emptyList<Problem>(), check(path = WirelessPath.SAME_WIFI, settings = UnifiedSettings(homeWifi = WifiDetails("Home", "")),
             wifi = onHome.copy(joinedOpen = true)))
+    }
+
+    // CarLink 1.0.0 (tablet, 2026-10-20): the password was saved, yet Home said "Add your Wi-Fi password".
+    @Test fun sameWifiWithTheRightPasswordNamesWhatIsActuallyWrong() {
+        val saved = UnifiedSettings(homeWifi = WifiDetails("Home", "homepassword"))
+        fun sameWifi(facts: DevicePreflight.Facts = ready, wifi: WifiEnvironment) =
+            check(facts, path = WirelessPath.SAME_WIFI, settings = saved, wifi = wifi)
+        // On another network, on none, or on two at once (the name is not read then).
+        assertEquals(listOf(Problem.SAME_WIFI_NOT_JOINED), sameWifi(wifi = WifiEnvironment(1, "Office", null)))
+        assertEquals(listOf(Problem.SAME_WIFI_NOT_JOINED), sameWifi(wifi = WifiEnvironment(0, null, null)))
+        assertEquals(listOf(Problem.SAME_WIFI_NOT_JOINED), sameWifi(wifi = WifiEnvironment(2, null, null)))
+        // Android hides the name with Location off or not allowed, and Wi-Fi off has no name: only that is said.
+        assertEquals(listOf(Problem.LOCATION_OFF), sameWifi(ready.copy(locationOn = false), WifiEnvironment(1, null, null)))
+        assertEquals(listOf(Problem.PERMISSIONS), sameWifi(ready.copy(missingPermissions = listOf("x")), WifiEnvironment(1, null, null)))
+        assertEquals(listOf(Problem.WIFI_OFF), sameWifi(ready.copy(wifiOn = false), WifiEnvironment(0, null, null)))
+        // The names are compared exactly; saving aligns a near-miss (WifiDetailsTest).
+        assertEquals(listOf(Problem.SAME_WIFI_NOT_JOINED), sameWifi(wifi = WifiEnvironment(1, "home", null)))
     }
 
     @Test fun hotspotNeedsItsDetailsAndToBeOn() {
