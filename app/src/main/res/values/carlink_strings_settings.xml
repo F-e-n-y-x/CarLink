@@ -213,6 +213,35 @@
     <string name="carlink_settings_car_byd_extras">DiLink extras</string>
     <string name="carlink_settings_car_explain_byd">BYD adds the DiLink extras: directions on the HUD and the instrument cluster, and BYD steering-wheel keys.</string>
     <string name="carlink_settings_car_explain_other">CarPlay and Android Auto work the same as in any car. The brand only labels this car in CarLink.</string>
+    <!-- Settings › Car › Steering-wheel buttons (core settings/WheelKeys). -->
+    <string name="carlink_wheel_keys">Steering-wheel buttons</string>
+    <string name="carlink_wheel_keys_detail">Teach CarLink your wheel\'s buttons for voice, calls and music in CarPlay and Android Auto</string>
+    <plurals name="carlink_wheel_keys_value">
+        <item quantity="one">%d set</item>
+        <item quantity="other">%d set</item>
+    </plurals>
+    <string name="carlink_wheel_keys_sheet_body">Tap Learn, then press the button on the steering wheel. Buttons the stereo keeps for itself never reach CarLink and cannot be learned.</string>
+    <string name="carlink_wheel_action_voice">Voice assistant</string>
+    <string name="carlink_wheel_action_voice_detail">Siri or Google Assistant</string>
+    <string name="carlink_wheel_action_answer">Answer call</string>
+    <string name="carlink_wheel_action_hang_up">Hang up</string>
+    <string name="carlink_wheel_action_play_pause">Play / Pause</string>
+    <string name="carlink_wheel_action_next">Next</string>
+    <string name="carlink_wheel_action_previous">Previous</string>
+    <!-- The learned key: its Android name and code, e.g. "MEDIA_NEXT · 87". -->
+    <string name="carlink_wheel_key_value">%1$s · %2$d</string>
+    <string name="carlink_wheel_key_unnamed">Key %1$d</string>
+    <string name="carlink_wheel_key_learn">Learn</string>
+    <string name="carlink_wheel_key_reset">Reset all</string>
+    <string name="carlink_wheel_key_waiting">Press a button on the steering wheel…</string>
+    <string name="carlink_wheel_key_waiting_for">For: %1$s</string>
+    <plurals name="carlink_wheel_key_seconds">
+        <item quantity="one">Waiting %d second</item>
+        <item quantity="other">Waiting %d seconds</item>
+    </plurals>
+    <string name="carlink_wheel_key_waiting_note">Volume, Back and Home buttons cannot be used.</string>
+    <string name="carlink_wheel_key_timed_out">No button arrived. The stereo may keep that one for itself.</string>
+    <string name="carlink_wheel_key_cancel">Cancel</string>
     <string name="carlink_settings_setup_again">Set up again</string>
     <string name="carlink_settings_setup_again_detail">Permissions, car brand and pairing a phone, step by step</string>
 </resources>

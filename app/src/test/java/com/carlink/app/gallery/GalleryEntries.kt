@@ -1,6 +1,7 @@
 package com.carlink.app.gallery
 
 import com.carlink.core.settings.CarBrand
+import com.carlink.core.settings.WheelAction
 import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -53,6 +54,10 @@ class GalleryEntry(
     val configs: Set<String>? = null,
     val content: @Composable () -> Unit,
 )
+
+/** Learned steering-wheel buttons for the gallery: two media keys, the search key and a vendor code. */
+private val previewWheelKeys = mapOf(WheelAction.VOICE to 84, WheelAction.HANG_UP to 600, WheelAction.NEXT to 87,
+    WheelAction.PREVIOUS to 88)
 
 /**
  * Every registered screen state. To add a screen, append entries that call its stateless
@@ -306,6 +311,18 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("settings", "sheet-car-brand-byd", opensWindow = true) {
         SettingsContent(settingsPreviewUi(byd = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CAR, initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
+    },
+    // Settings › Car › Steering-wheel buttons: four learned (one a vendor code with no Android name).
+    GalleryEntry("settings", "sheet-wheel-keys", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(byd = false, wheelKeys = previewWheelKeys), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CAR, initialSheet = SheetKey.of(EssentialSheet.WHEEL_KEYS))
+    },
+    // Learn pressed: waiting for the button, with the countdown and Cancel.
+    GalleryEntry("settings", "sheet-wheel-keys-learning", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(byd = false, wheelKeys = previewWheelKeys), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CAR)
+        com.carlink.app.ui.settings.WheelKeysSheet(previewWheelKeys, onChange = {}, onDismiss = {},
+            initialLearning = WheelAction.ANSWER)
     },
     // Nothing chosen on a generic screen: the row reads "Other / Generic".
     GalleryEntry("settings", "car-brand-not-chosen") {

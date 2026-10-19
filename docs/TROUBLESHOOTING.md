@@ -143,6 +143,12 @@ until it arrives). If the
 screen stays black for more than a second, please [report it](#reporting-a-problem) with the
 stereo model.
 
+**A steering-wheel button cannot be learnt, or does nothing.** Learn sees only buttons the stereo
+passes to apps; buttons its firmware keeps for itself never reach CarLink (or any app). Try the
+stereo's own steering-wheel settings to give the button a standard media or voice function, then
+learn it again. A learnt button applies from the next connection; in CarPlay it works while the
+CarPlay screen is in front. See [Steering-wheel buttons](USER_GUIDE.md#steering-wheel-buttons).
+
 **Plugging in a second phone did not take over.** By design: during a session, CarLink asks
 "Switch to &lt;phone&gt;?" (**Switch** / **Not now**). The floating switcher over CarPlay or Android
 Auto can also switch phones.

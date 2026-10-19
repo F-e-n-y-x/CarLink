@@ -236,6 +236,8 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
                 nextConnection = true)
             CarBrandPicker(ui.carBrand, ui.detectedBrand, onSelect = { actions.setCarBrand(it); onDismiss() })
         }
+        EssentialSheet.WHEEL_KEYS -> WheelKeysSheet(u.wheelKeys, onChange = { keys -> actions.update { it.copy(wheelKeys = keys) } },
+            onDismiss = onDismiss)
     }
 }
 
@@ -370,7 +372,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
     com.carlink.app.ui.premium.GlassSheet(onDismiss, content)
 
 @Composable
-private fun SheetTitle(title: String, body: String?, nextConnection: Boolean) {
+internal fun SheetTitle(title: String, body: String?, nextConnection: Boolean) {
     com.carlink.app.ui.premium.SheetHeader(title, body)
     if (nextConnection) {
         Spacer(Modifier.height(14.dp))

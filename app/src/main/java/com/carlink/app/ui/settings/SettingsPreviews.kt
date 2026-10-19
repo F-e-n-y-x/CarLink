@@ -36,6 +36,7 @@ fun settingsPreviewUi(
     loading: Boolean = false,
     /** The chosen car brand; by default BYD when [byd], else none chosen. */
     carBrand: com.carlink.core.settings.CarBrand? = null,
+    wheelKeys: Map<com.carlink.core.settings.WheelAction, Int> = emptyMap(),
 ): SettingsUi = SettingsUi(
     unified = UnifiedSettings(
         connectionMethod = ConnectionMethod.AUTOMATIC,
@@ -45,6 +46,7 @@ fun settingsPreviewUi(
         dayNight = if (schedule) DayNight.SCHEDULE else DayNight.AUTOMATIC,
         showAdvanced = showAdvanced,
         labUnlocked = lab,
+        wheelKeys = wheelKeys,
     ),
     connection = ConnectionPrefs(autoConnectUsb = true, autoConnectBluetooth = true, startOnBoot = false, autoConnectPaused = paused),
     display = DisplayPrefs(ThemeMode.FOLLOW_SYSTEM, UiProfileMode.AUTO, 1f),

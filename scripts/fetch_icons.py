@@ -42,6 +42,9 @@ ICONS = {
     "gavel": False, "groups": False, "description": False, "bug_report": False,
     # Updates (update/UpdateDialog.kt)
     "system_update": False, "download": False,
+    # Steering-wheel buttons (Settings › Car)
+    "search_hands_free": False, "call": False, "call_end": False, "play_pause": False,
+    "skip_next": False, "skip_previous": False,
 }
 
 # Directional glyphs mirror in RTL layouts (DESIGN_SPEC §7.3); device and media glyphs do not.

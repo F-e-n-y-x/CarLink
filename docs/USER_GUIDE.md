@@ -128,6 +128,29 @@ on the DiLink extras the engines were written for: head-up display, instrument c
 steering-wheel keys. The picker shows what CarLink detected about the screen (for example "Detected:
 Generic"); until you choose, **Other / Generic** applies.
 
+## Steering-wheel buttons
+
+**Settings › Car › Steering-wheel buttons** lets a button on the steering wheel do one of six
+things in both CarPlay and Android Auto: **Voice assistant** (Siri or Google Assistant), **Answer
+call**, **Hang up**, **Play / Pause**, **Next** and **Previous**. Tap **Learn** next to an action,
+then press the button within 15 seconds; **Cancel** or Back stops waiting. Each action has one
+button, and a button learnt for a second action moves to it. **Reset all** forgets every button.
+The buttons apply from the next connection.
+
+CarLink turns the learnt button into the standard Android key for that action, which both
+engines already handle. In CarPlay this works while the CarPlay screen is in front; in Android
+Auto it also works for buttons the stereo sends as media buttons or as its own broadcasts.
+
+Limits:
+
+- **Buttons the stereo keeps for itself never reach CarLink.** Many stereos act on some wheel
+  buttons in their firmware (often volume, mode, the stereo's own voice or phone button). No app
+  sees those presses, so Learn waits and then says no button arrived. On some stereos the
+  manufacturer's "steering wheel" settings app can give such a button a standard function first.
+- Volume, Back and Home cannot be learnt: they keep their usual job.
+- Buttons a stereo reports only through its own broadcast (some FYT, NWD, Eonon units) cannot be
+  learnt here yet, because CarLink's screen sees key presses only.
+
 ## Slower head units
 
 **Settings › General › Visual effects** is **Automatic** by default. On a device with little

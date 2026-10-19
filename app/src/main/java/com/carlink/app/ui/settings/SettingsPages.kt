@@ -205,6 +205,14 @@ private fun CarEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
             { openSheet(SheetKey.of(EssentialSheet.CAR_BRAND)) },
             description = stringResource(R.string.carlink_settings_car_brand_detail) + "\n" + detectedCarLabel(ui.detectedBrand),
             icon = R.drawable.carlink_ic_directions_car_filled, tags = { NextConnectionTag() })
+        GroupDivider()
+        val learned = ui.unified.wheelKeys.size
+        ChoiceRow(stringResource(R.string.carlink_wheel_keys),
+            if (learned == 0) stringResource(R.string.carlink_settings_not_set)
+            else pluralStringResource(R.plurals.carlink_wheel_keys_value, learned, learned),
+            { openSheet(SheetKey.of(EssentialSheet.WHEEL_KEYS)) },
+            description = stringResource(R.string.carlink_wheel_keys_detail), icon = R.drawable.carlink_ic_search_hands_free,
+            tags = { NextConnectionTag() })
     }
 }
 

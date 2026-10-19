@@ -138,7 +138,7 @@ internal val SettingsCategory.selectedIcon: Int
 /** The bottom sheets Settings opens; saved by [key] so a rotation keeps the sheet open. */
 internal enum class EssentialSheet {
     CONNECTION_METHOD, CAR_HOTSPOT, SAME_WIFI, PICTURE, INTERFACE_SIZE, DAY_NIGHT, NIGHT_START, NIGHT_END,
-    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING, CAR_BRAND,
+    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING, CAR_BRAND, WHEEL_KEYS,
 }
 
 internal object SheetKey {
