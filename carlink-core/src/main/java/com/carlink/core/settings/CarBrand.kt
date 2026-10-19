@@ -21,7 +21,8 @@ import android.content.SharedPreferences
  * of 72,665 units splits the combined Skoda-Volkswagen entry, leaving Volkswagen about 35,600,
  * just behind Renault's 36,420), then the smaller makes, then the luxury makes, then [OTHER].
  */
-enum class CarBrand(val displayName: String, val profile: VehicleProfile = VehicleProfile.GENERIC, val luxury: Boolean = false) {
+enum class CarBrand(val displayName: String, val profile: VehicleProfile = VehicleProfile.GENERIC, val luxury: Boolean = false,
+                    val motorcycle: Boolean = false) {
     MARUTI_SUZUKI("Maruti Suzuki"),
     MAHINDRA("Mahindra"),
     TATA("Tata Motors"),
@@ -42,6 +43,18 @@ enum class CarBrand(val displayName: String, val profile: VehicleProfile = Vehic
     AUDI("Audi", luxury = true),
     VOLVO("Volvo", luxury = true),
     LEXUS("Lexus", luxury = true),
+
+    // Two-wheelers sold in India (issue #1). Like every make but BYD they only label the vehicle.
+    HERO("Hero MotoCorp", motorcycle = true),
+    HONDA_MOTORCYCLE("Honda Motorcycle", motorcycle = true),
+    TVS("TVS Motor", motorcycle = true),
+    BAJAJ("Bajaj", motorcycle = true),
+    SUZUKI_MOTORCYCLE("Suzuki Motorcycle", motorcycle = true),
+    ROYAL_ENFIELD("Royal Enfield", motorcycle = true),
+    YAMAHA("Yamaha", motorcycle = true),
+    OLA_ELECTRIC("Ola Electric", motorcycle = true),
+    ATHER("Ather", motorcycle = true),
+    KTM("KTM", motorcycle = true),
 
     /** A make that is not listed. Behaves as [VehicleProfile.GENERIC]. */
     OTHER("Other"),

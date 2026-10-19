@@ -249,7 +249,10 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
 internal fun CarBrandPicker(selected: CarBrand?, detected: CarBrand?, onSelect: (CarBrand) -> Unit, note: Boolean = true) {
     val dimens = CarLinkTokens.dimens
     val current = brandInEffect(selected, detected)
-    val (luxury, popular) = CarBrand.entries.filter { it != CarBrand.OTHER }.partition { it.luxury }
+    val listed = CarBrand.entries.filter { it != CarBrand.OTHER }
+    val popular = listed.filter { !it.luxury && !it.motorcycle }
+    val luxury = listed.filter { it.luxury }
+    val motorcycles = listed.filter { it.motorcycle }
     Column(Modifier.selectableGroup()) {
         com.carlink.app.ui.premium.Eyebrow(stringResource(R.string.carlink_settings_car_popular))
         Spacer(Modifier.height(dimens.targetGap))
@@ -258,6 +261,10 @@ internal fun CarBrandPicker(selected: CarBrand?, detected: CarBrand?, onSelect: 
         com.carlink.app.ui.premium.Eyebrow(stringResource(R.string.carlink_settings_car_luxury))
         Spacer(Modifier.height(dimens.targetGap))
         BrandGrid(luxury, current, onSelect)
+        Spacer(Modifier.height(dimens.gutter))
+        com.carlink.app.ui.premium.Eyebrow(stringResource(R.string.carlink_settings_car_motorcycles))
+        Spacer(Modifier.height(dimens.targetGap))
+        BrandGrid(motorcycles, current, onSelect)
         Spacer(Modifier.height(dimens.targetGap * 2))
         BrandGrid(listOf(CarBrand.OTHER), current, onSelect)
     }

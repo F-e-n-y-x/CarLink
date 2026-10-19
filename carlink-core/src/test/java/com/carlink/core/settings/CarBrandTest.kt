@@ -32,7 +32,9 @@ class CarBrandTest {
         assertEquals(CarBrand.MARUTI_SUZUKI, all.first())
         assertEquals(CarBrand.OTHER, all.last())
         val firstLuxury = all.indexOfFirst { it.luxury }
-        assertTrue(all.drop(firstLuxury).dropLast(1).all { it.luxury })
+        val firstMotorcycle = all.indexOfFirst { it.motorcycle }
+        assertTrue(all.subList(firstLuxury, firstMotorcycle).all { it.luxury })
+        assertTrue(all.drop(firstMotorcycle).dropLast(1).all { it.motorcycle })
         assertTrue(all.indexOf(CarBrand.BYD) < firstLuxury)
     }
 
