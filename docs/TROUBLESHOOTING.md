@@ -31,9 +31,22 @@ does not help. Connect the phone with a USB cable (**How to connect** shows how)
 same. Diagnostics shows **Car stereo Bluetooth is a separate module** with what was found. To help
 add wireless for your stereo, tap **Report on GitHub** in Diagnostics (or **Share log** and
 [open an issue](https://github.com/F-e-n-y-x/CarLink/issues/new/choose)): the report says which kind
-of module it is. Settings › Connection (with **Show advanced**) has **Try wireless on this stereo
-anyway**, for when Diagnostics only says the module *may* be separate; Android Auto may still
-refuse. Details: [design/EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md).
+of module it is. Details: [design/EXTERNAL_BLUETOOTH.md](../design/EXTERNAL_BLUETOOTH.md).
+
+**Trying wireless Android Auto through the stereo's module (experimental).** Settings ›
+Connection › **Show advanced** › **Wireless through the stereo's Bluetooth module (experimental)**
+(shown only on such stereos) lets Android Auto talk to the phone through the stereo's own module
+instead. It is off by default and not yet tested on a real stereo. On an FYT stereo, first disable
+the stereo's own **Car Link** app (`com.syu.carlink`) in Android Settings › Apps; CarLink does not
+do it for you. Then pair the phone with the stereo as usual, tap **Connect**, and afterwards send
+**Report on GitHub** from Diagnostics, whether it worked or not: the log shows the last step reached
+([step by step](../design/EXTERNAL_BLUETOOTH.md#trying-it-on-a-stereo-step-by-step)). CarPlay is not
+covered.
+
+**"Couldn't reach the stereo's Bluetooth module".** The experimental setting above is on, but the
+module did not answer: on an FYT stereo the stereo's own Car Link app is usually still enabled;
+otherwise this stereo's module is not one CarLink can talk to yet. Turn the setting off and use the
+USB cable, and send the report from Diagnostics so support can be added.
 
 **"Pair your iPhone first" / "This phone isn't paired".** Wireless needs pairing once, started on
 the phone (its Bluetooth settings, tap this screen's name). A cable works without pairing.

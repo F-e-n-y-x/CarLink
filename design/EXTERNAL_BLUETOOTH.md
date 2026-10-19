@@ -1,8 +1,10 @@
 # External Bluetooth modules (FYT/ZLink-type stereos)
 
 > **Status: current.** CarLink detects these stereos, explains the limit and blocks wireless
-> before an engine starts (`detect/ExternalBluetoothProbe`, `SessionManager`). Porting a module
-> route (below) is a later task and is not started.
+> before an engine starts (`detect/ExternalBluetoothProbe`, `SessionManager`). Both upstream module
+> routes (ZBT and BLINK) are ported into DiAuto from open-headunit v.3.5.0 and can be tried with an
+> **experimental, off-by-default** setting ([below](#the-module-routes-experimental)). Not yet
+> verified on a real stereo.
 
 ## The problem
 
@@ -124,31 +126,89 @@ classification blocks only on positive evidence and never guesses that a module 
   evidence), listed first while no session runs, so the summary never says "Everything looks
   ready" on such a stereo.
 - **Setup:** the pairing step says wireless is not available yet and that USB works.
-- **Override:** Settings › Connection › (Show advanced) **Try wireless on this stereo anyway**,
-  shown only where the probe found a signal. It lifts CarLink's block only; DiAuto's own
-  `ExternalBtPolicy` still refuses unless a manual secondary Bluetooth service is configured, and
-  then its report shows the same Home problem.
+- **Opt-in:** Settings › Connection › (Show advanced) **Wireless through the stereo's Bluetooth
+  module (experimental)**, shown only where the probe found a module (`ZLINK_DAEMON`, `FYT_MODULE`,
+  `EXTERNAL_UNKNOWN`). It replaced "Try wireless on this stereo anyway" and keeps its preference
+  key (`wireless_on_external_bluetooth`). See the next section.
 
-## Porting plan (about 3-5 days, after a shared log shows which route)
+## The module routes (experimental)
 
-1. **`HandshakeLink` seam in `NativeAaHandshakeManager`** (DiAuto, a `// CarLink` hook and a row in
-   `docs/VENDOR_CHANGES.md`): the RFCOMM server/poke code reads and writes a `BluetoothSocket`
-   directly (`listenUsingRfcommWithServiceRecord`, `createRfcommSocketToServiceRecord`). Put the
-   accept/connect and the byte streams behind an interface with today's Android-socket
-   implementation as the default, so the Wi-Fi credential protocol above it stays untouched.
-2. **`zbt` package**: upstream's ZBT client for `gocsdk_zj` on 127.0.0.1:3152 (PRs #971, #1010,
-   #1031, #1051) as a `HandshakeLink` implementation.
-3. **`ExternalBtTransportPolicy`**: picks the link from the probe's classification
-   (`ZLINK_DAEMON` → ZBT, `FYT_MODULE` → BLINK, else Android), replacing the blanket refusal, and
-   tells `SessionManager` that wireless Android Auto is available again for that classification.
-4. **BLINK** (PR #1027) over `/dev/auto_serial`, including the check (and the driver's consent) to
-   disable `com.syu.carlink`; verify on an FYT unit.
-5. CarPlay is a separate question: DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither
-   upstream route carries iAP2. Until someone shows a module that does, wireless CarPlay stays
-   blocked on these stereos.
+Ported from [open-headunit](https://github.com/andreknieriem/open-headunit) tag **v.3.5.0**, commit
+`1c1b5b7261ebebde8000778ff2c06e3af3e3a326` (AGPL-3.0, like CarLink); each new file says so in its
+header, and `docs/VENDOR_CHANGES.md` lists every edit.
 
-Every step is verified on the user's stereo with a shared log before it is called done; there is
-no emulator stand-in for these modules.
+| Piece | Where (vendor/diauto/app/src/main/java/com/andrerinas/openheadunit/) | Upstream |
+|---|---|---|
+| `HandshakeLink`, `BluetoothSocketLink`, `ExternalModuleCarrier` | `connection/HandshakeLink.kt` | `nativeaa/HandshakeLink.kt`, `ExternalModuleCarrier.kt` |
+| Route decision NORMAL / ZBT / BLINK / BLOCKED, the host's key, step logging, failure report | `connection/ExternalBtTransportPolicy.kt` | `nativeaa/ExternalBtTransportPolicy.kt` (only `route()`, with CarLink's inputs) |
+| ZBT: 16-byte BE header (magic `0x0000FFFF`, version `0x101`, id, length) + protobuf body, `RequestInit{enable_type=2}` (0x101), raw RFCOMM bytes (0x105), `RequestReconn` (0x114) as the wake, link-state presence, attempt/wake/reopen/retransmit pacing | `connection/zbt/` | PRs #971, #1010, #1031, #1051 |
+| BLINK: `/dev/auto_serial` line protocol (`JH<MAC>`, `AA`, `SS`, `ZB<hex>` in; `AT#ZA<hex>\r\n` out), raw tty (`stty raw -echo -iuclc …`), opened as the app when `com.syu.carlink` is disabled, else through `su` (refused when the stock app is enabled), idle ping answers | `connection/blink/` | PR #1027 |
+
+How a session uses it:
+
+1. The driver turns the setting on. `DeviceEnvironment.wirelessBlocked` stops blocking wireless,
+   and `DeviceEnvironment.moduleRoute` names the route: `ZLINK_DAEMON` and `EXTERNAL_UNKNOWN` → ZBT,
+   `FYT_MODULE` → BLINK. Pre-flight for wireless Android Auto then skips "Bluetooth is off" and
+   "phone not paired" (the phone pairs with the module, not with Android).
+2. `AaSessionSettings` writes the route into DiAuto's settings (`carlink-external-bt-route` = `ZBT`,
+   `BLINK`, or empty for USB sessions and every other stereo); carlink.log says
+   `Android Auto Bluetooth through the stereo's module: <ROUTE> (experimental)`.
+3. In `:aa`, mode 3 asks `ExternalBtTransportPolicy.routeFor` (the host's route wins; without one,
+   DiAuto's own ExternalBtPolicy markers still refuse as before). Wi-Fi Direct starts as usual, and
+   `NativeAaHandshakeManager.start` hands over to the module carrier instead of opening RFCOMM
+   listeners. The carrier hands each phone to the unchanged handshake (`WppHandshakeSession`) as a
+   `HandshakeLink`. CarLink's wake pokes become `RequestReconn` on ZBT and nothing on BLINK (its
+   module opens Android Auto itself once the phone's hands-free link is up).
+4. If the module cannot be reached (ZBT: nothing answers on 3152 for 30 s; BLINK: `com.syu.carlink`
+   enabled or still running, `/dev/auto_serial` not openable and no root), the engine reports
+   `EXTERNAL_MODULE_UNAVAILABLE`, CarLink fails the session with `FailureReason.EXTERNAL_MODULE`, and
+   Home says **Couldn't reach the stereo's Bluetooth module** with the cable help. Root is never
+   required: `su` is only tried as upstream's fallback, and a stereo without it fails cleanly.
+
+Every step is logged in DiAuto's journal (`files/diagnostics/current.log`, in **Share log** and
+**Report on GitHub**) with a `NativeAA: [ZBT]`, `[BLINK]` or `[module]` prefix, and the milestones as
+`WIRELESS_TIMING` lines:
+
+| Line | Means |
+|---|---|
+| `module-reachable` | ZBT: the daemon accepted the connection and `RequestInit` went out. BLINK: whether `/dev/auto_serial` exists and the stock app's state |
+| `module-ready` | ZBT: the daemon answered. BLINK: the port is open and listening |
+| `module-wake` | ZBT: `RequestReconn` sent. BLINK: nothing to send (said once) |
+| `phone-on-module` | BLINK: the phone opened the Android Auto channel (`AA`) |
+| `phone-first-bytes` | the phone's first bytes arrived over the module |
+| `phone-rfcomm`, `wifi-start-request`, `wifi-info-response` | the handshake started, WifiStartRequest and the credentials went out (as on the normal route) |
+| `phone-joined`, `tcp-accepted`, `first-frame` | the phone joined Wi-Fi Direct and Android Auto started (as on the normal route) |
+
+The Wi-Fi password is never logged: raw module frames are logged by size only (an upstream log line
+that printed them in hex was changed).
+
+### Trying it on a stereo, step by step
+
+1. Install CarLink, open Diagnostics and check **Car stereo Bluetooth**: it should name the module
+   (the full probe block is in **Share log**, right after the header).
+2. On an FYT stereo (probe `FYT_MODULE`): Android Settings › Apps › Car Link (`com.syu.carlink`) ›
+   **Disable**. CarLink never disables it itself. Calls keep going through the module.
+3. Pair the phone with the stereo as usual (the stereo's own Bluetooth screen, i.e. the module).
+4. CarLink › Settings › Connection › **Show advanced** › turn on **Wireless through the stereo's
+   Bluetooth module (experimental)**.
+5. On the phone, make sure Android Auto's wireless option is on; keep Wi-Fi and Location on the
+   stereo on.
+6. Home › **Connect** with the phone (wireless). Wait up to a minute.
+7. Whatever happens, open Diagnostics › **Report on GitHub** (or **Share log**). The
+   `WIRELESS_TIMING` lines above show the last step reached; the `[ZBT]`/`[BLINK]` lines around it
+   say why.
+8. To go back: turn the setting off (wireless is blocked again) and use the cable.
+
+### Not ported, and why
+
+- Upstream's daemon measurement (`ZbtProbe`, `ZbtDaemonReachability`): CarLink's own probe decides,
+  and the driver opts in.
+- Seeding this unit's Bluetooth address from the module (upstream uses it to announce the
+  Bluetooth service so calls stay on the car): this DiAuto has no such setting.
+- Join-refusal pacing, upstream's UI toggles, toasts and the main screen's Wi-Fi button.
+- **CarPlay**: DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither route carries iAP2.
+  With the setting on, wireless CarPlay is no longer blocked by CarLink but still fails on these
+  stereos (Home then shows "Wireless isn't available on this stereo yet").
 
 ## Alternatives that work today
 
