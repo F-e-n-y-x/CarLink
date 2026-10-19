@@ -138,6 +138,8 @@ interface SetupActions {
     fun connectKnown(phone: PairedPhone) {}
     fun useCable(cable: Boolean) {}
     fun retry() {}
+    /** Stops the first connection and forgets the chosen phone, so another can be picked. */
+    fun otherPhone() {}
     /** The one-tap fix for the first connection's problem, as Home offers it (home/rememberProblemFix). */
     fun fix(problem: com.carlink.core.core.LinkProblem) {}
 }

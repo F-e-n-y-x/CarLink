@@ -257,6 +257,11 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         }
         override fun useCable(cable: Boolean) = chooseCable(cable)
         override fun retry() = vm.retry()
+        override fun otherPhone() {
+            vm.disconnect()
+            found = null
+            connectedFor = null
+        }
         override fun fix(problem: LinkProblem) = fixProblem(problem)
     }
     BackHandler { actions.back() }
@@ -650,6 +655,9 @@ private fun PairActions(ui: SetupUi, actions: SetupActions) {
             }
         }
         if (session?.stage != LinkStage.CONNECTED) {
+            // A start that hangs or fails must never trap the driver on one phone.
+            if (ui.phone != null) GlassButton(stringResource(R.string.carlink_setup_pair_other), actions::otherPhone,
+                icon = R.drawable.carlink_ic_close)
             if (ui.cable) {
                 GlassButton(stringResource(R.string.carlink_setup_pair_wireless), { actions.useCable(false) },
                     icon = R.drawable.carlink_ic_bluetooth)
