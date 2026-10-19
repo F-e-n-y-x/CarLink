@@ -171,6 +171,7 @@ object SwitcherController {
 
     /** The last show decision and its inputs, logged on change so a hidden bubble can be explained. */
     private var lastDecision: String? = null
+    private var lastLoggedShow = false
 
     private fun canDrawOverlays() = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(app)
 
@@ -186,7 +187,10 @@ object SwitcherController {
         if (inputs != lastDecision) {
             lastDecision = inputs
             Log.i(TAG, inputs)
-            com.carlink.core.diagnostics.EventLog.add("Switcher", inputs)
+            // The shared log only gets decisions that show the bubble or hide it: CarLink moving to
+            // the front and back with nothing to show filled reports with noise (issue #2).
+            if (show || lastLoggedShow) com.carlink.core.diagnostics.EventLog.add("Switcher", inputs)
+            lastLoggedShow = show
         }
         if (switching) {
             // "Switching…" stays until its linger ends, unless CarLink's own screen took over.
