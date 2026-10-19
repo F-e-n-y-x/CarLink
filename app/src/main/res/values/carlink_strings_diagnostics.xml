@@ -293,7 +293,8 @@
     <string name="carlink_diag_problem_external_bt">Stereo Bluetooth out of reach</string>
     <string name="carlink_diag_problem_external_module">Stereo Bluetooth module did not answer</string>
     <string name="carlink_diag_problem_refused_wifi">Phone refused the car’s Wi-Fi</string>
-    <string name="carlink_diag_problem_unreached">Phone didn’t reach the car’s Wi-Fi</string>
+    <string name="carlink_diag_problem_unreached">Phone didn’t connect over the car’s Wi-Fi</string>
+    <string name="carlink_diag_problem_wifi_off">iPhone’s Wi-Fi was off</string>
     <string name="carlink_diag_problem_dropped">Connection dropped</string>
     <string name="carlink_diag_problem_wifi_setup">Car Wi-Fi link didn’t start</string>
     <string name="carlink_diag_problem_usb">USB link failed</string>

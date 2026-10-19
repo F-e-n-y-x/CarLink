@@ -95,6 +95,13 @@ sealed interface AdapterEvent {
     /** The session ended without an error (phone left, driver exited, engine closed). */
     data class Ended(val byUser: Boolean) : AdapterEvent
 
+    /**
+     * The adapter can tell this attempt is stuck before any deadline (CarPlayLinkWatch):
+     * [SessionManager] restarts it on the same path at once, a couple of times, then applies the
+     * phase's playbook.
+     */
+    data class Stalled(val reason: FailureReason, val detail: String) : AdapterEvent
+
     /** Terminal for this session: the engine stopped trying. */
     data class Failed(val reason: FailureReason, val detail: String? = null) : AdapterEvent
 }
@@ -138,6 +145,8 @@ enum class FailureReason(val pathRelated: Boolean) {
      * reach the module: no daemon, the serial port refused, or the stereo's own Car Link app holds it.
      */
     EXTERNAL_MODULE(false),
+    /** CarPlay: the iPhone took the Wi-Fi details but never joined: its Wi-Fi is off in Settings. */
+    PHONE_WIFI_OFF(false),
     /** The phone never answered within the engine's time budget. */
     PHONE_DID_NOT_ANSWER(false),
     /** USB permission denied, interface claim failed, accessory switch failed. */

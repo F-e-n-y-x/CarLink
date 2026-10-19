@@ -137,8 +137,10 @@
     <string name="carlink_home_error_vpn_body">Wired CarPlay runs over a private link. Android asks once to allow it.</string>
     <string name="carlink_home_error_refused_title">Your phone couldn’t join the Wi-Fi</string>
     <string name="carlink_home_error_refused_body">Check the Wi-Fi password in Settings, or switch the connection type to Wi-Fi Direct.</string>
-    <string name="carlink_home_error_unreached_title">Your iPhone couldn’t reach this screen</string>
-    <string name="carlink_home_error_unreached_body">Your network blocks the link CarPlay needs. Choose Wi-Fi Direct, or plug in with a cable.</string>
+    <string name="carlink_home_error_unreached_title">Your iPhone didn’t open CarPlay over Wi-Fi</string>
+    <string name="carlink_home_error_unreached_body">It got the Wi-Fi details but never connected to this screen. Try again. On your own Wi-Fi the router may block CarPlay: choose Wi-Fi Direct, or plug in with a cable.</string>
+    <string name="carlink_home_error_wifi_phone_off_title">Turn on your iPhone’s Wi-Fi</string>
+    <string name="carlink_home_error_wifi_phone_off_body">Wireless CarPlay needs it. Open Settings › Wi-Fi on the iPhone and switch it on, then try again. Or plug in with a cable.</string>
     <string name="carlink_home_error_weak_title">The wireless link was too weak</string>
     <string name="carlink_home_error_weak_body">Keep your phone close to the screen and try again, or plug in with a cable.</string>
     <string name="carlink_home_error_no_answer_title">Your phone didn’t answer</string>
@@ -194,7 +196,7 @@
     <string name="carlink_notice_not_answering">The %1$s isn’t answering yet</string>
     <string name="carlink_notice_retry_bluetooth">Trying again: the %1$s didn’t answer over Bluetooth</string>
     <string name="carlink_notice_retry_refused">Trying again: the %1$s didn’t accept the car’s Wi-Fi</string>
-    <string name="carlink_notice_retry_unreached">Trying again: the %1$s didn’t reach the car’s Wi-Fi</string>
+    <string name="carlink_notice_retry_unreached">Trying again: the %1$s didn’t connect over the car’s Wi-Fi</string>
     <string name="carlink_notice_retry_dropped">Trying again: the connection dropped</string>
     <string name="carlink_notice_retry_usb">Trying again: the USB link restarted</string>
     <string name="carlink_notice_retry_plain">Trying again…</string>

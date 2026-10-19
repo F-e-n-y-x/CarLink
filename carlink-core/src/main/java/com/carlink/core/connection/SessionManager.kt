@@ -218,6 +218,8 @@ class SessionManager(
     private val recoveries = mutableMapOf<Pair<Int, ProgressStage?>, Int>()
     /** The current request has shown a picture at least once. */
     private var everConnected = false
+    /** [AdapterEvent.Stalled] restarts used by the current request ([MAX_QUICK_RETRIES]). */
+    private var quickRetries = 0
     /** A [Environment.warmUp] is running; the engine starts after it. */
     private var warmingUp = false
 
@@ -530,6 +532,7 @@ class SessionManager(
         stop()
         recoveries.clear()
         everConnected = false
+        quickRetries = 0
         // Before any engine, warm-up or path: a wireless start cannot work on this stereo.
         if (request.transport == Transport.WIRELESS && environment.wirelessUnavailable(request.engine)) {
             note("${request.engine} blocked: wireless is not available on this stereo (external Bluetooth module)")
@@ -645,9 +648,24 @@ class SessionManager(
                 }
                 _state.value = current.copy(phase = SessionState.Phase.Connected, notice = null)
             }
+            is AdapterEvent.Stalled -> {
+                val now = clock()
+                note("${plan.engine} stuck at ${a.stage} after ${now - a.stageSince} ms: ${event.detail}")
+                if (quickRetries < MAX_QUICK_RETRIES) {
+                    quickRetries++
+                    profiles.recordFailure(request, plan.path, event.reason.name, a.stage, event.detail)
+                    replaceAttempt(a, a.index, SessionState.Phase.Retrying(a.index + 1, event.reason, a.stage, event.detail), notice = null)
+                } else {
+                    // Out of quick restarts: the phase's playbook decides now, not at its deadline.
+                    a.expiries++
+                    recover(a, a.stage, now - a.stageSince, stageDeadline(a))
+                }
+            }
             is AdapterEvent.Ended -> {
                 note("${plan.engine} session ended${if (event.byUser) " by the driver" else ""}")
-                if (!event.byUser && request.transport == Transport.USB && !environment.usbPhonePresent(plan.engine)) {
+                // The phone left (unplugged, or gone from the car's Wi-Fi and Bluetooth): Home, not
+                // the engine's waiting screen.
+                if (!event.byUser && (request.transport == Transport.WIRELESS || !environment.usbPhonePresent(plan.engine))) {
                     environment.returnHome()
                 }
                 if (event.byUser) {
@@ -874,6 +892,12 @@ class SessionManager(
         /** How long USB attaches after the driver's Disconnect count as re-enumeration. */
         const val REENUMERATION_WINDOW_MILLIS = 10_000L
 
+        /**
+         * Immediate restarts for [AdapterEvent.Stalled] per request. Tablet 2026-10-20: a start
+         * stuck twice (no StartSession, then no TCP) and the third try connected in 4.0 s.
+         */
+        const val MAX_QUICK_RETRIES = 2
+
         /** The longest the engine start waits for [Environment.warmUp] (one Bluetooth page window plus SDP). */
         const val WARM_UP_MAX_MILLIS = 6_000L
 
@@ -893,7 +917,8 @@ fun FailureReason.retryText(engine: Engine): String {
     val phone = if (engine == Engine.CARPLAY) "iPhone" else "phone"
     return when (this) {
         FailureReason.PHONE_REFUSED_WIFI -> "the $phone refused the car's Wi-Fi"
-        FailureReason.PHONE_NEVER_REACHED_CAR -> "the $phone did not reach the car over Wi-Fi"
+        FailureReason.PHONE_NEVER_REACHED_CAR -> "the $phone did not connect over the car's Wi-Fi"
+        FailureReason.PHONE_WIFI_OFF -> "the $phone's Wi-Fi is off"
         FailureReason.LINK_TOO_WEAK -> "the connection dropped"
         FailureReason.WIFI_SETUP_FAILED -> "the car's Wi-Fi link could not be set up"
         FailureReason.BLUETOOTH -> "the $phone did not answer over Bluetooth"

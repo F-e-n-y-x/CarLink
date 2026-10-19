@@ -226,6 +226,8 @@ class CarPlayEventMappingTest {
             tracker.onHostState(HostState.RetriesStopped(unusable, WirelessStartupFailure.BLUETOOTH_UNUSABLE, 0, exhausted = false)))
         assertTrue(tracker.lastFailure!!.hard)
         assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, FailureReason.EXTERNAL_BLUETOOTH.toLinkProblem())
+        assertEquals(com.carlink.core.core.LinkProblem.PHONE_WIFI_OFF, FailureReason.PHONE_WIFI_OFF.toLinkProblem())
+        assertTrue(!FailureReason.PHONE_WIFI_OFF.pathRelated) // no other Wi-Fi path helps an iPhone with Wi-Fi off
         // Without the probe's signals it stays the ordinary Bluetooth problem.
         assertEquals(FailureReason.BLUETOOTH, CarPlayEventMapping.classify(unusable, CarPlayStatus.ConnectingBluetooth, Transport.WIRELESS).reason)
         // Other Bluetooth failures on such a stereo keep their own meaning.

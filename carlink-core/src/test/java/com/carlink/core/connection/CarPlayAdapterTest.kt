@@ -59,6 +59,12 @@ class CarPlayAdapterTest {
         fun status(status: CarPlayStatus?) = statusListeners.toList().forEach { it(status) }
         fun host(state: HostState) = hostListeners.toList().forEach { it(state) }
         val listening get() = statusListeners.size + hostListeners.size
+        var clients: ((Int, Int) -> Unit)? = null
+        override fun watchClients(listener: ((Int, Int) -> Unit)?) { clients = listener }
+        var linked = false
+        override fun phoneLinked(address: String) = linked
+        var wifiHeld = false
+        override fun holdWifi(on: Boolean) { wifiHeld = on }
     }
 
     private val hooks = FakeHooks()
@@ -178,5 +184,51 @@ class CarPlayAdapterTest {
         hooks.host(HostState.Closed)
         idle()
         assertEquals("no listener once the session is over", null, hooks.milestones)
+    }
+
+    // --- CarPlayLinkWatch on Wi-Fi Direct (tablet 2026-10-20) ------------------------------------
+
+    private val directPlan = wirelessPlan.copy(path = WirelessPath.WIFI_DIRECT)
+    private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(ms))
+
+    @Test fun aStartWithoutStartSessionIsReportedStuckWithinFourSeconds() {
+        adapter.start(directPlan) { events += it }; idle()
+        assertTrue(hooks.wifiHeld)
+        hooks.milestones!!(WirelessStartupTimeline.Phase.WIFI_CONFIG); idle()
+        advance(4_600)
+        assertEquals(AdapterEvent.Stalled::class, events.last()::class)
+        assertEquals(FailureReason.PHONE_NEVER_REACHED_CAR, (events.last() as AdapterEvent.Stalled).reason)
+    }
+
+    @Test fun anIphoneThatNeverJoinsFailsWithItsWifiOff() {
+        adapter.start(directPlan) { events += it }; idle()
+        hooks.milestones!!(WirelessStartupTimeline.Phase.WIFI_CONFIG)
+        hooks.milestones!!(WirelessStartupTimeline.Phase.START_SESSION); idle()
+        advance(9_600)
+        assertEquals(FailureReason.PHONE_WIFI_OFF, (events.last() as AdapterEvent.Failed).reason)
+        assertFalse(hooks.wifiHeld)
+        assertEquals(null, hooks.clients)
+    }
+
+    @Test fun anIphoneGoneFromWifiAndBluetoothEndsTheSessionInAboutTwoSeconds() {
+        adapter.start(directPlan) { events += it }; idle()
+        hooks.clients!!(1, 1); hooks.host(HostState.FirstFrame); idle()
+        hooks.clients!!(0, 0); idle()
+        advance(2_600)
+        assertEquals(AdapterEvent.Ended(byUser = false), events.last())
+    }
+
+    @Test fun anIphoneGoneFromWifiButStillOnBluetoothGetsOneFreshAttempt() {
+        hooks.linked = true
+        adapter.start(directPlan) { events += it }; idle()
+        hooks.clients!!(1, 1); hooks.host(HostState.FirstFrame); idle()
+        hooks.clients!!(0, 0); idle()
+        advance(2_600)
+        assertEquals(FailureReason.LINK_TOO_WEAK, (events.last() as AdapterEvent.Stalled).reason)
+    }
+
+    @Test fun otherPathsAreNotWatched() {
+        adapter.start(wirelessPlan) { events += it }; idle()
+        assertEquals(null, hooks.clients)
     }
 }

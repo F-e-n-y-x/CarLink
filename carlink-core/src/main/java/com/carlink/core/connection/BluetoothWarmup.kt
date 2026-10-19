@@ -57,10 +57,15 @@ internal object BluetoothWarmup {
         receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val from = intentDevice(intent) ?: return
-                if (from.address.equals(address, ignoreCase = true)) finish("answered", report = true)
+                if (!from.address.equals(address, ignoreCase = true)) return
+                // The page is what the dial needs; the service list can come seconds later (tablet
+                // 2026-10-20 #s4: link up at +0.25 s, UUIDs at +6.0 s, the engine waited for them).
+                finish(if (intent.action == BluetoothDevice.ACTION_ACL_CONNECTED) "linked" else "answered", report = true)
             }
         }
-        ContextCompat.registerReceiver(app, receiver, IntentFilter(BluetoothDevice.ACTION_UUID), ContextCompat.RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(app, receiver, IntentFilter(BluetoothDevice.ACTION_UUID).apply {
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+        }, ContextCompat.RECEIVER_EXPORTED)
         val asked = runCatching { device.fetchUuidsWithSdp() }.getOrDefault(false)
         if (!asked) {
             finish("could not start", report = false)
@@ -69,6 +74,12 @@ internal object BluetoothWarmup {
         main.postDelayed({ finish("got no answer", report = true) }, GIVE_UP_MILLIS)
         return true
     }
+
+    /** [address]'s Bluetooth link to this device is up (false when unknown). */
+    @SuppressLint("MissingPermission")
+    fun linked(context: Context, address: String): Boolean = runCatching {
+        context.getSystemService(BluetoothManager::class.java)?.adapter?.getRemoteDevice(address)?.let(::isConnected) == true
+    }.getOrDefault(false)
 
     private fun isConnected(device: BluetoothDevice): Boolean = runCatching {
         BluetoothDevice::class.java.getMethod("isConnected").invoke(device) as? Boolean == true

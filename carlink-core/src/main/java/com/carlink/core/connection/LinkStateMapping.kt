@@ -128,6 +128,7 @@ fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
     FailureReason.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH
     FailureReason.EXTERNAL_MODULE -> LinkProblem.EXTERNAL_MODULE
     FailureReason.PHONE_DID_NOT_ANSWER -> LinkProblem.PHONE_DID_NOT_ANSWER
+    FailureReason.PHONE_WIFI_OFF -> LinkProblem.PHONE_WIFI_OFF
     FailureReason.USB -> LinkProblem.USB
     FailureReason.BLOCKED -> LinkProblem.PERMISSIONS
     FailureReason.AUTHENTICATION -> LinkProblem.CARPLAY_AUTH_MISSING

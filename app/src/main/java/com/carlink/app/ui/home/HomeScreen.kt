@@ -668,6 +668,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.VPN_CONSENT -> R.string.carlink_home_error_vpn_title to R.string.carlink_home_error_vpn_body
     LinkProblem.PHONE_REFUSED_WIFI -> R.string.carlink_home_error_refused_title to R.string.carlink_home_error_refused_body
     LinkProblem.PHONE_NEVER_REACHED_CAR -> R.string.carlink_home_error_unreached_title to R.string.carlink_home_error_unreached_body
+    LinkProblem.PHONE_WIFI_OFF -> R.string.carlink_home_error_wifi_phone_off_title to R.string.carlink_home_error_wifi_phone_off_body
     LinkProblem.LINK_TOO_WEAK -> R.string.carlink_home_error_weak_title to R.string.carlink_home_error_weak_body
     LinkProblem.PHONE_DID_NOT_ANSWER -> R.string.carlink_home_error_no_answer_title to R.string.carlink_home_error_no_answer_body
     LinkProblem.BLUETOOTH -> R.string.carlink_home_error_bluetooth_title to R.string.carlink_home_error_bluetooth_body
@@ -730,7 +731,12 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
                 icon = R.drawable.carlink_ic_monitor_heart)
             if (cableHelp) CableHelpDialog { cableHelp = false }
         }
-        LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> {
+        // Already on Wi-Fi Direct (tablet 2026-10-20): "Use Wi-Fi Direct" would change nothing.
+        LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR -> if (network?.path == WirelessPath.WIFI_DIRECT) {
+            IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
+            GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
+                icon = R.drawable.carlink_ic_monitor_heart)
+        } else {
             IonButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.fix(problem) }, icon = R.drawable.carlink_ic_p2p)
             GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
         }

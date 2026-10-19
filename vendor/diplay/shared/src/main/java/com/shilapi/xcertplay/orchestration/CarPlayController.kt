@@ -1535,7 +1535,13 @@ class CarPlayController(
                         )
                     }
                 },
-                additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
+                // CarLink: plus the group's IPv6 link-local, which appears ~0.3 s after the group.
+                // Without it Bonjour ran on IPv4 only and never heard the iPhone's _carplay-ctrl
+                // (bonjourAdded=0 on every start, tablet 2026-10-20), so no invite ever went out.
+                additionalAddresses = (hotspotInfo.hostAddresses + addressRecovery.awaitCandidates(
+                    hotspotCandidates(hotspotInfo), HotspotAddressPolicy.FAMILY_IPV6, BONJOUR_LINK_LOCAL_WAIT_MILLIS,
+                ).filter { it is Inet6Address && it.isLinkLocalAddress && it.scopeId != 0 })
+                    .distinct().filter { it != hostAddress },
             )
             synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
@@ -3329,6 +3335,9 @@ class CarPlayController(
         @Volatile
         @JvmStatic
         var openCarScreen: (() -> Unit)? = null
+        /** CarLink: how long Bonjour waits for the group's IPv6 link-local before starting without it. */
+        private const val BONJOUR_LINK_LOCAL_WAIT_MILLIS = 600L
+
         // CarLink: see awaitDefaultGrantThenRequest.
         private const val DEFAULT_GRANT_WAIT_MS = 2_000L
         private const val DEFAULT_GRANT_POLL_MS = 100L

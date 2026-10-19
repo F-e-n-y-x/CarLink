@@ -565,7 +565,7 @@ class SessionManagerTest {
         val retry = active(m).phase as SessionState.Phase.Retrying
         assertEquals(ProgressStage.JOINING_WIFI, retry.stage)
         assertEquals(3, link(m).step)
-        assertEquals("Retrying: the iPhone did not reach the car over Wi-Fi", link(m).detail)
+        assertEquals("Retrying: the iPhone did not connect over the car's Wi-Fi", link(m).detail)
     }
 
     @Test fun aPictureThatNeverComesIsRetriedThenTheNextPathThenAFailure() {
@@ -746,6 +746,35 @@ class SessionManagerTest {
         m.onUsbDetached()
         advance(SessionManager.USB_GONE_CONNECTED_GRACE_MILLIS + 1)
         assertEquals(SessionState.Idle, m.state.value)
+    }
+
+    @Test fun aStuckLinkIsRestartedAtOnceTwiceThenThePlaybookDecides() { // tablet 2026-10-20 #s5
+        paths = listOf(WirelessPath.WIFI_DIRECT)
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        repeat(2) {
+            carPlay.emit(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI))
+            carPlay.emit(AdapterEvent.Stalled(FailureReason.PHONE_NEVER_REACHED_CAR, "stuck")); idle()
+        }
+        assertEquals(3, starts.size)
+        val retrying = (m.state.value as SessionState.Active).phase as SessionState.Phase.Retrying
+        assertEquals(ProgressStage.JOINING_WIFI, retrying.stage)
+        carPlay.emit(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI))
+        carPlay.emit(AdapterEvent.Stalled(FailureReason.PHONE_NEVER_REACHED_CAR, "stuck")); idle()
+        assertEquals(4, starts.size) // the playbook's fresh Wi-Fi Direct
+        carPlay.emit(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI))
+        carPlay.emit(AdapterEvent.Stalled(FailureReason.PHONE_NEVER_REACHED_CAR, "stuck")); idle()
+        assertEquals(FailureReason.PHONE_NEVER_REACHED_CAR, (m.state.value as SessionState.Failed).reason)
+    }
+
+    @Test fun aWirelessPhoneThatLeftReturnsHome() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Connected); idle()
+        carPlay.emit(AdapterEvent.Ended(byUser = false)); idle()
+        assertEquals(SessionState.Idle, m.state.value)
+        assertTrue("home" in log)
+        assertEquals(false, env.autoConnectPaused) // it may come back by itself
     }
 
     @Test fun aLostPictureGetsFreshDeadlines() {
