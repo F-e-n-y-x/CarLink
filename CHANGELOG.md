@@ -6,6 +6,13 @@ is what the in-app update popup shows.
 
 ## [1.0.5] - 2026-10-20
 
+- USB Android Auto opens its screen again without "display over other apps" (broken since 1.0.3).
+- A phone that was already plugged in when CarLink opened now connects, for CarPlay and Android Auto.
+- Unplugging a phone clears its "Allow" or error screen, and plugging it in again after Disconnect
+  connects it.
+- The VPN "Allow" button for wired CarPlay works.
+- Wireless Android Auto 17.8: CarLink completes the hands-free Bluetooth link the phone now
+  requires before it starts.
 - Steering-wheel buttons: Settings › Car › Steering-wheel buttons lets you press a button and use
   it for the voice assistant, answering or ending a call, play/pause, next or previous, in both
   CarPlay and Android Auto.
