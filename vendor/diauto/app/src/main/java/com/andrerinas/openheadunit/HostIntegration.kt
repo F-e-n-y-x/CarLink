@@ -167,4 +167,13 @@ object HostIntegration {
     @Volatile
     @JvmStatic
     var usbOnlySession: Boolean = false
+
+    /**
+     * CarLink: the density announced when the DPI setting is Automatic (0), from the device's own
+     * density and the visible codec area (codec size less margins, in pixels). Null = the device's
+     * density (standalone).
+     */
+    @Volatile
+    @JvmStatic
+    var automaticDensityDpi: ((deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int) -> Int)? = null
 }

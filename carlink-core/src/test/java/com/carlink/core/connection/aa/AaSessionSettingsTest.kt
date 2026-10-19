@@ -11,6 +11,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AaSessionSettingsTest {
@@ -111,5 +112,29 @@ class AaSessionSettingsTest {
         assertEquals(0, v["dpi-pixel-density"])
         val custom = values(settings = base.copy(picture = Picture.CUSTOM)).values
         assertFalse(custom.containsKey("resolutionId"))
+    }
+
+    /**
+     * Automatic DPI keeps Android Auto's 748x450 dp minimum (open-headunit #1108). The visible
+     * area is what DiAuto's HeadUnitScreenConfig gives each panel with Automatic resolution:
+     * codec size less margins (2560x1600: 1080p scaled to the panel height, 192 px width margin).
+     */
+    @Test fun automaticDensityKeepsAndroidAutosMinimumCanvas() {
+        data class Case(val panel: String, val w: Int, val h: Int, val deviceDpi: Int, val expected: Int)
+        for (c in listOf(
+            Case("1024x600", 1024, 600, 160, 160), Case("1024x600 high", 1024, 600, 240, 213),
+            Case("1280x720", 1280, 720, 213, 213), Case("1280x720 high", 1280, 720, 320, 256),
+            Case("1920x720 ultrawide", 1920, 720, 240, 240), Case("1920x720 ultrawide high", 1920, 720, 320, 256),
+            Case("800x480", 800, 480, 160, 160), Case("800x480 high", 800, 480, 240, 170),
+            Case("2560x1600", 1728, 1080, 320, 320), Case("2560x1600 high", 1728, 1080, 400, 369),
+        )) {
+            val dpi = AaSessionSettings.automaticDensityDpi(c.deviceDpi, c.w, c.h)
+            assertEquals(c.panel, c.expected, dpi)
+            assertTrue("${c.panel} height", c.h * 160 / dpi >= 450)
+            assertTrue("${c.panel} width", c.w * 160 / dpi >= 748)
+        }
+        // Portrait and an unknown picture keep the device's density.
+        assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 720, 1280))
+        assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 0, 0))
     }
 }

@@ -453,7 +453,10 @@ object HeadUnitScreenConfig {
         return if (this::currentSettings.isInitialized && currentSettings.dpiPixelDensity != 0) {
             currentSettings.dpiPixelDensity
         } else {
-            densityDpi
+            // CarLink: the host may lower Automatic to keep Android Auto's full layout (open-headunit #1108).
+            com.andrerinas.openheadunit.HostIntegration.automaticDensityDpi
+                ?.invoke(densityDpi, getNegotiatedWidth() - getWidthMargin(), getNegotiatedHeight() - getHeightMargin())
+                ?: densityDpi
         }
     }
 

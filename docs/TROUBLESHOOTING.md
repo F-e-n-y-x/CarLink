@@ -115,6 +115,8 @@ app on the phone, fixed by Google in Android Auto 17.4
 ([arenaev.com](https://www.arenaev.com/two_frustrating_android_auto_bugs_are_now_been_fixed-news-6171.php)):
 update Android Auto from the Play Store on the phone.
 
+**Android Auto shows no media controls, only a narrow left rail.** Android Auto draws that reduced layout when the screen gives it less than about 450 dp of height. With **Interface size** on Medium (or Advanced **Pixel density (DPI)** on Automatic) CarLink lowers the DPI to keep the full layout; a DPI you set yourself (or Small or Large) is sent as is, so pick Medium or a lower DPI.
+
 **Plugging in a second phone did not take over.** By design: during a session, CarLink asks
 "Switch to &lt;phone&gt;?" (**Switch** / **Not now**). The floating switcher over CarPlay or Android
 Auto can also switch phones.

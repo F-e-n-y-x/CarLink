@@ -165,6 +165,21 @@ object AaSessionSettings {
         }
     }
 
+    /**
+     * The density DiAuto announces for "dpi-pixel-density" 0 (Interface size Medium, or Advanced DPI
+     * Automatic): the device's own density, lowered where it would leave Android Auto less than its
+     * minimum 748x450 dp canvas, below which it draws a reduced layout without media controls
+     * (open-headunit #1101/#1108). [visibleWidthPx] x [visibleHeightPx] is the codec area less its
+     * margins. Portrait is left alone: the floor is a landscape one. A typed DPI never comes here.
+     */
+    fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int): Int {
+        if (visibleWidthPx <= 0 || visibleHeightPx <= 0 || visibleHeightPx > visibleWidthPx) return deviceDpi
+        return minOf(deviceDpi, visibleWidthPx * 160 / MIN_WIDTH_DP, visibleHeightPx * 160 / MIN_HEIGHT_DP)
+    }
+
+    private const val MIN_WIDTH_DP = 748
+    private const val MIN_HEIGHT_DP = 450
+
     /** Writes [values] into DiAuto's settings in ":aa". Blocking IPC: call off the main thread. */
     fun apply(context: Context, values: AaSessionValues) {
         val bundle = Bundle()

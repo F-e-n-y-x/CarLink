@@ -872,6 +872,8 @@ Everything a session needs runs headless in `AapService`, except the projection 
 | Offline VPN to keep projection off mobile data | wiki Settings | VPN code unused |
 | Lower video automatically on 2.4 GHz | wiki Settings; #964 | Advice only (`VideoStarvationPolicy`) |
 | Per-vendor external-Bluetooth transports | PR #1027 | Refuses the route |
+| Keep Android Auto's full layout: automatic DPI keeps a 748x450 dp canvas | PR #1108, issue #1101 | CarLink caps Automatic through `HostIntegration.automaticDensityDpi` (docs/VENDOR_CHANGES.md) |
+| Withhold the WPP-over-TCP endpoint until the group IP repeats across creates | PR #1096, issue #1085 | Does not apply: DiAuto advertises no TCP endpoint (`WifiVersionRequest` carries only the version); the IP goes out per session in `WifiStartRequest` over Bluetooth, read from the live group. Still sends `AccessPointType.STATIC` for every Wi-Fi Direct group without grading the BSSID (upstream `GroupIdentityStabilityPolicy`, before #1096) |
 
 ---
 

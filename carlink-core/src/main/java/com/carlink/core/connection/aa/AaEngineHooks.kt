@@ -39,6 +39,11 @@ object AaEngineHooks {
         HostIntegration.stickyService = false
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
+        HostIntegration.automaticDensityDpi = { dpi, w, h ->
+            AaSessionSettings.automaticDensityDpi(dpi, w, h).also {
+                if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture (Android Auto's 748x450 dp minimum)")
+            }
+        }
         HostIntegration.onEngineEvent = { _, kind, detail ->
             AaEngineMonitor.shared.onEngineEvent(kind.name)
             sendEvent(app, kind.name, detail)
