@@ -123,8 +123,11 @@ internal class AaCommandHandler(
             report()
             // A phone left in accessory mode by an earlier session may never answer; say so in
             // seconds instead of the generic USB timeout (71 s on the tablet, 2026-10-09).
+            // CarLink resets it and switches it again instead of asking for a re-plug (tablet, 2026-10-20).
             if (device != null && !waitUntil(STALE_ACCESSORY_MILLIS) { engine.isBusy() }) {
-                emit(AaProtocol.KIND_AOA_STALE, "device=${engine.deviceName(device)}")
+                Log.i(TAG, "accessory phone silent; resetting its USB link")
+                reswitchStaleAccessory()
+                if (!waitUntil(STALE_ACCESSORY_MILLIS) { engine.isBusy() }) emit(AaProtocol.KIND_AOA_STALE, "device=${engine.deviceName(device)}")
             }
             return
         }
@@ -182,6 +185,16 @@ internal class AaCommandHandler(
         }
         Log.i(TAG, "stale accessory re-switch result=$result")
         emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))
+        if (result != "reset=true") return
+        // The phone comes back in its normal USB mode; the engine leaves the switch to CarLink and
+        // the session treats the re-attach as the engine's, so switch it here (tablet, 2026-10-20:
+        // nobody did, and the session failed 3 s later).
+        if (!waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }) {
+            Log.w(TAG, "the phone did not come back after the USB reset")
+            return
+        }
+        val phone = engine.plainAndroidPhone() ?: return
+        if (engine.hasUsbPermission(phone)) switchToAccessory(phone) else engine.requestUsbPermission(phone)
     }
 
     /** The answer to [AaEngineAccess.requestUsbPermission]. */
@@ -310,7 +323,8 @@ internal class AaCommandHandler(
         const val SETTLE_STABLE_MILLIS = 600L
         const val SETTLE_MAX_MILLIS = 2_000L
         const val RETRY_SWITCH_MILLIS = 700L
-        const val STALE_ACCESSORY_MILLIS = 10_000L
+        const val STALE_ACCESSORY_MILLIS = 3_000L
+        const val RESET_RETURN_MILLIS = 5_000L
         const val FRONT_MILLIS = 3_000L
     }
 }

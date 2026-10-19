@@ -78,7 +78,10 @@ class AaCommandHandlerTest {
         override fun hasUsbPermission(device: UsbDevice) = permission.also { if (grantedAfterFirstCheck) permission = true }
         override fun requestUsbPermission(device: UsbDevice) { permissionRequested = true }
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
-        override fun resetUsb(device: UsbDevice): Boolean { resets++; return true }
+        override fun resetUsb(device: UsbDevice): Boolean { resets++; plainPhone = phoneAfterReset; return true }
+        var plainPhone: UsbDevice? = null
+        var phoneAfterReset: UsbDevice? = null
+        override fun plainAndroidPhone() = plainPhone
         override fun deviceName(device: UsbDevice) = "Pixel"
         override fun currentDevice(previous: UsbDevice): UsbDevice? = previous
         var accessoryOnBus: UsbDevice? = null
@@ -240,6 +243,14 @@ class AaCommandHandlerTest {
         assertEquals(phone, engine.targets)
     }
 
+    @Test fun aPhoneBackFromTheResetIsSwitchedToAccessory() {
+        engine.accessoryOnBus = device()
+        engine.phoneAfterReset = device()
+        handler.reswitchStaleAccessory()
+        assertEquals(1, engine.resets)
+        assertEquals(1, engine.switched)
+    }
+
     @Test fun aPermissionTheSystemGrantedWhileSettlingIsNotAskedAgain() {
         engine.permission = false
         engine.grantedAfterFirstCheck = true
@@ -294,7 +305,7 @@ class AaCommandHandlerTest {
         assertEquals(AaProtocol.KIND_AOA_RESWITCH, events.last().first)
         assertTrue(events.last().second!!.startsWith("result=reset=true"))
         assertEquals(1, engine.resets)
-        assertEquals(0, engine.switched)
+        assertEquals(0, engine.switched) // the phone never came back
         engine.busy = true
         handler.reswitchStaleAccessory()
         assertTrue(events.last().second!!.startsWith("result=busy"))

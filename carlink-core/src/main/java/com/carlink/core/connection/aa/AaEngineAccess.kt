@@ -71,6 +71,9 @@ internal interface AaEngineAccess {
     fun currentDevice(previous: UsbDevice): UsbDevice?
     /** The attached phone that is in accessory mode, if any. */
     fun accessoryDevice(): UsbDevice?
+
+    /** An Android phone on USB that is not in accessory mode yet (after a reset), or null. */
+    fun plainAndroidPhone(): UsbDevice?
     /** DiAuto's `HostIntegration.usbOnlySession`: no wireless bring-up while true. */
     fun setUsbOnlySession(usbOnly: Boolean)
     fun sleep(millis: Long)
@@ -243,6 +246,14 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
 
     override fun accessoryDevice(): UsbDevice? =
         app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty().firstOrNull { UsbDeviceCompat.isInAccessoryMode(it) }
+
+    override fun plainAndroidPhone(): UsbDevice? =
+        app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty().firstOrNull {
+            !UsbDeviceCompat.isInAccessoryMode(it) && runCatching {
+                com.carlink.core.detect.PhoneClassifier.classifyUsb(com.carlink.core.entry.UsbRouterActivity.describe(it)) ==
+                    com.carlink.core.core.PhoneKind.ANDROID
+            }.getOrDefault(false)
+        }
 
     override fun setUsbOnlySession(usbOnly: Boolean) {
         HostIntegration.usbOnlySession = usbOnly
