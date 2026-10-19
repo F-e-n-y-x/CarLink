@@ -88,6 +88,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val network by vm.network.collectAsStateWithLifecycle()
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
     val stereoBluetooth by vm.stereoBluetooth.collectAsStateWithLifecycle()
+    val link by vm.link.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val access = remember { EngineAccess(context.applicationContext) }
     val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
@@ -128,6 +129,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun openAppSettings() = vm.openAppSettings()
             override fun setCarBrand(brand: com.carlink.core.settings.CarBrand) = vm.setCarBrand(brand)
             override fun navigate(route: Route) = goTo(route)
+            override fun returnToProjection() { vm.settingsFromCar.value = false; vm.returnToProjection() }
             override suspend fun readCarHotspot() = vm.readCarHotspot()
             override suspend fun readSavedWifiPassword(ssid: String) = vm.readSavedWifiPassword(ssid)
             override fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = vm.saveCarHotspot(details)
@@ -159,6 +161,8 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         detectedBrand = vehicle.detected,
         stereoBluetoothExternal = stereoBluetooth?.classification?.blocksWireless == true,
         stereoBluetoothFyt = stereoBluetooth?.classification == com.carlink.core.detect.StereoBluetooth.FYT_MODULE,
+        liveEngine = link.engine?.takeIf { link.stage == com.carlink.core.core.LinkStage.CONNECTED }
+            ?.let { com.carlink.app.ui.components.engineName(it) },
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }
@@ -225,10 +229,10 @@ fun SettingsContent(
             val wide = maxWidth >= 720.dp
             BackHandler(enabled = !wide && selected != null) { selected = null }
             if (wide) {
-                WideSettings(selected ?: SettingsCategory.CONNECTION, ui, onSelect = { selected = it }, onBack = onBack,
+                WideSettings(selected ?: SettingsCategory.CONNECTION, ui, actions::returnToProjection, onSelect = { selected = it }, onBack = onBack,
                     onAbout = { actions.navigate(Route.ABOUT) }, setAdvanced = setAdvanced, page = page, maxWidth = maxWidth)
             } else {
-                NarrowSettings(selected, ui, onSelect = { selected = it }, onBack = onBack,
+                NarrowSettings(selected, ui, actions::returnToProjection, onSelect = { selected = it }, onBack = onBack,
                     onAbout = { actions.navigate(Route.ABOUT) }, setAdvanced = setAdvanced, page = page)
             }
         }
@@ -238,7 +242,7 @@ fun SettingsContent(
 
 @Composable
 private fun WideSettings(
-    selected: SettingsCategory, ui: SettingsUi, onSelect: (SettingsCategory) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
+    selected: SettingsCategory, ui: SettingsUi, onReturn: () -> Unit, onSelect: (SettingsCategory) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
     setAdvanced: (Boolean) -> Unit, page: @Composable (SettingsCategory, Modifier) -> Unit, maxWidth: Dp,
 ) {
     val dimens = CarLinkTokens.dimens
@@ -246,6 +250,7 @@ private fun WideSettings(
     val railWidth = (if (isCar) 380.dp else 260.dp).coerceAtMost(maxWidth * 0.32f)
     Column(Modifier.fillMaxSize()) {
         Header(stringResource(R.string.carlink_settings_title), onBack, margin) {
+            ui.liveEngine?.let { ReturnButton(it, onReturn); Spacer(Modifier.width(dimens.gutter)) }
             AdvancedPill(ui.unified.showAdvanced, setAdvanced)
         }
         Row(Modifier.fillMaxSize().padding(start = margin, end = margin)) {
@@ -277,7 +282,7 @@ private fun WideSettings(
 
 @Composable
 private fun NarrowSettings(
-    selected: SettingsCategory?, ui: SettingsUi, onSelect: (SettingsCategory?) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
+    selected: SettingsCategory?, ui: SettingsUi, onReturn: () -> Unit, onSelect: (SettingsCategory?) -> Unit, onBack: () -> Unit, onAbout: () -> Unit,
     setAdvanced: (Boolean) -> Unit, page: @Composable (SettingsCategory, Modifier) -> Unit,
 ) {
     val dimens = CarLinkTokens.dimens
@@ -294,6 +299,7 @@ private fun NarrowSettings(
                 Header(stringResource(R.string.carlink_settings_title), onBack, margin)
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = margin)
                     .padding(top = 8.dp, bottom = dimens.gutter * 2), verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+                    ui.liveEngine?.let { ReturnButton(it, onReturn, Modifier.fillMaxWidth()) }
                     GlassGroup {
                         SwitchRow(stringResource(R.string.carlink_settings_show_advanced), ui.unified.showAdvanced, setAdvanced,
                             description = stringResource(R.string.carlink_settings_show_advanced_detail), icon = R.drawable.carlink_ic_tune)
@@ -352,6 +358,13 @@ private fun Header(title: String, onBack: () -> Unit, margin: Dp, trailing: (@Co
             trailing()
         }
     }
+}
+
+/** Back to the phone's picture (CarPlay / Android Auto), shown while a session is live. */
+@Composable
+private fun ReturnButton(engine: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    com.carlink.app.ui.premium.IonButton(stringResource(R.string.carlink_home_return, engine), onClick, modifier,
+        icon = R.drawable.carlink_ic_play_arrow_filled)
 }
 
 @Composable

@@ -110,7 +110,7 @@ The hooks CarLink sets (where):
 
 | Engine | Hook | Set in |
 |---|---|---|
-| DiAuto `HostIntegration` | `homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
+| DiAuto `HostIntegration` | `homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler`, `openCarScreen` (car tile → Settings) | `CarLinkApplication.brandEngines` |
 | | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession`, `automaticDensityDpi` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
@@ -118,6 +118,7 @@ The hooks CarLink sets (where):
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
+| DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |
 
 ## Build and test loop
 

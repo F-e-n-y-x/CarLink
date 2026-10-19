@@ -57,6 +57,16 @@ object HostIntegration {
     @JvmStatic
     var exitMenuHomeLabel: String? = null
 
+    /**
+     * CarLink: the phone asked for the car's own screen (the Exit / car tile). Non-null: the engine
+     * answers "native", keeps the session, and calls this (any thread) while the projection is in
+     * front, so the host shows its screen; showing the projection again regains focus. Null
+     * (standalone) ends the session as before.
+     */
+    @Volatile
+    @JvmStatic
+    var openCarScreen: (() -> Unit)? = null
+
     // CarLink: process lifecycle. Standalone DiAuto keeps both true: it owns the device and wants
     // its engine back after a low-memory kill or a task swipe. A host that drives the engine itself
     // sets both false, so no engine runs that the host did not start and cannot see.

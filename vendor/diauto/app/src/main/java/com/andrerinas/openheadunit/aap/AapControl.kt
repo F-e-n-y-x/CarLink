@@ -68,6 +68,13 @@ internal class AapControlMedia(
                 }
 
                 if (focusRequest.mode == Media.VideoFocusMode.VIDEO_FOCUS_NATIVE) {
+                    val carScreen = com.andrerinas.openheadunit.HostIntegration.openCarScreen // CarLink
+                    if (carScreen != null) { // CarLink: keep the session, show the host's screen
+                        AppLog.i("Video Focus NATIVE received. Opening the host's car screen; the session stays.")
+                        aapTransport.send(VideoFocusEvent(gain = false, unsolicited = false))
+                        if (AapProjectionActivity.isForeground) carScreen()
+                        return 0
+                    }
                     AppLog.i("Video Focus NATIVE received. User likely clicked Exit. Stopping transport.")
                     aapTransport.wasUserExit = true
                     aapTransport.stop()

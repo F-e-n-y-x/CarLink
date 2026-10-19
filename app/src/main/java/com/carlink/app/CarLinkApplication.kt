@@ -64,6 +64,15 @@ class CarLinkApplication : App() {
             Log.i(TOAST_TAG, "CarPlay engine toast: $text")
             true
         }
+        // The car tile in Android Auto / CarPlay opens CarLink's Settings, as a car shows its own
+        // screen; the phone session keeps running and comes back with the projection.
+        val openCarSettings = {
+            runCatching { startActivity(HomeActivity.carSettingsIntent(this)) }
+                .onFailure { Log.w("CarLink", "Settings from the car tile could not open: $it") }
+            Unit
+        }
+        HostIntegration.openCarScreen = openCarSettings
+        com.shilapi.xcertplay.orchestration.CarPlayController.openCarScreen = openCarSettings
         // The projections' own chrome (waiting screens, session menus, panels) in CarLink's look.
         com.carlink.app.engine.EngineChrome.install(this)
     }

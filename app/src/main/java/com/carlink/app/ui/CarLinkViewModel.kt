@@ -312,6 +312,12 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         session.retry()
     }
 
+    /**
+     * True from the car tile in CarPlay / Android Auto (HomeActivity page "settings") until the
+     * driver leaves that Settings visit: Back from it returns to the projection.
+     */
+    val settingsFromCar = MutableStateFlow(false)
+
     /** Bring the running engine's projection back to the front. */
     fun returnToProjection() {
         val intent = when (link.value.engine) {
