@@ -618,8 +618,10 @@ class AapTransport(
         try {
             val isUsb = connection !is SocketAccessoryConnection && !connection.isSingleMessage
             // Increased delay for AA 16.4+ stability on USB - skip for Sockets
+            // CarLink: 100 ms, not 500: the drain below clears stale bytes and the version request is
+            // retried, so the extra 400 ms only delayed every USB start (S25/AA 17.8 measured).
             if (isUsb) {
-                SystemClock.sleep(500)
+                SystemClock.sleep(100)
             }
 
             val buffer = ByteArray(Messages.DEF_BUFFER_LENGTH)

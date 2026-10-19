@@ -113,6 +113,10 @@ internal class AapControlMedia(
 
         if (channel == Channel.ID_VID) {
             aapTransport.gainVideoFocus()
+            // CarLink: grant focus with the config, as openauto's VideoService does; the phone waited
+            // for the first-frame watchdog otherwise (~900 ms on every start). A surface made later
+            // still asks again with an unsolicited gain.
+            aapTransport.send(com.andrerinas.openheadunit.aap.protocol.messages.VideoFocusEvent(gain = true, unsolicited = false))
         }
         if (channel == Channel.ID_CLUSTER_VID) {
             // The dashboard has no activity of its own to take focus. It is projected once the main

@@ -136,10 +136,11 @@ internal class AaCommandHandler(
             waitUntil(SERVICE_START_MILLIS) { engine.isServiceRunning() }
         }
         report()
-        // Phones re-enumerate a few times right after plug-in (charging negotiation); act on the
-        // settled device, or the permission and the switch go to a handle that no longer exists.
-        val settled = settle(device)
-        if (engine.hasUsbPermission(settled)) switchToAccessory(settled) else engine.requestUsbPermission(settled)
+        // Switch at once (aasdk sends the accessory queries with no wait; settling cost 600 ms of every
+        // plug). A phone still re-enumerating fails the switch, and switchToAccessory retries on its
+        // current handle. The permission dialog goes to the settled device: it must outlive the dialog.
+        val current = engine.currentDevice(device) ?: device
+        if (engine.hasUsbPermission(current)) switchToAccessory(current) else engine.requestUsbPermission(settle(current))
     }
 
     /** The phone once it has stopped re-enumerating, up to [SETTLE_MAX_MILLIS]. */
