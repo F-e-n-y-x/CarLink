@@ -4,6 +4,28 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.6] - 2026-10-20
+
+- Faster connections: USB Android Auto in about 1.3 s (was 3.2 s), wireless Android Auto in about 3 s.
+- Fixed an Android Auto video glitch where the map and app bar broke up for a moment.
+- A phone that was already plugged in, or still in an old Android Auto session, now connects
+  without unplugging it.
+- The USB permission prompt no longer comes back on every plug once "Always" was ticked.
+- Setup: "Allow all" goes through every permission, asks for everything up front, shows the real
+  problem with a one-tap fix, and has "Use another phone".
+- Home asks for a missing Wi-Fi password right there, and offers hotspot settings or Wi-Fi Direct
+  when the car hotspot is off.
+- The car hotspot name and password are filled in from the stereo and can be changed in Settings.
+- Tapping CarLink's tile in Android Auto or CarPlay opens CarLink's Settings; the phone stays
+  connected and Return goes back.
+- A plugged-in phone stays on the cable; CarLink no longer starts wireless for it.
+- Slow head units get Direct video output and a lighter CarPlay picture automatically.
+- CarPlay shows CarLink's icon instead of BYD's on other car brands.
+- Root mode for rooted stereos (Settings › Connection, Show advanced): no permission popups, and
+  Wi-Fi low-latency mode while a phone is connected.
+
+<!-- more -->
+
 ## [1.0.5] - 2026-10-20
 
 - USB Android Auto opens its screen again without "display over other apps" (broken since 1.0.3).
