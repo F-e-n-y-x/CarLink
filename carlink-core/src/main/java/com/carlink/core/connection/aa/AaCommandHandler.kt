@@ -140,7 +140,13 @@ internal class AaCommandHandler(
         // plug). A phone still re-enumerating fails the switch, and switchToAccessory retries on its
         // current handle. The permission dialog goes to the settled device: it must outlive the dialog.
         val current = engine.currentDevice(device) ?: device
-        if (engine.hasUsbPermission(current)) switchToAccessory(current) else engine.requestUsbPermission(settle(current))
+        if (engine.hasUsbPermission(current)) return switchToAccessory(current)
+        // The first attach can come with unreadable strings (usb_device_open failed, serial null), so
+        // Android cannot match the driver's "Always" choice; the re-attach a moment later matches it
+        // and the system grants access itself. Check again on the settled device before asking:
+        // asking anyway showed the permission dialog on every plug (S25, 2026-10-20).
+        val settled = settle(current)
+        if (engine.hasUsbPermission(settled)) switchToAccessory(settled) else engine.requestUsbPermission(settled)
     }
 
     /** The phone once it has stopped re-enumerating, up to [SETTLE_MAX_MILLIS]. */

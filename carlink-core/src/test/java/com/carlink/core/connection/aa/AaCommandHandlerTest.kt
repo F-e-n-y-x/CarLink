@@ -34,6 +34,8 @@ class AaCommandHandlerTest {
         var staticBssidReset = false
         var claim: Boolean? = null
         var permission = true
+        /** Permission the system grants by itself after the first check (the re-attach matched "Always"). */
+        var grantedAfterFirstCheck = false
         var permissionRequested = false
         var switchWorks = true
         var switched = 0
@@ -73,7 +75,7 @@ class AaCommandHandlerTest {
         override fun resetStaticBssid() { staticBssidReset = true }
         override fun setClaimHiddenBottomStrip(claim: Boolean) { this.claim = claim }
         override fun isAccessory(device: UsbDevice) = accessory
-        override fun hasUsbPermission(device: UsbDevice) = permission
+        override fun hasUsbPermission(device: UsbDevice) = permission.also { if (grantedAfterFirstCheck) permission = true }
         override fun requestUsbPermission(device: UsbDevice) { permissionRequested = true }
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
         override fun resetUsb(device: UsbDevice): Boolean { resets++; return true }
@@ -236,6 +238,14 @@ class AaCommandHandlerTest {
         assertEquals("service up first, with no action", listOf<String?>(null), actions())
         assertEquals(1, engine.switched)
         assertEquals(phone, engine.targets)
+    }
+
+    @Test fun aPermissionTheSystemGrantedWhileSettlingIsNotAskedAgain() {
+        engine.permission = false
+        engine.grantedAfterFirstCheck = true
+        handler.startUsb(device(), null, VehicleProfile.GENERIC)
+        assertFalse(engine.permissionRequested)
+        assertEquals(1, engine.switched)
     }
 
     @Test fun usbAsksForPermissionAndSwitchesOnlyWhenGranted() {
