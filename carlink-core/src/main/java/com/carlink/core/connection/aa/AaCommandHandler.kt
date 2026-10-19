@@ -161,8 +161,9 @@ internal class AaCommandHandler(
     /**
      * A phone left in accessory mode by a session whose host side died (process death, reinstall)
      * hands the next session the old stream, and the handshake fails ("Drained 549115 bytes of stale
-     * USB data", RELIABILITY_AUDIT K2). The accessory switch sent again makes it re-enumerate; the
-     * engine connects the fresh accessory by itself. Asked for by the main process on the first
+     * USB data", RELIABILITY_AUDIT K2). A phone already in accessory mode ignores a second accessory
+     * switch (S25, Android 17), so the port is reset: the phone drops the old session and re-enumerates,
+     * and the fresh attach is switched as a new plug. Asked for by the main process on the first
      * handshake failure (DiAuto's own re-switch waits for a second one that never comes).
      */
     fun reswitchStaleAccessory() {
@@ -170,7 +171,7 @@ internal class AaCommandHandler(
         val result = when {
             device == null -> "no-accessory"
             engine.isBusy() -> "busy" // a new session is already under way
-            else -> engine.switchToAccessory(device).toString()
+            else -> "reset=" + engine.resetUsb(device)
         }
         Log.i(TAG, "stale accessory re-switch result=$result")
         emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))

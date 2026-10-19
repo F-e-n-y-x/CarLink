@@ -16,6 +16,7 @@ import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.aap.AapService
 import com.andrerinas.openheadunit.connection.UsbAccessoryMode
+import com.andrerinas.openheadunit.connection.UsbNative
 import com.andrerinas.openheadunit.connection.UsbDeviceCompat
 import com.andrerinas.openheadunit.utils.Settings
 import java.util.concurrent.CountDownLatch
@@ -58,6 +59,9 @@ internal interface AaEngineAccess {
     fun hasUsbPermission(device: UsbDevice): Boolean
     fun requestUsbPermission(device: UsbDevice)
     fun switchToAccessory(device: UsbDevice): Boolean
+
+    /** A USB port reset: the phone sees an unplug and re-enumerates, ending its old session. */
+    fun resetUsb(device: UsbDevice): Boolean
     fun deviceName(device: UsbDevice): String
     /**
      * The same phone as it is attached right now. A phone re-enumerates (charging-mode changes,
@@ -208,6 +212,24 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
         return runCatching { UsbAccessoryMode(usb).connectAndSwitch(device, settings.useLibusb) }
             .onFailure { Log.w(TAG, "AOA switch threw ${it.javaClass.simpleName}: ${it.message}") }
             .getOrDefault(false)
+    }
+
+    // USBDEVFS_RESET through libusb on our own fd; SELinux lets apps ioctl a usb_device they opened
+    // (open-headunit eafe3261 recovers a stale accessory the same way).
+    override fun resetUsb(device: UsbDevice): Boolean {
+        val connection = app.getSystemService(UsbManager::class.java)?.openDevice(device) ?: return false
+        return try {
+            val native = UsbNative()
+            if (!native.wrap(connection, 0, 0)) return false
+            native.reset()
+            native.close()
+            true
+        } catch (e: Throwable) {
+            Log.w(TAG, "USB reset threw ${e.javaClass.simpleName}: ${e.message}")
+            false
+        } finally {
+            connection.close()
+        }
     }
 
     override fun deviceName(device: UsbDevice): String = UsbDeviceCompat(device).uniqueName

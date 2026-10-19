@@ -37,6 +37,7 @@ class AaCommandHandlerTest {
         var permissionRequested = false
         var switchWorks = true
         var switched = 0
+        var resets = 0
         var accessory = false
         var refuseStarts = false
         /** For each fresh AapService start: whether CarLink was in front (while-in-use). */
@@ -75,6 +76,7 @@ class AaCommandHandlerTest {
         override fun hasUsbPermission(device: UsbDevice) = permission
         override fun requestUsbPermission(device: UsbDevice) { permissionRequested = true }
         override fun switchToAccessory(device: UsbDevice): Boolean { switched++; return switchWorks }
+        override fun resetUsb(device: UsbDevice): Boolean { resets++; return true }
         override fun deviceName(device: UsbDevice) = "Pixel"
         override fun currentDevice(previous: UsbDevice): UsbDevice? = previous
         var accessoryOnBus: UsbDevice? = null
@@ -274,18 +276,19 @@ class AaCommandHandlerTest {
 
     // ---- RELIABILITY_AUDIT K2 / K10 ----
 
-    @Test fun aStaleAccessoryIsSwitchedAgainUnlessASessionIsAlreadyUnderWay() {
+    @Test fun aStaleAccessoryIsResetUnlessASessionIsAlreadyUnderWay() {
         handler.reswitchStaleAccessory()
         assertEquals("result=no-accessory", events.last().second)
         engine.accessoryOnBus = device()
         handler.reswitchStaleAccessory()
         assertEquals(AaProtocol.KIND_AOA_RESWITCH, events.last().first)
-        assertTrue(events.last().second!!.startsWith("result=true"))
-        assertEquals(1, engine.switched)
+        assertTrue(events.last().second!!.startsWith("result=reset=true"))
+        assertEquals(1, engine.resets)
+        assertEquals(0, engine.switched)
         engine.busy = true
         handler.reswitchStaleAccessory()
         assertTrue(events.last().second!!.startsWith("result=busy"))
-        assertEquals(1, engine.switched)
+        assertEquals(1, engine.resets)
     }
 
     @Test fun usbSessionsArmNoWirelessAndTheFlagIsClearedAfterwards() {
