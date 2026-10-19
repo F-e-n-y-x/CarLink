@@ -57,6 +57,8 @@ data class SettingsUi(
     val stereoBluetoothExternal: Boolean = false,
     /** That module is FYT's, whose own "Car Link" app (com.syu.carlink) must be disabled for the module route. */
     val stereoBluetoothFyt: Boolean = false,
+    /** "CarPlay" / "Android Auto" while a session shows a picture: Settings offers the way back to it. */
+    val liveEngine: String? = null,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -85,6 +87,8 @@ interface SettingsActions {
     /** Stores the car brand (applies from the next connection). */
     fun setCarBrand(brand: CarBrand) {}
     fun navigate(route: Route) {}
+    /** Brings the live projection back to the front. */
+    fun returnToProjection() {}
     /** The car hotspot read from the stereo itself, or null where Android does not allow it. */
     suspend fun readCarHotspot(): com.carlink.core.settings.WifiDetails? = null
     /** A saved Wi-Fi network's password (rooted stereos only), or null. */

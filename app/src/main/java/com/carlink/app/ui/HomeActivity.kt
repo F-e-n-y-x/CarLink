@@ -29,7 +29,7 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) { consumeAutoPhone(intent); consumeRecovery(intent) }
+        if (savedInstanceState == null) { consumeAutoPhone(intent); consumeRecovery(intent); consumeCarSettings(intent) }
         setContent {
             val display by vm.display.collectAsStateWithLifecycle()
             val profile = remember(display.uiProfileMode) { UiProfileDetector.detect(this, display.uiProfileMode) }
@@ -101,6 +101,14 @@ class HomeActivity : ComponentActivity() {
         super.onNewIntent(intent)
         consumeAutoPhone(intent)
         consumeRecovery(intent)
+        consumeCarSettings(intent)
+    }
+
+    /** The car tile in CarPlay / Android Auto opens Settings; the phone session keeps running. */
+    private fun consumeCarSettings(intent: Intent) {
+        if (intent.getStringExtra("page") != PAGE_SETTINGS) return
+        intent.removeExtra("page")
+        vm.settingsFromCar.value = true
     }
 
     /** A phone SystemEventReceiver identified; start its engine now that CarLink is in front. */
@@ -133,5 +141,12 @@ class HomeActivity : ComponentActivity() {
         private const val PREWARM_DELAY_MILLIS = 2_500L
         private const val UPDATE_CHECK_DELAY_MILLIS = 8_000L
         fun intent(context: Context): Intent = Intent(context, HomeActivity::class.java)
+
+        /** DiPlay's page name for its settings, also used by CarPlay's "CarLink settings" menu button. */
+        private const val PAGE_SETTINGS = "settings"
+
+        /** Settings over a running projection, for the engines' car tile (CarLinkApplication). */
+        fun carSettingsIntent(context: Context): Intent = intent(context).putExtra("page", PAGE_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
     }
 }

@@ -264,6 +264,10 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("settings", "root") {
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {})
     },
+    // Opened from the car tile in Android Auto / CarPlay: the way back to the live picture.
+    GalleryEntry("settings", "from-car-live") {
+        SettingsContent(settingsPreviewUi().copy(liveEngine = "Android Auto"), SettingsPreviewActions, onBack = {})
+    },
     GalleryEntry("settings", "connection-paused") {
         SettingsContent(settingsPreviewUi(paused = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CONNECTION)

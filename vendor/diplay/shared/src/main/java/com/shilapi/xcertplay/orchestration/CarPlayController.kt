@@ -421,7 +421,8 @@ class CarPlayController(
         override fun onHostUiRequested(session: AirPlaySession) {
             debugLog("CarPlay requested the car UI; opening the head-unit home screen")
             runCatching {
-                appContext.startActivity(
+                val carScreen = openCarScreen // CarLink: a host shows its own screen instead
+                if (carScreen != null) carScreen() else appContext.startActivity(
                     Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
@@ -3324,6 +3325,10 @@ class CarPlayController(
     }
 
     companion object {
+        /** CarLink: opens the host's own screen when the iPhone's car tile asks for the car UI; null opens the launcher. */
+        @Volatile
+        @JvmStatic
+        var openCarScreen: (() -> Unit)? = null
         // CarLink: see awaitDefaultGrantThenRequest.
         private const val DEFAULT_GRANT_WAIT_MS = 2_000L
         private const val DEFAULT_GRANT_POLL_MS = 100L

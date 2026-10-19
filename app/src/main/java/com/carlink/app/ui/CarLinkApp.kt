@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +26,8 @@ import com.carlink.app.ui.home.HomeScreen
 import com.carlink.app.ui.settings.SettingsScreen
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.carlink.core.core.LinkStage
 import com.carlink.core.settings.SettingsCategory
 
 /** CarLink's screens (DESIGN_SPEC §4.1). Home is the hub; everything is one level below it. */
@@ -35,6 +38,10 @@ enum class Route {
     /** The setup's pairing step (Home's "Pair a phone"). */
     SETUP_PAIR,
 }
+
+/** Back on Settings that the car tile opened goes back to the phone's picture while it is live. */
+internal fun backReturnsToProjection(route: Route, fromCar: Boolean, live: Boolean) =
+    route == Route.SETTINGS && fromCar && live
 
 @Composable
 fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
@@ -53,7 +60,15 @@ fun CarLinkApp(vm: CarLinkViewModel, onExitToCarHome: () -> Unit) {
             else -> stack + target
         }
     }
-    val back: () -> Unit = { stack = if (stack.size > 1) stack.dropLast(1) else listOf(Route.HOME) }
+    // The car tile in CarPlay / Android Auto (HomeActivity) opens Settings over the live session.
+    val fromCar by vm.settingsFromCar.collectAsStateWithLifecycle()
+    val link by vm.link.collectAsStateWithLifecycle()
+    LaunchedEffect(fromCar) { if (fromCar && route != Route.SETTINGS) navigate(Route.SETTINGS) }
+    val back: () -> Unit = {
+        if (backReturnsToProjection(route, fromCar, link.stage == LinkStage.CONNECTED)) vm.returnToProjection()
+        if (route == Route.SETTINGS) vm.settingsFromCar.value = false
+        stack = if (stack.size > 1) stack.dropLast(1) else listOf(Route.HOME)
+    }
 
     val openSettings: (SettingsCategory) -> Unit = { category -> navigate(Route.SETTINGS); settingsStart = category }
     BackHandler(enabled = route != Route.HOME) { back() }
