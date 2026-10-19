@@ -20,6 +20,8 @@ enum class AaResolution(val id: Int, private val landscape: VideoSize, private v
  * @property aaCodec DiAuto `video-codec`: "H.264" when the device has no hardware HEVC decoder.
  * @property carPlayScalePercent DiPlay `display_scale_percent`: the CarPlay picture is the panel at this size.
  * @property carPlayHevc DiPlay `hevc_enabled`: false when the device has no hardware HEVC decoder.
+ * @property carPlayDirectVideo DiPlay `direct_video_output`: true on slow hardware (a SurfaceView
+ *   instead of a TextureView, so no GPU pass per video frame); null leaves the driver's switch alone.
  */
 data class PictureChoice(
     val aaResolutionId: Int,
@@ -29,6 +31,7 @@ data class PictureChoice(
     val carPlayFps: Int,
     val carPlayHevc: Boolean?,
     val summary: String,
+    val carPlayDirectVideo: Boolean? = null,
 )
 
 /**
@@ -44,12 +47,19 @@ data class PictureChoice(
  * 3. Android Auto frame rate: 60 fps only when the decoder carries 60 at that size and the device
  *    is not low-end ([DeviceSignals.lowEnd]); otherwise 30.
  * 4. CarPlay size: the panel at 100 %, 75 % or 50 %, the first the decoder carries at 30 fps
- *    (a software decoder no more than 1280×720 pixels). CarPlay stays at 30 fps.
+ *    (a software decoder no more than 1280×720 pixels; slow hardware no more than 1600×900).
+ *    CarPlay stays at 30 fps.
+ * 5. CarPlay video output: on slow hardware ([DeviceSignals.liteRendering]: ≤ 3 GB, weak GPU, slow
+ *    CPU, …) DiPlay's Direct video output, a SurfaceView the compositor shows as it is, instead of
+ *    a TextureView the app's GPU draws again for every frame (issue #4: lag on a 2 GB stereo).
  */
 object PicturePolicy {
     const val AA_AUTOMATIC = 0
     val CARPLAY_SCALES = listOf(100, 75, 50)
     private const val SOFTWARE_MAX_PIXELS = 1280L * 720L
+    // ponytail: one pixel cap for every slow unit; keeps 1024x600-1920x720 panels at 100 %, shrinks
+    // 1080p and "2K" panels to 75 %. Tune per SoC if reports show a unit that carries more.
+    private const val SLOW_HARDWARE_MAX_PIXELS = 1600L * 900L
 
     /** Automatic as it was before this policy: used when nothing is known about the decoder. */
     val ENGINE_DEFAULTS = PictureChoice(AA_AUTOMATIC, 60, null, 100, 30, null, "engine defaults")
@@ -69,10 +79,12 @@ object PicturePolicy {
 
     fun choose(caps: DeviceCapabilities): PictureChoice {
         val hevcOk = caps.hardwareHevc
-        val codecRule = if (hevcOk) ENGINE_DEFAULTS else ENGINE_DEFAULTS.copy(aaCodec = H264, carPlayHevc = false)
+        val slow = caps.signals.liteRendering
+        val codecRule = (if (hevcOk) ENGINE_DEFAULTS else ENGINE_DEFAULTS.copy(aaCodec = H264, carPlayHevc = false))
+            .copy(carPlayDirectVideo = if (slow) true else null)
         val avc = caps.h264
         if (avc == null || avc.maxFps.isEmpty()) {
-            return codecRule.copy(summary = "no H.264 decoder answered; engine defaults" + lowEndNote(caps.signals))
+            return codecRule.copy(summary = "no H.264 decoder answered; engine defaults" + directNote(slow) + lowEndNote(caps.signals))
         }
         val fits = { size: VideoSize -> avc.carries(size) && (avc.hardware || size.pixels <= SOFTWARE_MAX_PIXELS) }
 
@@ -81,11 +93,13 @@ object PicturePolicy {
         val aa = AaResolution.entries.filter { it <= panelClass }.reversed().firstOrNull { fits(it.stream(portrait)) }
             ?: AaResolution.P480
         val aaFps = if (avc.hardware && !caps.signals.lowEnd && avc.carries(aa.stream(portrait), 60)) 60 else 30
-        val scale = CARPLAY_SCALES.firstOrNull { fits(caps.panel.scaled(it)) } ?: CARPLAY_SCALES.last()
+        val scale = CARPLAY_SCALES.firstOrNull { percent ->
+            caps.panel.scaled(percent).let { fits(it) && (!slow || it.pixels <= SLOW_HARDWARE_MAX_PIXELS) }
+        } ?: CARPLAY_SCALES.last()
 
         val codec = if (hevcOk) "engine's choice" else H264
         val summary = "Android Auto ${aa.label}${if (aa == panelClass) " (panel)" else ""} $aaFps fps $codec; " +
-            "CarPlay $scale% of ${caps.panel} 30 fps $codec; decoder ${avc.name}" +
+            "CarPlay $scale% of ${caps.panel} 30 fps $codec${directNote(slow)}; decoder ${avc.name}" +
             (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals)
         return codecRule.copy(
             aaResolutionId = if (aa == panelClass) AA_AUTOMATIC else aa.id,
@@ -95,8 +109,10 @@ object PicturePolicy {
         )
     }
 
+    private fun directNote(slow: Boolean) = if (slow) " direct video output" else ""
+
     private fun lowEndNote(signals: DeviceSignals) =
-        if (signals.lowEnd) "; low-end: ${signals.lowEndReasons.joinToString()}" else ""
+        if (signals.liteRendering) "; low-end: ${signals.liteReasons.joinToString()}" else ""
 
     const val H264 = "H.264"
 }

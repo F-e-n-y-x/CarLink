@@ -124,6 +124,27 @@ in, and CarLink no longer starts wireless CarPlay by itself while an iPhone is p
 iPhone charges from the cable as usual. Android also shows a key (VPN) icon on the stereo during USB
 CarPlay. That is the same local link, not a VPN to the internet.
 
+**CarPlay laggy on low-end stereos.** The picture stutters, or touches answer late, on a cheap
+head unit (2-3 GB of RAM, a 1.6 GHz processor, a PowerVR/Mali-T GPU). Unlike a CarPlay dongle,
+which hands the stereo a finished video stream, CarLink does all of CarPlay on the stereo
+(decrypting the picture, decoding the sound, drawing the picture), so a weak stereo runs out of
+breath sooner. With **Picture = Automatic** (the default) CarLink already picks the light path on
+such a unit: H.264, the panel's size at 30 fps (at most about 1600×900), and **Direct video
+output**. Try, one at a time, reconnecting after each (Direct video output and Resolution need
+**Show advanced**):
+
+1. **Settings › Display › Direct video output**: on. It sends the picture straight to the screen
+   instead of drawing it a second time. If the picture shows artifacts or freezes, turn it off.
+2. **Settings › Display › Picture**: **Light** (75 % of the screen, 30 fps), or **Resolution** 75 %
+   or 50 %. Fewer pixels per frame to decrypt and decode.
+3. **Settings › General › Visual effects**: **Lite**, and **Settings › General › Floating
+   switcher** off. Less for the GPU to draw next to CarPlay.
+
+Changing Resolution, Frame rate or Direct video output sets Picture to **Custom**; choose
+**Automatic** again to go back. If it still lags, reproduce it and tap **Report on GitHub** in
+**Settings › General › Diagnostics** right after: the log has the stereo's decoder, GPU and
+processor, and the picture CarLink asked for.
+
 **CarPlay stopped working after an iOS update.** Possible, and not something CarLink can promise
 against: see the CarPlay notice in the [README](../README.md#carplay-notice). Android Auto is not
 affected. Please report it with the iOS version.
