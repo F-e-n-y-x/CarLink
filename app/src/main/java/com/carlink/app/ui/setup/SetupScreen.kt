@@ -148,6 +148,10 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     var reads by remember { mutableIntStateOf(0) }
     LifecycleResumeEffect(Unit) { reads++; onPauseOrDispose { } }
     val permissions = remember(reads) { readPermissions(context) }
+    // "Allow all" walks every missing item, one system screen after another: the items already
+    // asked in this run (so a refusal is not asked again) and whether a system screen is still open.
+    var chain by remember { mutableStateOf<Set<SetupItem>?>(null) }
+    var waiting by remember { mutableStateOf(false) }
 
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
     val wirelessUnavailable by vm.wirelessUnavailable.collectAsStateWithLifecycle()
@@ -162,10 +166,11 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     (pairState as? PairingSession.State.Waiting)?.carName?.let { if (it != lastCarName) lastCarName = it }
 
     val runtime = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        waiting = false
         reads++
         vm.refreshPhones()
     }
-    val system = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { reads++ }
+    val system = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { waiting = false; reads++ }
     val discover = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         // The system dialog answers with the visible time in seconds, or "cancelled".
         if (result.resultCode > 0) visibleUntil = SystemClock.elapsedRealtime() + result.resultCode * 1000L
@@ -209,9 +214,9 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         }
         override fun exit() = exit()
         override fun allowAll() {
-            val missing = permissions.filter { !it.granted && it.item.grant == GrantKind.RUNTIME }.flatMap { it.permissions }
-            if (missing.isNotEmpty()) runtime.launch(missing.toTypedArray())
-            else permissions.firstOrNull { !it.granted }?.let { allow(it.item) }
+            chain = emptySet()
+            waiting = false
+            reads++ // the effect below asks for the first missing item
         }
         override fun allow(item: SetupItem) {
             when (item.grant) {
@@ -250,6 +255,24 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         override fun retry() = vm.retry()
     }
     BackHandler { actions.back() }
+
+    // Each answer (and each return to this screen) re-reads the grants and asks the next one.
+    LaunchedEffect(reads, step) {
+        val asked = chain ?: return@LaunchedEffect
+        if (waiting) return@LaunchedEffect
+        val next = SetupPermissions.nextToAllow(permissions, asked)
+        if (step != SetupStep.PERMISSIONS || next.isEmpty()) { chain = null; return@LaunchedEffect }
+        chain = asked + next.map { it.item }
+        val item = next.first().item
+        if (item.grant == GrantKind.RUNTIME) {
+            waiting = true
+            runtime.launch(next.flatMap { it.permissions }.toTypedArray())
+        } else {
+            // VPN answers through its own path (adb or the system launcher), the others through [system].
+            waiting = item.grant != GrantKind.VPN
+            actions.allow(item)
+        }
+    }
 
     val ui = SetupUi(
         step = step,

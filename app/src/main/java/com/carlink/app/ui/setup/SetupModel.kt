@@ -76,6 +76,15 @@ object SetupPermissions {
         return groups + listOf(SetupItem.OVERLAY to emptyList(), SetupItem.VPN to emptyList(), SetupItem.BATTERY to emptyList())
     }
 
+    /**
+     * What "Allow all" asks next: every missing runtime item together (one dialog), else the next
+     * special grant; never an item already asked in this run, so a refusal ends the walk.
+     */
+    fun nextToAllow(permissions: List<SetupPermission>, asked: Set<SetupItem>): List<SetupPermission> {
+        val missing = permissions.filter { !it.granted && it.item !in asked }
+        return missing.filter { it.item.grant == GrantKind.RUNTIME }.ifEmpty { missing.take(1) }
+    }
+
     /** The runtime permissions the setup asks for in one dialog. */
     fun runtimePermissions(sdk: Int = Build.VERSION.SDK_INT): List<String> =
         (DevicePreflight.requiredPermissions() + CarPlayPreflight.requiredPermissions(Transport.WIRELESS, WirelessPath.WIFI_DIRECT, sdk))
