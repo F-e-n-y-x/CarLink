@@ -33,6 +33,8 @@ data class CarPlayEngineSettings(
     val fps: Int?,
     /** DiPlay's HEVC switch; false only when Automatic picture found no hardware HEVC decoder ([PicturePolicy]). */
     val hevc: Boolean? = null,
+    /** DiPlay's Direct video output; true only when Automatic picture found slow hardware ([PicturePolicy]). */
+    val directVideoOutput: Boolean? = null,
     val widthPhysicalMm: Int?,
     /** DiPlay's night-mode key: system, day, night or schedule. */
     val nightModeKey: String,
@@ -125,6 +127,7 @@ object CarPlaySettingsPolicy {
             displayScalePercent = scale,
             fps = fps,
             hevc = if (settings.picture == Picture.AUTOMATIC) picture.carPlayHevc else null,
+            directVideoOutput = if (settings.picture == Picture.AUTOMATIC) picture.carPlayDirectVideo else null,
             widthPhysicalMm = widthMm,
             nightModeKey = when (settings.dayNight) {
                 DayNight.AUTOMATIC -> "system"
@@ -172,6 +175,7 @@ object CarPlaySettingsPolicy {
         values.displayScalePercent?.let { AirPlayPersistence.saveDisplayScalePercent(context, it) }
         values.fps?.let { AirPlayPersistence.saveFps(context, it) }
         values.hevc?.let { AirPlayPersistence.saveHevcEnabled(context, it) }
+        values.directVideoOutput?.let { AirPlayPersistence.saveDirectVideoOutput(context, it) }
         values.widthPhysicalMm?.let { AirPlayPersistence.saveWidthPhysicalMm(context, it) }
         AirPlayPersistence.saveCarPlayNightMode(context, CarPlayNightMode.fromKey(values.nightModeKey))
         AirPlayPersistence.saveAppAppearance(context, AppAppearance.fromKey(values.appearanceKey))

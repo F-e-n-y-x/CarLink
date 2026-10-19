@@ -159,9 +159,10 @@ asks for more than before; it only steps down.
 | Rule | Android Auto (DiAuto) | CarPlay (DiPlay) |
 |---|---|---|
 | Codec | `video-codec` = H.264 when there is no hardware HEVC decoder; otherwise untouched | `hevc_enabled` = false when there is no hardware HEVC decoder; otherwise untouched |
-| Size | DiAuto's own panel class (800×480 → 480p, up to 1280×720 → 720p, larger → 1080p; portrait 720×1280 / 1080×1920), then down the ladder 1080p → 720p → 480p to the first the H.264 decoder carries at 30 fps. The panel class itself is written as `resolutionId` 0 (DiAuto's Automatic) | The panel at 100 %, 75 % or 50 % (`display_scale_percent`), the first the decoder carries at 30 fps |
+| Size | DiAuto's own panel class (800×480 → 480p, up to 1280×720 → 720p, larger → 1080p; portrait 720×1280 / 1080×1920), then down the ladder 1080p → 720p → 480p to the first the H.264 decoder carries at 30 fps. The panel class itself is written as `resolutionId` 0 (DiAuto's Automatic) | The panel at 100 %, 75 % or 50 % (`display_scale_percent`), the first the decoder carries at 30 fps; on slow hardware (the [lite signals](#lite-rendering)) also at most 1600×900 pixels |
 | Frame rate | 60 when the decoder carries 60 at that size and the device is not low-end ([lite signals](#lite-rendering)); otherwise 30 | 30 (DiPlay's default; Automatic never asked for 60) |
 | Software-only H.264 | at most 720p, 30 fps | at most 1280×720 pixels |
+| Video output | untouched (TextureView) | **Direct video output** (SurfaceView) on slow hardware (the lite signals, also when the probe failed); otherwise the driver's switch is left alone |
 | Probe failed or no H.264 decoder | engine defaults (Automatic, 60 fps) | engine defaults (100 %, 30 fps) |
 
 Examples:
@@ -169,7 +170,9 @@ Examples:
 | Device | Android Auto | CarPlay |
 |---|---|---|
 | Strong tablet (hardware HEVC, 1080p60 H.264, 8 GB) | Automatic, 60 fps, codec untouched (as before) | 100 %, 30 fps (as before) |
-| 1024×600 head unit, 2 GB, decoder carries 1080p60 (the emulator) | 720p (Automatic), **30 fps**, **H.264** | 100 %, 30 fps, **HEVC off** |
+| 1024×600 head unit, 2 GB, decoder carries 1080p60 (the emulator) | 720p (Automatic), **30 fps**, **H.264** | 100 %, 30 fps, **HEVC off**, **direct video output** |
+| Issue #4: 2 GB, 8× 1.6 GHz, Android 12, 1280×720, no hardware HEVC | 720p (Automatic), 30 fps, H.264 | 100 %, 30 fps, HEVC off, **direct video output** |
+| The same unit with a 2000×1200 panel | 1080p (Automatic) or less, 30 fps, H.264 | **75 %** (1500×900), 30 fps, HEVC off, direct video output |
 | 1920×720 head unit whose decoder tops out at 720p30 | **720p**, **30 fps**, H.264 | **75 %** (1440×540), 30 fps |
 | 1920×1080 unit with only a software decoder | **720p**, **30 fps** | **50 %** (960×540) |
 
@@ -357,7 +360,7 @@ compresses a little worse); `baseline.prof` 7.7 → 14.2 KB. The shipping arm-on
   `onTrimMemory` (UI hidden and above, and the running-low levels Android 10-13 still send) by
   dropping the decoder probe.
 
-### Projection video surface (report only)
+### Projection video surface (round 2: report only; CarPlay changed in round 3)
 
 Both engines draw the picture into a **TextureView** by default:
 
@@ -409,3 +412,64 @@ the user's stereo should be checked with `adb logcat -s CarLink-Capabilities` ("
 '…'") and Settings › General › Visual effects ("Automatic · Lite"). The prewarm change alters when
 `:aa` starts on 2-3 GB units without a known Android phone: the first Android Auto plug-in there
 starts the process cold (round 1 measured 4.5 s for that on the tablet).
+
+## Round 3 (2026-10-20): CarPlay lag on a 2 GB stereo (issue #4)
+
+Report: a cheap Android 12 head unit (8 cores at 1.6 GHz, 2 GB), iPhone 12 Pro on iOS 27 over
+USB, CarLink 1.0.4: "lag and lack of fluency", "with Carlinkit box + Autokit it works way better".
+No log yet.
+
+**What CarLink asked for on that unit (before this round).** `DeviceSignals.lowEnd` (1.8-1.9 GB
+reported) → Automatic picture: CarPlay at 100 % of the panel, 30 fps (CarPlay was never asked for
+60), HEVC off unless a hardware HEVC decoder exists. Resolution, frame rate and codec were already
+the cheap ones. What it did not change was the video output: DiPlay drew the picture into a
+**TextureView**, so every decoded frame was drawn a second time by the app's GPU before the
+compositor showed it ([AOSP TextureView](https://source.android.com/docs/core/graphics/arch-tv)).
+
+**What a dongle does differently.** A Carlinkit dongle runs the CarPlay protocol itself (USB
+networking, the encrypted AirPlay stream, the audio) and hands Autokit a plain H.264 stream and
+PCM audio, at a size and frame rate the head-unit app chooses: the open-source host for those
+dongles defaults to 800×640 at 20 fps
+([node-CarPlay `DEFAULT_CONFIG`](https://github.com/rhysmorgan134/node-CarPlay/blob/main/src/modules/DongleDriver.ts));
+Autokit offers a frame-rate setting "depending on android radio capability", hardware or
+software decoding (software "fixed 800 * 480 resolution") and a render-mode switch for stutter
+([Carlinkit: Autokit options](https://carlinkitcarplay.com/blogs/for-models-with-android-head-unit/explanation-of-autokit-app-options-settings));
+the dongle's own settings page suggests a lower frame rate for an obviously delayed screen and a
+bit rate under 8 Mbps for freezing or lag
+([Carlinkit: 192.168.50.2 options](https://autokitcarplay.com/blogs/u2w-plus/as-for-the-192-168-50-2-backend-what-are-those-option-settings-mean)).
+CarLink does all of that on the stereo: DiPlay decrypts every video frame with ChaCha20-Poly1305
+(`ScreenStream`/`ScreenCodec.decryptFrame`), decodes the audio and runs the USB network, on
+little cores. That CPU cost is the protocol's and stays; the GPU pass and the picture size are
+what CarLink can cut.
+
+**Code findings.**
+
+| Suspect | Finding | Changed |
+|---|---|---|
+| Video view | DiPlay `carPlayVideoSurfaceMode`: TextureView unless Smooth video, Direct video output, no hardware acceleration or an FFmpeg Codec2 decoder. **Smooth video** paces frames to the iPhone's timestamps plus a delay that starts at 40 + 3000/fps ms (140 ms at 30 fps, `smoothVideoDelayMillis`): steadier but *more* touch latency, so not for lag. **Direct video output** is a SurfaceView with frames "shown as soon as they are decoded"; DiPlay documents it as able to save "about one screen refresh", experimental, off by default, picture adjustments unavailable, "turn it off if the picture shows artifacts or freezes" (DiPlay `docs/INSTALL.md`, 0.2.16 notes). CarLink already offers it for the iOS 27 black screen | Automatic turns it on on slow hardware |
+| CarLink's waiting view | `CarPlayWaitingContent` (Compose) stays attached in the host window; DiPlay sets its panel `GONE` while a screen stream is active (`connectionPanel`). In the Connected state Home's dial and progress line have no endless animation (`DialReading(progress = 1f)`, no `ProgressLine`) and the waiting view passes no `connectedSince`, so no one-second ticker: nothing runs behind the video | No |
+| Home behind the projection | `HomeActivity` is stopped under the full-screen host, so its recomposer is paused | No |
+| Floating switcher | A small `TYPE_APPLICATION_OVERLAY` window (translucent) over the projection, static after its fade to idle alpha; it draws no frames by itself but is one more layer for the compositor | No (Settings › General › Floating switcher can turn it off) |
+| Audio | DiPlay's music clock trim (`MediaClockTrim`) changes the AudioTrack rate by at most 26 cents and only for music; the music buffer (300 ms wired by default) delays music, not touches or the picture. Neither explains a laggy picture | No |
+
+**What changed** (`PicturePolicy`, `CarPlaySettingsPolicy`, `AdvancedSettings`):
+
+- With **Picture = Automatic** and slow hardware (`DeviceSignals.liteRendering`: ≤ 3.3 GB RAM,
+  low-RAM build, 32-bit only, ≤ 4 cores, weak GPU or no core above 1.7 GHz), each CarPlay session
+  writes DiPlay's `direct_video_output` = true. On other devices nothing is written, so the
+  iOS 27 "Turn on and reconnect" fix and the driver's own choice stay.
+- On the same devices CarPlay's size is also held to 1600×900 pixels: 1024×600 to 1920×720 panels
+  stay at 100 %, 1920×1080 and 2000×1200 panels go to 75 %.
+- **Settings › Display › Direct video output** now counts as a Picture override like Resolution
+  and Frame rate: changing it sets Picture to Custom, under which CarLink writes no picture
+  values, so a driver who turns it off keeps it off.
+- Not changed: CarPlay stays at 30 fps (Automatic never asked for 60); Android Auto is untouched
+  (its TextureView/SurfaceView choice is DiAuto's, Lab › Video surface).
+- Tests: `PicturePolicyTest.issue4TwoGigabyteStereoGetsTheCheapCarPlayPath` (the reporter's unit)
+  and `aWeakGpuOrSlowCpuAloneTurnsOnDirectVideo`, plus the Automatic-only mapping.
+
+**Not verified.** No measurement: the CarPlay video path needs an iPhone, and `carlink_lowend` has
+none (the emulator cannot carry a USB CarPlay session), so neither the GPU saving nor Direct video
+output's stability on cheap HWCs was measured. The user's FYT stereo (GE8322) and the reporter's
+unit are the next checks: DiPlay's log line `Video output mode=SURFACE … directVideoOutput=true`
+and CarLink's `Automatic picture: … direct video output` show the new path was taken.

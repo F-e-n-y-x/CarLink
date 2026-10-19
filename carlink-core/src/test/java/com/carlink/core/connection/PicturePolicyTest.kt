@@ -85,6 +85,39 @@ class PicturePolicyTest {
         assertEquals(50, choice.carPlayScalePercent) // 960x540 is the first CarPlay size within 1280x720 pixels
     }
 
+    /**
+     * Issue #4: a cheap Android 12 stereo, 2 GB, 8 cores at 1.6 GHz, GPU not probed yet, iPhone over
+     * USB. CarPlay: the panel at 30 fps in H.264 (as before) and now Direct video output (SurfaceView).
+     */
+    @Test fun issue4TwoGigabyteStereoGetsTheCheapCarPlayPath() {
+        val unit = DeviceSignals(totalRamMb = 1_870, lowRamDevice = false, cpuCores = 8,
+            supportedAbis = listOf("arm64-v8a", "armeabi-v7a"), cpuMaxMhz = 1_600)
+        val panel = VideoSize(1280, 720)
+        val choice = PicturePolicy.choose(caps(panel, decoder(panel, p1080), signals = unit))
+        assertEquals(100, choice.carPlayScalePercent)
+        assertEquals(30, choice.carPlayFps)
+        assertEquals(false, choice.carPlayHevc)
+        assertEquals(true, choice.carPlayDirectVideo)
+        assertEquals(30, choice.aaFps)
+        val cp = CarPlaySettingsPolicy.map(UnifiedSettings(), null, VehicleProfile.GENERIC, true, picture = choice)
+        assertEquals(true, cp.directVideoOutput)
+        // The same unit with a "2K" panel: 75 % (1500x900) instead of 2.4 MP per frame.
+        val big = VideoSize(2000, 1200)
+        assertEquals(75, PicturePolicy.choose(caps(big, decoder(big, p1080 * 2), signals = unit)).carPlayScalePercent)
+    }
+
+    @Test fun aWeakGpuOrSlowCpuAloneTurnsOnDirectVideo() {
+        val panel = VideoSize(1280, 720)
+        fun direct(signals: DeviceSignals) = PicturePolicy.choose(caps(panel, decoder(panel, p1080), signals = signals)).carPlayDirectVideo
+        assertNull(direct(strong))
+        assertEquals(true, direct(strong.copy(gpuRenderer = "PowerVR Rogue GE8322")))
+        assertEquals(true, direct(strong.copy(cpuMaxMhz = 1_600)))
+        assertEquals(true, PicturePolicy.choose(caps(panel, null, signals = weak)).carPlayDirectVideo) // also without a probe
+        // A strong unit keeps a big panel at 100 %.
+        val big = VideoSize(2000, 1200)
+        assertEquals(100, PicturePolicy.choose(caps(big, decoder(big, p1080 * 2))).carPlayScalePercent)
+    }
+
     @Test fun anUnansweredProbeKeepsTheEngineDefaults() {
         val panel = VideoSize(1024, 600)
         val none = PicturePolicy.choose(caps(panel, null))
@@ -165,6 +198,11 @@ class PicturePolicyTest {
         assertEquals(75, auto.displayScalePercent)
         assertEquals(30, auto.fps)
         assertEquals(false, auto.hevc)
+        assertEquals(true, CarPlaySettingsPolicy.map(UnifiedSettings(), null, VehicleProfile.GENERIC, true,
+            picture = weakChoice.copy(carPlayDirectVideo = true)).directVideoOutput)
+        assertNull(auto.directVideoOutput) // null in the choice: the driver's switch is left alone
+        assertNull(CarPlaySettingsPolicy.map(UnifiedSettings(picture = Picture.CUSTOM), null, VehicleProfile.GENERIC, true,
+            picture = weakChoice.copy(carPlayDirectVideo = true)).directVideoOutput)
         val best = cp(Picture.BEST)
         assertEquals(100, best.displayScalePercent)
         assertEquals(60, best.fps)

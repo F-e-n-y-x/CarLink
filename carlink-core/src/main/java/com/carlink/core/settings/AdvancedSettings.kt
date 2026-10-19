@@ -127,10 +127,12 @@ object AdvancedSettings {
         AdvancedSetting("cp_adapt_pip", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Re-negotiate size in split screen", "Off scales the picture; on asks the iPhone for the new size.",
             Applies.NOW, carPlayToggle(AirPlayPersistence::loadAdaptPipResolution, AirPlayPersistence::saveAdaptPipResolution)),
-        // iOS 27 black screen with sound (DiPlay #249, #975). DiPlay reads it each time its host opens.
+        // iOS 27 black screen with sound (DiPlay #249, #975); less GPU work per frame. DiPlay reads it
+        // each time its host opens. Automatic picture turns it on on slow hardware, so an edit makes Picture Custom.
         AdvancedSetting("cp_direct_output", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
-            "Direct video output", "Try this if CarPlay plays sound but the screen stays black.",
-            Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadDirectVideoOutput, AirPlayPersistence::saveDirectVideoOutput)),
+            "Direct video output", "Lighter on slow head units. Try it if CarPlay lags, or plays sound with a black screen.",
+            Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadDirectVideoOutput, AirPlayPersistence::saveDirectVideoOutput),
+            Overrides.PICTURE),
         AdvancedSetting("cp_hevc_sw", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.LAB,
             "Software HEVC decoder", "Decode HEVC on the processor instead of the video chip.",
             Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadHevcSoftwareDecoderEnabled,
