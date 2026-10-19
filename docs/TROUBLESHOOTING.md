@@ -117,6 +117,13 @@ update Android Auto from the Play Store on the phone.
 
 **Android Auto shows no media controls, only a narrow left rail.** Android Auto draws that reduced layout when the screen gives it less than about 450 dp of height. With **Interface size** on Medium (or Advanced **Pixel density (DPI)** on Automatic) CarLink lowers the DPI to keep the full layout; a DPI you set yourself (or Small or Large) is sent as is, so pick Medium or a lower DPI.
 
+**Black screen after the reverse or 360 camera closes.** It should not happen: while the camera
+covers the projection, Android Auto and CarPlay keep their video decoders, and where the picture's
+surface does go away they ask the phone for a new picture on return (CarPlay shows the last one
+until it arrives). If the
+screen stays black for more than a second, please [report it](#reporting-a-problem) with the
+stereo model.
+
 **Plugging in a second phone did not take over.** By design: during a session, CarLink asks
 "Switch to &lt;phone&gt;?" (**Switch** / **Not now**). The floating switcher over CarPlay or Android
 Auto can also switch phones.
