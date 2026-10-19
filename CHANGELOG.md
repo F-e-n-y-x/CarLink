@@ -4,6 +4,17 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.5] - 2026-10-20
+
+- Steering-wheel buttons: Settings › Car › Steering-wheel buttons lets you press a button and use
+  it for the voice assistant, answering or ending a call, play/pause, next or previous, in both
+  CarPlay and Android Auto.
+- Android Auto keeps its full layout with media controls on short screens when the screen density
+  is automatic, and offers a widescreen layout option for ultrawide screens.
+- After a CarPlay call ends, music and navigation sound come back reliably.
+- If Android loses a phone's pairing, Home says so and opens Bluetooth settings to pair again.
+- A warning when the stereo's own phone link may take the microphone during a call.
+
 ## [1.0.4] - 2026-10-19
 
 - CarPlay on iOS 27 with sound but a black screen: CarLink now offers "Direct video output" (also in
