@@ -6,8 +6,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.carlink.app.R
 import com.carlink.app.ui.HomeActivity
@@ -38,6 +41,12 @@ object HomeLauncher : CarLinkHost {
         }
         if (reason == OpenReason.UNPLUGGED || reason == OpenReason.ENGINE_START) return
         notify(context, intent, name)
+    }
+
+    override fun onCallMicrophoneConflict(context: Context) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, R.string.carlink_notice_call_microphone, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun notify(context: Context, intent: Intent, phoneName: String?) {

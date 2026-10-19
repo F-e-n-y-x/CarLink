@@ -44,6 +44,13 @@ interface CarLinkHost {
 
     /** Brings the host's main screen to the front from the background (any process, any thread). */
     fun openHome(context: Context, reason: OpenReason, address: String? = null, kind: PhoneKind? = null, name: String? = null)
+
+    /**
+     * A call runs while something else may hold the microphone (the stereo's own Bluetooth
+     * hands-free link, or another app recording): tell the driver briefly, over the projection.
+     * Once per call, from a background thread.
+     */
+    fun onCallMicrophoneConflict(context: Context) {}
 }
 
 /**

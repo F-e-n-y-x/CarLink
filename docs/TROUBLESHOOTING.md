@@ -97,6 +97,25 @@ affected. Please report it with the iOS version.
 
 ## Other
 
+**The other person can't hear me on calls, or hears an echo.** On a stereo with its own
+Bluetooth phone link (AutoChips and other head units with a built-in hands-free), the stereo's
+phone app can take the microphone while CarPlay or Android Auto carries the call
+([DiPlay #987](https://github.com/shihabal3amri/DiPlay/issues/987); echo on iOS 27:
+[#985](https://github.com/shihabal3amri/DiPlay/issues/985)). When a call starts while that link
+is connected or another app is recording, CarLink shows **"The stereo's own phone link may take
+the microphone"**. Answer on the CarPlay or Android Auto screen, not with the stereo's own phone
+popup, or disconnect the phone from the stereo's phone settings (or turn off its **Phone calls**
+there) so only CarPlay or Android Auto handles calls. `carlink.log` has a `call: audioMode=…
+recordings=[…] stereoHandsFree=…` line for each call (mode 2 is the stereo's own call, 3 a
+CarPlay or Android Auto call; recordings are audio sources: 1 microphone, 6 voice recognition,
+7 voice communication). If music and navigation stay silent after a CarPlay call, report it with
+that log.
+
+**"&lt;phone&gt; needs to be paired again".** Android 16 and later tell CarLink when this screen's
+Bluetooth key for a phone is missing (Android 17 first tries to pair again by itself). The phone
+then cannot connect wirelessly: on the phone, open Bluetooth settings, forget this screen, and
+pair again (**Open Bluetooth settings** opens this screen's side). A USB cable still works.
+
 **The phone does not connect by itself when I get in (tablet).** A tablet is not a Bluetooth car
 kit, so the phone never connects to it on its own. CarLink starts the last phone when Home comes
 to the front (the app opens, the screen wakes), at most once a minute. After **Disconnect** or

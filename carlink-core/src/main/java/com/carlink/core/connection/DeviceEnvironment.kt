@@ -33,6 +33,7 @@ class DeviceEnvironment(
     private val unified = UnifiedSettingsStore(app)
     private val knownPhones = KnownPhones(app)
     private val paths = PathMemory(app)
+    private val callMicrophone = CallMicrophoneWatch(app)
 
     override val autoConnectUsb get() = preferences.autoConnectUsb
     override val autoConnectBluetooth get() = preferences.autoConnectBluetooth
@@ -84,6 +85,7 @@ class DeviceEnvironment(
      * and enabled only while Android Auto is engaged, so CarPlay keeps the steering-wheel keys.
      */
     override fun onEngaged(engine: Engine?) {
+        callMicrophone.setWatching(engine != null)
         val state = if (engine == Engine.ANDROID_AUTO) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         ANDROID_AUTO_KEY_RECEIVERS.forEach { name ->

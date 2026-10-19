@@ -110,6 +110,7 @@ called).
 interface CarLinkHost {
     enum class OpenReason { BOOT, PHONE, UNPLUGGED }
     fun openHome(context: Context, reason: OpenReason, address: String? = null, kind: PhoneKind? = null, name: String? = null)
+    fun onCallMicrophoneConflict(context: Context) {}
 }
 ```
 
@@ -127,6 +128,10 @@ The backend calls it, from the main process, to bring the host's main screen to 
 Android 10+ blocks background activity starts unless the app may draw over other apps; CarLink's
 `app/.../entry/HomeLauncher.kt` starts the activity directly when it can and otherwise posts a
 full-screen notification (not for `UNPLUGGED`). A launcher can copy it.
+
+`onCallMicrophoneConflict` (optional) is called, once per call and from a background thread, when a
+CarPlay or Android Auto call runs while the stereo's own hands-free link or another recording may
+hold the microphone (`connection/CallMicrophoneWatch`). CarLink shows a toast over the projection.
 
 ## Driving and observing sessions
 
@@ -190,6 +195,7 @@ respect the driver's pause.
 | `onUsbPhone(kind, phoneName, attachIntent)` | `UsbRouterActivity`, `UsbWatcher` (library) | Starts at once when idle; during a session sets `pendingSwitch`; ignores the engines' own re-enumeration |
 | `onUsbDetached()` | `UsbWatcher` (library) | Ends a USB session whose phone stays away past a grace period, then `CarLinkHost.openHome(UNPLUGGED)` |
 | `onBluetoothPhone(address, kind, phoneName)` | the host's main screen after `openHome(PHONE)` | Wireless start unless a session runs or automatic starts are off/paused |
+| `onPairingLost(address, kind, phoneName)` | `detect/PairingLoss` (Android 16+ `ACTION_KEY_MISSING`) | Blocks that phone with `PAIRING_LOST`; stops its attempt if one is still connecting |
 | `onHomeShown(address, kind, phoneName)` | `Connection.onHomeShown` | Wireless start of the last phone from idle, at most once a minute |
 | `connect(address, kind, phoneName, transport)` | the driver | Clears the pause and replaces any running session |
 | `retry()` | the driver | Retries a `Blocked` or `Failed` request |
