@@ -24,6 +24,10 @@ class WirelessTimeline(
         CREDENTIALS("credentials"),
         POKE_START("poke-start"),
         POKE_CONNECTED("poke-connected"),
+        // CarLink: the hands-free service level connection (connection/HfpLink).
+        HFP_SLC_START("hfp-slc-start"),
+        HFP_SLC_DONE("hfp-slc-done"),
+        HFP_SLC_FAILED("hfp-slc-failed"),
         PHONE_RFCOMM("phone-rfcomm"),
         WIFI_START_REQUEST("wifi-start-request"),
         WIFI_INFO_RESPONSE("wifi-info-response"),

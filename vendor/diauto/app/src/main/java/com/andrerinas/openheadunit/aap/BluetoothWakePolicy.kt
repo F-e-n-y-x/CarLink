@@ -34,6 +34,39 @@ object BluetoothWakePolicy {
      */
     val POKE_TARGETS: List<UUID> = listOf(HFP_AG_UUID, HSP_AG_UUID)
 
+    /**
+     * Whether a hands-free service level connection can be opened over [uuid].
+     *
+     * Only Hands-Free. Headset speaks `AT+CKPD` and knows nothing of `BRSF` or `CIND`, so the walk
+     * would answer every command with an error, reach a false "established" on those errors alone,
+     * and then poll a channel that cannot answer it every two seconds.
+     */
+    // CarLink: ported from open-headunit c86332be.
+    fun carriesServiceLevelConnection(uuid: UUID): Boolean = uuid == HFP_AG_UUID
+
+    /** CarLink: iAP2 over Bluetooth, published only by Apple devices (as CarLink's PhoneClassifier). */
+    val IAP2_UUID: UUID = UUID.fromString("00000000-deca-fade-deca-deafdecacafe")
+
+    /**
+     * CarLink: whether a paired device is an iPhone or iPad, by its cached iAP2 record or its name
+     * (the same evidence CarLink's PhoneClassifier uses). An iPhone is CarPlay's, so Android Auto
+     * never pokes it and never takes its hands-free link.
+     */
+    fun looksLikeApple(uuids: Collection<UUID>?, name: String?): Boolean {
+        if (uuids.orEmpty().contains(IAP2_UUID)) return true
+        val lower = name.orEmpty().lowercase(java.util.Locale.ROOT)
+        return "iphone" in lower || "ipad" in lower
+    }
+
+    /**
+     * CarLink: whether this app may complete the hands-free link a phone opened to the stand-in
+     * record. Only for the phone this session pokes ([pokeTargets], which CarLink sets to exactly the
+     * chosen phone; empty means DiAuto pokes every paired device, so any), and never for an Apple
+     * device: a completed link routes that phone's calls to an app that cannot play them.
+     */
+    fun mayOpenHandsFreeFor(address: String?, pokeTargets: Collection<String>, apple: Boolean): Boolean =
+        !apple && (pokeTargets.isEmpty() || pokeTargets.any { it.equals(address, ignoreCase = true) })
+
     /** Reader-facing name for a target, so a log says what was touched rather than a UUID. */
     fun profileName(uuid: UUID): String = when (uuid) {
         HFP_AG_UUID -> "HFP-AG"

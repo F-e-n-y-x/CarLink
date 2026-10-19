@@ -158,4 +158,39 @@ class BluetoothWakePolicyTest {
             )
         }
     }
+
+    // CarLink: ported from open-headunit c86332be.
+    @Test
+    fun `only the hands-free record can carry a service level connection`() {
+        // Headset speaks AT+CKPD, not BRSF or CIND, so walking it would error its way to a false
+        // "established" and then poll a channel that cannot answer.
+        assertTrue(BluetoothWakePolicy.carriesServiceLevelConnection(BluetoothWakePolicy.HFP_AG_UUID))
+        assertFalse(BluetoothWakePolicy.carriesServiceLevelConnection(BluetoothWakePolicy.HSP_AG_UUID))
+        assertFalse(
+            BluetoothWakePolicy.carriesServiceLevelConnection(
+                java.util.UUID.fromString("0000110b-0000-1000-8000-00805f9b34fb")
+            )
+        )
+    }
+
+    // CarLink: an iPhone is CarPlay's; Android Auto neither pokes it nor takes its hands-free link.
+    @Test
+    fun `an iPhone is known by its iAP2 record or its name`() {
+        assertTrue(BluetoothWakePolicy.looksLikeApple(listOf(BluetoothWakePolicy.IAP2_UUID), "Car phone"))
+        assertTrue(BluetoothWakePolicy.looksLikeApple(null, "Ayush's iPhone"))
+        assertTrue(BluetoothWakePolicy.looksLikeApple(emptyList(), "IPAD"))
+        assertFalse(BluetoothWakePolicy.looksLikeApple(listOf(BluetoothWakePolicy.HFP_AG_UUID), "Ayush's S25 Ultra"))
+        assertFalse(BluetoothWakePolicy.looksLikeApple(null, null))
+    }
+
+    @Test
+    fun `the stand-in completes a hands-free link only for the poked Android phone`() {
+        val phone = "5C:51:36:59:85:86"
+        assertTrue(BluetoothWakePolicy.mayOpenHandsFreeFor(phone.lowercase(), setOf(phone), apple = false))
+        assertFalse(BluetoothWakePolicy.mayOpenHandsFreeFor("AA:BB:CC:DD:EE:FF", setOf(phone), apple = false))
+        // No target: DiAuto pokes every paired device, so any Android phone may be answered.
+        assertTrue(BluetoothWakePolicy.mayOpenHandsFreeFor("AA:BB:CC:DD:EE:FF", emptySet(), apple = false))
+        assertFalse(BluetoothWakePolicy.mayOpenHandsFreeFor(phone, setOf(phone), apple = true))
+        assertFalse(BluetoothWakePolicy.mayOpenHandsFreeFor(null, setOf(phone), apple = false))
+    }
 }

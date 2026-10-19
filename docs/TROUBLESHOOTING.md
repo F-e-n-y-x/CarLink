@@ -48,6 +48,19 @@ module did not answer: on an FYT stereo the stereo's own Car Link app is usually
 otherwise this stereo's module is not one CarLink can talk to yet. Turn the setting off and use the
 USB cable, and send the report from Diagnostics so support can be added.
 
+**Android Auto 17.8: phone shows "Connecting to Android Auto" then gives up.** Android Auto
+17.8 (October 2026) starts wireless only once this screen is connected to the phone as a
+*hands-free device*, not merely over Bluetooth; earlier versions of CarLink never finished that step, so
+the phone waited about 5 seconds and stopped (its log: `WIRELESS_SETUP_FAILED_TO_START_NO_HFP_FROM_HU_PRESENCE`).
+CarLink now completes it while it wakes the phone. If it still gives up: on the phone, open
+Bluetooth › this screen's name and make sure **Phone calls** is on; on a stereo with its own
+Bluetooth phone link, let that link connect (CarLink then leaves it alone). The Android Auto log
+(`current.log`) shows `WIRELESS_TIMING hfp-slc-done` when the step worked, or `hfp-slc-failed
+stage=BRSF` when the phone answered nothing (usually because it already gives another device its
+hands-free link). While Android Auto is waking the phone, the phone treats this screen as its
+hands-free device, so answer calls on the Android Auto screen. Details:
+[DA§4.2](dissection/DIAUTO.md#42-the-poke-connectionnativeaahandshakemanagerkt591-788-aapbluetoothwakepolicykt).
+
 **"Pair your iPhone first" / "This phone isn't paired".** Wireless needs pairing once, started on
 the phone (its Bluetooth settings, tap this screen's name). A cable works without pairing.
 

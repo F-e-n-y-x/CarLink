@@ -145,6 +145,10 @@ class NativeAaHandshakeManager(
     // the current run of skips. Cleared as soon as a poke does go ahead, so a later skip says so
     // again rather than hiding behind a line from minutes earlier.
     @Volatile private var handsFreeSkipLogged = false
+    // CarLink (open-headunit c86332be): whether this app stands in for a primary radio with no
+    // hands-free stack of its own. Answered once in start(); the poke needs the same answer the HFP
+    // listener acted on, because driving a link from here would compete with a real stack.
+    @Volatile private var standingInForHfp = false
 
     /**
      * The credentials to hand the phone, as one value.
@@ -357,18 +361,22 @@ class NativeAaHandshakeManager(
         }
 
         // Start HFP RFCOMM Server (Required by some phones to detect HU)
-        scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer")) {
+        // CarLink (open-headunit c86332be): only where the radio advertises no Hands-Free of its own.
+        standingInForHfp = shouldRegisterDummyHfp(adapter, localRadioName)
+        if (standingInForHfp) scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer")) {
             try {
                 // CarLink (PR #1029): a local, so a record withdrawn for the session ends this loop
                 // instead of leaving it spinning on a nulled field.
-                val server = adapter.listenUsingRfcommWithServiceRecord("Hands-Free Unit", HFP_UUID)
+                val server = openHfpRecord(adapter, localRadioName) ?: return@launch // CarLink (c3b58e61)
                 hfpServerSocket = server
                 while (isRunning && isActive) {
                     val socket = server.accept()
                     if (socket != null) {
                         logHfpAccept(socket, localRadioName)
                         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpResponder-${socket.remoteDevice.address}")) {
-                            handleHfp(socket)
+                            // CarLink (c86332be): we publish Hands-Free, so the opening exchange is ours to start.
+                            serveHfp(socket, "radio [$localRadioName]", "stand-in",
+                                initiate = shouldInitiateSlc(standingInForHfp, socket.remoteDevice), closeWhenDone = true)
                         }
                     }
                 }
@@ -448,16 +456,19 @@ class NativeAaHandshakeManager(
                 else AppLog.d("NativeAA: Secondary AA server closed cleanly ['$serviceName' $radioName].")
             }
         }
-        scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer-2")) {
+        // CarLink (c86332be): this radio's own answer; standingInForHfp speaks only for the primary.
+        val standingInOnExtra = shouldRegisterDummyHfp(extra, "'$serviceName' $radioName")
+        if (standingInOnExtra) scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer-2")) {
             try {
-                val server = extra.listenUsingRfcommWithServiceRecord("Hands-Free Unit", HFP_UUID)
+                val server = openHfpRecord(extra, "'$serviceName' $radioName") ?: return@launch // CarLink (c3b58e61)
                 extraHfpServerSockets.add(server)
                 while (isRunning && isActive) {
                     val socket = server.accept()
                     if (socket != null) {
                         logHfpAccept(socket, "$serviceName $radioName")
                         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpResponder-${socket.remoteDevice.address}")) {
-                            handleHfp(socket)
+                            serveHfp(socket, "radio [$serviceName $radioName]", "stand-in", // CarLink (c86332be)
+                                initiate = shouldInitiateSlc(standingInOnExtra, socket.remoteDevice), closeWhenDone = true)
                         }
                     }
                 }
@@ -507,53 +518,133 @@ class NativeAaHandshakeManager(
     }
 
     /**
-     * Minimal HFP responder to satisfy phones that require a stable HFP connection
-     * during the Android Auto Wireless handshake.
+     * CarLink: ported from open-headunit c86332be (`serveHfpSocket`; the loop is [HfpLink]). Serves
+     * one hands-free channel, answering the phone and, when [initiate], opening the service level
+     * connection ourselves; replaces the old responder, which waited to be spoken to and so left a
+     * phone that dialled us (or that we poked) at "connecting". [via] names the channel in
+     * `WIRELESS_TIMING`. [closeWhenDone] is false for the wake poke, whose caller owns that socket.
      */
-    private suspend fun handleHfp(socket: BluetoothSocket) = withContext(Dispatchers.IO) {
+    private suspend fun serveHfp(
+        socket: BluetoothSocket,
+        label: String,
+        via: String,
+        initiate: Boolean,
+        closeWhenDone: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        val progress = HfpLink.Progress()
+        val startedAt = SystemClock.elapsedRealtime()
+        fun elapsed() = SystemClock.elapsedRealtime() - startedAt
         try {
-            val input = socket.inputStream
-            val output = socket.outputStream
-            val buf = ByteArray(1024)
-            
-            AppLog.i("NativeAA: HFP responder active for ${socket.remoteDevice.name}")
-            
-            while (isRunning && isActive && socket.isConnected) {
-                if (input.available() > 0) {
-                    val read = input.read(buf)
-                    if (read == -1) break
-                    
-                    val cmd = String(buf, 0, read, Charsets.US_ASCII).trim()
-                    AppLog.d("NativeAA: HFP RX: $cmd")
-                    
-                    // Respond to standard HFP initialization commands
-                    when {
-                        cmd.contains("AT+BRSF") -> {
-                            output.write("+BRSF: 20\r\n".toByteArray())
-                            output.write("OK\r\n".toByteArray())
-                        }
-                        cmd.contains("AT+CIND=?") -> {
-                            output.write("+CIND: (\"service\",(0,1)),(\"call\",(0,1))\r\n".toByteArray())
-                            output.write("OK\r\n".toByteArray())
-                        }
-                        cmd.contains("AT+CIND?") -> {
-                            output.write("+CIND: 1,0\r\n".toByteArray())
-                            output.write("OK\r\n".toByteArray())
-                        }
-                        else -> {
-                            output.write("OK\r\n".toByteArray())
-                        }
-                    }
-                    output.flush()
-                }
-                delay(200)
+            AppLog.i("NativeAA: HFP responder active for $label (opens the link: $initiate)")
+            if (initiate) com.andrerinas.openheadunit.aap.WirelessTiming.mark(
+                com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.HFP_SLC_START, "via=$via")
+            HfpLink.serve(
+                socket.inputStream, socket.outputStream, initiate,
+                isOpen = { isRunning && socket.isConnected },
+                progress = progress,
+                log = { AppLog.d("NativeAA: HFP $it ($label)") },
+            ) {
+                com.andrerinas.openheadunit.aap.WirelessTiming.mark(
+                    com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.HFP_SLC_DONE,
+                    "via=$via steps=${progress.commandsSent} ms=${elapsed()}")
+                // Warning, not info: this is the moment the cost lands, and a reporter whose calls
+                // stop being heard needs it in a log exported at the default level.
+                AppLog.w("NativeAA: hands-free service level connection established ($label) after " +
+                    "${progress.commandsSent} AT commands in ${elapsed()}ms. The phone now treats this head " +
+                    "unit as its hands-free device, and this app cannot carry call audio.")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            AppLog.d("NativeAA: HFP responder error: ${e.message}")
+            AppLog.d("NativeAA: HFP responder error ($label): ${e.message}")
         } finally {
-            try { socket.close() } catch (e: Exception) {}
-            AppLog.i("NativeAA: HFP socket for ${socket.remoteDevice.address} closed.")
+            HfpServiceRecordPolicy.standInRefusalReason(initiate, progress.stage)?.let { why ->
+                com.andrerinas.openheadunit.aap.WirelessTiming.mark(
+                    com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.HFP_SLC_FAILED,
+                    "via=$via stage=${progress.stage} steps=${progress.commandsSent} ms=${elapsed()}")
+                AppLog.i("NativeAA: the hands-free connection ($label) did not complete in ${elapsed()}ms: " +
+                    "$why. Android Auto will not start wireless setup without one.")
+            }
+            if (closeWhenDone) {
+                try { socket.close() } catch (e: Exception) {}
+                AppLog.i("NativeAA: HFP socket for ${socket.remoteDevice.address} closed.")
+            }
         }
+    }
+
+    /**
+     * CarLink: ported from open-headunit c86332be. Whether to publish the stand-in Hands-Free record
+     * on [adapter]: not where the radio already advertises Hands-Free (the real stack answers calls,
+     * this app cannot). getUuids() is not public API, so it is read reflectively, and a refusal means
+     * "register it", as DiAuto always did. [HfpServiceRecordPolicy] holds the rule.
+     */
+    private fun shouldRegisterDummyHfp(adapter: BluetoothAdapter, radio: String): Boolean {
+        val uuids = try {
+            when (val raw = adapter.javaClass.getMethod("getUuids").invoke(adapter)) {
+                is Array<*> -> raw.mapNotNull { it?.toString() }
+                is List<*> -> raw.mapNotNull { it?.toString() }
+                else -> null
+            }
+        } catch (e: Throwable) {
+            AppLog.d("NativeAA: could not read radio [$radio]'s service UUIDs: ${e.message}")
+            null
+        }
+        val register = HfpServiceRecordPolicy.shouldRegisterDummyHfp(uuids)
+        if (!register) {
+            AppLog.i("NativeAA: radio [$radio] already advertises Hands-Free, so the stand-in HFP record " +
+                "is not registered and the wake poke does not open a hands-free link - the real stack answers calls, this app cannot.")
+        } else {
+            val why = if (uuids == null) "its records could not be read" else "it advertises no Hands-Free"
+            AppLog.i("NativeAA: radio [$radio] gets the stand-in HFP record, because $why.")
+        }
+        return register
+    }
+
+    /**
+     * CarLink: ported from open-headunit c3b58e61. The stand-in Hands-Free record, with a refusal
+     * given a few more tries (one stack refused it 20 ms after the Android Auto record registered).
+     * Null when this radio will not publish one.
+     */
+    private suspend fun openHfpRecord(adapter: BluetoothAdapter, radio: String): BluetoothServerSocket? {
+        var attempt = 1
+        while (isRunning) {
+            try {
+                return adapter.listenUsingRfcommWithServiceRecord("Hands-Free Unit", HFP_UUID)
+            } catch (e: Exception) {
+                if (!isRunning) return null
+                if (!HfpServiceRecordPolicy.registrationRefused(attempt)) {
+                    AppLog.w("NativeAA: radio [$radio] refused the stand-in Hands-Free record (${e.message}); asking again in ${HfpServiceRecordPolicy.REGISTRATION_RETRY_GAP_MS}ms.")
+                    delay(HfpServiceRecordPolicy.REGISTRATION_RETRY_GAP_MS)
+                    attempt++
+                } else {
+                    AppLog.e("NativeAA: radio [$radio] would not publish a Hands-Free record in $attempt attempts (${e.message}). Android Auto will not start wireless setup against a head unit with no hands-free profile.", e)
+                    return null
+                }
+            }
+        }
+        return null
+    }
+
+    /** CarLink: an iPhone or iPad, by its cached records or name ([BluetoothWakePolicy.looksLikeApple]). */
+    private fun isApple(device: BluetoothDevice): Boolean = BluetoothWakePolicy.looksLikeApple(
+        try { device.uuids?.map { it.uuid } } catch (e: Exception) { null },
+        try { device.name } catch (e: Exception) { null },
+    )
+
+    /**
+     * CarLink: ported from open-headunit c86332be (`shouldInitiateSlc`), for a phone that opened a
+     * channel to the stand-in record. A readable live hands-free link stands it down (the phone's own
+     * hands-free device answers it), and CarLink completes the link only for the phone this session
+     * pokes, never for an iPhone ([BluetoothWakePolicy.mayOpenHandsFreeFor]).
+     */
+    private fun shouldInitiateSlc(standingIn: Boolean, device: BluetoothDevice): Boolean {
+        val address = try { device.address } catch (e: Exception) { null }
+        val link = BluetoothWakePolicy.HandsFreeLink.of(BluetoothHelper.handsFreeLinkState(context, address))
+        val open = HfpServiceRecordPolicy.shouldOpenServiceLevelConnection(standingIn, link) &&
+            BluetoothWakePolicy.mayOpenHandsFreeFor(address, settings.autoStartBluetoothDeviceMacs, isApple(device))
+        if (!open) AppLog.i("NativeAA: answering $address on the stand-in record without opening a hands-free " +
+            "link (stand-in=$standingIn, link=$link, poke targets=${settings.autoStartBluetoothDeviceMacs.size}).")
+        return open
     }
 
     /**
@@ -619,6 +710,16 @@ class NativeAaHandshakeManager(
      * the retry loop and the manual poke alike.
      */
     private suspend fun pokeDevice(device: BluetoothDevice, holdMs: Long): Boolean {
+        // CarLink: a USB-only session never pokes, and an iPhone is never poked: it is CarPlay's,
+        // and the hold below would take its hands-free link.
+        if (com.andrerinas.openheadunit.HostIntegration.usbOnlySession) {
+            AppLog.i("NativeAA: Not poking ${device.address} — this is a USB-only session.")
+            return false
+        }
+        if (isApple(device)) {
+            AppLog.i("NativeAA: Not poking ${device.name ?: "unnamed"} (${device.address}) — it is an Apple device.")
+            return false
+        }
         // A poke that connects takes the phone's single hands-free slot, and this unit's own client
         // is dropped to make room. See BluetoothWakePolicy for the measurement.
         val handsFreeLink = BluetoothWakePolicy.HandsFreeLink.of(BluetoothHelper.handsFreeLinkState(context, device.address)) // CarLink: per phone
@@ -654,7 +755,7 @@ class NativeAaHandshakeManager(
                     // Counted before the hold, so a poke that is cancelled mid-hold still counts:
                     // the phone answered, which is the whole point of the count.
                     pokesSinceLastAccept++
-                    delay(holdMs)
+                    holdPoke(socket, device, profile, uuid, holdMs, handsFreeLink) // CarLink (c86332be)
                     return true
                 } catch (e: CancellationException) {
                     // Rethrow instead of falling through to the next UUID: a cancelled poke (e.g.
@@ -674,6 +775,42 @@ class NativeAaHandshakeManager(
             return false
         } finally {
             pokeAttemptInFlight = false
+        }
+    }
+
+    /**
+     * CarLink: ported from open-headunit c86332be. Holds a connected poke for [holdMs], speaking
+     * hands-free over it where that is what it reached. The phone moves its hands-free profile to
+     * "connecting" on our connection and then waits for us to open the exchange; a silent hold times
+     * out there, and Android Auto 17.8 will not start wireless setup without a connected profile
+     * (`waitForHeadUnitConnected timeout`, `WIRELESS_SETUP_FAILED_TO_START_NO_HFP_FROM_HU_PRESENCE`).
+     * The targets, the hold and the retry cadence are unchanged. [handsFreeLink] is the reading the
+     * poke guard just let through.
+     */
+    private suspend fun holdPoke(
+        socket: BluetoothSocket,
+        device: BluetoothDevice,
+        profile: String,
+        uuid: UUID,
+        holdMs: Long,
+        handsFreeLink: BluetoothWakePolicy.HandsFreeLink,
+    ) {
+        if (!HfpServiceRecordPolicy.shouldOpenServiceLevelConnection(standingInForHfp, handsFreeLink) ||
+            !BluetoothWakePolicy.carriesServiceLevelConnection(uuid)) {
+            AppLog.i("NativeAA: holding the $profile poke without a hands-free link (stand-in=$standingInForHfp).")
+            delay(holdMs)
+            return
+        }
+        coroutineScope {
+            // A child of this poke, so cancelling the poke unwinds it before pokeDevice() closes the socket.
+            val slc = launch(CoroutineName("NativeAa-HfpSlc-${device.address}")) {
+                serveHfp(socket, "$profile poke to ${device.address}", profile, initiate = true, closeWhenDone = false)
+            }
+            try {
+                delay(holdMs)
+            } finally {
+                slc.cancel()
+            }
         }
     }
 
@@ -1600,6 +1737,7 @@ class NativeAaHandshakeManager(
         }
         aaServerSocket = null
         hfpServerSocket = null
+        standingInForHfp = false // CarLink (c86332be)
         credentials = null
         pokeJob?.cancel()
         pokeJob = null

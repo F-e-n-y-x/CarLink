@@ -199,7 +199,9 @@ Timing lines (always on, INFO, also in logcat):
   `start-session`, `peer-associated`, `tcp-accepted`, `first-frame` (`first-tcp-timeout` on a miss).
 - `WIRELESS_TIMING <phase> start+<ms>ms [detail]` (DiAuto, wireless Android Auto): `begin`,
   `wifi-init`, `group-create`/`group-created`, `credentials` (with `bssid=<hash>`: compare
-  groups), `poke-start`/`poke-connected`, `phone-rfcomm`, `phone-joined`, `tcp-accepted`,
+  groups), `poke-start`/`poke-connected`, `hfp-slc-start`/`hfp-slc-done`/`hfp-slc-failed`
+  (`via=HFP-AG|stand-in steps=<AT commands> ms=<n>`, plus `stage=` on a failure; Android Auto
+  17.8 needs `done`), `phone-rfcomm`, `phone-joined`, `tcp-accepted`,
   `first-frame`.
 - `AIRPLAY_TIMING <METHOD> <path> conn+<ms>ms wait=<ms>ms handle=<ms>ms status=<n>` (DiPlay,
   every AirPlay control request): `wait` is the iPhone's time since our previous answer.
