@@ -629,6 +629,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.SAME_WIFI_DETAILS_MISSING -> R.string.carlink_home_error_wifi_details_title to R.string.carlink_home_error_wifi_details_body
     LinkProblem.BLUETOOTH_OFF -> R.string.carlink_home_error_bt_off_title to R.string.carlink_home_error_bt_off_body
     LinkProblem.PHONE_NOT_PAIRED -> R.string.carlink_home_error_not_paired_title to R.string.carlink_home_error_not_paired_body
+    LinkProblem.PAIRING_LOST -> R.string.carlink_home_error_pairing_lost_title to R.string.carlink_home_error_pairing_lost_body
     LinkProblem.WIFI_OFF -> R.string.carlink_home_error_wifi_off_title to R.string.carlink_home_error_wifi_off_body
     LinkProblem.LOCATION_OFF -> R.string.carlink_home_error_location_off_title to R.string.carlink_home_error_location_off_body
     LinkProblem.PERMISSIONS -> R.string.carlink_home_error_permissions_title to R.string.carlink_home_error_permissions_body
@@ -648,7 +649,9 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
 @Composable
 private fun failureCopy(link: LinkState): Pair<String, String> {
     val (title, body) = failureCopyRes(link.problem)
-    return stringResource(title) to stringResource(body, link.engine?.let { engineName(it) } ?: "")
+    // Only the pairing-lost title takes an argument (the phone); the others ignore it.
+    val phone = link.phoneName ?: stringResource(R.string.carlink_home_error_pairing_lost_phone)
+    return stringResource(title, phone) to stringResource(body, link.engine?.let { engineName(it) } ?: "")
 }
 
 @Composable
@@ -668,6 +671,8 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
+        LinkProblem.PAIRING_LOST -> IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings),
+            actions::openBluetoothSettings, icon = R.drawable.carlink_ic_bluetooth)
         // No Try again: nothing on this stereo changes between attempts. The cable is the way.
         LinkProblem.EXTERNAL_BLUETOOTH, LinkProblem.EXTERNAL_MODULE -> {
             var cableHelp by rememberSaveable { mutableStateOf(false) }

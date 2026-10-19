@@ -6,6 +6,7 @@ import android.hardware.usb.UsbManager
 import android.os.Looper
 import com.carlink.core.core.Engine
 import com.carlink.core.core.LinkStage
+import com.carlink.core.core.LinkProblem
 import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.settings.WirelessPath
@@ -131,6 +132,21 @@ class SessionManagerTest {
         problems = { _, _ -> emptyList() }
         m.retry(); idle()
         assertEquals(1, starts.size)
+    }
+
+    @Test fun aLostPairingBlocksThatPhoneAndStopsItsAttemptButNotAnotherPhonesSession() {
+        val m = manager()
+        m.onPairingLost("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        val blocked = m.state.value as SessionState.Blocked
+        assertEquals(listOf(Problem.PAIRING_LOST), blocked.problems)
+        assertEquals(LinkProblem.PAIRING_LOST, blocked.toLinkState().problem)
+        assertEquals("iPhone", blocked.toLinkState().phoneName)
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.onPairingLost("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertTrue(m.state.value is SessionState.Blocked)
+        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        m.onPairingLost("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertTrue(m.state.value is SessionState.Active)
     }
 
     @Test fun retryRestartsARunningAttempt() {

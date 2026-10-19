@@ -60,6 +60,8 @@ enum class LinkProblem {
     // Pre-flight (connection v2): each has a one-tap fix.
     BLUETOOTH_OFF,
     PHONE_NOT_PAIRED,
+    /** Android 16+ lost the phone's Bluetooth key: forget this screen on the phone and pair again. */
+    PAIRING_LOST,
     WIFI_OFF,
     LOCATION_OFF,
     PERMISSIONS,

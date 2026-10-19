@@ -37,6 +37,8 @@ class DevicePreflightTest {
     @Test fun eachMissingThingIsNamed() {
         assertEquals(listOf(Problem.BLUETOOTH_OFF), check(ready.copy(bluetoothOn = false)))
         assertEquals(listOf(Problem.PHONE_NOT_PAIRED), check(ready.copy(phoneBonded = false)))
+        assertEquals(listOf(Problem.PAIRING_LOST), check(ready.copy(pairingLost = true)))
+        assertEquals(emptyList<Problem>(), check(ready.copy(pairingLost = true), request = usb))
         assertEquals(listOf(Problem.WIFI_OFF), check(ready.copy(wifiOn = false)))
         assertEquals(listOf(Problem.LOCATION_OFF), check(ready.copy(locationOn = false)))
         assertEquals(listOf(Problem.PERMISSIONS), check(ready.copy(missingPermissions = listOf("x"))))

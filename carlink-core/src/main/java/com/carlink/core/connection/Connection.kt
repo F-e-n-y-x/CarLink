@@ -123,6 +123,7 @@ object Connection {
             Engine.ANDROID_AUTO to AndroidAutoAdapter(app) { vehicleProfile(app) },
         )
         val environment = DeviceEnvironment(app) { request, path -> enginePreflight(app, unified.load(), request, path) }
+        com.carlink.core.detect.PairingLoss.watch(app)
         return SessionManager(
             adapters = adapters,
             environment = environment,

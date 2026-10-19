@@ -63,8 +63,11 @@ class DeviceEnvironment(
         ))
     }
 
-    override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) =
+    override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) {
         paths.remember(engine, phoneAddress, path)
+        // It connected wirelessly, so its pairing works again.
+        com.carlink.core.detect.PairingLoss.clear(app, phoneAddress)
+    }
 
     override fun rememberPhone(phoneAddress: String, kind: PhoneKind) {
         knownPhones.remember(phoneAddress, kind)

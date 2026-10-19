@@ -115,6 +115,7 @@ fun Problem.toLinkProblem(): LinkProblem = when (this) {
     Problem.CAR_HOTSPOT_DETAILS -> LinkProblem.CAR_HOTSPOT_DETAILS_MISSING
     Problem.CAR_HOTSPOT_OFF -> LinkProblem.CAR_HOTSPOT_OFF
     Problem.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH
+    Problem.PAIRING_LOST -> LinkProblem.PAIRING_LOST
 }
 
 fun FailureReason.toLinkProblem(): LinkProblem = when (this) {

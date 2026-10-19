@@ -49,7 +49,8 @@ object IssueReporter {
             versionCode = AppInfo.versionCode,
             device = device(context),
             session = session,
-            problemTitle = if (session?.failed == true) context.getString(titleRes) else null,
+            problemTitle = if (session?.failed == true) context.getString(titleRes,
+                context.getString(R.string.carlink_home_error_pairing_lost_phone)) else null,
             problemBody = if (session?.failed == true) context.getString(bodyRes, engineName) else null,
             carBrand = inputs.carBrand,
             stereoBluetooth = probe?.let { report ->

@@ -42,6 +42,8 @@ enum class Problem {
      * ([SessionManager.Environment.wirelessUnavailable] for the engine); USB works. No one-tap fix.
      */
     EXTERNAL_BLUETOOTH,
+    /** Android 16+ lost this phone's Bluetooth key (`ACTION_KEY_MISSING`): pair again. See detect/PairingLoss. */
+    PAIRING_LOST,
 }
 
 
@@ -371,6 +373,22 @@ class SessionManager(
             }
             else -> start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
         }
+    }
+
+    /**
+     * This screen lost [address]'s Bluetooth pairing (detect/PairingLoss). Shown on Home as a
+     * blocked request; an attempt still connecting that phone stops, since it cannot succeed.
+     */
+    fun onPairingLost(address: String, kind: PhoneKind, phoneName: String?) {
+        val engine = kind.engine ?: return
+        val current = _state.value
+        if (current is SessionState.Active) {
+            val samePhone = current.request.phoneAddress?.equals(address, ignoreCase = true) == true
+            if (!samePhone || current.phase == SessionState.Phase.Connected) return note("Bluetooth pairing lost for another or a connected phone")
+            stop()
+        }
+        note("$engine blocked: this screen's Bluetooth pairing with the phone was lost")
+        _state.value = SessionState.Blocked(SessionRequest(engine, Transport.WIRELESS, address, phoneName), listOf(Problem.PAIRING_LOST))
     }
 
     /**

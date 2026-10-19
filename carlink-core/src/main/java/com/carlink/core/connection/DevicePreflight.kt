@@ -32,6 +32,8 @@ object DevicePreflight {
         val locationOn: Boolean,
         val missingPermissions: List<String>,
         val canDrawOverlays: Boolean,
+        /** Android 16+ reported this phone's Bluetooth key missing (detect/PairingLoss). */
+        val pairingLost: Boolean = false,
     )
 
     /**
@@ -49,6 +51,7 @@ object DevicePreflight {
             if (bluetoothViaModule) Unit
             else if (!facts.bluetoothOn) add(Problem.BLUETOOTH_OFF)
             else if (request.phoneAddress != null && facts.phoneBonded == false) add(Problem.PHONE_NOT_PAIRED)
+            else if (request.phoneAddress != null && facts.pairingLost) add(Problem.PAIRING_LOST)
             // Wi-Fi Direct and every hotspot need the radio; DiAuto aborts its P2P path silently
             // when it is off (DA§10.8).
             if (!facts.wifiOn) add(Problem.WIFI_OFF)
@@ -85,6 +88,7 @@ object DevicePreflight {
             locationOn = location != null && LocationManagerCompat.isLocationEnabled(location),
             missingPermissions = requiredPermissions().filter { app.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED },
             canDrawOverlays = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(app),
+            pairingLost = phoneAddress != null && com.carlink.core.detect.PairingLoss.has(app, phoneAddress),
         )
     }
 
