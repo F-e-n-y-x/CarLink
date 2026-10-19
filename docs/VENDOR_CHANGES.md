@@ -28,6 +28,10 @@ record the new upstream commit in the table above and in the audit command below
 not reach files outside `vendor/diplay`: copy new entries of upstream's `gradle/libs.versions.toml`
 into CarLink's root catalog (0.2.19 added `zxing-core` and `androidx-work-runtime`; 0.2.21 added none).
 
+Watch on the next DiAuto update: if it brings open-headunit `1a6bf477` (releasing the video decoder
+in `AapProjectionActivity.onStop`), bring open-headunit PR #1141's delayed release with it, or the
+projection goes black after the reverse camera (open-headunit #1137). DiAuto 0.3.12 doesn't have it.
+
 Every edit inside `vendor/` is listed below, so a conflicting pull is easy to resolve. Code edits
 carry a `// CarLink` comment (new files say so in their header); the build-file changes, the
 renamed native library, the `com.carlink.app` package allowlists and DiAuto's `homeActivity`
