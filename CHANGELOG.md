@@ -4,6 +4,14 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.3] - 2026-10-19
+
+- CarLink no longer refuses to connect when "Display over other apps" isn't allowed. That
+  permission is only needed for the floating switcher, which falls back to an in-app prompt.
+- Motorcycles: Indian two-wheeler makes (Hero, Honda, TVS, Bajaj, Royal Enfield and more) in the
+  brand picker.
+- Shared logs and GitHub reports leave out routine screen switches, so the useful lines fit.
+
 ## [1.0.2] - 2026-10-15
 
 - Faster and smoother on low-end stereos: CarLink now also checks the graphics chip and CPU speed,
