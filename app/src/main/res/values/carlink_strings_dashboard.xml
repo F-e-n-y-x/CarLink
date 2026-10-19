@@ -168,6 +168,9 @@
     <string name="carlink_notice_slow_handshake">Taking longer than usual: the %1$s is still answering…</string>
     <string name="carlink_notice_slow_linking">Taking longer than usual: joining Wi-Fi…</string>
     <string name="carlink_notice_slow_picture">Taking longer than usual: starting the picture…</string>
+    <!-- iOS 27 black screen with sound (DiPlay #249); the button turns the setting on and reconnects. -->
+    <string name="carlink_notice_no_picture">Sound but no picture? Turn on Direct video output</string>
+    <string name="carlink_home_direct_video_action">Turn on and reconnect</string>
     <string name="carlink_notice_wake">Taking longer than usual: calling the %1$s again…</string>
     <string name="carlink_notice_restart_usb">Taking longer than usual: restarting the USB link…</string>
     <string name="carlink_notice_retry">Taking longer than usual: trying again…</string>

@@ -159,6 +159,8 @@ internal interface HomeActions {
     fun navigate(route: Route) {}
     /** "Report a problem on GitHub", offered on the failure states. */
     fun reportProblem() {}
+    /** CarPlay sound but no picture ([LinkNoticeKind.NO_PICTURE]): turn on Direct video output and reconnect. */
+    fun turnOnDirectVideo() {}
 }
 
 @Composable
@@ -188,6 +190,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
                 if (problem == LinkProblem.PERMISSIONS) requestPermissions() else vm.fix(problem)
             override fun navigate(route: Route) = navigate(route)
             override fun reportProblem() = reportProblem()
+            override fun turnOnDirectVideo() = vm.turnOnDirectVideo()
         }
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual), actions)
@@ -571,6 +574,10 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 IonButton(stringResource(R.string.carlink_home_connect), { actions.connect(it) }, icon = R.drawable.carlink_ic_link)
             }
             HomeMode.CONNECTING -> {
+                if (link.notice?.kind == com.carlink.core.core.LinkNoticeKind.NO_PICTURE) {
+                    IonButton(stringResource(R.string.carlink_home_direct_video_action), actions::turnOnDirectVideo,
+                        icon = R.drawable.carlink_ic_display_settings)
+                }
                 if (androidWaiting(ui) && !sessionPhoneConnected(ui)) {
                     IonButton(stringResource(R.string.carlink_home_bluetooth_settings), actions::openBluetoothSettings,
                         icon = R.drawable.carlink_ic_bluetooth)

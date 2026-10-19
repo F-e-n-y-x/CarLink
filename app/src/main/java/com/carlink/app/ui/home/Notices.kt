@@ -71,6 +71,7 @@ internal fun noticeText(link: LinkState): String? {
             LinkProblem.USB -> stringResource(R.string.carlink_notice_retry_usb)
             else -> stringResource(R.string.carlink_notice_retry_plain)
         }
+        LinkNoticeKind.NO_PICTURE -> stringResource(R.string.carlink_notice_no_picture)
     }
 }
 
@@ -86,7 +87,8 @@ internal fun noticeIcon(link: LinkState): Int {
         LinkRecovery.RESTART_USB, LinkRecovery.REPLUG -> R.drawable.carlink_ic_usb
         LinkRecovery.WAKE_PHONE -> R.drawable.carlink_ic_bluetooth_searching
         LinkRecovery.RETRY, LinkRecovery.TRY_OTHER_PATH -> R.drawable.carlink_ic_refresh
-        null -> if (notice.kind == LinkNoticeKind.RETRYING) R.drawable.carlink_ic_refresh else R.drawable.carlink_ic_schedule
+        null -> if (notice.kind == LinkNoticeKind.NO_PICTURE) R.drawable.carlink_ic_display_settings
+            else if (notice.kind == LinkNoticeKind.RETRYING) R.drawable.carlink_ic_refresh else R.drawable.carlink_ic_schedule
     }
 }
 

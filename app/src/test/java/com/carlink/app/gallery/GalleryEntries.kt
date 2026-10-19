@@ -113,6 +113,12 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
             notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.RETRYING,
                 reason = LinkProblem.BLUETOOTH)), phones = listOf(pixel.copy(connected = true))), actions)
     },
+    // iOS 27: the iPhone plays sound but sends no picture; one tap turns on Direct video output and reconnects.
+    home("connecting-notice-no-picture") {
+        HomeContent(ui(link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.WIRELESS, iphone.name, 4, 4,
+            notice = com.carlink.core.core.LinkNotice(com.carlink.core.core.LinkNoticeKind.NO_PICTURE)),
+            phones = listOf(iphoneConnected)), actions)
+    },
     // A USB phone that has not answered for 10 s (locked, or waiting for its prompt).
     home("connecting-not-answering-usb") {
         HomeContent(ui(link = LinkState(LinkStage.WAITING, Engine.ANDROID_AUTO, Transport.USB, pixel.name, 1, 4,
@@ -259,6 +265,24 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("settings", "display-advanced") {
         SettingsContent(settingsPreviewUi(showAdvanced = true, customPicture = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.DISPLAY)
+    },
+    // Display › Advanced, CarPlay's last rows (below the fold above), with Direct video output.
+    GalleryEntry("settings", "display-advanced-carplay") {
+        com.carlink.app.ui.premium.PremiumScreen("Display", onBack = {}) { margin ->
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = margin)
+                .widthIn(max = 900.dp)) {
+                com.carlink.app.ui.settings.GlassGroup(header = { com.carlink.app.ui.settings.EngineHeader(Engine.CARPLAY) }) {
+                    com.carlink.app.ui.settings.engineRows(SettingsCategory.DISPLAY, com.carlink.core.settings.Tier.ADVANCED)
+                        .first { it.first == Engine.CARPLAY }.second.dropWhile { it.id != "cp_adapt_pip" }.forEachIndexed { index, setting ->
+                            if (index > 0) com.carlink.app.ui.settings.GroupDivider()
+                            com.carlink.app.ui.settings.EngineSettingRow(setting, settingsPreviewUi().advancedValues,
+                                SettingsPreviewActions, openSheet = {})
+                        }
+                }
+            }
+        }
     },
     GalleryEntry("settings", "sound-advanced-lab") {
         SettingsContent(settingsPreviewUi(showAdvanced = true, lab = true), SettingsPreviewActions, onBack = {},

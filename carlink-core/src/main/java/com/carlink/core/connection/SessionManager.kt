@@ -410,11 +410,15 @@ class SessionManager(
         start(SessionRequest(engine, transport, address, phoneName))
     }
 
-    /** Try the last request again (Home's "Try again", or after the driver fixed a problem). */
+    /**
+     * Try the last request again (Home's "Try again", or after the driver fixed a problem). A
+     * running attempt restarts, so a setting that applies at the next connection takes effect.
+     */
     fun retry() {
         val request = when (val s = _state.value) {
             is SessionState.Blocked -> s.request
             is SessionState.Failed -> s.request
+            is SessionState.Active -> s.request
             else -> return
         }
         environment.autoConnectPaused = false

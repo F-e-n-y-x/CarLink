@@ -133,6 +133,13 @@ class SessionManagerTest {
         assertEquals(1, starts.size)
     }
 
+    @Test fun retryRestartsARunningAttempt() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.retry(); idle()
+        assertEquals(2, starts.size)
+    }
+
     // --- Paths --------------------------------------------------------------------------------
 
     @Test fun onlyPathRelatedFailuresMoveToTheNextPathAndTheDriverSeesNoFailureInBetween() {

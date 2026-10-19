@@ -71,6 +71,23 @@ class LinkNoticeMappingTest {
         assertEquals(LinkNotice(LinkNoticeKind.RETRYING, reason = LinkProblem.BLUETOOTH), active(retry).toLinkState().notice)
     }
 
+    @Test fun aLateCarPlayPictureOffersDirectVideoOutputWhileItIsOff() {
+        val picture = SessionState.Phase.Progress(4, 4, ProgressStage.STARTING_PROJECTION)
+        val slow = active(picture, Notice(Notice.Kind.SLOW, ProgressStage.STARTING_PROJECTION, "x"))
+        assertEquals(LinkNotice(LinkNoticeKind.NO_PICTURE), slow.toLinkState(directVideoOutput = false).notice)
+        // Already on: the usual notice, nothing to offer.
+        assertEquals(LinkNotice(LinkNoticeKind.SLOW), slow.toLinkState(directVideoOutput = true).notice)
+        // The stall retry in the picture step keeps the offer.
+        val retry = active(SessionState.Phase.Retrying(1, FailureReason.LINK_TOO_WEAK, ProgressStage.STARTING_PROJECTION, "x"),
+            Notice(Notice.Kind.RECOVERING, ProgressStage.STARTING_PROJECTION, "x", RecoveryAction.RETRY_STEP))
+        assertEquals(LinkNoticeKind.NO_PICTURE, retry.toLinkState(directVideoOutput = false).notice?.kind)
+        // Other steps and Android Auto never see it.
+        assertEquals(LinkNoticeKind.SLOW, active(linking, Notice(Notice.Kind.SLOW, ProgressStage.JOINING_WIFI, "x"))
+            .toLinkState(directVideoOutput = false).notice?.kind)
+        assertEquals(LinkNoticeKind.SLOW, slow.copy(request = request.copy(engine = Engine.ANDROID_AUTO))
+            .toLinkState(directVideoOutput = false).notice?.kind)
+    }
+
     @Test fun aSilentPhoneIsNotAnswering() {
         val state = active(SessionState.Phase.Progress(1, 4, ProgressStage.PHONE_NOT_ANSWERING),
             Notice(Notice.Kind.PHONE_NOT_ANSWERING, ProgressStage.WAITING_FOR_PHONE, "x"))

@@ -128,6 +128,11 @@ enum class LinkNoticeKind {
     RECOVERING,
     /** The engine is trying again after [LinkNotice.reason]. */
     RETRYING,
+    /**
+     * CarPlay is late in the picture step: on iOS 27 the iPhone plays sound but never sends a frame
+     * (DiPlay #249, #975). Offered only while DiPlay's Direct video output is off.
+     */
+    NO_PICTURE,
 }
 
 /** What CarLink does about a slow step, as the driver is told it. */

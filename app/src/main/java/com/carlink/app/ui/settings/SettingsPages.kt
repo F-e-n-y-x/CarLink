@@ -295,7 +295,7 @@ private fun EngineSection(category: SettingsCategory, tier: Tier, ui: SettingsUi
 }
 
 @Composable
-private fun EngineSettingRow(setting: AdvancedSetting, values: Map<String, String>?, actions: SettingsActions, openSheet: (String) -> Unit) {
+internal fun EngineSettingRow(setting: AdvancedSetting, values: Map<String, String>?, actions: SettingsActions, openSheet: (String) -> Unit) {
     val value = values?.get(setting.id)
     val loaded = value != null
     val tags: (@Composable () -> Unit)? = if (setting.applies == Applies.NEXT_CONNECTION) ({ NextConnectionTag() }) else null

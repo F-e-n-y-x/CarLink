@@ -20,6 +20,7 @@ import com.carlink.core.connection.DevicePreflight
 import com.carlink.core.connection.SessionState
 import com.carlink.core.connection.WirelessPolicy
 import com.carlink.core.connection.toLinkState
+import com.shilapi.xcertplay.AirPlayPersistence
 import kotlinx.coroutines.flow.map
 import com.carlink.core.settings.CarLinkPreferences
 import com.carlink.core.settings.ConnectionMethod
@@ -121,8 +122,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun acceptSwitch() = session.acceptSwitch()
     fun declineSwitch() = session.declineSwitch()
 
-    val link: StateFlow<LinkState> = session.state.map { it.toLinkState() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState())
+    val link: StateFlow<LinkState> = session.state.map { it.toLinkState(AirPlayPersistence.loadDirectVideoOutput(app)) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState(AirPlayPersistence.loadDirectVideoOutput(app)))
 
     private val _lastSession = MutableStateFlow(session.state.value.takeIf { it != SessionState.Idle }
         ?.let { com.carlink.app.diagnostics.LastSession(it, System.currentTimeMillis()) })
@@ -300,6 +301,13 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun disconnect() {
         session.disconnect()
         _connection.value = readConnection()
+    }
+
+    /** CarPlay sound but no picture (iOS 27, DiPlay #249): Direct video output on, then a fresh start. */
+    fun turnOnDirectVideo() {
+        AirPlayPersistence.saveDirectVideoOutput(app, true)
+        _attemptStartedAt.value = SystemClock.elapsedRealtime()
+        session.retry()
     }
 
     /** Bring the running engine's projection back to the front. */

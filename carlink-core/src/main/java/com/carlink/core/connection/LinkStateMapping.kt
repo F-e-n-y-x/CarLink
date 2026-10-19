@@ -1,5 +1,6 @@
 package com.carlink.core.connection
 
+import com.carlink.core.core.Engine
 import com.carlink.core.core.LinkNotice
 import com.carlink.core.core.LinkNoticeKind
 import com.carlink.core.core.LinkProblem
@@ -8,14 +9,17 @@ import com.carlink.core.core.LinkStage
 import com.carlink.core.core.LinkState
 import com.carlink.core.settings.WirelessPath
 
-/** [SessionState] in the terms the current screens use. */
-fun SessionState.toLinkState(): LinkState = when (this) {
+/**
+ * [SessionState] in the terms the current screens use. [directVideoOutput] is DiPlay's Direct video
+ * output setting: while it is off, a late CarPlay picture reads as [LinkNoticeKind.NO_PICTURE].
+ */
+fun SessionState.toLinkState(directVideoOutput: Boolean = true): LinkState = when (this) {
     SessionState.Idle -> LinkState.Idle
     is SessionState.Blocked -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
         problem = problems.first().toLinkProblem())
     is SessionState.Failed -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
         detail = detail, problem = reason.toLinkProblem())
-    is SessionState.Active -> activeLinkState().copy(notice = linkNotice())
+    is SessionState.Active -> activeLinkState().copy(notice = linkNotice(directVideoOutput))
 }
 
 private fun SessionState.Active.activeLinkState(): LinkState = when (val p = phase) {
@@ -44,9 +48,16 @@ private fun SessionState.Active.activeLinkState(): LinkState = when (val p = pha
  * [SessionState.Active.notice] (or a retry under way) as [LinkNotice], which the screens word for
  * the driver. A retry that moved to the next wireless path reads as "trying <path> instead".
  */
-private fun SessionState.Active.linkNotice(): LinkNotice? {
+private fun SessionState.Active.linkNotice(directVideoOutput: Boolean): LinkNotice? {
     if (phase == SessionState.Phase.Connected) return null
     notice?.let { n ->
+        // iOS 27 (DiPlay #249, #975): the iPhone's AirPlay session is up and its sound plays, but it
+        // never sends a frame; Direct video output fixed it for some drivers.
+        // ponytail: DiPlay gives the host no audio or zero-frame signal, so "late in the picture step"
+        // (the 10 s hint or the stall deadline) stands in; a slow but working start can see it too.
+        if (!directVideoOutput && request.engine == Engine.CARPLAY && n.stage == ProgressStage.STARTING_PROJECTION) {
+            return LinkNotice(LinkNoticeKind.NO_PICTURE)
+        }
         return when (n.kind) {
             Notice.Kind.PHONE_NOT_ANSWERING -> LinkNotice(LinkNoticeKind.NOT_ANSWERING)
             Notice.Kind.SLOW -> LinkNotice(LinkNoticeKind.SLOW)
