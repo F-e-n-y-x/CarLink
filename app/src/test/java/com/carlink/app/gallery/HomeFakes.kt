@@ -25,7 +25,8 @@ internal object HomeFakes {
     val prefs = ConnectionPrefs(autoConnectUsb = true, autoConnectBluetooth = true, startOnBoot = true, autoConnectPaused = false)
 
     val hotspot = NetworkPreview(WirelessPath.CAR_HOTSPOT, ssid = null)
-    val sameWifiOffer = NetworkPreview(WirelessPath.CAR_HOTSPOT, ssid = null, joinedSsid = "Home Wi-Fi", canOfferSameWifi = true)
+    /** Same Wi-Fi chosen, the screen on "Home Wi-Fi", no password saved yet. */
+    val sameWifiNoPassword = NetworkPreview(WirelessPath.SAME_WIFI, ssid = "Home Wi-Fi", joinedSsid = "Home Wi-Fi", savedSameWifi = "Home Wi-Fi")
     val sameWifi = NetworkPreview(WirelessPath.SAME_WIFI, ssid = "Home Wi-Fi", joinedSsid = "Home Wi-Fi")
 
     val actions: HomeActions = object : HomeActions {}

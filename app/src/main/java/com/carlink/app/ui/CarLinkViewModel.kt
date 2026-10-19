@@ -29,6 +29,7 @@ import com.carlink.core.settings.UnifiedSettings
 import com.carlink.core.settings.UnifiedSettingsStore
 import com.carlink.core.settings.WirelessPath
 import com.carlink.core.settings.isValid
+import com.carlink.core.settings.matchedTo
 import com.carlink.app.ui.theme.ThemeMode
 import com.carlink.app.ui.theme.UiProfileMode
 import com.shilapi.xcertplay.CarPlayHostActivity
@@ -75,8 +76,9 @@ data class NetworkPreview(
     val ssid: String?,
     /** The car's current Wi-Fi when exactly one is joined and its name is readable. */
     val joinedSsid: String? = null,
-    /** True when [joinedSsid] is not the saved "same Wi-Fi" network yet. */
-    val canOfferSameWifi: Boolean = false,
+    /** The saved Same Wi-Fi and car hotspot names ("" when none): Home's password prompt shows them. */
+    val savedSameWifi: String = "",
+    val savedHotspot: String = "",
     /** The driver's choice; [path] is what it resolves to right now. */
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
 )
@@ -341,15 +343,12 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         } else settings
         val path = WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, effective, wifi,
             headUnit = com.carlink.app.ui.theme.UiProfileDetector.looksLikeCarDisplay(app))).first()
-        val saved = settings.homeWifi
         _network.value = NetworkPreview(
             path = path,
             ssid = if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null,
             joinedSsid = wifi.joinedSsid,
-            // Offered again when the saved entry cannot work: no password for a secured network,
-            // or a phone already refused the one saved.
-            canOfferSameWifi = wifi.joinedSsid != null && (wifi.joinedSsid != saved.ssid ||
-                (saved.password.isEmpty() && wifi.joinedOpen != true) || wifi.androidAutoRefusedJoined),
+            savedSameWifi = settings.homeWifi.ssid,
+            savedHotspot = effective.carHotspot.ssid,
             method = settings.connectionMethod,
         )
     }
@@ -358,14 +357,23 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun saveSameWifi(ssid: String, password: String) =
         updateSettings { it.copy(homeWifi = com.carlink.core.settings.WifiDetails(ssid, password)) }
 
-    /** Saves a change to the unified settings and writes it into both engines. */
+    /** Remembers the car hotspot's name and password (Car hotspot). */
+    fun saveCarHotspot(ssid: String, password: String) =
+        updateSettings { it.copy(carHotspot = com.carlink.core.settings.WifiDetails(ssid, password)) }
+
+    /**
+     * Saves a change to the unified settings and writes it into both engines. A blocked start
+     * checks again, so a password or connection type the driver just gave takes effect at once.
+     */
     fun updateSettings(change: (UnifiedSettings) -> UnifiedSettings) {
-        val next = change(_unified.value)
+        val changed = change(_unified.value)
+        val next = changed.copy(homeWifi = changed.homeWifi.matchedTo(_network.value?.joinedSsid))
         if (next == _unified.value) return
         _unified.value = next
         unifiedStore.save(next)
         // Engines read their settings at the start of each session (SessionManager writes them).
         refreshNetwork()
+        session.onSettingsChanged()
     }
 
     /** Runtime permissions CarLink asks for in one go (Bluetooth, Wi-Fi, location, microphone, notifications). */
@@ -373,25 +381,39 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         .filter { app.checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
 
     /**
-     * The one-tap fix for a problem Home shows. Radios and system switches can only be offered by
-     * Android's own panels; the driver then taps Try again (or the session retries on its own).
+     * The system screen that fixes [problem]: a radio panel, Location, the overlay grant. Radios and
+     * system switches can only be offered by Android's own screens; the screens launch it for a
+     * result and check again when the driver comes back (home/rememberProblemFix).
+     */
+    fun fixIntent(problem: com.carlink.core.core.LinkProblem): Intent? = when (problem) {
+        com.carlink.core.core.LinkProblem.BLUETOOTH_OFF -> Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
+        com.carlink.core.core.LinkProblem.WIFI_OFF, com.carlink.core.core.LinkProblem.SAME_WIFI_NOT_JOINED ->
+            Intent(if (android.os.Build.VERSION.SDK_INT >= 29) android.provider.Settings.Panel.ACTION_WIFI
+                else android.provider.Settings.ACTION_WIFI_SETTINGS)
+        com.carlink.core.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            android.net.Uri.parse("package:${app.packageName}"))
+        else -> null
+    }
+
+    /**
+     * The one-tap fix for a problem Home shows, where it needs no activity result: a path switch,
+     * or [fixIntent]'s screen opened from the application. Permissions and the VPN consent are
+     * launched by the screens for a result (started from here, Android closes the VPN dialog).
      */
     fun fix(problem: com.carlink.core.core.LinkProblem) {
-        val intent = when (problem) {
-            com.carlink.core.core.LinkProblem.BLUETOOTH_OFF -> Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            com.carlink.core.core.LinkProblem.WIFI_OFF -> Intent(if (android.os.Build.VERSION.SDK_INT >= 29)
-                android.provider.Settings.Panel.ACTION_WIFI else android.provider.Settings.ACTION_WIFI_SETTINGS)
-            com.carlink.core.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-            com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                android.net.Uri.parse("package:${app.packageName}"))
-            // VPN_CONSENT is launched by Home for a result: started from here, Android closes the dialog.
+        when (problem) {
             com.carlink.core.core.LinkProblem.PHONE_REFUSED_WIFI, com.carlink.core.core.LinkProblem.PHONE_NEVER_REACHED_CAR -> {
                 updateSettings { it.copy(connectionMethod = com.carlink.core.settings.ConnectionMethod.WIFI_DIRECT) }
-                return retry()
+                retry()
             }
-            else -> return
+            else -> fixIntent(problem)?.let { runCatching { app.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
         }
-        runCatching { app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+
+    /** Back from a fix (a system screen, a permission dialog): a failed or blocked start checks again. */
+    fun recheckAfterFix() {
+        if (link.value.stage == LinkStage.FAILED) retry()
     }
 
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = phonesRepository.setKind(phone.address, kind)

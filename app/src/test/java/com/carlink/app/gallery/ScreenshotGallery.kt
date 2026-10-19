@@ -55,7 +55,7 @@ data class GalleryConfig(
 )
 
 /** The low-end head-unit configs render these states (docs/LOW_END_PERFORMANCE.md). */
-private val lowEndEntries = setOf("home/ready-no-phone", "home/ready-iphone-same-wifi-offer", "home/connecting-carplay-usb",
+private val lowEndEntries = setOf("home/ready-no-phone", "home/failed-same-wifi-password", "home/connecting-carplay-usb",
     "home/connected-carplay", "home/failed-wifi-off", "home/sheet-phones", "settings/general-lab", "settings/sheet-rendering",
     "home/connecting-notice-wifi", "setup/permissions", "setup/permissions-recommended", "setup/pair-waiting",
     "setup/pair-found-iphone", "setup/pair-cable-waiting",

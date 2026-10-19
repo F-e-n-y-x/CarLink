@@ -12,6 +12,7 @@ import android.provider.Settings
 import androidx.core.location.LocationManagerCompat
 import com.carlink.core.core.Transport
 import com.carlink.core.settings.UnifiedSettings
+import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WifiEnvironment
 import com.carlink.core.settings.WirelessPath
 import com.carlink.core.settings.isValid
@@ -58,11 +59,7 @@ object DevicePreflight {
             // Android hides SSIDs/BSSIDs and P2P details with the Location switch off (DA§10.8).
             if (!facts.locationOn) add(Problem.LOCATION_OFF)
             when (path) {
-                WirelessPath.SAME_WIFI -> {
-                    val saved = settings.homeWifi
-                    val passwordKnown = saved.password.isNotEmpty() || wifi.joinedOpen == true
-                    if (!saved.isValid() || !passwordKnown || wifi.joinedSsid != saved.ssid) add(Problem.SAME_WIFI_DETAILS)
-                }
+                WirelessPath.SAME_WIFI -> sameWifi(settings.homeWifi, wifi, facts)?.let(::add)
                 WirelessPath.CAR_HOTSPOT -> when {
                     wifi.carHotspotOn == false -> add(Problem.CAR_HOTSPOT_OFF)
                     !WirelessPolicy.hotspotUsable(settings, wifi) -> add(Problem.CAR_HOTSPOT_DETAILS)
@@ -70,6 +67,20 @@ object DevicePreflight {
                 WirelessPath.WIFI_DIRECT, null -> Unit
             }
         }
+
+    /**
+     * Same Wi-Fi, said precisely: the saved details are missing (no network, or no password for a
+     * secured one), or this device is not on the saved network. With Wi-Fi or Location off, or
+     * Location not allowed, Android hides the joined network's name; that problem is named on its
+     * own, so nothing is added for the name then (it read as "add your password" before).
+     */
+    private fun sameWifi(saved: WifiDetails, wifi: WifiEnvironment, facts: Facts): Problem? = when {
+        !saved.isValid() || (saved.password.isEmpty() && wifi.joinedOpen != true) -> Problem.SAME_WIFI_DETAILS
+        !facts.wifiOn || !facts.locationOn || facts.missingPermissions.isNotEmpty() -> null
+        // Exact: both engines hand the saved name to the phone (saving aligns it, WifiDetails.matchedTo).
+        wifi.joinedSsid != saved.ssid -> Problem.SAME_WIFI_NOT_JOINED
+        else -> null
+    }
 
     @SuppressLint("MissingPermission") // bondedDevices is only read with BLUETOOTH_CONNECT granted.
     fun facts(context: Context, phoneAddress: String?): Facts {

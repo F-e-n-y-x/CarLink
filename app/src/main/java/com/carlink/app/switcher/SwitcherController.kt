@@ -373,6 +373,8 @@ object SwitcherController {
             // Read just before writing: Home or Settings may have changed other values.
             val store = UnifiedSettingsStore(app)
             store.save(store.load().copy(connectionMethod = method))
+            // A start blocked on the old method (e.g. Same Wi-Fi without its password) checks again.
+            Connection.get(app).onSettingsChanged()
             panelUi = panelUi?.copy(method = method, page = SwitcherPage.MAIN)
         }
 

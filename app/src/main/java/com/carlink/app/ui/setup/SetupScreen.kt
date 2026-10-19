@@ -88,6 +88,8 @@ import com.carlink.app.ui.components.engineName
 import com.carlink.app.ui.components.isolate
 import com.carlink.app.ui.components.phoneIcon
 import com.carlink.app.ui.home.NoticeLine
+import com.carlink.app.ui.home.failureCopy
+import com.carlink.app.ui.home.oneTapFix
 import com.carlink.app.ui.home.noticeIcon
 import com.carlink.app.ui.home.noticeText
 import com.carlink.app.ui.premium.Atmosphere
@@ -114,6 +116,7 @@ import com.carlink.app.ui.theme.WidthClass
 import com.carlink.core.connection.AdbVpnConsent
 import com.carlink.core.connection.PairingSession
 import com.carlink.core.core.Engine
+import com.carlink.core.core.LinkProblem
 import com.carlink.core.core.LinkStage
 import com.carlink.core.core.LinkState
 import com.carlink.core.core.PhoneKind
@@ -203,6 +206,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         }
     }
 
+    val fixProblem = com.carlink.app.ui.home.rememberProblemFix(vm)
     val exit = { vm.finishSetup(); onExit() }
     val chooseCable: (Boolean) -> Unit = { cable = it }
     val actions = object : SetupActions {
@@ -253,6 +257,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         }
         override fun useCable(cable: Boolean) = chooseCable(cable)
         override fun retry() = vm.retry()
+        override fun fix(problem: LinkProblem) = fixProblem(problem)
     }
     BackHandler { actions.back() }
 
@@ -554,10 +559,12 @@ private fun pairCopy(ui: SetupUi): Copy {
         session?.stage == LinkStage.CONNECTED -> Copy(stringResource(R.string.carlink_home_eyebrow_connected), colors.success,
             plain(stringResource(R.string.carlink_setup_pair_connected_title, phoneName)),
             stringResource(R.string.carlink_setup_pair_connected_body, engine?.let { engineName(it) } ?: ""))
-        // Home's words: retrying cannot help, the cable can.
-        session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH ->
-            Copy(stringResource(R.string.carlink_home_eyebrow_problem), colors.warning,
-                plain(stringResource(R.string.carlink_home_error_external_bt_title)), stringResource(R.string.carlink_home_error_external_bt_body))
+        // A known problem (blocked before starting, or a precise failure) in Home's words, never "try again".
+        session?.stage == LinkStage.FAILED && knownProblem(session) != null -> {
+            val (title, body) = failureCopy(session)
+            val external = session.problem == LinkProblem.EXTERNAL_BLUETOOTH || session.problem == LinkProblem.EXTERNAL_MODULE
+            Copy(stringResource(R.string.carlink_home_eyebrow_problem), if (external) colors.warning else scheme.error, plain(title), body)
+        }
         session?.stage == LinkStage.FAILED -> Copy(stringResource(R.string.carlink_home_eyebrow_problem), scheme.error,
             plain(stringResource(R.string.carlink_setup_pair_failed_title)), stringResource(R.string.carlink_setup_pair_failed_body))
         ui.cable -> Copy(eyebrow, scheme.primary, plain(stringResource(R.string.carlink_setup_pair_cable_title)),
@@ -592,6 +599,9 @@ private fun pairCopy(ui: SetupUi): Copy {
     }
 }
 
+/** The session's problem when it says more than "the engine failed" (Home has words and a fix for it), else null. */
+private fun knownProblem(session: LinkState): LinkProblem? = session.problem?.takeIf { it != LinkProblem.ENGINE }
+
 /** Allow all, and how many items are still missing. */
 @Composable
 private fun PermissionSummary(ui: SetupUi, actions: SetupActions) {
@@ -617,12 +627,16 @@ private fun PermissionSummary(ui: SetupUi, actions: SetupActions) {
 private fun PairActions(ui: SetupUi, actions: SetupActions) {
     val dimens = CarLinkTokens.dimens
     val session = sessionOf(ui)
-    val externalFailure = session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH
+    val problem = session?.takeIf { it.stage == LinkStage.FAILED }?.let(::knownProblem)
+    val fix = oneTapFix(problem)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap), verticalArrangement = Arrangement.spacedBy(dimens.targetGap),
         itemVerticalAlignment = Alignment.CenterVertically) {
         when {
             session?.stage == LinkStage.CONNECTED -> Unit
-            externalFailure -> Unit
+            // Retrying cannot help on this stereo; the cable button below can.
+            problem == LinkProblem.EXTERNAL_BLUETOOTH || problem == LinkProblem.EXTERNAL_MODULE -> Unit
+            // The fix itself (Location, a radio, a permission); coming back checks again.
+            problem != null && fix != null -> IonButton(stringResource(fix.first), { actions.fix(problem) }, icon = fix.second)
             session?.stage == LinkStage.FAILED ->
                 IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
             ui.cable -> Unit

@@ -122,7 +122,7 @@ The stepped animations use `derivedStateOf` over the running animation, so nothi
 invalidated between steps and no frame is drawn. "Remove animations" still stops them entirely.
 
 Gallery: `docs/screenshots/*/*_headunit-1024x600_dark.webp` (full) and
-`*_headunit-1024x600-lite_{dark,light}.webp` (lite), for Ready, the same-Wi-Fi offer, Connecting,
+`*_headunit-1024x600-lite_{dark,light}.webp` (lite), for Ready, the Same Wi-Fi password card, Connecting,
 Connected, a failure, the Phones sheet, Settings › General and the Visual effects sheet.
 
 ## Start-up

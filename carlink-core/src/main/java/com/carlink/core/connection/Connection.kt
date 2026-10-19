@@ -199,9 +199,10 @@ object Connection {
                 CarPlayProblem.WifiOff -> Problem.WIFI_OFF
                 is CarPlayProblem.SameWifiNameUnreadable ->
                     if (problem.needsLocationOn) Problem.LOCATION_OFF
-                    else if (problem.needsLocationPermission) Problem.PERMISSIONS else Problem.SAME_WIFI_DETAILS
-                CarPlayProblem.SameWifiDetailsMissing, CarPlayProblem.SameWifiNotConnected,
-                CarPlayProblem.SameWifiMultipleNetworks, is CarPlayProblem.SameWifiDifferentNetwork -> Problem.SAME_WIFI_DETAILS
+                    else if (problem.needsLocationPermission) Problem.PERMISSIONS else Problem.SAME_WIFI_NOT_JOINED
+                CarPlayProblem.SameWifiDetailsMissing -> Problem.SAME_WIFI_DETAILS
+                CarPlayProblem.SameWifiNotConnected, CarPlayProblem.SameWifiMultipleNetworks,
+                is CarPlayProblem.SameWifiDifferentNetwork -> Problem.SAME_WIFI_NOT_JOINED
                 CarPlayProblem.CarHotspotDetailsMissing -> Problem.CAR_HOTSPOT_DETAILS
                 CarPlayProblem.CarHotspotOff -> Problem.CAR_HOTSPOT_OFF
             }

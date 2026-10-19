@@ -62,7 +62,7 @@ over Bluetooth SDP first; nothing starts until CarLink is sure.
   the display, which needs no router and no hotspot. On a car head unit whose own hotspot
   details are known, wireless CarPlay tries that hotspot first. The path that worked last time
   for a phone is tried first next time; only a network-related failure moves on to the next path.
-- **Same Wi-Fi is opt-in.** Settings › Connection (or the card Home offers once) can use the Wi-Fi
+- **Same Wi-Fi is opt-in.** Settings › Connection can use the Wi-Fi
   network the display is already on. It needs that network's password once. It is never chosen
   automatically (see [Known limits](#known-limits)).
 - **Plugging in starts at once.** A cable is a deliberate act, so a USB phone starts its engine

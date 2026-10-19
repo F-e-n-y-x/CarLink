@@ -112,6 +112,7 @@ fun Problem.toLinkProblem(): LinkProblem = when (this) {
     Problem.CARPLAY_AUTH_MISSING -> LinkProblem.CARPLAY_AUTH_MISSING
     Problem.NO_IPHONE_SELECTED -> LinkProblem.NO_IPHONE_SELECTED
     Problem.SAME_WIFI_DETAILS -> LinkProblem.SAME_WIFI_DETAILS_MISSING
+    Problem.SAME_WIFI_NOT_JOINED -> LinkProblem.SAME_WIFI_NOT_JOINED
     Problem.CAR_HOTSPOT_DETAILS -> LinkProblem.CAR_HOTSPOT_DETAILS_MISSING
     Problem.CAR_HOTSPOT_OFF -> LinkProblem.CAR_HOTSPOT_OFF
     Problem.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH

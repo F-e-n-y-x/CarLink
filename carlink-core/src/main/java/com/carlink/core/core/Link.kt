@@ -57,6 +57,8 @@ enum class LinkProblem {
     CAR_HOTSPOT_DETAILS_MISSING,
     CAR_HOTSPOT_OFF,
     SAME_WIFI_DETAILS_MISSING,
+    /** Same Wi-Fi is chosen, but this device is not on the saved network. */
+    SAME_WIFI_NOT_JOINED,
     // Pre-flight (connection v2): each has a one-tap fix.
     BLUETOOTH_OFF,
     PHONE_NOT_PAIRED,

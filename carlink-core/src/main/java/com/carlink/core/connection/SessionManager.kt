@@ -34,7 +34,10 @@ enum class Problem {
     VPN_CONSENT,
     CARPLAY_AUTH_MISSING,
     NO_IPHONE_SELECTED,
+    /** Same Wi-Fi: no saved network, or no password for a secured one. */
     SAME_WIFI_DETAILS,
+    /** Same Wi-Fi: this device is not on the saved network (another one, none, or two at once). */
+    SAME_WIFI_NOT_JOINED,
     CAR_HOTSPOT_DETAILS,
     CAR_HOTSPOT_OFF,
     /**
@@ -459,6 +462,16 @@ class SessionManager(
         }
         environment.autoConnectPaused = false
         start(request)
+    }
+
+    /**
+     * The driver changed a setting (a Wi-Fi password, the connection type): a blocked request
+     * checks again at once, so the fix shows without a Try again.
+     */
+    fun onSettingsChanged() {
+        if (_state.value !is SessionState.Blocked) return
+        note("settings changed; checking the blocked request again")
+        retry()
     }
 
     /** The driver cancelled or disconnected: stop, and pause automatic starts until they connect. */

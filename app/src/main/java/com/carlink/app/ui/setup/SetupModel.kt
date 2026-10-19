@@ -138,4 +138,6 @@ interface SetupActions {
     fun connectKnown(phone: PairedPhone) {}
     fun useCable(cable: Boolean) {}
     fun retry() {}
+    /** The one-tap fix for the first connection's problem, as Home offers it (home/rememberProblemFix). */
+    fun fix(problem: com.carlink.core.core.LinkProblem) {}
 }

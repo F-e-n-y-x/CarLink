@@ -134,6 +134,19 @@ class SessionManagerTest {
         assertEquals(1, starts.size)
     }
 
+    @Test fun aSettingsChangeChecksABlockedRequestAgain() { // tablet 2026-10-20: stuck on "Add your Wi-Fi password"
+        problems = { _, _ -> listOf(Problem.SAME_WIFI_DETAILS) }
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertTrue(m.state.value is SessionState.Blocked)
+        problems = { _, _ -> emptyList() }
+        m.onSettingsChanged(); idle()
+        assertEquals(1, starts.size)
+        // A running session is left alone.
+        m.onSettingsChanged(); idle()
+        assertEquals(1, starts.size)
+    }
+
     @Test fun aLostPairingBlocksThatPhoneAndStopsItsAttemptButNotAnotherPhonesSession() {
         val m = manager()
         m.onPairingLost("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
