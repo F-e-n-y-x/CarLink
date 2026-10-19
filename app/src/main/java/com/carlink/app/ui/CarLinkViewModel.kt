@@ -208,7 +208,9 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
 
     /** Wireless cannot start on this stereo (external Bluetooth module, and the driver did not override it). */
     val wirelessUnavailable: StateFlow<Boolean> = combine(_stereoBluetooth, _connection) { report, prefs ->
-        report != null && com.carlink.core.connection.DeviceEnvironment.wirelessBlocked(report.classification, prefs.wirelessOnExternalBluetooth)
+        // Setup's pairing step: the module setting only ever unblocks Android Auto.
+        report != null && com.carlink.core.connection.DeviceEnvironment.wirelessBlocked(report.classification,
+            prefs.wirelessOnExternalBluetooth, com.carlink.core.core.Engine.ANDROID_AUTO)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _network = MutableStateFlow<NetworkPreview?>(null)

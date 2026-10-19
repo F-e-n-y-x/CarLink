@@ -40,8 +40,8 @@ class DeviceEnvironment(
         get() = preferences.autoConnectPaused
         set(value) { preferences.autoConnectPaused = value }
 
-    override val wirelessUnavailable: Boolean
-        get() = wirelessBlocked(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth)
+    override fun wirelessUnavailable(engine: Engine): Boolean =
+        wirelessBlocked(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth, engine)
 
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()
@@ -105,10 +105,12 @@ class DeviceEnvironment(
         private const val KEY_LAST_PHONE = "address"
 
         /**
-         * Whether CarLink blocks wireless on a stereo classified [stereo]; [moduleOn] is the driver's
-         * "Wireless through the stereo's Bluetooth module (experimental)".
+         * Whether CarLink blocks wireless [engine] on a stereo classified [stereo]; [moduleOn] is the
+         * driver's "Wireless through the stereo's Bluetooth module (experimental)". It unblocks
+         * Android Auto only: neither module route carries CarPlay's iAP2.
          */
-        fun wirelessBlocked(stereo: StereoBluetooth, moduleOn: Boolean): Boolean = stereo.blocksWireless && !moduleOn
+        fun wirelessBlocked(stereo: StereoBluetooth, moduleOn: Boolean, engine: Engine): Boolean =
+            stereo.blocksWireless && !(moduleOn && engine == Engine.ANDROID_AUTO)
 
         /**
          * The route wireless Android Auto takes through the stereo's Bluetooth module when the driver

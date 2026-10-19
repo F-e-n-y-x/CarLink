@@ -39,7 +39,7 @@ enum class Problem {
     CAR_HOTSPOT_OFF,
     /**
      * Wireless only: this stereo's Bluetooth is an external module the app cannot reach
-     * ([SessionManager.Environment.wirelessUnavailable]); USB works. No one-tap fix.
+     * ([SessionManager.Environment.wirelessUnavailable] for the engine); USB works. No one-tap fix.
      */
     EXTERNAL_BLUETOOTH,
 }
@@ -151,12 +151,13 @@ class SessionManager(
         var autoConnectPaused: Boolean
 
         /**
-         * True when wireless cannot start on this device at all: its Bluetooth is an external
-         * module the app cannot reach (detect/ExternalBluetoothProbe) and the driver did not ask
-         * to try anyway. Wireless requests are then [Problem.EXTERNAL_BLUETOOTH] before any
-         * engine starts, and automatic wireless starts are skipped. USB is never affected.
+         * True when wireless [engine] cannot start on this device: its Bluetooth is an external
+         * module the app cannot reach (detect/ExternalBluetoothProbe), and for Android Auto the
+         * driver did not opt into the module route (CarPlay has none). Wireless requests are then
+         * [Problem.EXTERNAL_BLUETOOTH] before any engine starts, and automatic wireless starts are
+         * skipped. USB is never affected.
          */
-        val wirelessUnavailable: Boolean get() = false
+        fun wirelessUnavailable(engine: Engine): Boolean = false
 
         /** Problems that prevent [request] on [path] (pre-flight; does not open anything). */
         fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem>
@@ -354,7 +355,7 @@ class SessionManager(
         when {
             !environment.autoConnectBluetooth -> note("Bluetooth $engine phone: automatic start is off")
             // Nothing wireless can start here; neither a start nor a switch offer would help.
-            environment.wirelessUnavailable -> note("Bluetooth $engine phone: wireless is not available on this stereo")
+            environment.wirelessUnavailable(engine) -> note("Bluetooth $engine phone: wireless is not available on this stereo")
             environment.autoConnectPaused -> note("Bluetooth $engine phone: paused by the driver")
             _state.value.isActive -> {
                 // Another phone reached the car while one is projecting: offer it, never take over
@@ -386,7 +387,7 @@ class SessionManager(
             !environment.autoConnectBluetooth || environment.autoConnectPaused -> return
             _state.value !is SessionState.Idle -> return
             // No Bluetooth attempt and no Wi-Fi Direct churn on a stereo where wireless cannot start.
-            environment.wirelessUnavailable -> return note("Home shown: wireless is not available on this stereo; not connecting")
+            environment.wirelessUnavailable(engine) -> return note("Home shown: wireless is not available on this stereo; not connecting")
             now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS -> return
             // Home coming back because a session just ended is not "the car started".
             now - lastSessionEndedAt < HOME_AUTO_START_COOLDOWN_MILLIS -> return
@@ -461,7 +462,7 @@ class SessionManager(
         recoveries.clear()
         everConnected = false
         // Before any engine, warm-up or path: a wireless start cannot work on this stereo.
-        if (request.transport == Transport.WIRELESS && environment.wirelessUnavailable) {
+        if (request.transport == Transport.WIRELESS && environment.wirelessUnavailable(request.engine)) {
             note("${request.engine} blocked: wireless is not available on this stereo (external Bluetooth module)")
             _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
             return

@@ -146,7 +146,8 @@ header, and `docs/VENDOR_CHANGES.md` lists every edit.
 
 How a session uses it:
 
-1. The driver turns the setting on. `DeviceEnvironment.wirelessBlocked` stops blocking wireless,
+1. The driver turns the setting on. `DeviceEnvironment.wirelessBlocked` stops blocking wireless
+   Android Auto (CarPlay stays blocked),
    and `DeviceEnvironment.moduleRoute` names the route: `ZLINK_DAEMON` and `EXTERNAL_UNKNOWN` → ZBT,
    `FYT_MODULE` → BLINK. Pre-flight for wireless Android Auto then skips "Bluetooth is off" and
    "phone not paired" (the phone pairs with the module, not with Android).
@@ -207,8 +208,9 @@ that printed them in hex was changed).
   Bluetooth service so calls stay on the car): this DiAuto has no such setting.
 - Join-refusal pacing, upstream's UI toggles, toasts and the main screen's Wi-Fi button.
 - **CarPlay**: DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither route carries iAP2.
-  With the setting on, wireless CarPlay is no longer blocked by CarLink but still fails on these
-  stereos (Home then shows "Wireless isn't available on this stereo yet").
+  The setting therefore unblocks wireless Android Auto only: wireless CarPlay stays blocked before
+  any engine starts ("Wireless isn't available on this stereo yet"), and Home's wireless auto-start
+  still skips an iPhone.
 
 ## Alternatives that work today
 
