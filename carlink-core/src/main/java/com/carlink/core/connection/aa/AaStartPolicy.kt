@@ -65,6 +65,12 @@ internal enum class LeftoverGroupAction {
     LEAVE_FOR_ENGINE,
     /** CarPlay's group (DiPlay's `DIRECT-dp<hash>-` namespace) left behind by the other engine: remove it. */
     REMOVE_CARPLAY_GROUP,
+    /**
+     * Android Auto's group from another CarLink install (an update, a reinstall, the test build):
+     * same device name, so `DIRECT-xx-<accessoryName>`, but not this install's kept or recorded name.
+     * Nothing else uses it once that install is gone; left up, it blocks every wireless start.
+     */
+    REMOVE_OTHER_INSTALL,
     /** Not CarLink's: leave it. The engine stands down and reports P2P_OWNED_BY_OTHER. */
     LEAVE_FOREIGN,
 }
@@ -81,10 +87,12 @@ internal object LeftoverGroupPolicy {
     /** DiPlay's reinstall-stable namespace (vendor/diplay … network/P2pOwnership.kt). */
     private val CARPLAY_GROUP = Regex("^DIRECT-dp[0-9a-f]{12}-.*")
 
-    fun decide(groupName: String?, isGroupOwner: Boolean, keptName: String?, recordedName: String?): LeftoverGroupAction = when {
+    fun decide(groupName: String?, isGroupOwner: Boolean, keptName: String?, recordedName: String?,
+               accessoryName: String = "CarLink"): LeftoverGroupAction = when {
         groupName.isNullOrBlank() -> LeftoverGroupAction.NONE
         isAndroidAutoGroup(groupName, isGroupOwner, keptName, recordedName) -> LeftoverGroupAction.LEAVE_FOR_ENGINE
         isGroupOwner && CARPLAY_GROUP.matches(groupName) -> LeftoverGroupAction.REMOVE_CARPLAY_GROUP
+        isGroupOwner && groupName.startsWith("DIRECT-") && groupName.endsWith("-$accessoryName") -> LeftoverGroupAction.REMOVE_OTHER_INSTALL
         else -> LeftoverGroupAction.LEAVE_FOREIGN
     }
 

@@ -41,6 +41,10 @@ class AaStartPolicyTest {
 
     @Test fun carPlaysLeftoverGroupIsRemoved() {
         assertEquals(LeftoverGroupAction.REMOVE_CARPLAY_GROUP, LeftoverGroupPolicy.decide("DIRECT-dp0123456789ab-Ab12", true, "DIRECT-K7-CarLink", null))
+        // Another CarLink install's Android Auto group (1.0.5 uninstalled, test build installed, 2026-10-20).
+        assertEquals(LeftoverGroupAction.REMOVE_OTHER_INSTALL, LeftoverGroupPolicy.decide("DIRECT-U3-CarLink", true, "DIRECT-K7-CarLink", null))
+        assertEquals(LeftoverGroupAction.LEAVE_FOREIGN, LeftoverGroupPolicy.decide("DIRECT-U3-CarLink", false, "DIRECT-K7-CarLink", null))
+        assertEquals(LeftoverGroupAction.LEAVE_FOREIGN, LeftoverGroupPolicy.decide("DIRECT-U3-Miracast", true, "DIRECT-K7-CarLink", null))
         assertEquals("only as owner", LeftoverGroupAction.LEAVE_FOREIGN, LeftoverGroupPolicy.decide("DIRECT-dp0123456789ab-Ab12", false, null, null))
     }
 
