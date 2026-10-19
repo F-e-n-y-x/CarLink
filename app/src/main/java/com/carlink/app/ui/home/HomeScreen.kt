@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -33,10 +32,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,7 +82,6 @@ import com.carlink.app.ui.components.rememberElapsedMillis
 import com.carlink.app.ui.premium.Atmosphere
 import com.carlink.app.ui.premium.DialReading
 import com.carlink.app.ui.premium.GlassButton
-import com.carlink.app.ui.premium.GlassCard
 import com.carlink.app.ui.premium.IonButton
 import com.carlink.app.ui.premium.LinkDial
 import com.carlink.app.ui.premium.ProgressLine
@@ -104,7 +102,9 @@ import com.carlink.core.core.Transport
 import com.carlink.core.detect.BluetoothAvailability
 import com.carlink.core.detect.PairedPhone
 import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
+import com.carlink.core.settings.isValid
 
 /** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
 internal enum class HomeMode {
@@ -153,6 +153,7 @@ internal interface HomeActions {
     fun returnToProjection() {}
     fun resumeAutoConnect() {}
     fun saveSameWifi(ssid: String, password: String) {}
+    fun saveCarHotspot(ssid: String, password: String) {}
     fun setConnectionMethod(method: ConnectionMethod) {}
     /** The one-tap fix for [problem]: turn a radio on, open a permission screen, switch path. */
     fun fix(problem: LinkProblem) {}
@@ -185,6 +186,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun returnToProjection() = vm.returnToProjection()
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
+            override fun saveCarHotspot(ssid: String, password: String) = vm.saveCarHotspot(ssid, password)
             override fun setConnectionMethod(method: ConnectionMethod) = vm.updateSettings { it.copy(connectionMethod = method) }
             override fun fix(problem: LinkProblem) = fixProblem(problem)
             override fun navigate(route: Route) = navigate(route)
@@ -629,18 +631,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 GlassButton(stringResource(R.string.carlink_home_disconnect), actions::disconnect, icon = R.drawable.carlink_ic_link_off)
             }
             HomeMode.FAILED -> {
-                FailureActions(link, actions)
+                FailureActions(link, ui.network, actions)
                 // The log and the error go straight into a GitHub issue (no copying from the stereo).
                 TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
             }
         }
-    }
-    // Same Wi-Fi is opt-in (Settings › Connection): the card only completes it once chosen, never advertises it.
-    val offerSameWifi = ui.network?.canOfferSameWifi == true && mode == HomeMode.FAILED &&
-        link.problem == LinkProblem.SAME_WIFI_DETAILS_MISSING
-    if (offerSameWifi) {
-        Spacer(Modifier.height(sectionGap))
-        SameWifiCard(ui.network!!.joinedSsid!!, actions, dense)
     }
     if (ui.connection.autoConnectPaused && (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY)) {
         Spacer(Modifier.height(dimens.targetGap))
@@ -690,7 +685,7 @@ internal fun failureCopy(link: LinkState): Pair<String, String> {
 }
 
 @Composable
-private fun FailureActions(link: LinkState, actions: HomeActions) {
+private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: HomeActions) {
     val problem = link.problem
     val fix = oneTapFix(problem)
     if (problem != null && fix != null) {
@@ -707,8 +702,21 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
             { actions.navigate(Route.DIAGNOSTICS) }, icon = R.drawable.carlink_ic_monitor_heart)
         LinkProblem.NO_IPHONE_SELECTED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
-        LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> IonButton(
-            stringResource(R.string.carlink_home_open_settings), { actions.navigate(Route.SETTINGS) }, icon = R.drawable.carlink_ic_settings)
+        // Never given: ask for it right here; saving connects again (no dead end, no trip to Settings).
+        LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.SAME_WIFI_DETAILS_MISSING -> {
+            val hotspot = problem == LinkProblem.CAR_HOTSPOT_DETAILS_MISSING
+            var asking by rememberSaveable { mutableStateOf(false) }
+            IonButton(stringResource(R.string.carlink_home_same_wifi_enter), { asking = true }, icon = R.drawable.carlink_ic_lock)
+            GlassButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.setConnectionMethod(ConnectionMethod.WIFI_DIRECT) },
+                icon = R.drawable.carlink_ic_p2p)
+            if (asking) {
+                val known = (if (hotspot) network?.savedHotspot else network?.joinedSsid ?: network?.savedSameWifi)?.ifBlank { null }
+                WifiPasswordDialog(hotspot, known, onSave = { ssid, password ->
+                    if (hotspot) actions.saveCarHotspot(ssid, password) else actions.saveSameWifi(ssid, password)
+                    asking = false
+                }, onDismiss = { asking = false })
+            }
+        }
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PAIRING_LOST -> IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings),
@@ -822,67 +830,36 @@ private fun HomeStage(
 }
 
 /**
- * Completes Same Wi-Fi once the driver chose it and its password is missing: the network this
- * screen is on, as a compact banner; the password is entered in a dialog, so the keyboard never
- * reflows Home. [dense] drops the explanation line.
+ * The password (and the network's name, when CarLink does not know it) a wireless connection
+ * needs, asked right on Home: [hotspot] for the car hotspot, else Same Wi-Fi. Saving it makes the
+ * blocked start check again, so the connection goes ahead without another tap.
  */
 @Composable
-private fun SameWifiCard(ssid: String, actions: HomeActions, dense: Boolean) {
-    val dimens = CarLinkTokens.dimens
+internal fun WifiPasswordDialog(hotspot: Boolean, knownSsid: String?, onSave: (ssid: String, password: String) -> Unit,
+                               onDismiss: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    var asking by rememberSaveable { mutableStateOf(false) }
-    val button = @Composable {
-        GlassButton(stringResource(R.string.carlink_home_same_wifi_enter), { asking = true }, icon = R.drawable.carlink_ic_lock)
-    }
-    GlassCard(Modifier.widthIn(max = 760.dp).fillMaxWidth(), shape = RoundedCornerShape(28.dp),
-        contentPadding = PaddingValues(horizontal = dimens.gutter, vertical = dimens.targetGap)) {
-        BoxWithConstraints {
-            // The button sits beside the text only when the text keeps a comfortable measure.
-            val inline = maxWidth >= dimens.contentMaxWidth * 0.45f
-            @Composable
-            fun copy(modifier: Modifier) = Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-                com.carlink.app.ui.premium.IconTile(R.drawable.carlink_ic_wifi, tint = CarLinkTokens.colors.success,
-                    size = dimens.avatarRow * 0.85f)
-                Spacer(Modifier.width(dimens.targetGap * 1.5f))
-                Column {
-                    Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid)),
-                        style = MaterialTheme.typography.titleSmall, color = scheme.onSurface)
-                    if (!dense) {
-                        Text(stringResource(R.string.carlink_home_same_wifi_body), style = MaterialTheme.typography.bodyMedium,
-                            color = scheme.onSurfaceVariant)
-                    }
-                }
-            }
-            if (inline) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    copy(Modifier.weight(1f))
-                    Spacer(Modifier.width(dimens.targetGap))
-                    button()
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
-                    copy(Modifier)
-                    button()
-                }
-            }
-        }
-    }
-    if (asking) SameWifiDialog(ssid, actions, onDismiss = { asking = false })
-}
-
-@Composable
-private fun SameWifiDialog(ssid: String, actions: HomeActions, onDismiss: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
+    var ssid by rememberSaveable { mutableStateOf(knownSsid.orEmpty()) }
     var password by rememberSaveable { mutableStateOf("") }
     var reveal by rememberSaveable { mutableStateOf(false) }
-    val valid = password.length in 8..63
-    val showError = password.isNotEmpty() && !valid
+    val valid = password.isNotEmpty() && WifiDetails(ssid, password).isValid()
+    val showError = password.isNotEmpty() && password.length !in 8..63
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.carlink_home_same_wifi_title, isolate(ssid))) },
+        title = {
+            Text(when {
+                hotspot -> stringResource(R.string.carlink_home_error_hotspot_details_title)
+                knownSsid != null -> stringResource(R.string.carlink_home_same_wifi_title, isolate(knownSsid))
+                else -> stringResource(R.string.carlink_home_wifi_dialog_title)
+            })
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap)) {
-                Text(stringResource(R.string.carlink_home_same_wifi_body), color = scheme.onSurfaceVariant)
+                Text(stringResource(R.string.carlink_home_wifi_dialog_body), color = scheme.onSurfaceVariant)
+                if (knownSsid == null) {
+                    OutlinedTextField(value = ssid, onValueChange = { ssid = it }, singleLine = true,
+                        label = { Text(stringResource(R.string.carlink_settings_wifi_name)) },
+                        shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth())
+                }
                 OutlinedTextField(
                     value = password, onValueChange = { password = it }, singleLine = true,
                     label = { Text(stringResource(R.string.carlink_home_same_wifi_password)) },
@@ -891,8 +868,8 @@ private fun SameWifiDialog(ssid: String, actions: HomeActions, onDismiss: () -> 
                     visualTransformation = if (reveal) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
-                        IconButton(onClick = { reveal = !reveal }) {
-                            Icon(painterResource(R.drawable.carlink_ic_lock), stringResource(R.string.carlink_home_same_wifi_show))
+                        TextButton(onClick = { reveal = !reveal }) {
+                            Text(stringResource(if (reveal) R.string.carlink_settings_wifi_hide else R.string.carlink_settings_wifi_show))
                         }
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -901,9 +878,8 @@ private fun SameWifiDialog(ssid: String, actions: HomeActions, onDismiss: () -> 
             }
         },
         confirmButton = {
-            IonButton(stringResource(R.string.carlink_home_same_wifi_save), {
-                if (valid) { actions.saveSameWifi(ssid, password); onDismiss() }
-            }, icon = R.drawable.carlink_ic_check)
+            IonButton(stringResource(R.string.carlink_home_same_wifi_save), { if (valid) onSave(ssid, password) },
+                icon = R.drawable.carlink_ic_check)
         },
         dismissButton = { GlassButton(stringResource(R.string.carlink_home_cancel), onDismiss) },
         containerColor = scheme.surfaceContainerHigh,

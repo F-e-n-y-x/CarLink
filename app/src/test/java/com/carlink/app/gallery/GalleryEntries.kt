@@ -148,6 +148,11 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
         HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_DETAILS_MISSING), phones = listOf(iphone, pixel),
             network = sameWifiNoPassword), actions)
     },
+    // "Add password" on the state above: the password asked right on Home (masked, with Show), then it connects again.
+    home("dialog-wifi-password", opensWindow = true) {
+        HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_DETAILS_MISSING), network = sameWifiNoPassword), actions)
+        com.carlink.app.ui.home.WifiPasswordDialog(hotspot = false, knownSsid = "Home Wi-Fi", onSave = { _, _ -> }, onDismiss = {})
+    },
     // Same Wi-Fi chosen, but this screen is on another network (or none): join it, or use Wi-Fi Direct.
     home("failed-same-wifi-not-joined") {
         HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_NOT_JOINED), network = sameWifi), actions)

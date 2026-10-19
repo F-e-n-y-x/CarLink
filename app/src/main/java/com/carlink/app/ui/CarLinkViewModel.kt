@@ -76,8 +76,9 @@ data class NetworkPreview(
     val ssid: String?,
     /** The car's current Wi-Fi when exactly one is joined and its name is readable. */
     val joinedSsid: String? = null,
-    /** True when [joinedSsid] is not the saved "same Wi-Fi" network yet. */
-    val canOfferSameWifi: Boolean = false,
+    /** The saved Same Wi-Fi and car hotspot names ("" when none): Home's password prompt shows them. */
+    val savedSameWifi: String = "",
+    val savedHotspot: String = "",
     /** The driver's choice; [path] is what it resolves to right now. */
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
 )
@@ -342,15 +343,12 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         } else settings
         val path = WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, effective, wifi,
             headUnit = com.carlink.app.ui.theme.UiProfileDetector.looksLikeCarDisplay(app))).first()
-        val saved = settings.homeWifi
         _network.value = NetworkPreview(
             path = path,
             ssid = if (path == WirelessPath.SAME_WIFI) wifi.joinedSsid else null,
             joinedSsid = wifi.joinedSsid,
-            // Offered again when the saved entry cannot work: no password for a secured network,
-            // or a phone already refused the one saved.
-            canOfferSameWifi = wifi.joinedSsid != null && (wifi.joinedSsid != saved.ssid ||
-                (saved.password.isEmpty() && wifi.joinedOpen != true) || wifi.androidAutoRefusedJoined),
+            savedSameWifi = settings.homeWifi.ssid,
+            savedHotspot = effective.carHotspot.ssid,
             method = settings.connectionMethod,
         )
     }
@@ -358,6 +356,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     /** Remembers the car's current Wi-Fi so wireless CarPlay can use it (Same Wi-Fi). */
     fun saveSameWifi(ssid: String, password: String) =
         updateSettings { it.copy(homeWifi = com.carlink.core.settings.WifiDetails(ssid, password)) }
+
+    /** Remembers the car hotspot's name and password (Car hotspot). */
+    fun saveCarHotspot(ssid: String, password: String) =
+        updateSettings { it.copy(carHotspot = com.carlink.core.settings.WifiDetails(ssid, password)) }
 
     /**
      * Saves a change to the unified settings and writes it into both engines. A blocked start

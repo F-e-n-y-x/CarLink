@@ -59,7 +59,7 @@ button to turn it on; CarLink checks again when you come back. Wi-Fi does not ne
 connected to a network.
 
 **"Add your Wi-Fi password".** Same Wi-Fi is chosen in Settings › Connection and CarLink does not
-have the network's name or password yet. Add the password on the card (or in Settings ›
+have the network's name or password yet. Tap **Add password** and type it (or use Settings ›
 Connection); CarLink checks again as soon as it is saved.
 
 **"This screen isn't on your Wi-Fi".** Same Wi-Fi is chosen, but this screen is on another network
@@ -74,7 +74,7 @@ Wi-Fi Direct**, or plug in with a cable.
 or switch the connection type to Wi-Fi Direct.
 
 **"The car hotspot is off" / "Add the car hotspot".** Turn the hotspot on in the car's settings
-and add its name and password once in Settings, or plug your phone in with a cable.
+and add its name and password once (**Add password** on Home), or plug your phone in with a cable.
 
 **"The wireless link was too weak".** Keep the phone close to the screen and try again, or use a
 cable.

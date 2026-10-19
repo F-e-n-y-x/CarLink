@@ -51,7 +51,7 @@
     <string name="carlink_home_error_iphone_title">Pair your iPhone first</string>
     <string name="carlink_home_error_iphone_body">Pair it in the car\'s Bluetooth settings, then try again. A cable works without pairing.</string>
     <string name="carlink_home_error_hotspot_details_title">Add the car hotspot</string>
-    <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car\'s hotspot. Add them once in Settings.</string>
+    <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car\'s hotspot. Add them once.</string>
     <string name="carlink_home_error_hotspot_off_title">The car hotspot is off</string>
     <string name="carlink_home_error_hotspot_off_body">Turn it on in the car\'s settings, or plug your phone in with a cable.</string>
     <string name="carlink_home_error_wifi_details_title">Add your Wi-Fi password</string>
@@ -97,12 +97,12 @@
     <string name="carlink_home_path_usb">USB</string>
 
     <string name="carlink_home_same_wifi_title">Password for %1$s</string>
-    <string name="carlink_home_same_wifi_body">This screen is on it now. CarLink needs its password once.</string>
+    <string name="carlink_home_wifi_dialog_title">Add your Wi-Fi</string>
+    <string name="carlink_home_wifi_dialog_body">CarLink saves it on this screen and connects again.</string>
     <string name="carlink_home_same_wifi_password">Wi-Fi password</string>
     <string name="carlink_home_same_wifi_save">Save</string>
     <string name="carlink_home_same_wifi_enter">Add password</string>
     <string name="carlink_home_same_wifi_invalid">Wi-Fi passwords have 8 to 63 characters.</string>
-    <string name="carlink_home_same_wifi_show">Show password</string>
     <string name="carlink_home_connecting_android_wireless">Waiting for %1$s to start Android Auto. If nothing happens in a few seconds, turn the phone\u2019s Bluetooth off and on.</string>
     <string name="carlink_home_connecting_connect_bluetooth">Connect %1$s in Bluetooth. Android Auto starts by itself as soon as it\u2019s connected.</string>
     <string name="carlink_home_bluetooth_settings">Bluetooth settings</string>

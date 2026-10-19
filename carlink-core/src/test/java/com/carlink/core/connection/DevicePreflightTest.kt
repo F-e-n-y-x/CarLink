@@ -79,6 +79,36 @@ class DevicePreflightTest {
         assertEquals(listOf(Problem.SAME_WIFI_NOT_JOINED), sameWifi(wifi = WifiEnvironment(1, "home", null)))
     }
 
+    // User report (2026-10-20): "Wi-Fi Direct works only when the Wi-Fi password is entered in both".
+    // No Wi-Fi Direct decision reads the saved Same Wi-Fi details, for either engine.
+    @Test fun wifiDirectNeedsNoSavedWifiForEitherEngine() {
+        val none = UnifiedSettings()
+        val saved = UnifiedSettings(homeWifi = WifiDetails("Home", "homepassword"))
+        for (engine in Engine.entries) {
+            // Automatic never picks Same Wi-Fi, saved or not.
+            for (s in listOf(none, saved)) {
+                val paths = WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, s, onHome, headUnit = false))
+                assertEquals(listOf(WirelessPath.WIFI_DIRECT), paths)
+            }
+            assertEquals(emptyList<Problem>(), DevicePreflight.check(wireless.copy(engine = engine), WirelessPath.WIFI_DIRECT, ready, none, onHome))
+        }
+        val carPlay = CarPlayPreflightInput(
+            transport = Transport.WIRELESS, path = WirelessPath.WIFI_DIRECT, sdkInt = 35, authenticationReady = true,
+            grantedPermissions = CarPlayPreflight.requiredPermissions(Transport.WIRELESS, WirelessPath.WIFI_DIRECT, 35).toSet(),
+            vpnConsentGranted = false, bluetoothOn = true, bondedAddresses = setOf("AA:BB"), iphoneAddress = "AA:BB",
+            wifiOn = true, locationOn = true, homeWifi = WifiDetails(), carHotspot = WifiDetails(),
+            joinedNetworks = 0, joinedSsid = null, carHotspotOn = null, carHotspotCanStart = false,
+        )
+        assertEquals(emptyList<CarPlayProblem>(), CarPlayPreflight.check(carPlay))
+        // Android Auto's Wi-Fi Direct route carries no network name or password at all.
+        for (s in listOf(none, saved)) {
+            val v = com.carlink.core.connection.aa.AaSessionSettings.values(s, Transport.WIRELESS, WirelessPath.WIFI_DIRECT,
+                com.carlink.core.settings.VehicleProfile.GENERIC, "Car", 320, onHome).values
+            assertEquals("", v["hotspot-ssid"])
+            assertEquals("", v["hotspot-password"])
+        }
+    }
+
     @Test fun hotspotNeedsItsDetailsAndToBeOn() {
         val s = UnifiedSettings(carHotspot = WifiDetails("CarAP", "carpassword"))
         assertEquals(emptyList<Problem>(), check(path = WirelessPath.CAR_HOTSPOT, settings = s))
