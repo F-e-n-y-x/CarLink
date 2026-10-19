@@ -1,5 +1,6 @@
 package com.carlink.app.gallery
 
+import com.carlink.app.ui.setup.Need
 import com.carlink.app.ui.setup.SetupActions
 import com.carlink.app.ui.setup.SetupContent
 import com.carlink.app.ui.setup.SetupItem
@@ -28,6 +29,8 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
         SetupPermission(item, names, granted = item == SetupItem.BLUETOOTH || item == SetupItem.LOCATION)
     }
     val allGranted = permissions.map { it.copy(granted = it.item != SetupItem.VPN) }
+    // Everything a session needs is allowed; the recommended overlay and VPN (and optional battery) are not yet.
+    val recommendedMissing = permissions.map { it.copy(granted = it.item.need == Need.REQUIRED) }
     fun ui(step: SetupStep, pairing: PairingSession.State = PairingSession.State.Waiting(carName), visible: Boolean = true,
            link: LinkState = LinkState.Idle, phone: PairedPhone? = null, cable: Boolean = false,
            known: List<PairedPhone> = emptyList(), perms: List<SetupPermission> = permissions,
@@ -38,6 +41,7 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
     listOf(
         entry("welcome") { ui(SetupStep.WELCOME) },
         entry("permissions") { ui(SetupStep.PERMISSIONS) },
+        entry("permissions-recommended") { ui(SetupStep.PERMISSIONS, perms = recommendedMissing) },
         // Nothing chosen on a generic screen: "Other" is in effect.
         entry("car") { ui(SetupStep.CAR, perms = allGranted) },
         // A BYD DiLink unit, detected; the BYD tile is in effect and the DiLink extras are explained.
@@ -58,6 +62,8 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
             ui(SetupStep.PAIR, PairingSession.State.Paired(pixel.address, pixel.name, PhoneKind.ANDROID), perms = allGranted, phone = pixel,
                 link = LinkState(LinkStage.CONNECTED, Engine.ANDROID_AUTO, Transport.WIRELESS, pixel.name, 4, 4))
         },
+        // "Plug in with a cable" chosen, nothing plugged in yet: the one-time prompts are said first.
+        entry("pair-cable-waiting") { ui(SetupStep.PAIR, perms = allGranted, cable = true) },
         entry("pair-cable") {
             ui(SetupStep.PAIR, perms = allGranted, cable = true,
                 link = LinkState(LinkStage.CONNECTING, Engine.CARPLAY, Transport.USB, "iPhone", 2, 4))

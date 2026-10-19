@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -110,6 +111,7 @@ import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
 import com.carlink.app.ui.theme.WidthClass
+import com.carlink.core.connection.AdbVpnConsent
 import com.carlink.core.connection.PairingSession
 import com.carlink.core.core.Engine
 import com.carlink.core.core.LinkStage
@@ -118,6 +120,9 @@ import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.PairedPhone
 import com.carlink.core.settings.CarBrand
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * First-time setup (design/RESEARCH_PLUG_AND_PLAY.md "Lessons"): welcome, one permission step
@@ -148,6 +153,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     val wirelessUnavailable by vm.wirelessUnavailable.collectAsStateWithLifecycle()
     val home by vm.home.collectAsStateWithLifecycle()
     val pairing = remember { PairingSession(context) }
+    val scope = rememberCoroutineScope()
     DisposableEffect(step == SetupStep.PAIR) {
         if (step == SetupStep.PAIR) pairing.start()
         onDispose { pairing.close() }
@@ -215,7 +221,11 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
                     Uri.parse("package:${context.packageName}"))) { SystemScreens.openOverlaySettings(context) }
                 GrantKind.BATTERY -> launchOr(system, Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                     Uri.parse("package:${context.packageName}"))) { SystemScreens.openBatterySettings(context) }
-                GrantKind.VPN -> android.net.VpnService.prepare(context)?.let { launchOr(system, it) { } } ?: run { reads++ }
+                // The stereo's own approved adb can allow it with no dialog; Android's dialog otherwise.
+                GrantKind.VPN -> scope.launch {
+                    if (withContext(Dispatchers.IO) { AdbVpnConsent.ensure(context) }) reads++
+                    else android.net.VpnService.prepare(context)?.let { launchOr(system, it) { } } ?: run { reads++ }
+                }
             }
         }
         override fun setCarBrand(brand: CarBrand) = vm.setCarBrand(brand)
@@ -433,7 +443,7 @@ private fun SetupBottomBar(ui: SetupUi, actions: SetupActions, margin: Dp) {
             SetupStep.WELCOME -> IonButton(stringResource(R.string.carlink_setup_welcome_start), actions::next,
                 icon = R.drawable.carlink_ic_arrow_forward)
             // One lit action per screen: while something needed is missing, "Allow all" is the lit one.
-            SetupStep.PERMISSIONS -> if (ui.missingRequired > 0) {
+            SetupStep.PERMISSIONS -> if (ui.missingNeeded > 0) {
                 GlassButton(stringResource(R.string.carlink_setup_continue), actions::next, icon = R.drawable.carlink_ic_arrow_forward)
             } else {
                 IonButton(stringResource(R.string.carlink_setup_continue), actions::next, icon = R.drawable.carlink_ic_arrow_forward)
@@ -563,7 +573,7 @@ private fun pairCopy(ui: SetupUi): Copy {
 @Composable
 private fun PermissionSummary(ui: SetupUi, actions: SetupActions) {
     val colors = CarLinkTokens.colors
-    val all = ui.missingRequired == 0
+    val all = ui.missingNeeded == 0
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconTile(if (all) R.drawable.carlink_ic_check_circle_filled else R.drawable.carlink_ic_lock,
             tint = if (all) colors.success else colors.warning, size = if (isCar) 48.dp else 36.dp)
@@ -667,8 +677,12 @@ private fun PermissionList(ui: SetupUi, actions: SetupActions) {
                 icon = p.item.icon,
                 onClick = if (p.granted) null else ({ actions.allow(p.item) }),
                 role = androidx.compose.ui.semantics.Role.Button,
-                tags = if (p.item.optional && !p.granted) ({ Tag(stringResource(R.string.carlink_setup_permission_optional),
-                    scheme.onSurfaceVariant) }) else null,
+                tags = when {
+                    p.granted -> null
+                    p.item.need == Need.RECOMMENDED -> ({ Tag(stringResource(R.string.carlink_setup_permission_recommended), scheme.primary) })
+                    p.item.need == Need.OPTIONAL -> ({ Tag(stringResource(R.string.carlink_setup_permission_optional), scheme.onSurfaceVariant) })
+                    else -> null
+                },
             ) {
                 if (p.granted) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -693,6 +707,10 @@ private fun PairPanel(ui: SetupUi, actions: SetupActions) {
     val session = sessionOf(ui)
     Column(verticalArrangement = Arrangement.spacedBy(dimens.gutter)) {
         if (ui.cable) CableCard(session) else NameCard(ui, actions)
+        // The first cable connection's two one-time prompts, said before they appear.
+        if (ui.cable && session?.stage != LinkStage.CONNECTED) {
+            NoticeLine(stringResource(R.string.carlink_setup_pair_cable_prompts), R.drawable.carlink_ic_info)
+        }
         // On a stereo whose Bluetooth apps cannot use, say so before the driver pairs (the failure copy says it after).
         val externalFailure = session?.stage == LinkStage.FAILED && session.problem == com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH
         if (ui.wirelessUnavailable && !ui.cable && !externalFailure && session?.stage != LinkStage.CONNECTED) {
