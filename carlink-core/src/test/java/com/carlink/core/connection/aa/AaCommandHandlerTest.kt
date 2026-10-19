@@ -39,13 +39,22 @@ class AaCommandHandlerTest {
         var switched = 0
         var accessory = false
         var refuseStarts = false
+        /** For each fresh AapService start: whether CarLink was in front (while-in-use). */
+        val startedInFront = mutableListOf<Boolean>()
         private var clock = 0L
 
+        var front = true
+        /** What Home opening does to [front]; null: it never comes to the front. */
+        var frontAfterOpen: Boolean? = true
+        var broughtToFront = 0
+        override fun inFront() = front
+        override fun bringToFront() { broughtToFront++; frontAfterOpen?.let { front = it } }
         override fun isServiceRunning() = running
         override fun isBusy() = busy
         override fun startService(action: String?, mac: String?): Boolean {
             if (refuseStarts) return false
             started += action to mac
+            if (action != AapService.ACTION_STOP_SERVICE && !running) startedInFront += front
             if (action == AapService.ACTION_STOP_SERVICE) {
                 if (stopsWork) {
                     running = false
@@ -96,6 +105,31 @@ class AaCommandHandlerTest {
         assertEquals(false, engine.claim)
         assertEquals(engine.config, monitor.armedWith)
         assertTrue(reports > 0)
+    }
+
+    @Test fun aStartInTheBackgroundBringsCarLinkToTheFrontFirst() {
+        engine.front = false
+        handler.startWireless(phone, VehicleProfile.GENERIC)
+        assertEquals(1, engine.broughtToFront)
+        assertEquals(listOf(true), engine.startedInFront)
+        assertEquals("inFront=true", events.single { it.first == AaProtocol.KIND_BROUGHT_TO_FRONT }.second)
+    }
+
+    @Test fun aUsbStartInTheBackgroundStillStartsWhenHomeNeverComesUp() {
+        engine.front = false
+        engine.frontAfterOpen = null
+        engine.accessory = true
+        handler.startUsb(null, null, VehicleProfile.GENERIC)
+        assertEquals(listOf(AapService.ACTION_CHECK_USB), actions())
+        assertEquals(listOf(false), engine.startedInFront)
+        assertEquals("inFront=false", events.single { it.first == AaProtocol.KIND_BROUGHT_TO_FRONT }.second)
+    }
+
+    @Test fun aRunningServiceOrAVisibleCarLinkOpensNothing() {
+        handler.startWireless(phone, VehicleProfile.GENERIC)
+        engine.front = false
+        handler.poke(phone)
+        assertEquals(0, engine.broughtToFront)
     }
 
     @Test fun aBydProfileLetsTheProjectionClaimTheHiddenStrip() {

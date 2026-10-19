@@ -89,19 +89,19 @@ internal class AaCommandHandler(
         // plus clearing the user-exit cooldown and the boot-loop pause (DA§2.2).
         val action = if (decision == WirelessStartDecision.REARM) AapService.ACTION_START_WIRELESS_SCAN
             else AapService.ACTION_START_WIRELESS
-        if (!engine.startService(action)) {
+        if (!start(action)) {
             monitor.reset()
             emit(AaProtocol.KIND_START_REFUSED, "action=$action")
             return
         }
-        if (address != null) engine.startService(AapService.ACTION_NATIVE_AA_POKE, address)
+        if (address != null) start(AapService.ACTION_NATIVE_AA_POKE, address)
         report()
     }
 
     /** Pokes the chosen phone again, for an armed, idle engine (the manual poke is one 20 s hold). */
     fun poke(address: String) {
         if (!engine.isServiceRunning() || engine.isBusy()) return
-        engine.startService(AapService.ACTION_NATIVE_AA_POKE, address)
+        start(AapService.ACTION_NATIVE_AA_POKE, address)
     }
 
     /**
@@ -117,7 +117,7 @@ internal class AaCommandHandler(
         if (address != null) engine.setPokeTargets(address)
         if (device == null || engine.isAccessory(device)) {
             // Already an accessory (or re-enumerated): the engine's own check finds and connects it.
-            if (!engine.startService(AapService.ACTION_CHECK_USB)) {
+            if (!start(AapService.ACTION_CHECK_USB)) {
                 emit(AaProtocol.KIND_START_REFUSED, "action=${AapService.ACTION_CHECK_USB}")
             }
             report()
@@ -129,7 +129,7 @@ internal class AaCommandHandler(
             return
         }
         if (!engine.isServiceRunning()) {
-            if (!engine.startService(null)) {
+            if (!start(null)) {
                 emit(AaProtocol.KIND_START_REFUSED, "action=start")
                 return
             }
@@ -187,7 +187,7 @@ internal class AaCommandHandler(
 
     private fun switchToAccessory(device: UsbDevice) {
         if (engine.isAccessory(device)) {
-            engine.startService(AapService.ACTION_CHECK_USB)
+            start(AapService.ACTION_CHECK_USB)
             return
         }
         var switched = engine.switchToAccessory(device)
@@ -198,7 +198,7 @@ internal class AaCommandHandler(
             val again = engine.currentDevice(device)
             when {
                 again == null -> Unit
-                engine.isAccessory(again) -> { engine.startService(AapService.ACTION_CHECK_USB); return }
+                engine.isAccessory(again) -> { start(AapService.ACTION_CHECK_USB); return }
                 !engine.hasUsbPermission(again) -> { engine.requestUsbPermission(again); return }
                 else -> switched = engine.switchToAccessory(again).also { Log.i(TAG, "AOA switch retry result=$it") }
             }
@@ -224,6 +224,22 @@ internal class AaCommandHandler(
         Log.i(TAG, "stop done serviceStopped=$serviceStopped groupReleased=$groupReleased")
         ack(token, serviceStopped, groupReleased)
         report()
+    }
+
+    /**
+     * Starts AapService. A new one starts only with CarLink in front: Android gives a foreground
+     * service while-in-use only when it starts while the app is visible, and without it the
+     * microphone type is refused (Android 14+) and audio focus and playback fail (Android 17,
+     * apps targeting 37). A running service keeps what it got at its start.
+     */
+    private fun start(action: String?, mac: String? = null): Boolean {
+        if (!engine.isServiceRunning() && !engine.inFront()) {
+            engine.bringToFront()
+            val inFront = waitUntil(FRONT_MILLIS) { engine.inFront() }
+            Log.i(TAG, "CarLink brought to the front for the engine start: inFront=$inFront")
+            emit(AaProtocol.KIND_BROUGHT_TO_FRONT, "inFront=$inFront")
+        }
+        return engine.startService(action, mac)
     }
 
     private fun stopService(): Boolean {
@@ -283,5 +299,6 @@ internal class AaCommandHandler(
         const val SETTLE_MAX_MILLIS = 2_000L
         const val RETRY_SWITCH_MILLIS = 700L
         const val STALE_ACCESSORY_MILLIS = 10_000L
+        const val FRONT_MILLIS = 3_000L
     }
 }

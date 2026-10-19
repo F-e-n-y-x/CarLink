@@ -36,7 +36,7 @@ object HomeLauncher : CarLinkHost {
                 .onSuccess { return }
                 .onFailure { Log.w(TAG, "Direct launch failed: ${it.javaClass.simpleName}") }
         }
-        if (reason == OpenReason.UNPLUGGED) return
+        if (reason == OpenReason.UNPLUGGED || reason == OpenReason.ENGINE_START) return
         notify(context, intent, name)
     }
 

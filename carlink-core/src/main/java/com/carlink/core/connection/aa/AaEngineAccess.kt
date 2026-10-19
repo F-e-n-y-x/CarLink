@@ -36,6 +36,13 @@ internal interface AaEngineAccess {
     fun isBusy(): Boolean
     /** Starts AapService with [action] (null = plain start); false when Android refused it. */
     fun startService(action: String?, mac: String? = null): Boolean
+    /**
+     * True when a screen of the app (any process) is in front, so a foreground service started now
+     * gets while-in-use; always true below Android 14, where nothing needs it.
+     */
+    fun inFront(): Boolean
+    /** Brings CarLink's Home to the front (it may draw over other apps, so it may start activities). */
+    fun bringToFront()
     fun wirelessConfig(): WirelessConfig
     /** Replaces DiAuto's wake-poke targets (`auto-start-bt-macs`) with exactly [mac], device-protected copy included. */
     fun setPokeTargets(mac: String)
@@ -89,6 +96,14 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
             .onFailure { Log.w(TAG, "AapService $action refused: ${it.javaClass.simpleName}: ${it.message}") }
             .isSuccess
     }
+
+    // Only the caller's own processes are listed; IMPORTANCE_FOREGROUND is a resumed activity.
+    override fun inFront(): Boolean = Build.VERSION.SDK_INT < 34 ||
+        app.getSystemService(ActivityManager::class.java)?.runningAppProcesses.orEmpty()
+            .any { it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
+
+    override fun bringToFront() =
+        com.carlink.core.connection.CarLinkCore.config.host.openHome(app, com.carlink.core.connection.CarLinkHost.OpenReason.ENGINE_START)
 
     override fun wirelessConfig(): WirelessConfig = settings.let {
         WirelessConfig(

@@ -56,6 +56,8 @@ internal object AaProtocol {
 
     /** The receiver could not start AapService (background start refused, …). */
     const val KIND_START_REFUSED = "CARLINK_START_REFUSED"
+    /** CarLink was not in front, so Home was opened before AapService started (while-in-use). */
+    const val KIND_BROUGHT_TO_FRONT = "CARLINK_BROUGHT_TO_FRONT"
     /** The USB device was not given, or vanished before the switch. */
     const val KIND_USB_DEVICE_MISSING = "CARLINK_USB_DEVICE_MISSING"
     /** The phone did not take the Android Open Accessory switch. */

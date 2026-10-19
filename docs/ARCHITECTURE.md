@@ -63,3 +63,37 @@ reconnection, the switch prompt, one engine at a time) is described in
 [USER_GUIDE.md › How connections work](USER_GUIDE.md#how-connections-work). The rules behind it
 (`SessionManager`, `WirelessPolicy`, `PathMemory`, the stall playbook) are in the `carlink-dev`
 skill and [design/REBUILD_V2.md](../design/REBUILD_V2.md).
+
+## Android 17 background audio
+
+CarLink targets SDK 37. On Android 17 an app that targets 37 and plays audio, requests audio focus
+or changes volume while it is in the background needs a foreground service with while-in-use (WIU)
+capability; otherwise `requestAudioFocus` returns `AUDIOFOCUS_REQUEST_FAILED` and playback fails
+silently ([bg-audio](https://developer.android.com/about/versions/17/changes/bg-audio)). A
+foreground service gets WIU only when it is started while the app is visible (or through an
+exemption CarLink does not have: system component, notification or widget tap, a PendingIntent
+from another visible app). The same WIU decides whether the `microphone` type is granted
+(Android 14+). A running service keeps the WIU it got at its start.
+
+How each engine complies:
+
+- **CarPlay.** `DiPlaySessionService` is started only by `CarPlayHostActivity.startCarPlay`, i.e.
+  by the visible projection activity; DiPlay's reconnects (`restartCarPlay`) keep the service
+  running, and a new CarLink session reopens the activity first (`CarPlayAdapter.openHost`).
+- **Android Auto.** `AapService` runs in `:aa` and is started by `AaCommandHandler`. Every start
+  goes through `AaCommandHandler.start`: when the service is not running yet and no CarLink
+  screen (Home, either projection, any process) is in front, it opens Home
+  (`CarLinkHost.OpenReason.ENGINE_START`, allowed because CarLink may draw over other apps) and
+  waits up to 3 s for it before starting the service. This covers a phone found by `UsbWatcher`
+  while another app is in front and a retry after the driver left the projection. Bluetooth and
+  boot already open Home first (`SystemEventReceiver`), and a USB plug-in that reaches
+  `UsbRouterActivity` starts while that activity is in front.
+- `AapService` also takes the `microphone` type (Assistant and calls keep the microphone while
+  another app covers the projection) and falls back to `connectedDevice|mediaPlayback` if Android
+  refuses it.
+
+Check on an Android 17 emulator: `adb shell cmd audio set-hardening enable` (the shipped command
+is `set-hardening`, not the documented `set-enable-hardening`), then
+`adb shell dumpsys activity services com.andrerinas.openheadunit.aap.AapService` must show
+`getFgsAllowWiu_forStart=PROC_STATE_TOP` (not `DENIED`) and `types=0x00000092`; `AudioHardening`
+lines in logcat or `dumpsys audio` name an app that broke the rule.

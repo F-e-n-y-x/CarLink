@@ -7,7 +7,7 @@
 
 | # | Item | Gain | Effort | Risk | Evidence |
 |---|---|---|---|---|---|
-| 1 | Check Android 17 background-audio hardening | A session started from the background could play no sound | S (test) | High if hit | Rule proven; whether CarLink hits it is untested (tablet is Android 16) |
+| 1 | Check Android 17 background-audio hardening | A session started from the background could play no sound | S (test) | High if hit | **Done 2026-10-19**: AapService could start in the background (UsbWatcher, retries); now Home comes to the front first; checked on an API 37 emulator (docs/ARCHITECTURE.md § Android 17 background audio) |
 | 2 | R8 in release, in phases (below) | Startup, memory, APK size on low-end units | M–L | Medium | **Phase 1 built 2026-10-10** (APK 29.6 → 15.8 MB, dex 18.8 → 5.7 MB); device test pending |
 | 3 | Baseline + startup profiles covering engine code; explicit `androidx.profileinstaller` | Faster first launch / first connection | M | Low | Proven; sideloaded APKs get it after background dexopt |
 | 4 | Pull DiPlay 0.2.16 (we vendored 0.2.15) | **Done 2026-10-10.** Checked against the commits: video backlog recovery, Qualcomm low-latency decoding + FPS counter, smooth-video frame requests, call echo-cancel alignment, opt-in BYD Bluetooth pause, side panel and settings UI. It does *not* contain NCM/USB-retry/address-family changes (the first reading of the release notes was wrong). **Updated again 2026-10-15 to upstream main bc2bdb3e7 (DiPlay 0.2.19+) and 2026-10-19 to 6d3b8a8ce (0.2.21+)** by applying the upstream diff (the subtree lost its merge base) | S–M | Low–Med | Pulled; see docs/VENDOR_CHANGES.md |

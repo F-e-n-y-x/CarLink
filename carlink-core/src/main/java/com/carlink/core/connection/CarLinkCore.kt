@@ -33,9 +33,16 @@ interface CarLinkHost {
 
         /** A USB session's phone was unplugged: the main screen replaces the dead projection. */
         UNPLUGGED,
+
+        /**
+         * Android Auto is about to start while no screen of the app is in front (":aa", a USB phone
+         * found in the background or a retry). A foreground service started in the background gets
+         * no while-in-use capability: no microphone (Android 14+) and no sound (Android 17).
+         */
+        ENGINE_START,
     }
 
-    /** Brings the host's main screen to the front from the background (main process, any thread). */
+    /** Brings the host's main screen to the front from the background (any process, any thread). */
     fun openHome(context: Context, reason: OpenReason, address: String? = null, kind: PhoneKind? = null, name: String? = null)
 }
 
