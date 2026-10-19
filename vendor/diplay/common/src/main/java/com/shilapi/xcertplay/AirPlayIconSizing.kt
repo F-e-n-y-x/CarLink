@@ -2,6 +2,7 @@ package com.shilapi.xcertplay
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.shilapi.xcertplay.host.R
 import java.io.ByteArrayOutputStream
 
 /**
@@ -11,6 +12,10 @@ import java.io.ByteArrayOutputStream
  */
 internal object AirPlayIconSizing {
     const val MAX_PIXELS = 192
+
+    /** CarLink: the packaged icon; the BYD logo only with BYD [vehicleIntegrations], else CarLink's. */
+    fun packagedIcon(vehicleIntegrations: Boolean): Int =
+        if (vehicleIntegrations) R.raw.ic_car_home else R.raw.ic_carlink_home
 
     /** Square PNG bytes no larger than [MAX_PIXELS]; null when [encoded] is not a square image. */
     fun fit(encoded: ByteArray): Pair<Int, ByteArray>? {
