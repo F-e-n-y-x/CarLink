@@ -95,6 +95,11 @@ screens with sample data, not captured from a phone. Every screen and state, on 
    **Install**.
 4. Open CarLink and follow the first-time setup.
 
+**Add to Obtainium.** [Obtainium](https://github.com/ImranR98/Obtainium) can track CarLink's GitHub
+releases and install each new one: in Obtainium tap **Add app** and paste
+`https://github.com/F-e-n-y-x/CarLink`, or open `obtainium://add/https://github.com/F-e-n-y-x/CarLink`
+on a device that has Obtainium ([deep links](https://wiki.obtainium.imranr.dev/deep_links/)).
+
 Each [release page](https://github.com/F-e-n-y-x/CarLink/releases) repeats these steps with the
 APK's own SHA-256 and the signing certificate.
 

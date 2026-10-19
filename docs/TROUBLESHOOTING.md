@@ -80,6 +80,17 @@ mobile data on the phone.
 build from source. Install the release APK from
 [Releases](https://github.com/F-e-n-y-x/CarLink/releases/latest). Android Auto works either way.
 
+**CarPlay: sound but black screen (iOS 27).** The iPhone connects and plays music, touches work,
+but no picture appears and Home stays on **Starting the picture**. On iOS 27 some iPhones open the
+CarPlay screen but never send a frame
+([DiPlay #249](https://github.com/shihabal3amri/DiPlay/issues/249),
+[#975](https://github.com/shihabal3amri/DiPlay/issues/975)). When this happens CarLink shows
+**"Sound but no picture? Turn on Direct video output"**: tap **Turn on and reconnect**. The same
+switch is **Settings › Display › Direct video output** (with **Show advanced**) and applies at the
+next connection. It fixed the picture for some drivers but not all, since the iPhone itself sends
+nothing: if it stays black, try a USB cable, and on the iPhone forget this car in **Settings ›
+General › CarPlay** and connect again. Please report it with the iOS version.
+
 **CarPlay stopped working after an iOS update.** Possible, and not something CarLink can promise
 against: see the CarPlay notice in the [README](../README.md#carplay-notice). Android Auto is not
 affected. Please report it with the iOS version.
@@ -90,6 +101,19 @@ affected. Please report it with the iOS version.
 kit, so the phone never connects to it on its own. CarLink starts the last phone when Home comes
 to the front (the app opens, the screen wakes), at most once a minute. After **Disconnect** or
 **Cancel**, automatic starts pause until you connect again or for 10 minutes.
+
+**CarLink does not open when I start the car (head unit).** Turn on **Settings › Connection ›
+Start with the car**. CarLink then opens when the stereo boots and when it wakes from sleep at
+ignition (FYT, GLSX, MediaTek and Microntek/MTCD units that send an "ACC on" signal instead of
+rebooting). Some stereo firmware stops every app that is not on its own list when the ignition
+goes off, so nothing of CarLink is left to wake. The reliable fix is to make CarLink the stereo's
+home screen: press Home, choose CarLink and **Always** (or set it under Android's **Settings ›
+Apps › Default apps › Home app**).
+
+**Android Auto drops after about 3 minutes on an aftermarket stereo.** A bug in the Android Auto
+app on the phone, fixed by Google in Android Auto 17.4
+([arenaev.com](https://www.arenaev.com/two_frustrating_android_auto_bugs_are_now_been_fixed-news-6171.php)):
+update Android Auto from the Play Store on the phone.
 
 **Plugging in a second phone did not take over.** By design: during a session, CarLink asks
 "Switch to &lt;phone&gt;?" (**Switch** / **Not now**). The floating switcher over CarPlay or Android
