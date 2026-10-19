@@ -27,13 +27,14 @@
     <!-- Permissions -->
     <string name="carlink_setup_permissions_eyebrow">Access</string>
     <string name="carlink_setup_permissions_title">Allow what CarLink needs</string>
-    <string name="carlink_setup_permissions_body">Android asks for each one once. Items marked Optional can be skipped and allowed later.</string>
+    <string name="carlink_setup_permissions_body">Android asks for each one once. Allow the Recommended ones now so nothing asks while you drive; Optional ones can wait.</string>
     <string name="carlink_setup_permissions_all">Allow all</string>
     <string name="carlink_setup_permissions_done">Everything needed is allowed</string>
     <string name="carlink_setup_permissions_missing">%1$d still to allow</string>
     <string name="carlink_setup_permission_allowed">Allowed</string>
     <string name="carlink_setup_permission_allow">Allow</string>
     <string name="carlink_setup_permission_optional">Optional</string>
+    <string name="carlink_setup_permission_recommended">Recommended</string>
     <string name="carlink_setup_perm_bluetooth">Bluetooth</string>
     <string name="carlink_setup_perm_bluetooth_detail">Finds and pairs your phone, and wakes it for wireless</string>
     <string name="carlink_setup_perm_wifi">Nearby Wi-Fi devices</string>
@@ -47,11 +48,11 @@
     <string name="carlink_setup_perm_notifications">Notifications</string>
     <string name="carlink_setup_perm_notifications_detail">Shows that CarLink is connected and lets you stop it</string>
     <string name="carlink_setup_perm_overlay">Display over other apps</string>
-    <string name="carlink_setup_perm_overlay_detail">Opens CarPlay or Android Auto when the phone connects</string>
+    <string name="carlink_setup_perm_overlay_detail">Lets CarLink open by itself when your phone connects</string>
     <string name="carlink_setup_perm_battery">Run in the background</string>
     <string name="carlink_setup_perm_battery_detail">Keeps the connection up when the screen sleeps</string>
     <string name="carlink_setup_perm_vpn">Wired CarPlay link</string>
-    <string name="carlink_setup_perm_vpn_detail">A local network link to an iPhone on the cable; no internet traffic</string>
+    <string name="carlink_setup_perm_vpn_detail">Lets CarPlay run over the USB cable. Nothing goes to the internet through it</string>
 
     <!-- Car -->
     <string name="carlink_setup_car_eyebrow">Your car</string>
@@ -88,7 +89,9 @@
     <string name="carlink_setup_pair_wireless">Pair over Bluetooth instead</string>
     <string name="carlink_setup_pair_skip">Skip</string>
     <string name="carlink_setup_pair_cable_title">Plug your phone into this screen</string>
-    <string name="carlink_setup_pair_cable_body">Use the phone’s charging cable in this screen’s USB port. Unlock the phone and accept its prompt; CarLink starts by itself.</string>
+    <string name="carlink_setup_pair_cable_body">Use the phone’s charging cable in this screen’s USB port. Unlock the phone; CarLink starts by itself.</string>
+    <!-- Shown before and while plugging in: the two one-time prompts of the first cable connection. -->
+    <string name="carlink_setup_pair_cable_prompts">When you plug in, Android asks once to allow CarLink\u00A0— tick “Always open CarLink”\u00A0— and an iPhone asks you to Trust this screen.</string>
     <string name="carlink_setup_pair_cable_waiting">Waiting for a phone on the cable…</string>
     <string name="carlink_setup_pair_name_label">This screen’s Bluetooth name</string>
     <string name="carlink_setup_pair_name_unknown">Turn on Bluetooth to see it</string>

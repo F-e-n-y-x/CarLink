@@ -2,6 +2,7 @@ package com.carlink.app.connection
 
 import com.carlink.app.ui.home.PhoneUsual
 import com.carlink.app.ui.home.usualFor
+import com.carlink.app.ui.setup.Need
 import com.carlink.app.ui.setup.SetupItem
 import com.carlink.app.ui.setup.SetupPermissions
 import com.carlink.core.connection.CarPlayPreflight
@@ -113,6 +114,7 @@ class LinkNoticeMappingTest {
         assertTrue(CarPlayPreflight.ACCESS_LOCAL_NETWORK in runtime)
         val items = SetupPermissions.items(37, runtime).map { it.first }
         assertTrue(items.containsAll(listOf(SetupItem.OVERLAY, SetupItem.BATTERY, SetupItem.VPN)))
-        assertTrue(SetupItem.BATTERY.optional && SetupItem.VPN.optional && !SetupItem.OVERLAY.optional)
+        assertEquals(listOf(Need.RECOMMENDED, Need.RECOMMENDED, Need.OPTIONAL),
+            listOf(SetupItem.OVERLAY, SetupItem.VPN, SetupItem.BATTERY).map { it.need })
     }
 }

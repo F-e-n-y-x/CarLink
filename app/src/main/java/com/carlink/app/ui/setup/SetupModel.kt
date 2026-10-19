@@ -21,16 +21,23 @@ enum class SetupStep { WELCOME, PERMISSIONS, CAR, PAIR, DONE }
 enum class GrantKind { RUNTIME, OVERLAY, BATTERY, VPN }
 
 /**
- * One line of the permission step: what it is for, in one line, and whether a session needs it
- * ([optional] items can be skipped). Runtime items group Android permissions the driver thinks
- * of as one thing (Bluetooth connect + scan, fine + coarse location).
+ * How much a session needs a [SetupItem]. Recommended items are not needed to connect, but
+ * without them Android asks (VPN) or CarLink cannot come forward (overlay) in the middle of a
+ * drive, so the setup marks them and asks for them up front.
+ */
+enum class Need { REQUIRED, RECOMMENDED, OPTIONAL }
+
+/**
+ * One line of the permission step: what it is for, in one line, and how much a session needs it
+ * ([need]; a missing optional one leaves "Allow all" unlit). Runtime items group Android
+ * permissions the driver thinks of as one thing (Bluetooth connect + scan, fine + coarse location).
  */
 enum class SetupItem(
     @param:DrawableRes val icon: Int,
     @param:StringRes val title: Int,
     @param:StringRes val purpose: Int,
     val grant: GrantKind,
-    val optional: Boolean = false,
+    val need: Need = Need.REQUIRED,
 ) {
     BLUETOOTH(R.drawable.carlink_ic_bluetooth, R.string.carlink_setup_perm_bluetooth, R.string.carlink_setup_perm_bluetooth_detail, GrantKind.RUNTIME),
     NEARBY_WIFI(R.drawable.carlink_ic_p2p, R.string.carlink_setup_perm_wifi, R.string.carlink_setup_perm_wifi_detail, GrantKind.RUNTIME),
@@ -40,10 +47,11 @@ enum class SetupItem(
     MICROPHONE(R.drawable.carlink_ic_mic, R.string.carlink_setup_perm_microphone, R.string.carlink_setup_perm_microphone_detail, GrantKind.RUNTIME),
     NOTIFICATIONS(R.drawable.carlink_ic_notifications, R.string.carlink_setup_perm_notifications,
         R.string.carlink_setup_perm_notifications_detail, GrantKind.RUNTIME),
-    OVERLAY(R.drawable.carlink_ic_layers, R.string.carlink_setup_perm_overlay, R.string.carlink_setup_perm_overlay_detail, GrantKind.OVERLAY),
+    OVERLAY(R.drawable.carlink_ic_layers, R.string.carlink_setup_perm_overlay, R.string.carlink_setup_perm_overlay_detail, GrantKind.OVERLAY,
+        Need.RECOMMENDED),
+    VPN(R.drawable.carlink_ic_cable, R.string.carlink_setup_perm_vpn, R.string.carlink_setup_perm_vpn_detail, GrantKind.VPN, Need.RECOMMENDED),
     BATTERY(R.drawable.carlink_ic_battery_charging_full, R.string.carlink_setup_perm_battery, R.string.carlink_setup_perm_battery_detail,
-        GrantKind.BATTERY, optional = true),
-    VPN(R.drawable.carlink_ic_cable, R.string.carlink_setup_perm_vpn, R.string.carlink_setup_perm_vpn_detail, GrantKind.VPN, optional = true),
+        GrantKind.BATTERY, Need.OPTIONAL),
 }
 
 /** A [SetupItem] with the Android permissions behind it on this device and whether it is granted. */
@@ -65,7 +73,16 @@ object SetupPermissions {
             of(SetupItem.MICROPHONE, Manifest.permission.RECORD_AUDIO),
             of(SetupItem.NOTIFICATIONS, POST_NOTIFICATIONS),
         ).filter { it.second.isNotEmpty() }
-        return groups + listOf(SetupItem.OVERLAY to emptyList(), SetupItem.BATTERY to emptyList(), SetupItem.VPN to emptyList())
+        return groups + listOf(SetupItem.OVERLAY to emptyList(), SetupItem.VPN to emptyList(), SetupItem.BATTERY to emptyList())
+    }
+
+    /**
+     * What "Allow all" asks next: every missing runtime item together (one dialog), else the next
+     * special grant; never an item already asked in this run, so a refusal ends the walk.
+     */
+    fun nextToAllow(permissions: List<SetupPermission>, asked: Set<SetupItem>): List<SetupPermission> {
+        val missing = permissions.filter { !it.granted && it.item !in asked }
+        return missing.filter { it.item.grant == GrantKind.RUNTIME }.ifEmpty { missing.take(1) }
     }
 
     /** The runtime permissions the setup asks for in one dialog. */
@@ -101,7 +118,8 @@ data class SetupUi(
     /** This stereo's Bluetooth is an external module apps cannot use: wireless cannot start here yet. */
     val wirelessUnavailable: Boolean = false,
 ) {
-    val missingRequired: Int get() = permissions.count { !it.granted && !it.item.optional }
+    /** Required and recommended items not allowed yet; while any is, "Allow all" is the lit action. */
+    val missingNeeded: Int get() = permissions.count { !it.granted && it.item.need != Need.OPTIONAL }
     val missing: Int get() = permissions.count { !it.granted }
 }
 
