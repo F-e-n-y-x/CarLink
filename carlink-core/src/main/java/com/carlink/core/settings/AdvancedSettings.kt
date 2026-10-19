@@ -201,8 +201,11 @@ object AdvancedSettings {
             "Frame rate", "60 fps is smoother; 30 fps is lighter on older head units.",
             Applies.NEXT_CONNECTION, aaIntChoice("fps-limit", 60, options(30 to "30 fps", 60 to "60 fps")), Overrides.PICTURE),
         AdvancedSetting("aa_dpi", Engine.ANDROID_AUTO, SettingsCategory.DISPLAY, Tier.ADVANCED,
-            "Pixel density (DPI)", "Higher DPI makes Android Auto's controls bigger.",
-            Applies.NEXT_CONNECTION, aaIntChoice("dpi-pixel-density", 0, options(0 to "Automatic", 120 to "120", 160 to "160",
+            "Pixel density (DPI)",
+            "Higher DPI makes Android Auto's controls bigger. On a wide screen, 100 gives the widescreen layout (media beside the map).",
+            // 100: open-headunit #1101, DPI 103 or lower switches Android Auto to its wide layout on ultrawide screens.
+            Applies.NEXT_CONNECTION, aaIntChoice("dpi-pixel-density", 0, options(0 to "Automatic", 100 to "100 (widescreen layout)",
+                120 to "120", 160 to "160",
                 200 to "200", 240 to "240", 280 to "280", 320 to "320")), Overrides.INTERFACE_SIZE),
         AdvancedSetting("aa_codec", Engine.ANDROID_AUTO, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Video codec", "H.265 is sharper at the same bandwidth if the head unit decodes it well.",
