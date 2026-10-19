@@ -384,7 +384,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             com.carlink.core.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 android.net.Uri.parse("package:${app.packageName}"))
-            com.carlink.core.core.LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(app) ?: return retry()
+            // VPN_CONSENT is launched by Home for a result: started from here, Android closes the dialog.
             com.carlink.core.core.LinkProblem.PHONE_REFUSED_WIFI, com.carlink.core.core.LinkProblem.PHONE_NEVER_REACHED_CAR -> {
                 updateSettings { it.copy(connectionMethod = com.carlink.core.settings.ConnectionMethod.WIFI_DIRECT) }
                 return retry()

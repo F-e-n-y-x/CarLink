@@ -171,6 +171,9 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val permissionsNeeded by vm.permissionsNeeded.collectAsStateWithLifecycle()
     val usual by vm.usual.collectAsStateWithLifecycle()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refreshPhones() }
+    // Android's VPN dialog only stays open when started for a result from an activity.
+    val vpnConsent = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.retry() }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
     val actions = remember(vm) {
         object : HomeActions {
@@ -186,8 +189,11 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun resumeAutoConnect() = vm.resumeAutoConnect()
             override fun saveSameWifi(ssid: String, password: String) = vm.saveSameWifi(ssid, password)
             override fun setConnectionMethod(method: ConnectionMethod) = vm.updateSettings { it.copy(connectionMethod = method) }
-            override fun fix(problem: LinkProblem) =
-                if (problem == LinkProblem.PERMISSIONS) requestPermissions() else vm.fix(problem)
+            override fun fix(problem: LinkProblem) = when (problem) {
+                LinkProblem.PERMISSIONS -> requestPermissions()
+                LinkProblem.VPN_CONSENT -> android.net.VpnService.prepare(context)?.let { vpnConsent.launch(it) } ?: vm.retry()
+                else -> vm.fix(problem)
+            }
             override fun navigate(route: Route) = navigate(route)
             override fun reportProblem() = reportProblem()
             override fun turnOnDirectVideo() = vm.turnOnDirectVideo()

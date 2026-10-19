@@ -246,10 +246,15 @@ class SessionManager(
         var connectedOnce = false
     }
 
-    /** Remembers a driver stop; only a USB session's stop makes its phone re-enumerate. */
+    /**
+     * Remembers a driver stop; only a USB session's stop makes its phone re-enumerate, and only
+     * when the phone was still plugged in. A phone that was already unplugged (tablet 2026-10-20:
+     * unplugged, Disconnect, plugged in again) is plugged in for real next time.
+     */
     private fun markDriverStop(stopped: SessionState) {
         val active = stopped as? SessionState.Active
-        driverStoppedUsbEngine = active?.request?.engine?.takeIf { active.request.transport == Transport.USB }
+        driverStoppedUsbEngine = active?.request?.engine
+            ?.takeIf { active.request.transport == Transport.USB && environment.usbPhonePresent(it) }
         driverStoppedAt = SystemClock.uptimeMillis()
     }
 
@@ -340,7 +345,20 @@ class SessionManager(
                 if (_pendingSwitch.value === pending && !environment.usbPhonePresent(pending.engine)) _pendingSwitch.value = null
             }, USB_GONE_GRACE_MILLIS)
         }
-        val current = _state.value as? SessionState.Active ?: return
+        // A USB request that was blocked or failed belongs to the phone that left: once it stays
+        // unplugged, Home shows its normal screen again instead of the old problem.
+        val shown = _state.value
+        val usbRequest = (shown as? SessionState.Blocked)?.request ?: (shown as? SessionState.Failed)?.request
+        if (usbRequest?.transport == Transport.USB) {
+            main.postDelayed({
+                if (_state.value === shown && !environment.usbPhonePresent(usbRequest.engine)) {
+                    note("USB phone for ${usbRequest.engine} unplugged; clearing its ${shown.javaClass.simpleName.lowercase()} state")
+                    stop()
+                }
+            }, USB_GONE_GRACE_MILLIS)
+            return
+        }
+        val current = shown as? SessionState.Active ?: return
         if (current.request.transport != Transport.USB) return
         main.removeCallbacks(usbGoneCheck)
         // While connecting, the engines re-enumerate the phone on purpose; once projecting they do

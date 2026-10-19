@@ -219,12 +219,22 @@ class SessionManagerTest {
 
     @Test fun usbAttachRightAfterTheDriverStoppedDoesNotRestart() {
         val m = manager()
+        usbPresent = true // still plugged in when the driver stops: the next attach is re-enumeration
         m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
         m.disconnect(); idle()
         m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
         assertEquals(1, starts.size)
         advance(SessionManager.REENUMERATION_WINDOW_MILLIS + 1)
         m.onUsbPhone(PhoneKind.ANDROID, "Pixel", null); idle()
+        assertEquals(2, starts.size)
+    }
+
+    @Test fun aPhoneUnpluggedBeforeTheDriverStoppedStartsWhenPluggedIn() { // tablet 2026-10-20
+        val m = manager()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        usbPresent = false
+        m.disconnect(); idle()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
         assertEquals(2, starts.size)
     }
 
@@ -423,6 +433,27 @@ class SessionManagerTest {
         advance(SessionManager.USB_GONE_CONNECTED_GRACE_MILLIS + 1)
         assertEquals(SessionState.Idle, m.state.value)
         assertEquals("home", log.last())
+    }
+
+    @Test fun unpluggingAPhoneClearsItsBlockedUsbRequest() { // tablet 2026-10-20: "Allow" stayed after unplugging
+        val m = manager()
+        problems = { _, _ -> listOf(Problem.VPN_CONSENT) }
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        assertTrue(m.state.value is SessionState.Blocked)
+        usbPresent = false
+        m.onUsbDetached()
+        advance(SessionManager.USB_GONE_GRACE_MILLIS + 1)
+        assertEquals(SessionState.Idle, m.state.value)
+    }
+
+    @Test fun aReplugWithinTheGraceKeepsTheBlockedRequest() {
+        val m = manager()
+        problems = { _, _ -> listOf(Problem.VPN_CONSENT) }
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        usbPresent = true // the phone is back within the grace
+        m.onUsbDetached()
+        advance(SessionManager.USB_GONE_GRACE_MILLIS + 1)
+        assertTrue(m.state.value is SessionState.Blocked)
     }
 
     @Test fun homeShownConnectsTheLastPhoneOnceAndRespectsThePause() {
