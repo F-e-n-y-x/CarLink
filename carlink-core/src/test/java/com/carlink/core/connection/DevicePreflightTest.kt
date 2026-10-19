@@ -28,7 +28,11 @@ class DevicePreflightTest {
         assertEquals(listOf(Problem.WIFI_OFF), check(ready.copy(wifiOn = false)))
         assertEquals(listOf(Problem.LOCATION_OFF), check(ready.copy(locationOn = false)))
         assertEquals(listOf(Problem.PERMISSIONS), check(ready.copy(missingPermissions = listOf("x"))))
-        assertEquals(listOf(Problem.OVERLAY), check(ready.copy(canDrawOverlays = false)))
+    }
+
+    @Test fun overlayNeverBlocksASession() { // issue #2
+        assertEquals(emptyList<Problem>(), check(ready.copy(canDrawOverlays = false)))
+        assertEquals(emptyList<Problem>(), check(ready.copy(canDrawOverlays = false), usb, null))
     }
 
     @Test fun usbNeedsNoRadios() {

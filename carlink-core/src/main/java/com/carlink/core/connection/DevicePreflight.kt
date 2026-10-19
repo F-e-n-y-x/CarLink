@@ -37,8 +37,9 @@ object DevicePreflight {
     fun check(request: SessionRequest, path: WirelessPath?, facts: Facts, settings: UnifiedSettings, wifi: WifiEnvironment): List<Problem> =
         buildList {
             if (facts.missingPermissions.isNotEmpty()) add(Problem.PERMISSIONS)
-            // Projection is opened from the background when a phone connects (Android 10+).
-            if (!facts.canDrawOverlays) add(Problem.OVERLAY)
+            // No overlay check: a session always starts with CarLink in front (Connect, Home, the
+            // USB router), and without the permission only the floating switcher degrades to its
+            // in-app prompt. Blocking here stopped phones whose OEM hides the setting (issue #2).
             if (request.transport != Transport.WIRELESS) return@buildList
             if (!facts.bluetoothOn) add(Problem.BLUETOOTH_OFF)
             else if (request.phoneAddress != null && facts.phoneBonded == false) add(Problem.PHONE_NOT_PAIRED)
