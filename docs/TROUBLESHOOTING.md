@@ -113,6 +113,17 @@ next connection. It fixed the picture for some drivers but not all, since the iP
 nothing: if it stays black, try a USB cable, and on the iPhone forget this car in **Settings ›
 General › CarPlay** and connect again. Please report it with the iOS version.
 
+**The iPhone shows Personal Hotspot during USB CarPlay.** A car with built-in CarPlay switches its
+USB port so that the iPhone becomes the USB host. An Android stereo's port cannot do that. So
+CarLink asks the iPhone for its USB network connection instead, the same connection the iPhone
+offers a computer for Personal Hotspot over USB, and iOS may show that as a Personal Hotspot
+connection. Nothing else uses it. Only CarPlay's picture, sound and touches travel over the cable.
+The link is local to the cable and never reaches the internet. The stereo gets no internet from the
+iPhone through it, so no mobile data is spent on the stereo. Wi-Fi is not used while you are plugged
+in, and CarLink no longer starts wireless CarPlay by itself while an iPhone is plugged in. The
+iPhone charges from the cable as usual. Android also shows a key (VPN) icon on the stereo during USB
+CarPlay. That is the same local link, not a VPN to the internet.
+
 **CarPlay stopped working after an iOS update.** Possible, and not something CarLink can promise
 against: see the CarPlay notice in the [README](../README.md#carplay-notice). Android Auto is not
 affected. Please report it with the iOS version.

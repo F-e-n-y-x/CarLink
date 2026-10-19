@@ -276,6 +276,24 @@ class SessionManagerTest {
         assertEquals(1, starts.size)
     }
 
+    @Test fun aPluggedInPhoneIsNeverStartedWirelesslyByItself() {
+        usbPresent = true
+        val m = manager()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.onBluetoothPhone("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertTrue(starts.isEmpty())
+        // During its USB session, the same phone's Bluetooth is not offered as a wireless switch.
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone", null); idle()
+        m.onBluetoothPhone("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(listOf("CARPLAY start USB null"), starts)
+        assertEquals(null, m.pendingSwitch.value)
+        // With USB auto-start off, the driver chose not to use the cable: wireless starts as before.
+        m.stop(); idle()
+        env.autoConnectUsb = false
+        m.onBluetoothPhone("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals("CARPLAY start WIRELESS WIFI_DIRECT", starts.last())
+    }
+
     // --- A stereo whose Bluetooth is an external module ------------------------------------------
 
     @Test fun wirelessIsBlockedForBothEnginesBeforeAnyEngineStarts() {
