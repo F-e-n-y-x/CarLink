@@ -41,7 +41,8 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
     the next path; the path that connected is remembered per phone (`PathMemory`);
   - automatic starts (Bluetooth, Home shown) never interrupt a running session and respect the
     driver's pause (`CarLinkPreferences.autoConnectPaused`, set by Disconnect/Cancel/unplug,
-    expires after 10 min);
+    expires after 10 min), and are skipped while a phone of that engine is plugged in and USB
+    auto-start is on (issue #4: never wireless on the cable);
   - USB is deliberate: a USB phone starts at once when idle; during a session it sets
     `pendingSwitch` ("Switch to <phone>?"); the engines' own re-enumeration is not a new session;
   - an orphaned engine session found at start-up is stopped (the driver must see what runs);

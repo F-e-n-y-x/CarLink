@@ -359,6 +359,7 @@ class SessionManager(
             // Nothing wireless can start here; neither a start nor a switch offer would help.
             environment.wirelessUnavailable(engine) -> note("Bluetooth $engine phone: wireless is not available on this stereo")
             environment.autoConnectPaused -> note("Bluetooth $engine phone: paused by the driver")
+            usbHolds(engine) -> note("Bluetooth $engine phone: a $engine phone is on USB; not starting wireless")
             _state.value.isActive -> {
                 // Another phone reached the car while one is projecting: offer it, never take over
                 // (user request, 2026-10-09: "show that a device is available to switch").
@@ -374,6 +375,13 @@ class SessionManager(
             else -> start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
         }
     }
+
+    /**
+     * A phone of [engine] is plugged in and USB starts by itself: an automatic wireless start would
+     * put it on Wi-Fi Direct or the car hotspot while it is on the cable (issue #4). The driver can
+     * still choose wireless with Connect.
+     */
+    private fun usbHolds(engine: Engine) = environment.autoConnectUsb && environment.usbPhonePresent(engine)
 
     /**
      * This screen lost [address]'s Bluetooth pairing (detect/PairingLoss). Shown on Home as a
@@ -406,6 +414,7 @@ class SessionManager(
             _state.value !is SessionState.Idle -> return
             // No Bluetooth attempt and no Wi-Fi Direct churn on a stereo where wireless cannot start.
             environment.wirelessUnavailable(engine) -> return note("Home shown: wireless is not available on this stereo; not connecting")
+            usbHolds(engine) -> return note("Home shown: a $engine phone is on USB; not connecting wirelessly")
             now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS -> return
             // Home coming back because a session just ended is not "the car started".
             now - lastSessionEndedAt < HOME_AUTO_START_COOLDOWN_MILLIS -> return
