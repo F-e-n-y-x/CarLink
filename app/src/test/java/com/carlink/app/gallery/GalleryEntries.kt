@@ -274,6 +274,12 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             connection = settingsPreviewUi().connection.copy(wirelessOnExternalBluetooth = true)), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CONNECTION)
     },
+    // Root mode on (advanced): the switch and what it does.
+    GalleryEntry("settings", "connection-root") {
+        SettingsContent(settingsPreviewUi(showAdvanced = true).copy(
+            connection = settingsPreviewUi().connection.copy(rootMode = true)), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CONNECTION)
+    },
     GalleryEntry("settings", "display-schedule") {
         SettingsContent(settingsPreviewUi(schedule = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.DISPLAY)

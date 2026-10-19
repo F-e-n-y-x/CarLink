@@ -68,6 +68,8 @@ data class ConnectionPrefs(
     val floatingSwitcher: Boolean = true,
     /** "Wireless through the stereo's Bluetooth module (experimental)" (Settings › Connection, advanced). */
     val wirelessOnExternalBluetooth: Boolean = false,
+    /** Settings › Connection › Root mode (advanced). */
+    val rootMode: Boolean = false,
 )
 
 /** The wireless path the next session would use, for Home's Network chip. */
@@ -224,6 +226,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val permissionsNeeded: StateFlow<Boolean> = _permissionsNeeded.asStateFlow()
 
     init {
+        // Root mode re-applies its grants once per run (an update or a reinstall resets some of them).
+        if (preferences.rootMode) viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.carlink.core.settings.RootMode.grant(app, com.carlink.app.ui.setup.SetupPermissions.runtimePermissions())
+        }
         if (_stereoBluetooth.value == null) viewModelScope.launch {
             _stereoBluetooth.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 com.carlink.core.detect.ExternalBluetoothProbe.await(app)
@@ -480,6 +486,27 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         _connection.value = readConnection()
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Wireless through the stereo's Bluetooth module (experimental): ${if (on) "on" else "off"}")
     }
+    /** Root mode: turning it on asks the root manager once and grants everything setup asks for. */
+    fun setRootMode(on: Boolean) {
+        preferences.rootMode = on
+        _connection.value = readConnection()
+        if (!on) {
+            kotlin.concurrent.thread { com.carlink.core.settings.RootMode.projecting(false) }
+            return
+        }
+        viewModelScope.launch {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.carlink.core.settings.RootMode.available() &&
+                    com.carlink.core.settings.RootMode.grant(app, com.carlink.app.ui.setup.SetupPermissions.runtimePermissions())
+            }
+            if (!ok) {
+                preferences.rootMode = false
+                _connection.value = readConnection()
+                android.widget.Toast.makeText(app, com.carlink.app.R.string.carlink_settings_root_unavailable, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     fun setFloatingSwitcher(on: Boolean) {
         uiPreferences.floatingSwitcher = on
         _connection.value = readConnection()
@@ -520,5 +547,6 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     // The short pause after a Disconnect is silent: Home shows its normal ready state, no "Resume".
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
-        floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth)
+        floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth,
+        rootMode = preferences.rootMode)
 }

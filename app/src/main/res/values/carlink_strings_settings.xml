@@ -45,6 +45,9 @@
     <string name="carlink_settings_resume">Resume</string>
 
     <string name="carlink_settings_group_wireless">Wireless</string>
+    <string name="carlink_settings_root">Root mode</string>
+    <string name="carlink_settings_root_detail">For rooted stereos. Allows everything setup asks for without popups, and keeps Wi-Fi in low-latency mode while a phone is connected. Your root manager asks once.</string>
+    <string name="carlink_settings_root_unavailable">Root is not available or was refused, so Root mode stays off.</string>
     <string name="carlink_settings_external_bt">Wireless through the stereo\'s Bluetooth module (experimental)</string>
     <string name="carlink_settings_external_bt_detail">This stereo\'s Bluetooth is a separate module. Turn on to let wireless Android Auto reach your phone through it. Not yet tested on a real stereo; USB still works. Applies from the next connection.</string>
     <string name="carlink_settings_external_bt_fyt_note">First disable the stereo\'s own “Car Link” app (com.syu.carlink) in Android Settings › Apps.</string>

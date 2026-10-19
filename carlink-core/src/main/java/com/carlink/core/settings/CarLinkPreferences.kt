@@ -31,6 +31,11 @@ class CarLinkPreferences(context: Context) {
      * (DeviceEnvironment.moduleRoute). Off by default: untested on hardware. It replaced "Try
      * wireless on this stereo anyway" and keeps its key.
      */
+    /** Settings › Connection › Root mode (advanced): grants and projection tweaks through `su` (RootMode). */
+    var rootMode: Boolean
+        get() = prefs.getBoolean(KEY_ROOT_MODE, false)
+        set(value) = prefs.edit().putBoolean(KEY_ROOT_MODE, value).apply()
+
     var wirelessOnExternalBluetooth: Boolean
         get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, false)
         set(value) = prefs.edit().putBoolean(KEY_WIRELESS_EXTERNAL_BT, value).apply()
@@ -54,6 +59,7 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
         private const val KEY_WIRELESS_EXTERNAL_BT = "wireless_on_external_bluetooth"
+        private const val KEY_ROOT_MODE = "root_mode"
         private const val KEY_PAUSED_AT = "auto_connect_paused_at"
         const val PAUSE_MILLIS = 10 * 60_000L
         private const val KEY_PAUSED = "auto_connect_paused"

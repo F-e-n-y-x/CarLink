@@ -110,6 +110,11 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
                 description = if (ui.stereoBluetoothFyt) detail + "\n" + stringResource(R.string.carlink_settings_external_bt_fyt_note) else detail,
                 icon = R.drawable.carlink_ic_bluetooth)
         }
+        if (ui.unified.showAdvanced) {
+            GroupDivider()
+            SwitchRow(stringResource(R.string.carlink_settings_root), c.rootMode, actions::setRootMode,
+                description = stringResource(R.string.carlink_settings_root_detail), icon = R.drawable.carlink_ic_lock)
+        }
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_phones)) }) {
         LinkRow(stringResource(R.string.carlink_settings_bluetooth), actions::openBluetoothSettings,

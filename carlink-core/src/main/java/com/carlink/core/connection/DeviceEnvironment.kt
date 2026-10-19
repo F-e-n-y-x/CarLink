@@ -86,6 +86,7 @@ class DeviceEnvironment(
      */
     override fun onEngaged(engine: Engine?) {
         callMicrophone.setWatching(engine != null)
+        if (preferences.rootMode) kotlin.concurrent.thread(name = "carlink-root") { com.carlink.core.settings.RootMode.projecting(engine != null) }
         val state = if (engine == Engine.ANDROID_AUTO) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         ANDROID_AUTO_KEY_RECEIVERS.forEach { name ->
