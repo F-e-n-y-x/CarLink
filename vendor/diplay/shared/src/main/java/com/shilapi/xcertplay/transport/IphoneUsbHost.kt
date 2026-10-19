@@ -103,6 +103,12 @@ class IphoneUsbHost(
 
     /** CarLink: whether access is already granted (e.g. by Android's default-app grant on attach). */
     fun hasPermission(device: UsbDevice): Boolean = runCatching { usbManager.hasPermission(device) }.getOrDefault(false)
+    /**
+     * Every USB device Android lists, as `vid:pid node` like [Ch341UsbHost.describe], sorted. When no iPhone is
+     * listed, this shows whether Android sees anything on the head unit's port at all.
+     */
+    fun listedDevices(): List<String> =
+        usbManager.deviceList.values.map(Ch341UsbHost::describe).sorted()
 
     @Throws(IphoneUsbException::class)
     fun requestPermission(device: UsbDevice, allowAdbFallback: Boolean = true): PermissionRequest {

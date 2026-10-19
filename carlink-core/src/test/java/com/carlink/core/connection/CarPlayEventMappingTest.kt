@@ -193,6 +193,15 @@ class CarPlayEventMappingTest {
             tracker.onHostState(HostState.RetriesStopped(off, WirelessStartupFailure.HOTSPOT_CONFIGURATION, 0, exhausted = false)))
     }
 
+    @Test fun wifiDirectRefusedBesideTheCarHotspotStopsThatPath() {
+        val refused = CarPlayStatus.Failed("Wi-Fi Direct refused beside the car hotspot",
+            startupFailure = WirelessStartupFailure.WIFI_DIRECT_BESIDE_HOTSPOT)
+        val failure = CarPlayEventMapping.classify(refused, CarPlayStatus.StartingHotspot, Transport.WIRELESS)
+        assertEquals(FailureReason.WIFI_SETUP_FAILED, failure.reason)
+        assertTrue(failure.hard)
+        assertTrue(failure.reason.pathRelated)
+    }
+
     @Test fun unusableHeadUnitBluetoothStopsAtOnce() {
         // DiPlay 0.2.19: no adapter, no socket manager, or links that reach no phone; never retried.
         val unusable = CarPlayStatus.Failed(

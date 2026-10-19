@@ -60,6 +60,7 @@ class NcmUsbBridge internal constructor(
     private var readQueued = false
     private val readQueuePolicy = UsbReadQueuePolicy.forCurrentPlatform()
     private val readRequests = UsbRequestQueue(connection, "ncm-read-reaper")
+    private val traffic = NcmTrafficCounter()
     // CarLink: the interrupt (status) endpoint is read continuously by a second persistent async
     // request on the same connection, reaped by the NCM reader's requestWait(). Upstream polled it
     // with a 20 ms bulkTransfer every 500 ms and only logged the first notification.
@@ -151,6 +152,7 @@ class NcmUsbBridge internal constructor(
             synchronized(outLock) {
                 if (transferred == block.size) {
                     outbound.removeHead()
+                    traffic.sent() // CarLink: upstream counted in its synchronous send()
                     event = pacing.onAccepted()
                 } else {
                     // Before StartCarPlaySession, and until the phone's NCM link is up, the phone
@@ -211,6 +213,9 @@ class NcmUsbBridge internal constructor(
         }
         runCatching { onLinkEvent(event) }
     }
+
+    /** Frames to and from the iPhone so far, for a report line; see [NcmTrafficCounter]. */
+    fun trafficSummary(airPlayPort: Int?): String = traffic.summary(airPlayPort)
 
     /**
      * Returns the next complete Ethernet frame, or null when [timeoutMillis] elapses without one.
@@ -411,6 +416,7 @@ class NcmUsbBridge internal constructor(
     private fun pollFrame(): ByteArray {
         val frame = frames.removeFirst()
         queuedBytes -= frame.size
+        traffic.received(frame)
         return frame
     }
 

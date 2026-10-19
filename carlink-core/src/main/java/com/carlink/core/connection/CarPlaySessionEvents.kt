@@ -129,6 +129,9 @@ object CarPlayEventMapping {
             WirelessStartupFailure.HOTSPOT_NOT_READY -> return result(FailureReason.WIFI_SETUP_FAILED, hard = false)
             // Hotspot off or details missing: DiPlay stops at once (§3.3).
             WirelessStartupFailure.HOTSPOT_CONFIGURATION -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
+            // DiPlay 0.2.21: Android 13+ asked to turn the car hotspot off for Wi-Fi Direct and the
+            // driver said no. DiPlay does not ask again; another Wi-Fi path can still work.
+            WirelessStartupFailure.WIFI_DIRECT_BESIDE_HOTSPOT -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
             // DiPlay 0.2.19: this unit's Android Bluetooth has no adapter, no socket manager, or
             // "connects" without reaching a phone. No retry or other Wi-Fi path can change it.
             // On a stereo whose Bluetooth is an external module, that is the reason (and the fix is USB).

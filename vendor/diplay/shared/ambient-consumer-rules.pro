@@ -33,6 +33,10 @@
 -keep class com.shilapi.xcertplay.network.CarHotspotStartMain {
     public static void main(java.lang.String[]);
 }
+# CarLink (0.2.21+): the car music rhythm helper, same app_process pattern.
+-keep class com.shilapi.xcertplay.hud.BydCarMusicRhythmTool {
+    public static void main(java.lang.String[]);
+}
 # CarLink: linux_i2c_jni.c throws this from native code (FindClass + <init>(int, String)).
 -keep class com.shilapi.xcertplay.transport.LinuxI2cNativeException {
     <init>(int, java.lang.String);
