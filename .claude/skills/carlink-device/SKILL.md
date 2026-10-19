@@ -11,7 +11,10 @@ USB Android Auto only exist on real hardware, so every connection change is veri
 ## Target
 
 The user's tablet `192.168.10.103:5555` (Redmi Pad Pro 5G, Android 16, ~1458x911 dp landscape,
-281 dpi) over wireless adb. Full use is allowed when the user has not said otherwise in the
+281 dpi) over wireless adb. Its address changes with the network (2026-10-20: `192.168.11.22`, Wireless debugging
+port changes each time it is turned on): set `CARLINK_TABLET=ip:port` for `dev.sh` and `report.py`. A new
+computer or key needs `adb pair ip:pairing-port code` once (the user reads both from Wireless debugging ›
+Pair device with pairing code). Run adb as `ayush` (`sudo -u ayush -H`), whose key is paired. Full use is allowed when the user has not said otherwise in the
 current conversation (install, launch, start connections, read logs); never change the tablet's
 system settings. The phones (iPhone 13, Samsung Galaxy S25 Ultra) are in the user's hands and not
 on adb: tell the user exactly when a phone must be unlocked, nearby or plugged in, and what to

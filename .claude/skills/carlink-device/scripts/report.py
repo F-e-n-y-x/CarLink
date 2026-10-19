@@ -11,7 +11,8 @@ A release build (--package com.carlink.app, `dev.sh install-release`) is not deb
 files cannot be read with run-as; the engines' lines then come from logcat (by the app's uid),
 which rotates within minutes: run the report right after the test.
 """
-import argparse, datetime as dt, re, subprocess, sys
+import argparse
+import os, datetime as dt, re, subprocess, sys
 
 KEY_CARLINK = re.compile(r"CarLink-(Session|Connection|Engine|Settings|AAEngine|CarPlay|BT|AA)\b")
 KEY_DIAUTO = re.compile(
@@ -37,7 +38,7 @@ def mask(s):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--serial", default="192.168.10.103:5555")
+    ap.add_argument("--serial", default=os.environ.get("CARLINK_TABLET", "192.168.10.103:5555"))
     ap.add_argument("--package", default="com.carlink.app.hudtest")
     ap.add_argument("--since", help="local device time HH:MM[:SS] (default: last 10 minutes)")
     ap.add_argument("--all", action="store_true", help="every engine line, not only key events")

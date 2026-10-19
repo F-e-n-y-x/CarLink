@@ -16,7 +16,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SERIAL="${CARLINK_EMULATOR:-emulator-5560}"
-[ "${CARLINK_TARGET:-}" = tablet ] && SERIAL="192.168.10.103:5555"
+TABLET="${CARLINK_TABLET:-192.168.10.103:5555}" # wireless debugging moves the port; set CARLINK_TABLET=ip:port
+[ "${CARLINK_TARGET:-}" = tablet ] && SERIAL="$TABLET"
 ADB="$HOME/android-sdk/platform-tools/adb"
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 PKG="com.carlink.app.hudtest"
@@ -26,7 +27,7 @@ SHOTS="/tmp/carlink-shots"
 export ANDROID_HOME="$HOME/android-sdk"
 export ANDROID_SDK_ROOT="$HOME/android-sdk"  # Gradle refuses to configure when the two disagree (the shell sets /opt/android-sdk).
 
-case "$SERIAL" in emulator-*|192.168.10.103:5555) ;; *) echo "refusing unknown target $SERIAL" >&2; exit 2 ;; esac
+case "$SERIAL" in emulator-*|"$TABLET") ;; *) echo "refusing unknown target $SERIAL" >&2; exit 2 ;; esac
 adb_e() { "$ADB" -s "$SERIAL" "$@"; }
 
 ensure_emulator() {
