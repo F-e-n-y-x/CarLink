@@ -112,6 +112,8 @@ object HostIntegration {
         BOOT_LOOP_PAUSE,
         /** An external Bluetooth module makes the native route impossible. Detail: `evidence=`. */
         EXTERNAL_BLUETOOTH,
+        /** The host's module route (ZBT/BLINK) cannot reach the module. Detail: `route=;reason=`. */
+        EXTERNAL_MODULE_UNAVAILABLE,
         /** USB permission was denied, or its request failed. Detail: `device=`. */
         USB_PERMISSION_DENIED,
         /** The first video frame of a session was rendered. */

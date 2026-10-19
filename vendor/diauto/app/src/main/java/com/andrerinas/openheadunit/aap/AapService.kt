@@ -1719,10 +1719,11 @@ class AapService : Service(), UsbReceiver.Listener {
                 // phone is bonded to isn't reachable from here: with no Bluetooth channel there is
                 // nobody to hand the credentials to, so hosting a P2P group or holding the hotspot
                 // open would only churn the WiFi stack for nothing.
-                val externalBt = NativeAaHandshakeManager.externalBtDiagnostic()
-                if (externalBt != null) AppLog.e(externalBt)
-                val blockedByExternalBt =
-                    externalBt != null && !NativeAaHandshakeManager.externalBtOverridden(this)
+                // CarLink: the route decision (NORMAL / ZBT / BLINK / BLOCKED) replaces the blanket refusal.
+                val btRoute = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.routeFor(this)
+                AppLog.i("AapService: Native AA Bluetooth route $btRoute")
+                val blockedByExternalBt = btRoute == com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLOCKED
+                if (blockedByExternalBt) NativeAaHandshakeManager.externalBtDiagnostic()?.let { AppLog.e(it) }
                 if (blockedByExternalBt) { // CarLink: tell the host why wireless never starts here
                     com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
                         com.andrerinas.openheadunit.HostIntegration.EngineEvent.EXTERNAL_BLUETOOTH,

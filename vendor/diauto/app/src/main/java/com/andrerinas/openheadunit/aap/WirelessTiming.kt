@@ -30,6 +30,12 @@ class WirelessTimeline(
         PHONE_JOINED("phone-joined"),
         TCP_ACCEPTED("tcp-accepted"),
         FIRST_FRAME("first-frame"),
+        // CarLink: the external Bluetooth module routes (connection/ExternalBtTransportPolicy).
+        MODULE_REACHABLE("module-reachable"),
+        MODULE_READY("module-ready"),
+        MODULE_WAKE("module-wake"),
+        PHONE_ON_MODULE("phone-on-module"),
+        PHONE_FIRST_BYTES("phone-first-bytes"),
     }
 
     private val lock = Any()
