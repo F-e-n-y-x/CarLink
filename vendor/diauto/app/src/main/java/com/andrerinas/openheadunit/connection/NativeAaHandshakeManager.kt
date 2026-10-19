@@ -1194,8 +1194,10 @@ class NativeAaHandshakeManager(
                     }
                     WppAction.SendInfoResponse -> {
                         AppLog.i("NativeAA: Phone ready for WiFi association. Delivering credentials...")
-                        AppLog.i("NativeAA: [TX] Sending WifiInfoResponse (Type 3) with full credentials in 1000ms...")
-                        delay(1000) // [FIX] Increased delay to give phone more processing time
+                        AppLog.i("NativeAA: [TX] Sending WifiInfoResponse (Type 3) with full credentials in 100ms...")
+                        // CarLink: 100 ms, not 1000: the phone asked for these (Type 2), and
+                        // WirelessAndroidAutoDongle answers at once; the second only delayed every start.
+                        delay(100)
                         // [BUG_FIX] A phone still joined to our network from the last session
                         // does not wait for these: it opens the projection session right after
                         // WifiStartRequest, inside the pause above. Credentials that arrive after
