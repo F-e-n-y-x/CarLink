@@ -280,7 +280,13 @@ class CarPlayBonjour(
                     }
                     // A JmDNS instance joins only its address family's multicast group.
                     for (address in advertisedAddresses) {
-                        val dns = JmDNS.create(address, "carplay-${config.deviceId.replace(":", "")}")
+                        // CarLink: an extra IPv6 link-local (fresh, maybe still tentative) that
+                        // cannot bind yet must not cost the session; any other address is required.
+                        val dns = if (address == localAdvertisedAddress || address !is Inet6Address || !address.isLinkLocalAddress) {
+                            JmDNS.create(address, "carplay-${config.deviceId.replace(":", "")}")
+                        } else runCatching { JmDNS.create(address, "carplay-${config.deviceId.replace(":", "")}") }
+                            .onFailure { Log.w(TAG, "Bonjour on $address unavailable: ${it.javaClass.simpleName}") }
+                            .getOrNull() ?: continue
                         interfaceMdns.add(dns)
                         dns.addServiceListener("$CARPLAY_CONTROL_SERVICE_TYPE.local.", interfaceListener)
                         dns.registerService(ServiceInfo.create(
@@ -288,8 +294,8 @@ class CarPlayBonjour(
                             0, 0, CarPlayBonjourProtocol.airPlayTxtRecords(config, identity),
                         ))
                     }
-                    publishedFamilies = advertisedAddresses.joinToString(",") {
-                        if (it is Inet4Address) "IPv4" else "IPv6"
+                    publishedFamilies = interfaceMdns.joinToString(",") { // CarLink: what really runs
+                        if (it.inetAddress is Inet4Address) "IPv4" else "IPv6"
                     }
                 } else {
                     registerAirPlay()
