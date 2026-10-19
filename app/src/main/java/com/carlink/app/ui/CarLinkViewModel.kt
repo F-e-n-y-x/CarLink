@@ -331,6 +331,9 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         phonesRepository.refresh()
         _permissionsNeeded.value = missingPermissions().isNotEmpty()
         refreshNetwork()
+        val method = _unified.value.connectionMethod
+        if (method == ConnectionMethod.CAR_HOTSPOT ||
+            (method == ConnectionMethod.AUTOMATIC && com.carlink.app.ui.theme.UiProfileDetector.looksLikeCarDisplay(app))) importCarHotspot()
     }
 
     private fun refreshNetwork() {
@@ -357,9 +360,52 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun saveSameWifi(ssid: String, password: String) =
         updateSettings { it.copy(homeWifi = com.carlink.core.settings.WifiDetails(ssid, password)) }
 
-    /** Remembers the car hotspot's name and password (Car hotspot). */
-    fun saveCarHotspot(ssid: String, password: String) =
-        updateSettings { it.copy(carHotspot = com.carlink.core.settings.WifiDetails(ssid, password)) }
+    private var carHotspotImported = false
+
+    /**
+     * Copies the stereo's own hotspot name and password into Settings once per process, without
+     * any prompt (app or approved local ADB). What the car broadcasts wins over a stale saved copy.
+     */
+    private fun importCarHotspot() {
+        if (carHotspotImported) return
+        carHotspotImported = true
+        viewModelScope.launch {
+            val system = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.carlink.core.settings.SystemWifi.readHotspot(app, allowRoot = false)
+            } ?: return@launch
+            updateSettings { it.copy(carHotspot = system) }
+        }
+    }
+
+    /** The car hotspot read now for the Settings sheet; may show the superuser prompt. */
+    suspend fun readCarHotspot(): com.carlink.core.settings.WifiDetails? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.carlink.core.settings.SystemWifi.readHotspot(app, allowRoot = true)
+        }
+
+    /** A saved Wi-Fi network's password (root only); may show the superuser prompt. */
+    suspend fun readSavedWifiPassword(ssid: String): String? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.carlink.core.settings.SystemWifi.readSavedPassword(ssid)
+        }
+
+    /** Saves the car hotspot and, when it differs from what the car broadcasts, applies it to the car. */
+    fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) {
+        updateSettings { it.copy(carHotspot = details) }
+        if (details.ssid.isEmpty()) return
+        viewModelScope.launch {
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val system = com.carlink.core.settings.SystemWifi.readHotspot(app, allowRoot = false)
+                if (system == details) null else com.carlink.core.settings.SystemWifi.writeHotspot(app, details)
+            } ?: return@launch
+            android.widget.Toast.makeText(app, if (result == com.carlink.core.settings.SystemWifi.Write.APPLIED)
+                com.carlink.app.R.string.carlink_settings_hotspot_applied else com.carlink.app.R.string.carlink_settings_hotspot_not_applied,
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Remembers the car hotspot's name and password typed on Home (Car hotspot). */
+    fun saveCarHotspot(ssid: String, password: String) = saveCarHotspot(com.carlink.core.settings.WifiDetails(ssid, password))
 
     /**
      * Saves a change to the unified settings and writes it into both engines. A blocked start

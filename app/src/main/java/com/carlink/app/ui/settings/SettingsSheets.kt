@@ -35,7 +35,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -60,6 +63,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.carlink.app.R
 import com.carlink.core.settings.Applies
 import com.carlink.core.settings.CarBrand
@@ -118,11 +122,13 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
         )
         EssentialSheet.CAR_HOTSPOT -> WifiSheet(
             stringResource(R.string.carlink_settings_hotspot), stringResource(R.string.carlink_settings_hotspot_sheet_body),
-            u.carHotspot, suggestion = null, onSave = { w -> select { it.copy(carHotspot = w) } }, onDismiss = onDismiss,
+            u.carHotspot, suggestion = null, onSave = { w -> actions.saveCarHotspot(w); onDismiss() }, onDismiss = onDismiss,
+            readFromCar = actions::readCarHotspot,
         )
         EssentialSheet.SAME_WIFI -> WifiSheet(
             stringResource(R.string.carlink_settings_same_wifi), stringResource(R.string.carlink_settings_same_wifi_sheet_body),
             u.homeWifi, suggestion = ui.joinedWifi, onSave = { w -> select { it.copy(homeWifi = w) } }, onDismiss = onDismiss,
+            savedPassword = actions::readSavedWifiPassword,
         )
         EssentialSheet.PICTURE -> ChoiceSheet(
             stringResource(R.string.carlink_settings_picture), stringResource(R.string.carlink_settings_picture_detail), true,
@@ -445,10 +451,25 @@ private fun <T> PresetTile(preset: Preset<T>, selected: Boolean, onClick: () -> 
 /** Name and password of a Wi-Fi network, checked with [WifiDetails.isValid] before saving. */
 @Composable
 private fun WifiSheet(title: String, body: String, initial: WifiDetails, suggestion: String?, onSave: (WifiDetails) -> Unit,
-                      onDismiss: () -> Unit) {
+                      onDismiss: () -> Unit, readFromCar: (suspend () -> WifiDetails?)? = null,
+                      savedPassword: (suspend (String) -> String?)? = null) {
     var ssid by rememberSaveable { mutableStateOf(initial.ssid) }
     var password by rememberSaveable { mutableStateOf(initial.password) }
     var reveal by rememberSaveable { mutableStateOf(false) }
+    // Reading the car may take seconds (local ADB) or show the superuser prompt.
+    var reading by remember { mutableStateOf(false) }
+    var unreadable by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val read: () -> Unit = {
+        if (readFromCar != null && !reading) scope.launch {
+            reading = true
+            val found = readFromCar()
+            reading = false
+            unreadable = found == null
+            if (found != null) { ssid = found.ssid; password = found.password }
+        }
+    }
+    LaunchedEffect(Unit) { if (initial.ssid.isEmpty()) read() }
     val details = WifiDetails(ssid, password)
     val nameError = ssid.toByteArray(Charsets.UTF_8).size > 32
     val passwordError = password.isNotEmpty() && password.length !in 8..63
@@ -456,8 +477,20 @@ private fun WifiSheet(title: String, body: String, initial: WifiDetails, suggest
     SettingsSheet(onDismiss) {
         SheetTitle(title, body, nextConnection = true)
         if (suggestion != null && suggestion != ssid) {
-            GlassButton(stringResource(R.string.carlink_settings_wifi_use_current, suggestion), { ssid = suggestion },
-                icon = R.drawable.carlink_ic_wifi)
+            GlassButton(stringResource(R.string.carlink_settings_wifi_use_current, suggestion), {
+                ssid = suggestion
+                if (savedPassword != null) scope.launch { savedPassword(suggestion)?.let { password = it } }
+            }, icon = R.drawable.carlink_ic_wifi)
+            Spacer(Modifier.height(gap * 1.5f))
+        }
+        if (readFromCar != null) {
+            GlassButton(stringResource(if (reading) R.string.carlink_settings_hotspot_reading else R.string.carlink_settings_hotspot_read),
+                read, icon = R.drawable.carlink_ic_wifi_tethering)
+            if (unreadable) {
+                Spacer(Modifier.height(gap))
+                Text(stringResource(R.string.carlink_settings_hotspot_unreadable), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(gap * 1.5f))
         }
         WifiField(ssid, { ssid = it }, stringResource(R.string.carlink_settings_wifi_name), R.drawable.carlink_ic_wifi,

@@ -83,6 +83,12 @@ interface SettingsActions {
     /** Stores the car brand (applies from the next connection). */
     fun setCarBrand(brand: CarBrand) {}
     fun navigate(route: Route) {}
+    /** The car hotspot read from the stereo itself, or null where Android does not allow it. */
+    suspend fun readCarHotspot(): com.carlink.core.settings.WifiDetails? = null
+    /** A saved Wi-Fi network's password (rooted stereos only), or null. */
+    suspend fun readSavedWifiPassword(ssid: String): String? = null
+    /** Saves the car hotspot, and applies it to the car's own hotspot where Android allows it. */
+    fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = update { it.copy(carHotspot = details) }
 }
 
 /** Rail and grid order. */

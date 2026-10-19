@@ -62,7 +62,12 @@
 
     <string name="carlink_settings_hotspot">Car hotspot</string>
     <string name="carlink_settings_hotspot_detail">Name and password of the car’s own hotspot</string>
-    <string name="carlink_settings_hotspot_sheet_body">Enter them exactly as the car’s hotspot settings show them. CarLink passes them to your phone.</string>
+    <string name="carlink_settings_hotspot_sheet_body">CarLink reads them from the car where it can and passes them to your phone. Change them here and CarLink changes the car’s hotspot too, where Android allows it.</string>
+    <string name="carlink_settings_hotspot_read">Read from the car</string>
+    <string name="carlink_settings_hotspot_reading">Reading the car’s hotspot…</string>
+    <string name="carlink_settings_hotspot_unreadable">This stereo does not let CarLink read its hotspot. Enter the name and password exactly as the car’s hotspot settings show them.</string>
+    <string name="carlink_settings_hotspot_applied">The car’s hotspot now uses this name and password</string>
+    <string name="carlink_settings_hotspot_not_applied">Saved in CarLink. This stereo does not let CarLink change its hotspot: set the same name and password in the car’s hotspot settings.</string>
     <string name="carlink_settings_same_wifi">Same Wi-Fi network</string>
     <string name="carlink_settings_same_wifi_detail">The router both the car and your iPhone join</string>
     <string name="carlink_settings_same_wifi_sheet_body">The car must already be on this Wi-Fi. CarLink tells your iPhone to join it over Bluetooth.</string>
