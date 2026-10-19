@@ -3,6 +3,7 @@ package com.shilapi.xcertplay
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import com.shilapi.xcertplay.host.R
 import java.io.ByteArrayOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -34,6 +35,17 @@ class AirPlayIconSizingTest {
         assertEquals(192, bounds.outWidth)
         assertEquals(192, bounds.outHeight)
         assertTrue("${bytes.size} >= ${large.size}", bytes.size < large.size)
+    }
+
+    // CarLink: a non-BYD car gets CarLink's icon, a valid opaque square sent as it is.
+    @Test fun onlyBydGetsTheBydLogoAndCarLinksIconIsSentUnchanged() {
+        assertEquals(R.raw.ic_car_home, AirPlayIconSizing.packagedIcon(vehicleIntegrations = true))
+        assertEquals(R.raw.ic_carlink_home, AirPlayIconSizing.packagedIcon(vehicleIntegrations = false))
+        val icon = java.io.File("src/main/res/raw/ic_carlink_home.png").readBytes()
+        val (size, bytes) = AirPlayIconSizing.fit(icon)!!
+        assertEquals(AirPlayIconSizing.MAX_PIXELS, size)
+        assertSame(icon, bytes)
+        assertEquals(false, BitmapFactory.decodeByteArray(icon, 0, icon.size).hasAlpha())
     }
 
     @Test fun smallIconsAreSentUnchangedAndNonSquareImagesAreRejected() {
