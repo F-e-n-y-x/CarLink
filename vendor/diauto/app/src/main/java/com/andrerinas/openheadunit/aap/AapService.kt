@@ -726,12 +726,7 @@ class AapService : Service(), UsbReceiver.Listener {
         AppLog.i("AapService creating...")
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(1, createNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-            } else {
-                startForeground(1, createNotification())
-            }
+            startForegroundWithTypes() // CarLink: + microphone
         } catch (e: Exception) {
             AppLog.e("ForegroundServiceStartNotAllowedException/Exception caught in onCreate: ${e.message}", e)
             stopSelf()
@@ -1908,14 +1903,32 @@ class AapService : Service(), UsbReceiver.Listener {
         }
     }
 
+    /**
+     * CarLink: microphone too, so the Assistant and calls keep the microphone while another app
+     * covers the projection (Android 11+). Android 14+ refuses that type to a service started
+     * without while-in-use (SecurityException); the session then runs without it, as before.
+     */
+    private fun startForegroundWithTypes() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification())
+            return
+        }
+        val types = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            try {
+                startForeground(1, createNotification(), types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+                return
+            } catch (e: SecurityException) {
+                AppLog.w("AapService: started without the microphone type: ${e.message}")
+            }
+        }
+        startForeground(1, createNotification(), types)
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(1, createNotification(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-            } else {
-                startForeground(1, createNotification())
-            }
+            startForegroundWithTypes() // CarLink: + microphone
         } catch (e: Exception) {
             AppLog.e("ForegroundServiceStartNotAllowedException/Exception caught in onStartCommand: ${e.message}", e)
             stopSelf()

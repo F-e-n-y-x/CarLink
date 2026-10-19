@@ -78,6 +78,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- CarLink: AapService's microphone type (Assistant and calls behind another app) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
@@ -206,10 +208,11 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/AppTheme" />
 
+        <!-- CarLink: + microphone (AapService.startForegroundWithTypes) -->
         <service
             android:name=".aap.AapService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice|mediaPlayback"
+            android:foregroundServiceType="connectedDevice|mediaPlayback|microphone"
             android:stopWithTask="false">
             <!-- MediaButtonReceiver looks for a Service with this intent-filter -->
             <intent-filter>
