@@ -271,8 +271,7 @@ internal class AaCommandHandler(
     /** CarPlay's group left on the radio would make DiAuto stand down (foreign owner). */
     private fun clearCarPlayLeftover() {
         val reading = engine.currentGroup()
-        val action = LeftoverGroupPolicy.decide(reading.name, reading.isOwner, engine.keptGroupName(), engine.recordedGroupName(),
-            com.carlink.core.connection.CarLinkCore.config.accessoryName)
+        val action = LeftoverGroupPolicy.decide(reading.name, reading.isOwner, engine.keptGroupName(), engine.recordedGroupName())
         when (action) {
             LeftoverGroupAction.REMOVE_CARPLAY_GROUP -> {
                 Log.i(TAG, "removing CarPlay's leftover Wi-Fi Direct group ${reading.name}")
