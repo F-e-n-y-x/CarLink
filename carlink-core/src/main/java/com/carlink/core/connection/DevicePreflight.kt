@@ -34,14 +34,20 @@ object DevicePreflight {
         val canDrawOverlays: Boolean,
     )
 
-    fun check(request: SessionRequest, path: WirelessPath?, facts: Facts, settings: UnifiedSettings, wifi: WifiEnvironment): List<Problem> =
+    /**
+     * [bluetoothViaModule]: wireless Android Auto goes through the stereo's own Bluetooth module
+     * (DeviceEnvironment.moduleRoute), so Android's Bluetooth switch and bonds do not matter.
+     */
+    fun check(request: SessionRequest, path: WirelessPath?, facts: Facts, settings: UnifiedSettings, wifi: WifiEnvironment,
+              bluetoothViaModule: Boolean = false): List<Problem> =
         buildList {
             if (facts.missingPermissions.isNotEmpty()) add(Problem.PERMISSIONS)
             // No overlay check: a session always starts with CarLink in front (Connect, Home, the
             // USB router), and without the permission only the floating switcher degrades to its
             // in-app prompt. Blocking here stopped phones whose OEM hides the setting (issue #2).
             if (request.transport != Transport.WIRELESS) return@buildList
-            if (!facts.bluetoothOn) add(Problem.BLUETOOTH_OFF)
+            if (bluetoothViaModule) Unit
+            else if (!facts.bluetoothOn) add(Problem.BLUETOOTH_OFF)
             else if (request.phoneAddress != null && facts.phoneBonded == false) add(Problem.PHONE_NOT_PAIRED)
             // Wi-Fi Direct and every hotspot need the radio; DiAuto aborts its P2P path silently
             // when it is off (DA§10.8).

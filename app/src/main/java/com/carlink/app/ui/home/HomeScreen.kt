@@ -634,6 +634,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.BLUETOOTH -> R.string.carlink_home_error_bluetooth_title to R.string.carlink_home_error_bluetooth_body
     LinkProblem.USB -> R.string.carlink_home_error_usb_title to R.string.carlink_home_error_usb_body
     LinkProblem.EXTERNAL_BLUETOOTH -> R.string.carlink_home_error_external_bt_title to R.string.carlink_home_error_external_bt_body
+    LinkProblem.EXTERNAL_MODULE -> R.string.carlink_home_error_external_module_title to R.string.carlink_home_error_external_module_body
     LinkProblem.ENGINE, null -> R.string.carlink_home_error_engine_title to R.string.carlink_home_error_engine_body
 }
 
@@ -661,7 +662,7 @@ private fun FailureActions(link: LinkState, actions: HomeActions) {
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
         // No Try again: nothing on this stereo changes between attempts. The cable is the way.
-        LinkProblem.EXTERNAL_BLUETOOTH -> {
+        LinkProblem.EXTERNAL_BLUETOOTH, LinkProblem.EXTERNAL_MODULE -> {
             var cableHelp by rememberSaveable { mutableStateOf(false) }
             IonButton(stringResource(R.string.carlink_home_how_to_connect), { cableHelp = true }, icon = R.drawable.carlink_ic_usb)
             GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },

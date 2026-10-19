@@ -167,6 +167,16 @@ class AaSessionTrackerTest {
         assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, failure.reason.toLinkProblem())
     }
 
+    @Test fun anUnreachableModuleIsItsOwnFailureWithTheReason() {
+        val failure = wireless().event(EngineEvent.EXTERNAL_MODULE_UNAVAILABLE,
+            "route=BLINK;reason=STOCK_CLIENT_ENABLED: disable com.syu.carlink").failure()
+        assertEquals(FailureReason.EXTERNAL_MODULE, failure.reason)
+        assertFalse(failure.reason.pathRelated)
+        assertTrue(failure.detail!!.contains("BLINK"))
+        assertTrue(failure.detail!!.contains("com.syu.carlink"))
+        assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_MODULE, failure.reason.toLinkProblem())
+    }
+
     @Test fun aDfsChannelIsNamedInTheLaterFailure() {
         val t = wireless()
         t.event(EngineEvent.DFS_CHANNEL, "frequency=5500")

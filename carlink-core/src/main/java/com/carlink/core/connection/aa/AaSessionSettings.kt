@@ -2,6 +2,7 @@ package com.carlink.core.connection.aa
 
 import android.content.Context
 import android.os.Bundle
+import com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy
 import com.carlink.core.connection.PictureChoice
 import com.carlink.core.connection.PicturePolicy
 import com.carlink.core.core.Transport
@@ -34,6 +35,7 @@ object AaSessionSettings {
     /**
      * @param panelDensityDpi the head unit's own density, which scales Android Auto's interface.
      * @param wifi the car's Wi-Fi right now; Same Wi-Fi needs its client interface and the router's BSSID.
+     * @param moduleRoute the stereo's Bluetooth module route the driver opted into (DeviceEnvironment.moduleRoute).
      */
     fun values(
         settings: UnifiedSettings,
@@ -44,6 +46,7 @@ object AaSessionSettings {
         panelDensityDpi: Int,
         wifi: WifiEnvironment? = null,
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
+        moduleRoute: ExternalBtTransportPolicy.Route? = null,
     ): AaSessionValues {
         var problem: String? = null
         val values = buildMap<String, Any> {
@@ -92,6 +95,8 @@ object AaSessionSettings {
             put("night-mode-manual-end", settings.nightEndMinute)
             put("right-hand-drive", settings.rightHandDrive)
             put("gps-navigation", settings.sendCarLocation)
+            // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md); empty = Android's own.
+            put(ExternalBtTransportPolicy.HOST_ROUTE_KEY, if (transport == Transport.WIRELESS) moduleRoute?.name.orEmpty() else "")
 
             // The wireless route. A USB session writes the Wi-Fi Direct route: the engine arms
             // wireless in the background of every service start (DA§2.3), and must not do so with

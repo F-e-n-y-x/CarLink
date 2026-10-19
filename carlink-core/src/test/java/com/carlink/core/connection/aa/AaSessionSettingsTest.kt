@@ -40,6 +40,16 @@ class AaSessionSettingsTest {
         assertEquals(false, values(transport = Transport.USB, path = null).values["auto-connect-last-session"])
     }
 
+    @Test fun theModuleRouteReachesTheEngineOnlyForWirelessSessions() {
+        val key = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.HOST_ROUTE_KEY
+        val blink = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLINK
+        assertEquals("", values().values[key])
+        assertEquals("BLINK", AaSessionSettings.values(base, Transport.WIRELESS, WirelessPath.WIFI_DIRECT, VehicleProfile.GENERIC,
+            "My Car", 320, moduleRoute = blink).values[key])
+        assertEquals("", AaSessionSettings.values(base, Transport.USB, null, VehicleProfile.GENERIC,
+            "My Car", 320, moduleRoute = blink).values[key])
+    }
+
     @Test fun wifiDirectClearsEveryAccessPointValue() {
         val v = values(settings = base.copy(carHotspot = WifiDetails("CarAP", "password1"))).values
         assertEquals(0, v["native-ap-transport"])

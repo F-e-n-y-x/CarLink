@@ -828,6 +828,7 @@ fun FailureReason.retryText(engine: Engine): String {
         FailureReason.WIFI_SETUP_FAILED -> "the car's Wi-Fi link could not be set up"
         FailureReason.BLUETOOTH -> "the $phone did not answer over Bluetooth"
         FailureReason.EXTERNAL_BLUETOOTH -> "this stereo's Bluetooth cannot be used for wireless"
+        FailureReason.EXTERNAL_MODULE -> "the stereo's Bluetooth module could not be reached"
         FailureReason.PHONE_DID_NOT_ANSWER -> "the $phone did not answer"
         FailureReason.USB -> "the USB link restarted"
         FailureReason.BLOCKED -> "a permission or switch is missing"

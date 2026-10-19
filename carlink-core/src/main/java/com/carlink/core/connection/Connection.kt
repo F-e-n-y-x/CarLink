@@ -161,9 +161,14 @@ object Connection {
                     brandName = CarLinkCore.config.accessoryName, picture = picture))
             }
             Engine.ANDROID_AUTO -> {
+                val moduleRoute = DeviceEnvironment.moduleRoute(com.carlink.core.detect.ExternalBluetoothProbe.current(app).classification,
+                    com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
+                if (moduleRoute != null && plan.transport == com.carlink.core.core.Transport.WIRELESS) {
+                    com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto Bluetooth through the stereo's module: $moduleRoute (experimental)")
+                }
                 val values = AaSessionSettings.values(settings, plan.transport, plan.path, profile,
                     carName = CarLinkCore.config.accessoryName, panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
-                    picture = picture)
+                    picture = picture, moduleRoute = moduleRoute)
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
             }

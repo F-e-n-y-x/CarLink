@@ -66,7 +66,7 @@
     <string name="carlink_diag_stereo_bt_external_body">Found: %1$s. Apps can\'t use this module, so wireless CarPlay and Android Auto can\'t start on this stereo yet. A USB cable works.</string>
     <string name="carlink_diag_stereo_bt_maybe">Car stereo Bluetooth may be a separate module</string>
     <string name="carlink_diag_stereo_bt_maybe_body">Found: %1$s. Your phone is paired with this stereo\'s Android Bluetooth, so wireless may still work. If it doesn\'t, a USB cable works.</string>
-    <string name="carlink_diag_stereo_bt_override_note">“Try wireless on this stereo anyway” is on in Settings.</string>
+    <string name="carlink_diag_stereo_bt_override_note">“Wireless through the stereo\'s Bluetooth module (experimental)” is on in Settings.</string>
     <string name="carlink_diag_stereo_signal_service">a Bluetooth module service is running</string>
     <string name="carlink_diag_stereo_signal_fyt_setting">the stereo\'s settings name an external Bluetooth module</string>
     <string name="carlink_diag_stereo_signal_fyt_port">the FYT module\'s serial port</string>
@@ -291,6 +291,7 @@
     <string name="carlink_diag_problem_no_answer">Phone didn’t answer</string>
     <string name="carlink_diag_problem_bluetooth">Bluetooth link failed</string>
     <string name="carlink_diag_problem_external_bt">Stereo Bluetooth out of reach</string>
+    <string name="carlink_diag_problem_external_module">Stereo Bluetooth module did not answer</string>
     <string name="carlink_diag_problem_refused_wifi">Phone refused the car’s Wi-Fi</string>
     <string name="carlink_diag_problem_unreached">Phone didn’t reach the car’s Wi-Fi</string>
     <string name="carlink_diag_problem_dropped">Connection dropped</string>

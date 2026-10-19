@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.util.Log
+import com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy
 import com.carlink.core.core.Engine
 import com.carlink.core.core.PhoneKind
 import com.carlink.core.detect.ExternalBluetoothProbe
@@ -46,7 +47,9 @@ class DeviceEnvironment(
         val settings = unified.load()
         val wifi = WifiEnvironmentReader.read(app, settings)
         val facts = DevicePreflight.facts(app, request.phoneAddress)
-        return (DevicePreflight.check(request, path, facts, settings, wifi) + enginePreflight(request, path)).distinct()
+        val viaModule = request.engine == Engine.ANDROID_AUTO &&
+            moduleRoute(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth) != null
+        return (DevicePreflight.check(request, path, facts, settings, wifi, viaModule) + enginePreflight(request, path)).distinct()
     }
 
     override fun wirelessPaths(request: SessionRequest): List<WirelessPath> {
@@ -101,8 +104,23 @@ class DeviceEnvironment(
         private const val TAG = "CarLink-Session"
         private const val KEY_LAST_PHONE = "address"
 
-        /** Whether CarLink blocks wireless on a stereo classified [stereo]; [override] is the driver's "Try wireless anyway". */
-        fun wirelessBlocked(stereo: StereoBluetooth, override: Boolean): Boolean = stereo.blocksWireless && !override
+        /**
+         * Whether CarLink blocks wireless on a stereo classified [stereo]; [moduleOn] is the driver's
+         * "Wireless through the stereo's Bluetooth module (experimental)".
+         */
+        fun wirelessBlocked(stereo: StereoBluetooth, moduleOn: Boolean): Boolean = stereo.blocksWireless && !moduleOn
+
+        /**
+         * The route wireless Android Auto takes through the stereo's Bluetooth module when the driver
+         * turned it on ([moduleOn]), or null for Android's own Bluetooth (design/EXTERNAL_BLUETOOTH.md):
+         * a ZLink-type daemon, or ZLink markers with no daemon seen yet, take ZBT; FYT's module takes BLINK.
+         */
+        fun moduleRoute(stereo: StereoBluetooth, moduleOn: Boolean): ExternalBtTransportPolicy.Route? = when {
+            !moduleOn -> null
+            stereo == StereoBluetooth.ZLINK_DAEMON || stereo == StereoBluetooth.EXTERNAL_UNKNOWN -> ExternalBtTransportPolicy.Route.ZBT
+            stereo == StereoBluetooth.FYT_MODULE -> ExternalBtTransportPolicy.Route.BLINK
+            else -> null
+        }
 
         private fun lastPhone(context: Context) = context.getSharedPreferences("carlink_last_phone", Context.MODE_PRIVATE)
 

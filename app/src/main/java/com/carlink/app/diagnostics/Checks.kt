@@ -87,7 +87,7 @@ data class CheckResult(
     val mfiTarget: MfiTarget? = null,
     /** [CheckId.STEREO_BLUETOOTH]: what the probe found. */
     val stereo: StereoBluetoothReport? = null,
-    /** [CheckId.STEREO_BLUETOOTH]: the driver turned on "Try wireless on this stereo anyway". */
+    /** [CheckId.STEREO_BLUETOOTH]: the driver turned on "Wireless through the stereo's Bluetooth module (experimental)". */
     val overridden: Boolean = false,
 )
 
@@ -97,7 +97,7 @@ data class CheckInputs(
     val phones: List<PairedPhone>,
     val autoConnectPaused: Boolean,
     val autoConnectEnabled: Boolean,
-    /** "Try wireless on this stereo anyway" is on. */
+    /** "Wireless through the stereo's Bluetooth module (experimental)" is on. */
     val wirelessOnExternalBluetooth: Boolean = false,
 )
 

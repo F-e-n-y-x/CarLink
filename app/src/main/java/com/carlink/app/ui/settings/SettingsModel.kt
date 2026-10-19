@@ -55,6 +55,8 @@ data class SettingsUi(
     val detectedBrand: CarBrand? = null,
     /** This stereo's Bluetooth looks like an external module (detect/ExternalBluetoothProbe found signs of one). */
     val stereoBluetoothExternal: Boolean = false,
+    /** That module is FYT's, whose own "Car Link" app (com.syu.carlink) must be disabled for the module route. */
+    val stereoBluetoothFyt: Boolean = false,
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -65,7 +67,7 @@ interface SettingsActions {
     fun setAutoConnectUsb(on: Boolean) {}
     fun setStartOnBoot(on: Boolean) {}
     fun setFloatingSwitcher(on: Boolean) {}
-    /** "Try wireless on this stereo anyway": CarLink stops blocking wireless on an external Bluetooth module. */
+    /** "Wireless through the stereo's Bluetooth module (experimental)" (CarLinkPreferences.wirelessOnExternalBluetooth). */
     fun setWirelessOnExternalBluetooth(on: Boolean) {}
     /** Android's "Display over other apps" screen for CarLink. */
     fun openOverlayPermission() {}

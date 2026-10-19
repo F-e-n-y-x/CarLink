@@ -140,6 +140,9 @@ internal class AaSessionTracker(
             EngineEvent.EXTERNAL_BLUETOOTH.name ->
                 fail(FailureReason.EXTERNAL_BLUETOOTH, "this unit's Bluetooth is an external module the app cannot reach" +
                     (d["evidence"]?.let { " ($it)" } ?: ""))
+            EngineEvent.EXTERNAL_MODULE_UNAVAILABLE.name ->
+                fail(FailureReason.EXTERNAL_MODULE, "the stereo's Bluetooth module could not be reached over ${d["route"] ?: "its route"}" +
+                    (d["reason"]?.let { ": $it" } ?: ""))
             EngineEvent.BT_CHANNEL_ACCEPTED.name -> {
                 accepted = true
                 nextRepokeAt = null
@@ -332,7 +335,7 @@ internal class AaSessionTracker(
         val WIRELESS_ONLY = setOf(
             EngineEvent.WIFI_OFF.name, EngineEvent.P2P_OWNED_BY_OTHER.name, EngineEvent.DFS_CHANNEL.name,
             EngineEvent.BSSID_UNRESOLVED.name, EngineEvent.BLUETOOTH_UNAVAILABLE.name,
-            EngineEvent.EXTERNAL_BLUETOOTH.name, EngineEvent.BT_CHANNEL_ACCEPTED.name,
+            EngineEvent.EXTERNAL_BLUETOOTH.name, EngineEvent.EXTERNAL_MODULE_UNAVAILABLE.name, EngineEvent.BT_CHANNEL_ACCEPTED.name,
             EngineEvent.CREDENTIALS_SENT.name, EngineEvent.POKE_ANSWERED_NO_ACCEPT.name,
             EngineEvent.HANDSHAKE_BACKOFF.name, EngineEvent.PHONE_WIFI_STATUS.name,
             EngineEvent.SETTLE_TIMEOUT.name, EngineEvent.LINK_READ_TIMEOUT.name,

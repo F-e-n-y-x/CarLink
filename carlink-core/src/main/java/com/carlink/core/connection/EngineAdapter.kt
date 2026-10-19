@@ -133,6 +133,11 @@ enum class FailureReason(val pathRelated: Boolean) {
      * (detect/ExternalBluetoothProbe); no wireless path can work until a module route is ported.
      */
     EXTERNAL_BLUETOOTH(false),
+    /**
+     * Wireless through the stereo's Bluetooth module (the driver's experimental opt-in) could not
+     * reach the module: no daemon, the serial port refused, or the stereo's own Car Link app holds it.
+     */
+    EXTERNAL_MODULE(false),
     /** The phone never answered within the engine's time budget. */
     PHONE_DID_NOT_ANSWER(false),
     /** USB permission denied, interface claim failed, accessory switch failed. */

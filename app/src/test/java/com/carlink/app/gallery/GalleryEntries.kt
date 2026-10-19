@@ -160,6 +160,10 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-external-bluetooth") {
         HomeContent(ui(link = failed(LinkProblem.EXTERNAL_BLUETOOTH, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
     },
+    // Wireless through the stereo's Bluetooth module (experimental) could not reach the module.
+    home("failed-external-module") {
+        HomeContent(ui(link = failed(LinkProblem.EXTERNAL_MODULE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
+    },
     home("failed-engine") {
         HomeContent(ui(link = failed(LinkProblem.ENGINE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel, iphone)), actions)
     },
@@ -240,6 +244,12 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
     },
     GalleryEntry("settings", "connection-paused") {
         SettingsContent(settingsPreviewUi(paused = true), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.CONNECTION)
+    },
+    // An FYT stereo with an external Bluetooth module: the experimental module switch and its note.
+    GalleryEntry("settings", "connection-external-module") {
+        SettingsContent(settingsPreviewUi(showAdvanced = true).copy(stereoBluetoothExternal = true, stereoBluetoothFyt = true,
+            connection = settingsPreviewUi().connection.copy(wirelessOnExternalBluetooth = true)), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CONNECTION)
     },
     GalleryEntry("settings", "display-schedule") {

@@ -22,6 +22,18 @@ class DevicePreflightTest {
 
     @Test fun readyDeviceHasNoProblems() = assertEquals(emptyList<Problem>(), check())
 
+    @Test fun throughTheStereosModuleAndroidsBluetoothDoesNotMatter() {
+        val offAndUnpaired = ready.copy(bluetoothOn = false, phoneBonded = false)
+        assertEquals(emptyList<Problem>(),
+            DevicePreflight.check(wireless, WirelessPath.WIFI_DIRECT, offAndUnpaired, UnifiedSettings(), onHome, bluetoothViaModule = true))
+        assertEquals(emptyList<Problem>(), DevicePreflight.check(wireless, WirelessPath.WIFI_DIRECT,
+            ready.copy(phoneBonded = false), UnifiedSettings(), onHome, bluetoothViaModule = true))
+        // Wi-Fi Direct still needs the radio and Location.
+        assertEquals(listOf(Problem.WIFI_OFF), DevicePreflight.check(wireless, WirelessPath.WIFI_DIRECT,
+            offAndUnpaired.copy(wifiOn = false), UnifiedSettings(), onHome, bluetoothViaModule = true))
+        assertEquals(listOf(Problem.BLUETOOTH_OFF), check(offAndUnpaired))
+    }
+
     @Test fun eachMissingThingIsNamed() {
         assertEquals(listOf(Problem.BLUETOOTH_OFF), check(ready.copy(bluetoothOn = false)))
         assertEquals(listOf(Problem.PHONE_NOT_PAIRED), check(ready.copy(phoneBonded = false)))

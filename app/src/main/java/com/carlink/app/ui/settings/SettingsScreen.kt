@@ -154,7 +154,8 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         overlayAllowed = overlayAllowed,
         carBrand = vehicle.brand,
         detectedBrand = vehicle.detected,
-        stereoBluetoothExternal = stereoBluetooth?.classification?.hasSignals == true,
+        stereoBluetoothExternal = stereoBluetooth?.classification?.blocksWireless == true,
+        stereoBluetoothFyt = stereoBluetooth?.classification == com.carlink.core.detect.StereoBluetooth.FYT_MODULE,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }

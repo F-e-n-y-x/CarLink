@@ -25,9 +25,11 @@ class CarLinkPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_START_ON_BOOT, value).apply()
 
     /**
-     * Start wireless sessions even where this stereo's Bluetooth looks like an external module
-     * (detect/ExternalBluetoothProbe). Off by default; the Android Auto engine has its own check
-     * and may still refuse.
+     * "Wireless through the stereo's Bluetooth module (experimental)": where this stereo's
+     * Bluetooth is an external module (detect/ExternalBluetoothProbe), CarLink stops blocking
+     * wireless and wireless Android Auto runs its handshake through the module
+     * (DeviceEnvironment.moduleRoute). Off by default: untested on hardware. It replaced "Try
+     * wireless on this stereo anyway" and keeps its key.
      */
     var wirelessOnExternalBluetooth: Boolean
         get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, false)

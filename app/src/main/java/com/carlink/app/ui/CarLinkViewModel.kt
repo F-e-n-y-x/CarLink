@@ -64,7 +64,7 @@ data class ConnectionPrefs(
     val autoConnectPaused: Boolean,
     /** The floating switcher over the projection (Settings › General). */
     val floatingSwitcher: Boolean = true,
-    /** "Try wireless on this stereo anyway" (Settings › Connection, advanced). */
+    /** "Wireless through the stereo's Bluetooth module (experimental)" (Settings › Connection, advanced). */
     val wirelessOnExternalBluetooth: Boolean = false,
 )
 
@@ -400,7 +400,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setWirelessOnExternalBluetooth(on: Boolean) {
         preferences.wirelessOnExternalBluetooth = on
         _connection.value = readConnection()
-        com.carlink.core.diagnostics.EventLog.add("CarLink", "Try wireless on this stereo anyway: ${if (on) "on" else "off"}")
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Wireless through the stereo's Bluetooth module (experimental): ${if (on) "on" else "off"}")
     }
     fun setFloatingSwitcher(on: Boolean) {
         uiPreferences.floatingSwitcher = on

@@ -272,10 +272,10 @@ class SessionManagerTest {
             val expected = stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON ||
                 stereo == com.carlink.core.detect.StereoBluetooth.FYT_MODULE ||
                 stereo == com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN
-            assertEquals(stereo.name, expected, DeviceEnvironment.wirelessBlocked(stereo, override = false))
-            assertEquals(stereo.name, false, DeviceEnvironment.wirelessBlocked(stereo, override = true))
+            assertEquals(stereo.name, expected, DeviceEnvironment.wirelessBlocked(stereo, moduleOn = false))
+            assertEquals(stereo.name, false, DeviceEnvironment.wirelessBlocked(stereo, moduleOn = true))
         }
-        env.wirelessUnavailable = DeviceEnvironment.wirelessBlocked(com.carlink.core.detect.StereoBluetooth.FYT_MODULE, override = true)
+        env.wirelessUnavailable = DeviceEnvironment.wirelessBlocked(com.carlink.core.detect.StereoBluetooth.FYT_MODULE, moduleOn = true)
         val m = manager()
         m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
         assertEquals(listOf("ANDROID_AUTO start WIRELESS WIFI_DIRECT"), starts)
@@ -285,6 +285,33 @@ class SessionManagerTest {
         assertEquals(FailureReason.EXTERNAL_BLUETOOTH, failed.reason)
         assertEquals("not path-related: no second path", 1, starts.size)
         assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_BLUETOOTH, failed.toLinkState().problem)
+    }
+
+    @Test fun theModuleSettingPicksTheEngineRouteOnlyWhereAModuleWasFound() {
+        val zbt = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.ZBT
+        val blink = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLINK
+        for (stereo in com.carlink.core.detect.StereoBluetooth.entries) {
+            assertEquals(stereo.name, null, DeviceEnvironment.moduleRoute(stereo, moduleOn = false))
+            val expected = when (stereo) {
+                com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON, com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN -> zbt
+                com.carlink.core.detect.StereoBluetooth.FYT_MODULE -> blink
+                else -> null
+            }
+            assertEquals(stereo.name, expected, DeviceEnvironment.moduleRoute(stereo, moduleOn = true))
+            // Every stereo the setting unblocks gets a module route; none is unblocked onto Android's own radio.
+            if (stereo.blocksWireless) assertEquals(stereo.name, true, DeviceEnvironment.moduleRoute(stereo, true) != null)
+        }
+    }
+
+    @Test fun anUnreachableModuleFailsOnceAndPointsToTheCable() {
+        env.wirelessUnavailable = DeviceEnvironment.wirelessBlocked(com.carlink.core.detect.StereoBluetooth.FYT_MODULE, moduleOn = true)
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Failed(FailureReason.EXTERNAL_MODULE, "the stereo's Bluetooth module could not be reached over BLINK")); idle()
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(FailureReason.EXTERNAL_MODULE, failed.reason)
+        assertEquals("not path-related: no second path", 1, starts.size)
+        assertEquals(com.carlink.core.core.LinkProblem.EXTERNAL_MODULE, failed.toLinkState().problem)
     }
 
     @Test fun usbSessionEndsWhenThePhoneStaysUnplugged() {

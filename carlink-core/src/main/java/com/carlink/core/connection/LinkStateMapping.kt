@@ -113,6 +113,7 @@ fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
     FailureReason.WIFI_SETUP_FAILED -> LinkProblem.ENGINE
     FailureReason.BLUETOOTH -> LinkProblem.BLUETOOTH
     FailureReason.EXTERNAL_BLUETOOTH -> LinkProblem.EXTERNAL_BLUETOOTH
+    FailureReason.EXTERNAL_MODULE -> LinkProblem.EXTERNAL_MODULE
     FailureReason.PHONE_DID_NOT_ANSWER -> LinkProblem.PHONE_DID_NOT_ANSWER
     FailureReason.USB -> LinkProblem.USB
     FailureReason.BLOCKED -> LinkProblem.PERMISSIONS

@@ -202,6 +202,7 @@ private fun problemName(record: ProblemRecord): String = stringResource(when (re
     FailureReason.PHONE_DID_NOT_ANSWER.name -> R.string.carlink_diag_problem_no_answer
     FailureReason.BLUETOOTH.name -> R.string.carlink_diag_problem_bluetooth
     FailureReason.EXTERNAL_BLUETOOTH.name -> R.string.carlink_diag_problem_external_bt
+    FailureReason.EXTERNAL_MODULE.name -> R.string.carlink_diag_problem_external_module
     FailureReason.PHONE_REFUSED_WIFI.name -> R.string.carlink_diag_problem_refused_wifi
     FailureReason.PHONE_NEVER_REACHED_CAR.name -> R.string.carlink_diag_problem_unreached
     FailureReason.LINK_TOO_WEAK.name -> R.string.carlink_diag_problem_dropped

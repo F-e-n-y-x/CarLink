@@ -78,6 +78,8 @@ enum class LinkProblem {
      * Android Auto cannot start (pre-flight or engine-reported); a USB cable works.
      */
     EXTERNAL_BLUETOOTH,
+    /** Wireless through the stereo's Bluetooth module was tried (opt-in) and could not reach it; USB works. */
+    EXTERNAL_MODULE,
 }
 
 /**

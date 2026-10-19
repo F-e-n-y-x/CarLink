@@ -45,8 +45,9 @@
     <string name="carlink_settings_resume">Resume</string>
 
     <string name="carlink_settings_group_wireless">Wireless</string>
-    <string name="carlink_settings_external_bt">Try wireless on this stereo anyway</string>
-    <string name="carlink_settings_external_bt_detail">This stereo\'s Bluetooth looks like a separate module apps can\'t use, so CarLink doesn\'t start wireless here. Turn on to try anyway; the Android Auto engine may still refuse. Applies from the next connection.</string>
+    <string name="carlink_settings_external_bt">Wireless through the stereo\'s Bluetooth module (experimental)</string>
+    <string name="carlink_settings_external_bt_detail">This stereo\'s Bluetooth is a separate module. Turn on to let wireless Android Auto reach your phone through it. Not yet tested on a real stereo; USB still works. Applies from the next connection.</string>
+    <string name="carlink_settings_external_bt_fyt_note">First disable the stereo\'s own “Car Link” app (com.syu.carlink) in Android Settings › Apps.</string>
     <string name="carlink_settings_method">Connection method</string>
     <string name="carlink_settings_method_detail">How the phone and the car share Wi-Fi</string>
     <string name="carlink_settings_method_auto">Automatic</string>
