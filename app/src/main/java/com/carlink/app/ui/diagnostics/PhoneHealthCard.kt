@@ -205,6 +205,7 @@ private fun problemName(record: ProblemRecord): String = stringResource(when (re
     FailureReason.EXTERNAL_MODULE.name -> R.string.carlink_diag_problem_external_module
     FailureReason.PHONE_REFUSED_WIFI.name -> R.string.carlink_diag_problem_refused_wifi
     FailureReason.PHONE_NEVER_REACHED_CAR.name -> R.string.carlink_diag_problem_unreached
+    FailureReason.PHONE_WIFI_OFF.name -> R.string.carlink_diag_problem_wifi_off
     FailureReason.LINK_TOO_WEAK.name -> R.string.carlink_diag_problem_dropped
     FailureReason.WIFI_SETUP_FAILED.name -> R.string.carlink_diag_problem_wifi_setup
     FailureReason.USB.name -> R.string.carlink_diag_problem_usb

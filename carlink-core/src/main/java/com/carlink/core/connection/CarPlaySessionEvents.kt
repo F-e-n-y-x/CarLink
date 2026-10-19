@@ -281,6 +281,13 @@ class CarPlaySessionTracker(
         }
     }
 
+    /** CarLink itself found the session cannot work ([CarPlayLinkWatch]): no retry can fix [reason]. */
+    fun fail(reason: FailureReason, detail: String): List<AdapterEvent> =
+        if (finished) emptyList() else finish(failed(CarPlayFailure(reason, hard = true, message = detail)))
+
+    /** The iPhone left a running session (off the car's Wi-Fi and off Bluetooth): it ended, nothing failed. */
+    fun phoneLeft(): List<AdapterEvent> = if (finished) emptyList() else finish(AdapterEvent.Ended(byUser = false))
+
     private fun onRetrying(state: HostState.Retrying): List<AdapterEvent> {
         projecting = false
         lastProgress = null

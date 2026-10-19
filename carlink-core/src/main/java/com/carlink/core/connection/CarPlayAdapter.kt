@@ -9,6 +9,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.net.wifi.WifiManager
+import android.net.wifi.p2p.WifiP2pGroup
+import android.net.wifi.p2p.WifiP2pManager
+import androidx.core.content.ContextCompat
+import com.carlink.core.settings.WirelessPath
 import android.util.Log
 import com.carlink.core.core.Engine
 import com.carlink.core.core.Transport
@@ -59,6 +67,20 @@ class CarPlayAdapter internal constructor(
     private val hostStateListener: (HostState) -> Unit = { state -> main.post { onHostState(state) } }
     private val milestoneListener: (WirelessStartupTimeline.Phase) -> Unit = { phase -> main.post { onMilestone(phase) } }
 
+    /** Wireless CarPlay on Wi-Fi Direct only: stuck starts and a departed iPhone ([CarPlayLinkWatch]). */
+    private val linkWatch = CarPlayLinkWatch()
+    private var watching = false
+    private val clientsListener: (Int, Int) -> Unit = { clients, leased ->
+        main.post { if (watching) linkWatch.onClients(clients, leased, SystemClock.uptimeMillis()) }
+    }
+    private val linkPoll = object : Runnable {
+        override fun run() {
+            if (!watching) return
+            linkWatch.verdict(SystemClock.uptimeMillis())?.let(::onLinkVerdict)
+            if (watching) main.postDelayed(this, CarPlayLinkWatch.POLL_MILLIS)
+        }
+    }
+
     override fun start(plan: SessionPlan, listener: (AdapterEvent) -> Unit) {
         require(plan.engine == Engine.CARPLAY) { "CarPlayAdapter cannot start ${plan.engine}" }
         if (hooks.hasSession()) {
@@ -84,6 +106,13 @@ class CarPlayAdapter internal constructor(
             hooks.selectPhone(plan.phoneAddress, plan.phoneName ?: plan.phoneAddress)
         }
         hooks.setWirelessEnabled(plan.transport == Transport.WIRELESS)
+        if (plan.transport == Transport.WIRELESS) hooks.holdWifi(true)
+        if (plan.transport == Transport.WIRELESS && plan.path == WirelessPath.WIFI_DIRECT) {
+            linkWatch.reset()
+            watching = true
+            hooks.watchClients(clientsListener)
+            main.postDelayed(linkPoll, CarPlayLinkWatch.POLL_MILLIS)
+        }
         deliver(listOf(tracker.started()))
         hooks.openHost(plan.usbAttach)?.let { error ->
             Log.w(TAG, "could not open CarPlay: ${error.javaClass.simpleName}")
@@ -117,6 +146,7 @@ class CarPlayAdapter internal constructor(
     private fun onMilestone(phase: WirelessStartupTimeline.Phase) {
         val tracker = tracker ?: return
         if (listener == null) return
+        if (watching) linkWatch.onMilestone(phase, SystemClock.uptimeMillis())
         deliver(tracker.onMilestone(phase))
     }
 
@@ -124,7 +154,31 @@ class CarPlayAdapter internal constructor(
         val tracker = tracker ?: return
         if (listener == null) return
         Log.i(TAG, "host state $state")
+        when (state) {
+            is HostState.Retrying -> linkWatch.reset() // DiPlay brings the link up again
+            HostState.FirstFrame -> linkWatch.onConnected()
+            else -> Unit
+        }
         deliver(tracker.onHostState(state))
+    }
+
+    private fun onLinkVerdict(verdict: CarPlayLinkWatch.Verdict) {
+        val tracker = tracker ?: return
+        if (listener == null) return
+        Log.i(TAG, "link watch $verdict")
+        deliver(when (verdict) {
+            CarPlayLinkWatch.Verdict.NO_START_REQUEST -> listOf(AdapterEvent.Stalled(FailureReason.PHONE_NEVER_REACHED_CAR,
+                "the iPhone took the Wi-Fi details but did not start CarPlay"))
+            CarPlayLinkWatch.Verdict.NO_TCP -> listOf(AdapterEvent.Stalled(FailureReason.PHONE_NEVER_REACHED_CAR,
+                "the iPhone joined the car's Wi-Fi but did not open CarPlay"))
+            CarPlayLinkWatch.Verdict.NOT_JOINED -> tracker.fail(FailureReason.PHONE_WIFI_OFF,
+                "the iPhone did not join the car's Wi-Fi: turn its Wi-Fi on in Settings")
+            // Still on Bluetooth: one fresh attempt (a long roam or a Control Center Wi-Fi toggle,
+            // which iOS still lets CarPlay rejoin through); gone from both: it left.
+            CarPlayLinkWatch.Verdict.PHONE_LEFT -> if (plan?.phoneAddress?.let(hooks::phoneLinked) == true) {
+                listOf(AdapterEvent.Stalled(FailureReason.LINK_TOO_WEAK, "the iPhone left the car's Wi-Fi"))
+            } else tracker.phoneLeft()
+        })
     }
 
     private fun deliver(events: List<AdapterEvent>) {
@@ -140,6 +194,12 @@ class CarPlayAdapter internal constructor(
     }
 
     private fun detach() {
+        if (watching) {
+            watching = false
+            main.removeCallbacks(linkPoll)
+            hooks.watchClients(null)
+        }
+        hooks.holdWifi(false)
         hooks.removeStatusListener(statusListener)
         hooks.removeHostStateListener(hostStateListener)
         hooks.setMilestoneListener(null)
@@ -193,6 +253,15 @@ interface CarPlayEngineHooks {
 
     /** DiPlay's wireless `WIRELESS_TIMING` milestones (any thread); null stops them. */
     fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {}
+
+    /** The Wi-Fi Direct group's (clients, clients with a DHCP lease) on every change (any thread); null stops. */
+    fun watchClients(listener: ((Int, Int) -> Unit)?) {}
+
+    /** The phone's Bluetooth (ACL) link to this device is up. */
+    fun phoneLinked(address: String): Boolean = false
+
+    /** Keeps Wi-Fi out of power save while a wireless session runs (DiAuto holds the same lock). */
+    fun holdWifi(on: Boolean) {}
 }
 
 /** Fans DiPlay's single host-state hook out to every listener (adapter, waiting view). */
@@ -226,6 +295,41 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
 
     override fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {
         WirelessStartupTimeline.milestoneListener = listener
+    }
+
+    private var clientsReceiver: BroadcastReceiver? = null
+
+    override fun watchClients(listener: ((Int, Int) -> Unit)?) {
+        clientsReceiver?.let { runCatching { app.unregisterReceiver(it) } }
+        clientsReceiver = null
+        if (listener == null) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                @Suppress("DEPRECATION")
+                val group = runCatching { intent.getParcelableExtra<WifiP2pGroup>(WifiP2pManager.EXTRA_WIFI_P2P_GROUP) }
+                    .getOrNull()?.takeIf { it.isGroupOwner } ?: return
+                val clients = group.clientList
+                // The lease shows in the client list from Android 15 (TETHER_INTERFACE_CLIENTS_CHANGED).
+                val leased = if (Build.VERSION.SDK_INT >= 35) clients.count { it.ipAddress != null } else 0
+                listener(clients.size, leased)
+            }
+        }
+        clientsReceiver = receiver
+        ContextCompat.registerReceiver(app, receiver, IntentFilter(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION),
+            ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun phoneLinked(address: String): Boolean = BluetoothWarmup.linked(app, address)
+
+    private val wifiLock by lazy {
+        @Suppress("DEPRECATION") // HIGH_PERF before Q; LOW_LATENCY (foreground, screen on) from Q.
+        val mode = if (Build.VERSION.SDK_INT >= 29) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL_HIGH_PERF
+        app.getSystemService(WifiManager::class.java)?.createWifiLock(mode, "CarLink:CarPlay")?.apply { setReferenceCounted(false) }
+    }
+
+    override fun holdWifi(on: Boolean) {
+        runCatching { if (on) wifiLock?.acquire() else if (wifiLock?.isHeld == true) wifiLock?.release() }
+            .onFailure { Log.w("CarLink-CarPlay", "Wi-Fi lock: ${it.javaClass.simpleName}") }
     }
 
     override fun openHost(usbAttach: Intent?): Throwable? {

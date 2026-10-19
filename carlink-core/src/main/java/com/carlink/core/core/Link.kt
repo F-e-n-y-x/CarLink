@@ -72,6 +72,8 @@ enum class LinkProblem {
     // Session failures (connection v2), precise enough to say what to do.
     PHONE_REFUSED_WIFI,
     PHONE_NEVER_REACHED_CAR,
+    /** The iPhone took the Wi-Fi details but never joined: its Wi-Fi is off (Settings). */
+    PHONE_WIFI_OFF,
     LINK_TOO_WEAK,
     PHONE_DID_NOT_ANSWER,
     BLUETOOTH,

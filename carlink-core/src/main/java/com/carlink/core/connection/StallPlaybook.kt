@@ -117,7 +117,7 @@ object StallPlaybook {
             ProgressStage.HANDSHAKE ->
                 if (transport == Transport.USB) FailureReason.USB to "the $phone stopped answering during the handshake ($s s)"
                 else FailureReason.BLUETOOTH to "the $phone stopped answering during the handshake ($s s)"
-            ProgressStage.JOINING_WIFI -> FailureReason.PHONE_NEVER_REACHED_CAR to "the $phone did not join the car's Wi-Fi in $s s"
+            ProgressStage.JOINING_WIFI -> FailureReason.PHONE_NEVER_REACHED_CAR to "the $phone did not connect over the car's Wi-Fi in $s s"
             ProgressStage.STARTING_PROJECTION -> FailureReason.LINK_TOO_WEAK to "no picture $s s after the $phone connected"
             null -> (if (transport == Transport.USB) FailureReason.USB else FailureReason.PHONE_DID_NOT_ANSWER) to
                 "no picture after $s s"
