@@ -50,6 +50,10 @@ object AaSessionSettings {
             // Native wireless Android Auto, the only no-companion route; a stray mode 1/2 makes
             // every wireless start a no-op (DA§10.4).
             put("wifi-connection-mode", 3)
+            // DiAuto 0.3.12 keeps every wireless transport down when its connection types leave
+            // WiFi out (WirelessScopePolicy). CarLink decides USB or wireless per session
+            // (usbOnlySession), so the engine's own filter always allows both.
+            put("connection-modes", setOf("usb", "wifi"))
             // CarLink owns every entry point (DA§10.6.2, §11.1): the engine's hibernate-wake launch
             // and its USB/Wi-Fi auto-starts stay off.
             put("auto-start-on-boot", false)
@@ -73,6 +77,10 @@ object AaSessionSettings {
             })
             // BYD's HUD/cluster outputs only on a BYD (DA§12.2).
             put("byd-navigation-enabled", profile == VehicleProfile.BYD_DILINK && settings.bydDirections)
+            // DiAuto 0.3.12's BYD dashboard map (a second video stream announced to the phone and a
+            // window on the cluster display). Off everywhere: CarLink has no setting for it yet,
+            // and it is untested beyond DiLink 5.1. A BYD-only setting can turn it on later.
+            put("cluster-map-enabled", false)
             putPicture(settings, panelDensityDpi, picture)
             put("night-mode", when (settings.dayNight) {
                 DayNight.AUTOMATIC -> 0 // sunrise/sunset

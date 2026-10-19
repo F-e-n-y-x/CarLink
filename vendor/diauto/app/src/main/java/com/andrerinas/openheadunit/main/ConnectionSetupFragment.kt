@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.andrerinas.openheadunit.R
+import com.andrerinas.openheadunit.aap.WirelessScopePolicy
 import com.andrerinas.openheadunit.utils.AppPermissions
 import com.andrerinas.openheadunit.utils.Settings
 import com.google.android.material.appbar.MaterialToolbar
@@ -135,6 +136,11 @@ class ConnectionSetupFragment : Fragment() {
         pendingCarHotspotSetup = false
         settings.nativeApTransport = mode
         settings.wifiConnectionMode = 3
+        // Choosing the car hotspot or Wi-Fi Direct here is a choice of WiFi. Without it among the
+        // connection types (onboarding may have left only USB) the wireless route stays down.
+        if (!WirelessScopePolicy.allowsWireless(settings.connectionModes)) {
+            settings.connectionModes = settings.connectionModes + Settings.ConnectionMode.WIFI
+        }
         render()
     }
 

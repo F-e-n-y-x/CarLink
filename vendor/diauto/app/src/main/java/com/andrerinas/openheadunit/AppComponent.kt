@@ -17,6 +17,11 @@ class AppComponent(private val app: App) {
     val videoDecoder = VideoDecoder(settings, DeviceMemoryProfile.readWithOverride(app, settings.debugForceMemoryProfile))
     val audioDecoder = AudioDecoder()
 
+    /** Decodes the instrument-cluster (dashboard) stream; created only if a session uses one. */
+    val clusterVideoDecoder: VideoDecoder by lazy {
+        VideoDecoder(settings, DeviceMemoryProfile.readWithOverride(app, settings.debugForceMemoryProfile))
+    }
+
     val notificationManager: NotificationManager
         get() = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val wifiManager: WifiManager

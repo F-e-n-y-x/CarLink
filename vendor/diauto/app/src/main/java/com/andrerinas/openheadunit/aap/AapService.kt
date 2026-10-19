@@ -195,6 +195,18 @@ class AapService : Service(), UsbReceiver.Listener {
                 }
             }
 
+            // Covers the settings dialog, onboarding and settings import alike: re-evaluate which
+            // wireless transports may run. initWifiMode() is a no-op when nothing effectively
+            // changed, and it keeps honouring the boot-loop pause. While the first bring-up still
+            // waits for WiFi, that pending start reads the new value itself.
+            if (key == Settings.KEY_CONNECTION_MODES) {
+                serviceScope.launch(Dispatchers.Main) {
+                    if (!isDestroying && wifiReadyTimeoutJob?.isActive != true) {
+                        initWifiMode()
+                    }
+                }
+            }
+
             if (key == Settings.KEY_MEDIA_VOLUME_OFFSET || key == Settings.KEY_ASSISTANT_VOLUME_OFFSET || key == Settings.KEY_NAVIGATION_VOLUME_OFFSET) {
                 serviceScope.launch(Dispatchers.Main) {
                     commManager.updateAudioGains()
@@ -1193,7 +1205,9 @@ class AapService : Service(), UsbReceiver.Listener {
             nearbyManager?.stop() // Disconnect Nearby tunnel
 
             val settings = App.provide(this@AapService).settings
-            val mode = settings.wifiConnectionMode
+            // Effective, not stored: with WiFi left out of the connection types nothing wireless
+            // ran, so ending a USB session must not re-arm Native AA or bounce the hotspot.
+            val mode = WirelessScopePolicy.effectiveMode(settings.wifiConnectionMode, settings.connectionModes)
             val strategy = settings.helperConnectionStrategy
 
             if (mode == 3) {
@@ -1636,7 +1650,13 @@ class AapService : Service(), UsbReceiver.Listener {
         }
 
         val settings = App.provide(this).settings
-        val mode = settings.wifiConnectionMode
+        val storedMode = settings.wifiConnectionMode
+        // The connection types decide whether wireless runs at all; the stored mode only says
+        // which kind. Leaving WiFi out of them must not leave a hidden Native AA route running.
+        val mode = WirelessScopePolicy.effectiveMode(storedMode, settings.connectionModes)
+        if (mode != storedMode) {
+            AppLog.i("AapService: WiFi is not among the chosen connection types; keeping wireless mode $storedMode down.")
+        }
         val strategy = settings.helperConnectionStrategy
 
         if (!force && mode == activeWifiMode && strategy == activeHelperStrategy &&
@@ -2023,7 +2043,9 @@ class AapService : Service(), UsbReceiver.Listener {
                 val settings = App.provide(this).settings
                 val sessionUp = commManager.isConnected ||
                     commManager.connectionState.value is CommManager.ConnectionState.Connecting
-                if (settings.wifiConnectionMode == 3 && !sessionUp &&
+                val nativeAllowed = WirelessScopePolicy.effectiveMode(
+                    settings.wifiConnectionMode, settings.connectionModes) == 3
+                if (nativeAllowed && !sessionUp &&
                     nativeAaHandshakeManager?.isActive() != true &&
                     nativeAaHandshakeManager?.isAttemptInFlight() != true) {
                     AppLog.i("AapService: Bluetooth auto-start — Native AA handshake manager was stopped, re-arming.")

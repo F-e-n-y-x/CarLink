@@ -115,6 +115,48 @@ class Settings(private val context: Context) {
         get() = prefs.getBoolean("byd-navigation-enabled", false)
         set(value) { prefs.edit().putBoolean("byd-navigation-enabled", value).apply() }
 
+    // Instrument-cluster ("dashboard") map from Android Auto. Declared to the phone at connection
+    // time, so changes apply on the next connection. See hud/ClusterMapConfig.
+    var clusterMapEnabled: Boolean
+        get() = prefs.getBoolean("cluster-map-enabled", false)
+        set(value) { prefs.edit().putBoolean("cluster-map-enabled", value).apply() }
+
+    var clusterMapSize: Int
+        get() = prefs.getInt("cluster-map-size", 0)
+        set(value) { prefs.edit().putInt("cluster-map-size", value).apply() }
+
+    var clusterMapDetail: Int
+        get() = prefs.getInt("cluster-map-detail", 1)
+        set(value) { prefs.edit().putInt("cluster-map-detail", value).apply() }
+
+    var clusterMarkerX: Int
+        get() = prefs.getInt("cluster-marker-x", 0)
+        set(value) { prefs.edit().putInt("cluster-marker-x", value).apply() }
+
+    var clusterMarkerY: Int
+        get() = prefs.getInt("cluster-marker-y", 0)
+        set(value) { prefs.edit().putInt("cluster-marker-y", value).apply() }
+
+    var clusterMapWidth: Int
+        get() = prefs.getInt("cluster-map-width", 0)
+        set(value) { prefs.edit().putInt("cluster-map-width", value).apply() }
+
+    /** The cluster theme picked on the car, which decides where its map window is (DiLink 5.1). */
+    var clusterTheme: Int
+        get() = prefs.getInt("cluster-theme", 0)
+        set(value) { prefs.edit().putInt("cluster-theme", value).apply() }
+
+    /** DiPlay's turn card drawn over the dashboard map. */
+    var clusterTurnCardOverlay: Boolean
+        get() = prefs.getBoolean("cluster-turn-card-overlay", true)
+        set(value) { prefs.edit().putBoolean("cluster-turn-card-overlay", value).apply() }
+    // Traffic side for BYD cluster/HUD roundabouts. Legacy Android Auto turn events carry the exit
+    // number but not the circulation direction, which the cluster needs to show that exit.
+    // false = traffic keeps right (counter-clockwise roundabouts), the common case.
+    var bydLeftHandTraffic: Boolean
+        get() = prefs.getBoolean("byd-left-hand-traffic", false)
+        set(value) { prefs.edit().putBoolean("byd-left-hand-traffic", value).apply() }
+
     var showNavigationNotifications: Boolean
         get() = prefs.getBoolean("show-navigation-notifications", false)
         set(value) {
@@ -559,18 +601,19 @@ class Settings(private val context: Context) {
     /**
      * The connection types the user actually uses (multi-select). Drives which settings are shown.
      * Empty = nothing chosen yet, so everything is shown. Migrated once from the legacy
-     * single-choice [primaryConnection].
+     * single-choice [primaryConnection]. Leaving WiFi out also keeps every wireless transport
+     * down, see [com.andrerinas.openheadunit.aap.WirelessScopePolicy].
      */
     var connectionModes: Set<ConnectionMode>
         get() {
-            val stored = prefs.getStringSet("connection-modes", null)
+            val stored = prefs.getStringSet(KEY_CONNECTION_MODES, null)
             if (stored != null) return stored.mapNotNull { ConnectionMode.fromKey(it) }.toSet()
             val migrated = migrateLegacyConnectionModes()
             connectionModes = migrated
             return migrated
         }
         set(value) {
-            prefs.edit().putStringSet("connection-modes", value.map { it.key }.toSet()).apply()
+            prefs.edit().putStringSet(KEY_CONNECTION_MODES, value.map { it.key }.toSet()).apply()
         }
 
     private fun migrateLegacyConnectionModes(): Set<ConnectionMode> = when (primaryConnection) {
@@ -770,6 +813,14 @@ class Settings(private val context: Context) {
         set(value) {
             prefs.edit().putString("auto-connect-priority-order", value.joinToString(",")).apply()
         }
+
+    /**
+     * Phones the user took off the auto-start list. DiAuto adds a phone that connects to the list
+     * by itself, so without this a removed phone came back on its next connection (#35).
+     */
+    var autoStartBluetoothDeviceMacsRemoved: Set<String>
+        get() = prefs.getStringSet("auto-start-bt-macs-removed", null)?.toSet() ?: emptySet()
+        set(value) { prefs.edit().putStringSet("auto-start-bt-macs-removed", value).apply() }
 
     var autoStartBluetoothDeviceMacs: Set<String>
         get() {
@@ -1038,6 +1089,8 @@ class Settings(private val context: Context) {
         const val KEY_MEDIA_VOLUME_OFFSET = "media-volume-offset"
         const val KEY_ASSISTANT_VOLUME_OFFSET = "assistant-volume-offset"
         const val KEY_NAVIGATION_VOLUME_OFFSET = "navigation-volume-offset"
+
+        const val KEY_CONNECTION_MODES = "connection-modes"
 
         const val AUTO_CONNECT_LAST_SESSION = "last-session"
         const val AUTO_CONNECT_SELF_MODE = "self-mode"

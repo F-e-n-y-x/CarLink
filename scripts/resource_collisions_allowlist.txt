@@ -63,3 +63,28 @@ string exit_dialog_stop
 string exit_dialog_title
 string gesture_hint
 string side_panel_full_screen
+
+# DiAuto 0.3.12 copied DiPlay's turn card (e2cdb7937): the drawables are byte-identical and the
+# strings identical, placeholders included (the one exception to "never for format strings";
+# re-check them after either engine's update). cluster_map_size differs only in wording.
+drawable ic_turn_card_roundabout_left
+drawable ic_turn_card_roundabout_right
+drawable ic_turn_card_sports_score
+drawable ic_turn_card_straight
+drawable ic_turn_card_turn_left
+drawable ic_turn_card_turn_right
+drawable ic_turn_card_turn_sharp_left
+drawable ic_turn_card_turn_sharp_right
+drawable ic_turn_card_turn_slight_left
+drawable ic_turn_card_turn_slight_right
+drawable ic_turn_card_u_turn_left
+drawable ic_turn_card_u_turn_right
+string cluster_map_size
+string turn_card_distance_km
+string turn_card_distance_m
+string turn_card_exit
+string turn_card_info_arrival
+string turn_card_info_duration_hm
+string turn_card_info_duration_m
+string turn_card_info_km
+string turn_card_now

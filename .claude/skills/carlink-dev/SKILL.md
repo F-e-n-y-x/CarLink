@@ -100,12 +100,11 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
 ## Vendor engines
 
 `vendor/diplay` (CarPlay, main process; upstream main 6d3b8a8ce, DiPlay 0.2.21+) and `vendor/diauto`
-(Android Auto, `:aa`) were imported as git subtrees. Change them only through small hooks marked `// CarLink`, and add a row
+(Android Auto, `:aa`; upstream main d53dad71e, DiAuto 0.3.12+) were imported as git subtrees. Change them only through small hooks marked `// CarLink`, and add a row
 to `docs/VENDOR_CHANGES.md` for every edit (every edit needs a row, every row an edit; audit with
-`git diff --stat 6d3b8a8ce: HEAD:vendor/diplay`, `git diff --stat a2119f48 HEAD:vendor/diauto` and
+`git diff --stat 6d3b8a8ce: HEAD:vendor/diplay`, `git diff --stat d53dad71e: HEAD:vendor/diauto` and
 `grep -rn CarLink vendor/`). Prefer a host hook over editing engine logic. Do not run
-`git subtree pull` unless asked; DiPlay can no longer be subtree-pulled at all (history rewrite
-upstream): it is updated by applying the upstream diff (commands in `docs/VENDOR_CHANGES.md`).
+`git subtree pull`; neither engine can be subtree-pulled any more (no merge base): each is updated by applying the upstream diff (commands in `docs/VENDOR_CHANGES.md`).
 
 The hooks CarLink sets (where):
 

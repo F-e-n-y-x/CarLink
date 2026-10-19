@@ -59,6 +59,14 @@ object KeyCode {
         65536, 65537, 65538 // Rotary controller
     ).distinct().sorted()
 
+    /** BYD's KEYCODE_AUTO_MEDIA_VOICE_LP, verified on DiLink 3.0 (Android 10). */
+    const val BYD_VOICE_LONG_PRESS = 312
+
+    private val isByd: Boolean by lazy {
+        android.os.Build.MANUFACTURER.contains("BYD", ignoreCase = true) ||
+            android.os.Build.BRAND.contains("BYD", ignoreCase = true)
+    }
+
     val KeyEvent.isMediaSessionKey: Boolean
         get() = keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ||
                 keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE ||
@@ -81,6 +89,13 @@ object KeyCode {
         }
 
         if (keyCode == KeyEvent.KEYCODE_VOICE_ASSIST)
+            return KeyEvent.KEYCODE_SEARCH
+
+        // BYD DiLink: a long press on the steering-wheel voice button reaches the foreground app as
+        // KEYCODE_AUTO_MEDIA_VOICE_LP (312), a BYD framework keycode, while a short press stays with
+        // the BYD assistant. Map the long press to the phone assistant, like a dedicated voice key.
+        // Gated to BYD because 312 is not a standard keycode on other head units.
+        if (keyCode == BYD_VOICE_LONG_PRESS && isByd)
             return KeyEvent.KEYCODE_SEARCH
 
         // Return KEYCODE_UNKNOWN for anything else to avoid sending invalid codes to AA

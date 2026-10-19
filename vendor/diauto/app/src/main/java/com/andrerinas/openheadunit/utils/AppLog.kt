@@ -252,8 +252,24 @@ object AppLog {
 
     private fun loge(message: String, tr: Throwable?) {
         val trace = if (LOGGER is Logger.Android) Log.getStackTraceString(tr) else ""
-        DiagnosticJournal.record(Log.ERROR, message)
+        // The journal is what a diagnostic report exports, and the logcat stack trace never reaches
+        // it. Without the exception's type and message a reported "crashed" line cannot be read for
+        // its cause, so carry a short, bounded summary into the journal as well.
+        DiagnosticJournal.record(Log.ERROR, if (tr == null) message else message + '\n' + throwableSummary(tr))
         LOGGER.println(Log.ERROR, TAG, message + '\n' + trace)
+    }
+
+    /**
+     * One line per exception in the cause chain (type and message), followed by the first frames
+     * of the innermost cause. Bounded so a deep chain cannot flood the journal.
+     */
+    internal fun throwableSummary(tr: Throwable): String {
+        val chain = generateSequence(tr) { it.cause.takeIf { cause -> cause !== it } }.take(4).toList()
+        val lines = chain.mapIndexed { index, t ->
+            (if (index == 0) "  exception: " else "  caused by: ") + "${t.javaClass.name}: ${t.message}"
+        }
+        val frames = chain.last().stackTrace.take(6).map { "    at $it" }
+        return (lines + frames).joinToString("\n")
     }
 
     private fun closeAppLogFileLogger() {

@@ -2528,6 +2528,39 @@ public final class Control {
        * @return The availableWhileInCall.
        */
       boolean getAvailableWhileInCall();
+
+      /**
+       * <code>optional uint32 display_id = 6;</code>
+       * @return Whether the displayId field is set.
+       */
+      boolean hasDisplayId();
+      /**
+       * <code>optional uint32 display_id = 6;</code>
+       * @return The displayId.
+       */
+      int getDisplayId();
+
+      /**
+       * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+       * @return Whether the displayType field is set.
+       */
+      boolean hasDisplayType();
+      /**
+       * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+       * @return The displayType.
+       */
+      com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType getDisplayType();
+
+      /**
+       * <code>optional uint32 initial_content_keycode = 8;</code>
+       * @return Whether the initialContentKeycode field is set.
+       */
+      boolean hasInitialContentKeycode();
+      /**
+       * <code>optional uint32 initial_content_keycode = 8;</code>
+       * @return The initialContentKeycode.
+       */
+      int getInitialContentKeycode();
     }
     /**
      * Protobuf type {@code com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService}
@@ -2546,6 +2579,7 @@ public final class Control {
         audioType_ = 0;
         audioConfigs_ = java.util.Collections.emptyList();
         videoConfigs_ = java.util.Collections.emptyList();
+        displayType_ = 0;
       }
 
       @java.lang.Override
@@ -2566,6 +2600,116 @@ public final class Control {
         return com.andrerinas.openheadunit.aap.protocol.proto.Control.internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.class, com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.Builder.class);
+      }
+
+      /**
+       * <pre>
+       * Which screen of the car a video sink is: the main screen, the instrument cluster, or
+       * an auxiliary screen that opens on initial_content_keycode.
+       * </pre>
+       *
+       * Protobuf enum {@code com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType}
+       */
+      public enum DisplayType
+          implements com.google.protobuf.ProtocolMessageEnum {
+        /**
+         * <code>DISPLAY_TYPE_MAIN = 0;</code>
+         */
+        DISPLAY_TYPE_MAIN(0),
+        /**
+         * <code>DISPLAY_TYPE_CLUSTER = 1;</code>
+         */
+        DISPLAY_TYPE_CLUSTER(1),
+        /**
+         * <code>DISPLAY_TYPE_AUXILIARY = 2;</code>
+         */
+        DISPLAY_TYPE_AUXILIARY(2),
+        ;
+
+        /**
+         * <code>DISPLAY_TYPE_MAIN = 0;</code>
+         */
+        public static final int DISPLAY_TYPE_MAIN_VALUE = 0;
+        /**
+         * <code>DISPLAY_TYPE_CLUSTER = 1;</code>
+         */
+        public static final int DISPLAY_TYPE_CLUSTER_VALUE = 1;
+        /**
+         * <code>DISPLAY_TYPE_AUXILIARY = 2;</code>
+         */
+        public static final int DISPLAY_TYPE_AUXILIARY_VALUE = 2;
+
+
+        public final int getNumber() {
+          return value;
+        }
+
+        /**
+         * @param value The numeric wire value of the corresponding enum entry.
+         * @return The enum associated with the given numeric wire value.
+         * @deprecated Use {@link #forNumber(int)} instead.
+         */
+        @java.lang.Deprecated
+        public static DisplayType valueOf(int value) {
+          return forNumber(value);
+        }
+
+        /**
+         * @param value The numeric wire value of the corresponding enum entry.
+         * @return The enum associated with the given numeric wire value.
+         */
+        public static DisplayType forNumber(int value) {
+          switch (value) {
+            case 0: return DISPLAY_TYPE_MAIN;
+            case 1: return DISPLAY_TYPE_CLUSTER;
+            case 2: return DISPLAY_TYPE_AUXILIARY;
+            default: return null;
+          }
+        }
+
+        public static com.google.protobuf.Internal.EnumLiteMap<DisplayType>
+            internalGetValueMap() {
+          return internalValueMap;
+        }
+        private static final com.google.protobuf.Internal.EnumLiteMap<
+            DisplayType> internalValueMap =
+              new com.google.protobuf.Internal.EnumLiteMap<DisplayType>() {
+                public DisplayType findValueByNumber(int number) {
+                  return DisplayType.forNumber(number);
+                }
+              };
+
+        public final com.google.protobuf.Descriptors.EnumValueDescriptor
+            getValueDescriptor() {
+          return getDescriptor().getValues().get(ordinal());
+        }
+        public final com.google.protobuf.Descriptors.EnumDescriptor
+            getDescriptorForType() {
+          return getDescriptor();
+        }
+        public static final com.google.protobuf.Descriptors.EnumDescriptor
+            getDescriptor() {
+          return com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.getDescriptor().getEnumTypes().get(0);
+        }
+
+        private static final DisplayType[] VALUES = values();
+
+        public static DisplayType valueOf(
+            com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+          if (desc.getType() != getDescriptor()) {
+            throw new java.lang.IllegalArgumentException(
+              "EnumValueDescriptor is not for this type.");
+          }
+          return VALUES[desc.getIndex()];
+        }
+
+        private final int value;
+
+        private DisplayType(int value) {
+          this.value = value;
+        }
+
+        // @@protoc_insertion_point(enum_scope:com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType)
       }
 
       public interface VideoConfigurationOrBuilder extends
@@ -2639,6 +2783,17 @@ public final class Control {
         int getDecoderAdditionalDepth();
 
         /**
+         * <code>optional uint32 viewing_distance = 7;</code>
+         * @return Whether the viewingDistance field is set.
+         */
+        boolean hasViewingDistance();
+        /**
+         * <code>optional uint32 viewing_distance = 7;</code>
+         * @return The viewingDistance.
+         */
+        int getViewingDistance();
+
+        /**
          * <pre>
          * Pixel aspect ratio x 10000 (10000 = 1.0 = square pixels)
          * </pre>
@@ -2658,6 +2813,17 @@ public final class Control {
         int getPixelAspectRatioE4();
 
         /**
+         * <code>optional uint32 real_density = 9;</code>
+         * @return Whether the realDensity field is set.
+         */
+        boolean hasRealDensity();
+        /**
+         * <code>optional uint32 real_density = 9;</code>
+         * @return The realDensity.
+         */
+        int getRealDensity();
+
+        /**
          * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.MediaCodecType video_codec_type = 10;</code>
          * @return Whether the videoCodecType field is set.
          */
@@ -2667,6 +2833,21 @@ public final class Control {
          * @return The videoCodecType.
          */
         com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType getVideoCodecType();
+
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         * @return Whether the uiConfig field is set.
+         */
+        boolean hasUiConfig();
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         * @return The uiConfig.
+         */
+        com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig getUiConfig();
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         */
+        com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder getUiConfigOrBuilder();
       }
       /**
        * Protobuf type {@code com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.VideoConfiguration}
@@ -3074,6 +3255,25 @@ public final class Control {
           return decoderAdditionalDepth_;
         }
 
+        public static final int VIEWING_DISTANCE_FIELD_NUMBER = 7;
+        private int viewingDistance_ = 0;
+        /**
+         * <code>optional uint32 viewing_distance = 7;</code>
+         * @return Whether the viewingDistance field is set.
+         */
+        @java.lang.Override
+        public boolean hasViewingDistance() {
+          return ((bitField0_ & 0x00000040) != 0);
+        }
+        /**
+         * <code>optional uint32 viewing_distance = 7;</code>
+         * @return The viewingDistance.
+         */
+        @java.lang.Override
+        public int getViewingDistance() {
+          return viewingDistance_;
+        }
+
         public static final int PIXEL_ASPECT_RATIO_E4_FIELD_NUMBER = 8;
         private int pixelAspectRatioE4_ = 0;
         /**
@@ -3086,7 +3286,7 @@ public final class Control {
          */
         @java.lang.Override
         public boolean hasPixelAspectRatioE4() {
-          return ((bitField0_ & 0x00000040) != 0);
+          return ((bitField0_ & 0x00000080) != 0);
         }
         /**
          * <pre>
@@ -3101,6 +3301,25 @@ public final class Control {
           return pixelAspectRatioE4_;
         }
 
+        public static final int REAL_DENSITY_FIELD_NUMBER = 9;
+        private int realDensity_ = 0;
+        /**
+         * <code>optional uint32 real_density = 9;</code>
+         * @return Whether the realDensity field is set.
+         */
+        @java.lang.Override
+        public boolean hasRealDensity() {
+          return ((bitField0_ & 0x00000100) != 0);
+        }
+        /**
+         * <code>optional uint32 real_density = 9;</code>
+         * @return The realDensity.
+         */
+        @java.lang.Override
+        public int getRealDensity() {
+          return realDensity_;
+        }
+
         public static final int VIDEO_CODEC_TYPE_FIELD_NUMBER = 10;
         private int videoCodecType_ = 1;
         /**
@@ -3108,7 +3327,7 @@ public final class Control {
          * @return Whether the videoCodecType field is set.
          */
         @java.lang.Override public boolean hasVideoCodecType() {
-          return ((bitField0_ & 0x00000080) != 0);
+          return ((bitField0_ & 0x00000200) != 0);
         }
         /**
          * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.MediaCodecType video_codec_type = 10;</code>
@@ -3117,6 +3336,32 @@ public final class Control {
         @java.lang.Override public com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType getVideoCodecType() {
           com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType result = com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType.forNumber(videoCodecType_);
           return result == null ? com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType.MEDIA_CODEC_AUDIO_PCM : result;
+        }
+
+        public static final int UI_CONFIG_FIELD_NUMBER = 11;
+        private com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig uiConfig_;
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         * @return Whether the uiConfig field is set.
+         */
+        @java.lang.Override
+        public boolean hasUiConfig() {
+          return ((bitField0_ & 0x00000400) != 0);
+        }
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         * @return The uiConfig.
+         */
+        @java.lang.Override
+        public com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig getUiConfig() {
+          return uiConfig_ == null ? com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.getDefaultInstance() : uiConfig_;
+        }
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+         */
+        @java.lang.Override
+        public com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder getUiConfigOrBuilder() {
+          return uiConfig_ == null ? com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.getDefaultInstance() : uiConfig_;
         }
 
         private byte memoizedIsInitialized = -1;
@@ -3172,10 +3417,19 @@ public final class Control {
             output.writeUInt32(6, decoderAdditionalDepth_);
           }
           if (((bitField0_ & 0x00000040) != 0)) {
-            output.writeUInt32(8, pixelAspectRatioE4_);
+            output.writeUInt32(7, viewingDistance_);
           }
           if (((bitField0_ & 0x00000080) != 0)) {
+            output.writeUInt32(8, pixelAspectRatioE4_);
+          }
+          if (((bitField0_ & 0x00000100) != 0)) {
+            output.writeUInt32(9, realDensity_);
+          }
+          if (((bitField0_ & 0x00000200) != 0)) {
             output.writeEnum(10, videoCodecType_);
+          }
+          if (((bitField0_ & 0x00000400) != 0)) {
+            output.writeMessage(11, getUiConfig());
           }
           getUnknownFields().writeTo(output);
         }
@@ -3212,11 +3466,23 @@ public final class Control {
           }
           if (((bitField0_ & 0x00000040) != 0)) {
             size += com.google.protobuf.CodedOutputStream
-              .computeUInt32Size(8, pixelAspectRatioE4_);
+              .computeUInt32Size(7, viewingDistance_);
           }
           if (((bitField0_ & 0x00000080) != 0)) {
             size += com.google.protobuf.CodedOutputStream
+              .computeUInt32Size(8, pixelAspectRatioE4_);
+          }
+          if (((bitField0_ & 0x00000100) != 0)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeUInt32Size(9, realDensity_);
+          }
+          if (((bitField0_ & 0x00000200) != 0)) {
+            size += com.google.protobuf.CodedOutputStream
               .computeEnumSize(10, videoCodecType_);
+          }
+          if (((bitField0_ & 0x00000400) != 0)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeMessageSize(11, getUiConfig());
           }
           size += getUnknownFields().getSerializedSize();
           memoizedSize = size;
@@ -3261,14 +3527,29 @@ public final class Control {
             if (getDecoderAdditionalDepth()
                 != other.getDecoderAdditionalDepth()) return false;
           }
+          if (hasViewingDistance() != other.hasViewingDistance()) return false;
+          if (hasViewingDistance()) {
+            if (getViewingDistance()
+                != other.getViewingDistance()) return false;
+          }
           if (hasPixelAspectRatioE4() != other.hasPixelAspectRatioE4()) return false;
           if (hasPixelAspectRatioE4()) {
             if (getPixelAspectRatioE4()
                 != other.getPixelAspectRatioE4()) return false;
           }
+          if (hasRealDensity() != other.hasRealDensity()) return false;
+          if (hasRealDensity()) {
+            if (getRealDensity()
+                != other.getRealDensity()) return false;
+          }
           if (hasVideoCodecType() != other.hasVideoCodecType()) return false;
           if (hasVideoCodecType()) {
             if (videoCodecType_ != other.videoCodecType_) return false;
+          }
+          if (hasUiConfig() != other.hasUiConfig()) return false;
+          if (hasUiConfig()) {
+            if (!getUiConfig()
+                .equals(other.getUiConfig())) return false;
           }
           if (!getUnknownFields().equals(other.getUnknownFields())) return false;
           return true;
@@ -3305,13 +3586,25 @@ public final class Control {
             hash = (37 * hash) + DECODER_ADDITIONAL_DEPTH_FIELD_NUMBER;
             hash = (53 * hash) + getDecoderAdditionalDepth();
           }
+          if (hasViewingDistance()) {
+            hash = (37 * hash) + VIEWING_DISTANCE_FIELD_NUMBER;
+            hash = (53 * hash) + getViewingDistance();
+          }
           if (hasPixelAspectRatioE4()) {
             hash = (37 * hash) + PIXEL_ASPECT_RATIO_E4_FIELD_NUMBER;
             hash = (53 * hash) + getPixelAspectRatioE4();
           }
+          if (hasRealDensity()) {
+            hash = (37 * hash) + REAL_DENSITY_FIELD_NUMBER;
+            hash = (53 * hash) + getRealDensity();
+          }
           if (hasVideoCodecType()) {
             hash = (37 * hash) + VIDEO_CODEC_TYPE_FIELD_NUMBER;
             hash = (53 * hash) + videoCodecType_;
+          }
+          if (hasUiConfig()) {
+            hash = (37 * hash) + UI_CONFIG_FIELD_NUMBER;
+            hash = (53 * hash) + getUiConfig().hashCode();
           }
           hash = (29 * hash) + getUnknownFields().hashCode();
           memoizedHashCode = hash;
@@ -3432,13 +3725,19 @@ public final class Control {
 
           // Construct using com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.VideoConfiguration.newBuilder()
           private Builder() {
-
+            maybeForceBuilderInitialization();
           }
 
           private Builder(
               com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
             super(parent);
-
+            maybeForceBuilderInitialization();
+          }
+          private void maybeForceBuilderInitialization() {
+            if (com.google.protobuf.GeneratedMessageV3
+                    .alwaysUseFieldBuilders) {
+              getUiConfigFieldBuilder();
+            }
           }
           @java.lang.Override
           public Builder clear() {
@@ -3450,8 +3749,15 @@ public final class Control {
             marginHeight_ = 0;
             density_ = 0;
             decoderAdditionalDepth_ = 0;
+            viewingDistance_ = 0;
             pixelAspectRatioE4_ = 0;
+            realDensity_ = 0;
             videoCodecType_ = 1;
+            uiConfig_ = null;
+            if (uiConfigBuilder_ != null) {
+              uiConfigBuilder_.dispose();
+              uiConfigBuilder_ = null;
+            }
             return this;
           }
 
@@ -3511,12 +3817,26 @@ public final class Control {
               to_bitField0_ |= 0x00000020;
             }
             if (((from_bitField0_ & 0x00000040) != 0)) {
-              result.pixelAspectRatioE4_ = pixelAspectRatioE4_;
+              result.viewingDistance_ = viewingDistance_;
               to_bitField0_ |= 0x00000040;
             }
             if (((from_bitField0_ & 0x00000080) != 0)) {
-              result.videoCodecType_ = videoCodecType_;
+              result.pixelAspectRatioE4_ = pixelAspectRatioE4_;
               to_bitField0_ |= 0x00000080;
+            }
+            if (((from_bitField0_ & 0x00000100) != 0)) {
+              result.realDensity_ = realDensity_;
+              to_bitField0_ |= 0x00000100;
+            }
+            if (((from_bitField0_ & 0x00000200) != 0)) {
+              result.videoCodecType_ = videoCodecType_;
+              to_bitField0_ |= 0x00000200;
+            }
+            if (((from_bitField0_ & 0x00000400) != 0)) {
+              result.uiConfig_ = uiConfigBuilder_ == null
+                  ? uiConfig_
+                  : uiConfigBuilder_.build();
+              to_bitField0_ |= 0x00000400;
             }
             result.bitField0_ |= to_bitField0_;
           }
@@ -3583,11 +3903,20 @@ public final class Control {
             if (other.hasDecoderAdditionalDepth()) {
               setDecoderAdditionalDepth(other.getDecoderAdditionalDepth());
             }
+            if (other.hasViewingDistance()) {
+              setViewingDistance(other.getViewingDistance());
+            }
             if (other.hasPixelAspectRatioE4()) {
               setPixelAspectRatioE4(other.getPixelAspectRatioE4());
             }
+            if (other.hasRealDensity()) {
+              setRealDensity(other.getRealDensity());
+            }
             if (other.hasVideoCodecType()) {
               setVideoCodecType(other.getVideoCodecType());
+            }
+            if (other.hasUiConfig()) {
+              mergeUiConfig(other.getUiConfig());
             }
             this.mergeUnknownFields(other.getUnknownFields());
             onChanged();
@@ -3674,11 +4003,21 @@ public final class Control {
                     bitField0_ |= 0x00000020;
                     break;
                   } // case 48
-                  case 64: {
-                    pixelAspectRatioE4_ = input.readUInt32();
+                  case 56: {
+                    viewingDistance_ = input.readUInt32();
                     bitField0_ |= 0x00000040;
                     break;
+                  } // case 56
+                  case 64: {
+                    pixelAspectRatioE4_ = input.readUInt32();
+                    bitField0_ |= 0x00000080;
+                    break;
                   } // case 64
+                  case 72: {
+                    realDensity_ = input.readUInt32();
+                    bitField0_ |= 0x00000100;
+                    break;
+                  } // case 72
                   case 80: {
                     int tmpRaw = input.readEnum();
                     com.andrerinas.openheadunit.aap.protocol.proto.Media.MediaCodecType tmpValue =
@@ -3687,10 +4026,17 @@ public final class Control {
                       mergeUnknownVarintField(10, tmpRaw);
                     } else {
                       videoCodecType_ = tmpRaw;
-                      bitField0_ |= 0x00000080;
+                      bitField0_ |= 0x00000200;
                     }
                     break;
                   } // case 80
+                  case 90: {
+                    input.readMessage(
+                        getUiConfigFieldBuilder().getBuilder(),
+                        extensionRegistry);
+                    bitField0_ |= 0x00000400;
+                    break;
+                  } // case 90
                   default: {
                     if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                       done = true; // was an endgroup tag
@@ -3952,6 +4298,46 @@ public final class Control {
             return this;
           }
 
+          private int viewingDistance_ ;
+          /**
+           * <code>optional uint32 viewing_distance = 7;</code>
+           * @return Whether the viewingDistance field is set.
+           */
+          @java.lang.Override
+          public boolean hasViewingDistance() {
+            return ((bitField0_ & 0x00000040) != 0);
+          }
+          /**
+           * <code>optional uint32 viewing_distance = 7;</code>
+           * @return The viewingDistance.
+           */
+          @java.lang.Override
+          public int getViewingDistance() {
+            return viewingDistance_;
+          }
+          /**
+           * <code>optional uint32 viewing_distance = 7;</code>
+           * @param value The viewingDistance to set.
+           * @return This builder for chaining.
+           */
+          public Builder setViewingDistance(int value) {
+
+            viewingDistance_ = value;
+            bitField0_ |= 0x00000040;
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional uint32 viewing_distance = 7;</code>
+           * @return This builder for chaining.
+           */
+          public Builder clearViewingDistance() {
+            bitField0_ = (bitField0_ & ~0x00000040);
+            viewingDistance_ = 0;
+            onChanged();
+            return this;
+          }
+
           private int pixelAspectRatioE4_ ;
           /**
            * <pre>
@@ -3963,7 +4349,7 @@ public final class Control {
            */
           @java.lang.Override
           public boolean hasPixelAspectRatioE4() {
-            return ((bitField0_ & 0x00000040) != 0);
+            return ((bitField0_ & 0x00000080) != 0);
           }
           /**
            * <pre>
@@ -3989,7 +4375,7 @@ public final class Control {
           public Builder setPixelAspectRatioE4(int value) {
 
             pixelAspectRatioE4_ = value;
-            bitField0_ |= 0x00000040;
+            bitField0_ |= 0x00000080;
             onChanged();
             return this;
           }
@@ -4002,8 +4388,48 @@ public final class Control {
            * @return This builder for chaining.
            */
           public Builder clearPixelAspectRatioE4() {
-            bitField0_ = (bitField0_ & ~0x00000040);
+            bitField0_ = (bitField0_ & ~0x00000080);
             pixelAspectRatioE4_ = 0;
+            onChanged();
+            return this;
+          }
+
+          private int realDensity_ ;
+          /**
+           * <code>optional uint32 real_density = 9;</code>
+           * @return Whether the realDensity field is set.
+           */
+          @java.lang.Override
+          public boolean hasRealDensity() {
+            return ((bitField0_ & 0x00000100) != 0);
+          }
+          /**
+           * <code>optional uint32 real_density = 9;</code>
+           * @return The realDensity.
+           */
+          @java.lang.Override
+          public int getRealDensity() {
+            return realDensity_;
+          }
+          /**
+           * <code>optional uint32 real_density = 9;</code>
+           * @param value The realDensity to set.
+           * @return This builder for chaining.
+           */
+          public Builder setRealDensity(int value) {
+
+            realDensity_ = value;
+            bitField0_ |= 0x00000100;
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional uint32 real_density = 9;</code>
+           * @return This builder for chaining.
+           */
+          public Builder clearRealDensity() {
+            bitField0_ = (bitField0_ & ~0x00000100);
+            realDensity_ = 0;
             onChanged();
             return this;
           }
@@ -4014,7 +4440,7 @@ public final class Control {
            * @return Whether the videoCodecType field is set.
            */
           @java.lang.Override public boolean hasVideoCodecType() {
-            return ((bitField0_ & 0x00000080) != 0);
+            return ((bitField0_ & 0x00000200) != 0);
           }
           /**
            * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.MediaCodecType video_codec_type = 10;</code>
@@ -4034,7 +4460,7 @@ public final class Control {
             if (value == null) {
               throw new NullPointerException();
             }
-            bitField0_ |= 0x00000080;
+            bitField0_ |= 0x00000200;
             videoCodecType_ = value.getNumber();
             onChanged();
             return this;
@@ -4044,10 +4470,131 @@ public final class Control {
            * @return This builder for chaining.
            */
           public Builder clearVideoCodecType() {
-            bitField0_ = (bitField0_ & ~0x00000080);
+            bitField0_ = (bitField0_ & ~0x00000200);
             videoCodecType_ = 1;
             onChanged();
             return this;
+          }
+
+          private com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig uiConfig_;
+          private com.google.protobuf.SingleFieldBuilderV3<
+              com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.Builder, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder> uiConfigBuilder_;
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           * @return Whether the uiConfig field is set.
+           */
+          public boolean hasUiConfig() {
+            return ((bitField0_ & 0x00000400) != 0);
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           * @return The uiConfig.
+           */
+          public com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig getUiConfig() {
+            if (uiConfigBuilder_ == null) {
+              return uiConfig_ == null ? com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.getDefaultInstance() : uiConfig_;
+            } else {
+              return uiConfigBuilder_.getMessage();
+            }
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public Builder setUiConfig(com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig value) {
+            if (uiConfigBuilder_ == null) {
+              if (value == null) {
+                throw new NullPointerException();
+              }
+              uiConfig_ = value;
+            } else {
+              uiConfigBuilder_.setMessage(value);
+            }
+            bitField0_ |= 0x00000400;
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public Builder setUiConfig(
+              com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.Builder builderForValue) {
+            if (uiConfigBuilder_ == null) {
+              uiConfig_ = builderForValue.build();
+            } else {
+              uiConfigBuilder_.setMessage(builderForValue.build());
+            }
+            bitField0_ |= 0x00000400;
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public Builder mergeUiConfig(com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig value) {
+            if (uiConfigBuilder_ == null) {
+              if (((bitField0_ & 0x00000400) != 0) &&
+                uiConfig_ != null &&
+                uiConfig_ != com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.getDefaultInstance()) {
+                getUiConfigBuilder().mergeFrom(value);
+              } else {
+                uiConfig_ = value;
+              }
+            } else {
+              uiConfigBuilder_.mergeFrom(value);
+            }
+            if (uiConfig_ != null) {
+              bitField0_ |= 0x00000400;
+              onChanged();
+            }
+            return this;
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public Builder clearUiConfig() {
+            bitField0_ = (bitField0_ & ~0x00000400);
+            uiConfig_ = null;
+            if (uiConfigBuilder_ != null) {
+              uiConfigBuilder_.dispose();
+              uiConfigBuilder_ = null;
+            }
+            onChanged();
+            return this;
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.Builder getUiConfigBuilder() {
+            bitField0_ |= 0x00000400;
+            onChanged();
+            return getUiConfigFieldBuilder().getBuilder();
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          public com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder getUiConfigOrBuilder() {
+            if (uiConfigBuilder_ != null) {
+              return uiConfigBuilder_.getMessageOrBuilder();
+            } else {
+              return uiConfig_ == null ?
+                  com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.getDefaultInstance() : uiConfig_;
+            }
+          }
+          /**
+           * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.UiConfig ui_config = 11;</code>
+           */
+          private com.google.protobuf.SingleFieldBuilderV3<
+              com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.Builder, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder> 
+              getUiConfigFieldBuilder() {
+            if (uiConfigBuilder_ == null) {
+              uiConfigBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+                  com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfig.Builder, com.andrerinas.openheadunit.aap.protocol.proto.Media.UiConfigOrBuilder>(
+                      getUiConfig(),
+                      getParentForChildren(),
+                      isClean());
+              uiConfig_ = null;
+            }
+            return uiConfigBuilder_;
           }
           @java.lang.Override
           public final Builder setUnknownFields(
@@ -4251,6 +4798,62 @@ public final class Control {
         return availableWhileInCall_;
       }
 
+      public static final int DISPLAY_ID_FIELD_NUMBER = 6;
+      private int displayId_ = 0;
+      /**
+       * <code>optional uint32 display_id = 6;</code>
+       * @return Whether the displayId field is set.
+       */
+      @java.lang.Override
+      public boolean hasDisplayId() {
+        return ((bitField0_ & 0x00000008) != 0);
+      }
+      /**
+       * <code>optional uint32 display_id = 6;</code>
+       * @return The displayId.
+       */
+      @java.lang.Override
+      public int getDisplayId() {
+        return displayId_;
+      }
+
+      public static final int DISPLAY_TYPE_FIELD_NUMBER = 7;
+      private int displayType_ = 0;
+      /**
+       * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+       * @return Whether the displayType field is set.
+       */
+      @java.lang.Override public boolean hasDisplayType() {
+        return ((bitField0_ & 0x00000010) != 0);
+      }
+      /**
+       * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+       * @return The displayType.
+       */
+      @java.lang.Override public com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType getDisplayType() {
+        com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType result = com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType.forNumber(displayType_);
+        return result == null ? com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType.DISPLAY_TYPE_MAIN : result;
+      }
+
+      public static final int INITIAL_CONTENT_KEYCODE_FIELD_NUMBER = 8;
+      private int initialContentKeycode_ = 0;
+      /**
+       * <code>optional uint32 initial_content_keycode = 8;</code>
+       * @return Whether the initialContentKeycode field is set.
+       */
+      @java.lang.Override
+      public boolean hasInitialContentKeycode() {
+        return ((bitField0_ & 0x00000020) != 0);
+      }
+      /**
+       * <code>optional uint32 initial_content_keycode = 8;</code>
+       * @return The initialContentKeycode.
+       */
+      @java.lang.Override
+      public int getInitialContentKeycode() {
+        return initialContentKeycode_;
+      }
+
       private byte memoizedIsInitialized = -1;
       @java.lang.Override
       public final boolean isInitialized() {
@@ -4296,6 +4899,15 @@ public final class Control {
         if (((bitField0_ & 0x00000004) != 0)) {
           output.writeBool(5, availableWhileInCall_);
         }
+        if (((bitField0_ & 0x00000008) != 0)) {
+          output.writeUInt32(6, displayId_);
+        }
+        if (((bitField0_ & 0x00000010) != 0)) {
+          output.writeEnum(7, displayType_);
+        }
+        if (((bitField0_ & 0x00000020) != 0)) {
+          output.writeUInt32(8, initialContentKeycode_);
+        }
         getUnknownFields().writeTo(output);
       }
 
@@ -4324,6 +4936,18 @@ public final class Control {
         if (((bitField0_ & 0x00000004) != 0)) {
           size += com.google.protobuf.CodedOutputStream
             .computeBoolSize(5, availableWhileInCall_);
+        }
+        if (((bitField0_ & 0x00000008) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(6, displayId_);
+        }
+        if (((bitField0_ & 0x00000010) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeEnumSize(7, displayType_);
+        }
+        if (((bitField0_ & 0x00000020) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(8, initialContentKeycode_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSize = size;
@@ -4357,6 +4981,20 @@ public final class Control {
           if (getAvailableWhileInCall()
               != other.getAvailableWhileInCall()) return false;
         }
+        if (hasDisplayId() != other.hasDisplayId()) return false;
+        if (hasDisplayId()) {
+          if (getDisplayId()
+              != other.getDisplayId()) return false;
+        }
+        if (hasDisplayType() != other.hasDisplayType()) return false;
+        if (hasDisplayType()) {
+          if (displayType_ != other.displayType_) return false;
+        }
+        if (hasInitialContentKeycode() != other.hasInitialContentKeycode()) return false;
+        if (hasInitialContentKeycode()) {
+          if (getInitialContentKeycode()
+              != other.getInitialContentKeycode()) return false;
+        }
         if (!getUnknownFields().equals(other.getUnknownFields())) return false;
         return true;
       }
@@ -4388,6 +5026,18 @@ public final class Control {
           hash = (37 * hash) + AVAILABLE_WHILE_IN_CALL_FIELD_NUMBER;
           hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
               getAvailableWhileInCall());
+        }
+        if (hasDisplayId()) {
+          hash = (37 * hash) + DISPLAY_ID_FIELD_NUMBER;
+          hash = (53 * hash) + getDisplayId();
+        }
+        if (hasDisplayType()) {
+          hash = (37 * hash) + DISPLAY_TYPE_FIELD_NUMBER;
+          hash = (53 * hash) + displayType_;
+        }
+        if (hasInitialContentKeycode()) {
+          hash = (37 * hash) + INITIAL_CONTENT_KEYCODE_FIELD_NUMBER;
+          hash = (53 * hash) + getInitialContentKeycode();
         }
         hash = (29 * hash) + getUnknownFields().hashCode();
         memoizedHashCode = hash;
@@ -4537,6 +5187,9 @@ public final class Control {
           }
           bitField0_ = (bitField0_ & ~0x00000008);
           availableWhileInCall_ = false;
+          displayId_ = 0;
+          displayType_ = 0;
+          initialContentKeycode_ = 0;
           return this;
         }
 
@@ -4604,6 +5257,18 @@ public final class Control {
           if (((from_bitField0_ & 0x00000010) != 0)) {
             result.availableWhileInCall_ = availableWhileInCall_;
             to_bitField0_ |= 0x00000004;
+          }
+          if (((from_bitField0_ & 0x00000020) != 0)) {
+            result.displayId_ = displayId_;
+            to_bitField0_ |= 0x00000008;
+          }
+          if (((from_bitField0_ & 0x00000040) != 0)) {
+            result.displayType_ = displayType_;
+            to_bitField0_ |= 0x00000010;
+          }
+          if (((from_bitField0_ & 0x00000080) != 0)) {
+            result.initialContentKeycode_ = initialContentKeycode_;
+            to_bitField0_ |= 0x00000020;
           }
           result.bitField0_ |= to_bitField0_;
         }
@@ -4713,6 +5378,15 @@ public final class Control {
           if (other.hasAvailableWhileInCall()) {
             setAvailableWhileInCall(other.getAvailableWhileInCall());
           }
+          if (other.hasDisplayId()) {
+            setDisplayId(other.getDisplayId());
+          }
+          if (other.hasDisplayType()) {
+            setDisplayType(other.getDisplayType());
+          }
+          if (other.hasInitialContentKeycode()) {
+            setInitialContentKeycode(other.getInitialContentKeycode());
+          }
           this.mergeUnknownFields(other.getUnknownFields());
           onChanged();
           return this;
@@ -4807,6 +5481,28 @@ public final class Control {
                   bitField0_ |= 0x00000010;
                   break;
                 } // case 40
+                case 48: {
+                  displayId_ = input.readUInt32();
+                  bitField0_ |= 0x00000020;
+                  break;
+                } // case 48
+                case 56: {
+                  int tmpRaw = input.readEnum();
+                  com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType tmpValue =
+                      com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType.forNumber(tmpRaw);
+                  if (tmpValue == null) {
+                    mergeUnknownVarintField(7, tmpRaw);
+                  } else {
+                    displayType_ = tmpRaw;
+                    bitField0_ |= 0x00000040;
+                  }
+                  break;
+                } // case 56
+                case 64: {
+                  initialContentKeycode_ = input.readUInt32();
+                  bitField0_ |= 0x00000080;
+                  break;
+                } // case 64
                 default: {
                   if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                     done = true; // was an endgroup tag
@@ -5427,6 +6123,128 @@ public final class Control {
           onChanged();
           return this;
         }
+
+        private int displayId_ ;
+        /**
+         * <code>optional uint32 display_id = 6;</code>
+         * @return Whether the displayId field is set.
+         */
+        @java.lang.Override
+        public boolean hasDisplayId() {
+          return ((bitField0_ & 0x00000020) != 0);
+        }
+        /**
+         * <code>optional uint32 display_id = 6;</code>
+         * @return The displayId.
+         */
+        @java.lang.Override
+        public int getDisplayId() {
+          return displayId_;
+        }
+        /**
+         * <code>optional uint32 display_id = 6;</code>
+         * @param value The displayId to set.
+         * @return This builder for chaining.
+         */
+        public Builder setDisplayId(int value) {
+
+          displayId_ = value;
+          bitField0_ |= 0x00000020;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint32 display_id = 6;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearDisplayId() {
+          bitField0_ = (bitField0_ & ~0x00000020);
+          displayId_ = 0;
+          onChanged();
+          return this;
+        }
+
+        private int displayType_ = 0;
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+         * @return Whether the displayType field is set.
+         */
+        @java.lang.Override public boolean hasDisplayType() {
+          return ((bitField0_ & 0x00000040) != 0);
+        }
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+         * @return The displayType.
+         */
+        @java.lang.Override
+        public com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType getDisplayType() {
+          com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType result = com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType.forNumber(displayType_);
+          return result == null ? com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType.DISPLAY_TYPE_MAIN : result;
+        }
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+         * @param value The displayType to set.
+         * @return This builder for chaining.
+         */
+        public Builder setDisplayType(com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.MediaSinkService.DisplayType value) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          bitField0_ |= 0x00000040;
+          displayType_ = value.getNumber();
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.MediaSinkService.DisplayType display_type = 7;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearDisplayType() {
+          bitField0_ = (bitField0_ & ~0x00000040);
+          displayType_ = 0;
+          onChanged();
+          return this;
+        }
+
+        private int initialContentKeycode_ ;
+        /**
+         * <code>optional uint32 initial_content_keycode = 8;</code>
+         * @return Whether the initialContentKeycode field is set.
+         */
+        @java.lang.Override
+        public boolean hasInitialContentKeycode() {
+          return ((bitField0_ & 0x00000080) != 0);
+        }
+        /**
+         * <code>optional uint32 initial_content_keycode = 8;</code>
+         * @return The initialContentKeycode.
+         */
+        @java.lang.Override
+        public int getInitialContentKeycode() {
+          return initialContentKeycode_;
+        }
+        /**
+         * <code>optional uint32 initial_content_keycode = 8;</code>
+         * @param value The initialContentKeycode to set.
+         * @return This builder for chaining.
+         */
+        public Builder setInitialContentKeycode(int value) {
+
+          initialContentKeycode_ = value;
+          bitField0_ |= 0x00000080;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint32 initial_content_keycode = 8;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearInitialContentKeycode() {
+          bitField0_ = (bitField0_ & ~0x00000080);
+          initialContentKeycode_ = 0;
+          onChanged();
+          return this;
+        }
         @java.lang.Override
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -5541,6 +6359,17 @@ public final class Control {
        * <code>optional .com.andrerinas.openheadunit.aap.protocol.proto.Service.InputSourceService.TouchConfig touchpad = 3;</code>
        */
       com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.InputSourceService.TouchConfigOrBuilder getTouchpadOrBuilder();
+
+      /**
+       * <code>optional uint32 display_id = 5;</code>
+       * @return Whether the displayId field is set.
+       */
+      boolean hasDisplayId();
+      /**
+       * <code>optional uint32 display_id = 5;</code>
+       * @return The displayId.
+       */
+      int getDisplayId();
     }
     /**
      * Protobuf type {@code com.andrerinas.openheadunit.aap.protocol.proto.Service.InputSourceService}
@@ -6279,6 +7108,25 @@ public final class Control {
         return touchpad_ == null ? com.andrerinas.openheadunit.aap.protocol.proto.Control.Service.InputSourceService.TouchConfig.getDefaultInstance() : touchpad_;
       }
 
+      public static final int DISPLAY_ID_FIELD_NUMBER = 5;
+      private int displayId_ = 0;
+      /**
+       * <code>optional uint32 display_id = 5;</code>
+       * @return Whether the displayId field is set.
+       */
+      @java.lang.Override
+      public boolean hasDisplayId() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /**
+       * <code>optional uint32 display_id = 5;</code>
+       * @return The displayId.
+       */
+      @java.lang.Override
+      public int getDisplayId() {
+        return displayId_;
+      }
+
       private byte memoizedIsInitialized = -1;
       @java.lang.Override
       public final boolean isInitialized() {
@@ -6314,6 +7162,9 @@ public final class Control {
         if (((bitField0_ & 0x00000002) != 0)) {
           output.writeMessage(3, getTouchpad());
         }
+        if (((bitField0_ & 0x00000004) != 0)) {
+          output.writeUInt32(5, displayId_);
+        }
         getUnknownFields().writeTo(output);
       }
 
@@ -6339,6 +7190,10 @@ public final class Control {
         if (((bitField0_ & 0x00000002) != 0)) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(3, getTouchpad());
+        }
+        if (((bitField0_ & 0x00000004) != 0)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt32Size(5, displayId_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSize = size;
@@ -6367,6 +7222,11 @@ public final class Control {
           if (!getTouchpad()
               .equals(other.getTouchpad())) return false;
         }
+        if (hasDisplayId() != other.hasDisplayId()) return false;
+        if (hasDisplayId()) {
+          if (getDisplayId()
+              != other.getDisplayId()) return false;
+        }
         if (!getUnknownFields().equals(other.getUnknownFields())) return false;
         return true;
       }
@@ -6389,6 +7249,10 @@ public final class Control {
         if (hasTouchpad()) {
           hash = (37 * hash) + TOUCHPAD_FIELD_NUMBER;
           hash = (53 * hash) + getTouchpad().hashCode();
+        }
+        if (hasDisplayId()) {
+          hash = (37 * hash) + DISPLAY_ID_FIELD_NUMBER;
+          hash = (53 * hash) + getDisplayId();
         }
         hash = (29 * hash) + getUnknownFields().hashCode();
         memoizedHashCode = hash;
@@ -6539,6 +7403,7 @@ public final class Control {
             touchpadBuilder_.dispose();
             touchpadBuilder_ = null;
           }
+          displayId_ = 0;
           return this;
         }
 
@@ -6588,6 +7453,10 @@ public final class Control {
                 ? touchpad_
                 : touchpadBuilder_.build();
             to_bitField0_ |= 0x00000002;
+          }
+          if (((from_bitField0_ & 0x00000008) != 0)) {
+            result.displayId_ = displayId_;
+            to_bitField0_ |= 0x00000004;
           }
           result.bitField0_ |= to_bitField0_;
         }
@@ -6652,6 +7521,9 @@ public final class Control {
           }
           if (other.hasTouchpad()) {
             mergeTouchpad(other.getTouchpad());
+          }
+          if (other.hasDisplayId()) {
+            setDisplayId(other.getDisplayId());
           }
           this.mergeUnknownFields(other.getUnknownFields());
           onChanged();
@@ -6719,6 +7591,11 @@ public final class Control {
                   bitField0_ |= 0x00000004;
                   break;
                 } // case 26
+                case 40: {
+                  displayId_ = input.readUInt32();
+                  bitField0_ |= 0x00000008;
+                  break;
+                } // case 40
                 default: {
                   if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                     done = true; // was an endgroup tag
@@ -7060,6 +7937,46 @@ public final class Control {
             touchpad_ = null;
           }
           return touchpadBuilder_;
+        }
+
+        private int displayId_ ;
+        /**
+         * <code>optional uint32 display_id = 5;</code>
+         * @return Whether the displayId field is set.
+         */
+        @java.lang.Override
+        public boolean hasDisplayId() {
+          return ((bitField0_ & 0x00000008) != 0);
+        }
+        /**
+         * <code>optional uint32 display_id = 5;</code>
+         * @return The displayId.
+         */
+        @java.lang.Override
+        public int getDisplayId() {
+          return displayId_;
+        }
+        /**
+         * <code>optional uint32 display_id = 5;</code>
+         * @param value The displayId to set.
+         * @return This builder for chaining.
+         */
+        public Builder setDisplayId(int value) {
+
+          displayId_ = value;
+          bitField0_ |= 0x00000008;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional uint32 display_id = 5;</code>
+         * @return This builder for chaining.
+         */
+        public Builder clearDisplayId() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          displayId_ = 0;
+          onChanged();
+          return this;
         }
         @java.lang.Override
         public final Builder setUnknownFields(
@@ -32260,221 +33177,231 @@ public final class Control {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\012\015control.proto\022.com.andrerinas.openhead" +
+      "\n\rcontrol.proto\022.com.andrerinas.openhead" +
       "unit.aap.protocol.proto\032\014common.proto\032\013m" +
-      "edia.proto\032\015sensors.proto\"\310\"\012\007Service\022h\012" +
-      "\024phone_status_service\030\012 \001(\0132J.com.andrer" +
+      "edia.proto\032\rsensors.proto\"\326%\n\007Service\022h\n" +
+      "\024phone_status_service\030\n \001(\0132J.com.andrer" +
       "inas.openheadunit.aap.protocol.proto.Ser" +
-      "vice.PhoneStatusService\022\012\012\002id\030\001 \002(\015\022j\012\025s" +
+      "vice.PhoneStatusService\022\n\n\002id\030\001 \002(\r\022j\n\025s" +
       "ensor_source_service\030\002 \001(\0132K.com.andreri" +
       "nas.openheadunit.aap.protocol.proto.Serv" +
-      "ice.SensorSourceService\022d\012\022media_sink_se" +
+      "ice.SensorSourceService\022d\n\022media_sink_se" +
       "rvice\030\003 \001(\0132H.com.andrerinas.openheaduni" +
       "t.aap.protocol.proto.Service.MediaSinkSe" +
-      "rvice\022h\012\024input_source_service\030\004 \001(\0132J.co" +
+      "rvice\022h\n\024input_source_service\030\004 \001(\0132J.co" +
       "m.andrerinas.openheadunit.aap.protocol.p" +
-      "roto.Service.InputSourceService\022h\012\024media" +
+      "roto.Service.InputSourceService\022h\n\024media" +
       "_source_service\030\005 \001(\0132J.com.andrerinas.o" +
       "penheadunit.aap.protocol.proto.Service.M" +
-      "ediaSourceService\022c\012\021bluetooth_service\030\006" +
+      "ediaSourceService\022c\n\021bluetooth_service\030\006" +
       " \001(\0132H.com.andrerinas.openheadunit.aap.p" +
       "rotocol.proto.Service.BluetoothService\022r" +
-      "\012\031navigation_status_service\030\010 \001(\0132O.com." +
+      "\n\031navigation_status_service\030\010 \001(\0132O.com." +
       "andrerinas.openheadunit.aap.protocol.pro" +
-      "to.Service.NavigationStatusService\022r\012\026me" +
-      "dia_playback_service\030\011 \001(\0132R.com.andreri" +
+      "to.Service.NavigationStatusService\022r\n\026me" +
+      "dia_playback_service\030\t \001(\0132R.com.andreri" +
       "nas.openheadunit.aap.protocol.proto.Serv" +
-      "ice.MediaPlaybackStatusService\022p\012\030vendor" +
+      "ice.MediaPlaybackStatusService\022p\n\030vendor" +
       "_extension_service\030\014 \001(\0132N.com.andrerina" +
       "s.openheadunit.aap.protocol.proto.Servic" +
-      "e.VendorExtensionService\022x\012\034generic_noti" +
-      "fication_service\030\015 \001(\0132R.com.andrerinas." +
+      "e.VendorExtensionService\022x\n\034generic_noti" +
+      "fication_service\030\r \001(\0132R.com.andrerinas." +
       "openheadunit.aap.protocol.proto.Service." +
-      "GenericNotificationService\022n\012\027wifi_proje" +
+      "GenericNotificationService\022n\n\027wifi_proje" +
       "ction_service\030\016 \001(\0132M.com.andrerinas.ope" +
       "nheadunit.aap.protocol.proto.Service.Wif" +
-      "iProjectionService\032\316\001\012\023SensorSourceServi" +
-      "ce\022c\012\007sensors\030\001 \003(\0132R.com.andrerinas.ope" +
+      "iProjectionService\032\316\001\n\023SensorSourceServi" +
+      "ce\022c\n\007sensors\030\001 \003(\0132R.com.andrerinas.ope" +
       "nheadunit.aap.protocol.proto.Service.Sen" +
-      "sorSourceService.Sensor\032R\012\006Sensor\022H\012\004typ" +
+      "sorSourceService.Sensor\032R\n\006Sensor\022H\n\004typ" +
       "e\030\001 \002(\0162:.com.andrerinas.openheadunit.aa" +
-      "p.protocol.proto.SensorType\032\206\011\012\020MediaSin" +
-      "kService\022V\012\016available_type\030\001 \002(\0162>.com.a" +
+      "p.protocol.proto.SensorType\032\200\014\n\020MediaSin" +
+      "kService\022V\n\016available_type\030\001 \002(\0162>.com.a" +
       "ndrerinas.openheadunit.aap.protocol.prot" +
-      "o.MediaCodecType\022S\012\012audio_type\030\002 \001(\0162?.c" +
+      "o.MediaCodecType\022S\n\naudio_type\030\002 \001(\0162?.c" +
       "om.andrerinas.openheadunit.aap.protocol." +
-      "proto.AudioStreamType\022Y\012\015audio_configs\030\003" +
+      "proto.AudioStreamType\022Y\n\raudio_configs\030\003" +
       " \003(\0132B.com.andrerinas.openheadunit.aap.p" +
-      "rotocol.proto.AudioConfiguration\022r\012\015vide" +
+      "rotocol.proto.AudioConfiguration\022r\n\rvide" +
       "o_configs\030\004 \003(\0132[.com.andrerinas.openhea" +
       "dunit.aap.protocol.proto.Service.MediaSi" +
-      "nkService.VideoConfiguration\022\037\012\027availabl" +
-      "e_while_in_call\030\005 \001(\010\032\324\005\012\022VideoConfigura" +
-      "tion\022\216\001\012\020codec_resolution\030\001 \002(\0162t.com.an" +
-      "drerinas.openheadunit.aap.protocol.proto" +
-      ".Service.MediaSinkService.VideoConfigura" +
-      "tion.VideoCodecResolutionType\022\202\001\012\012frame_" +
-      "rate\030\002 \002(\0162n.com.andrerinas.openheadunit" +
-      ".aap.protocol.proto.Service.MediaSinkSer" +
-      "vice.VideoConfiguration.VideoFrameRateTy" +
-      "pe\022\024\012\014margin_width\030\003 \002(\015\022\025\012\015margin_heigh" +
-      "t\030\004 \002(\015\022\017\012\007density\030\005 \002(\015\022 \012\030decoder_addi" +
-      "tional_depth\030\006 \001(\015\022\035\012\025pixel_aspect_ratio" +
-      "_e4\030\010 \001(\015\022X\012\020video_codec_type\030\012 \001(\0162>.co" +
-      "m.andrerinas.openheadunit.aap.protocol.p" +
-      "roto.MediaCodecType\"\246\001\012\030VideoCodecResolu" +
-      "tionType\022\014\012\010_800x480\020\001\022\015\012\011_1280x720\020\002\022\016\012" +
-      "\012_1920x1080\020\003\022\016\012\012_2560x1440\020\004\022\016\012\012_3840x2" +
-      "160\020\005\022\015\012\011_720x1280\020\006\022\016\012\012_1080x1920\020\007\022\016\012\012" +
-      "_1440x2560\020\010\022\016\012\012_2160x3840\020\011\"&\012\022VideoFra" +
-      "meRateType\022\007\012\003_60\020\001\022\007\012\003_30\020\002\032\265\002\012\022InputSo" +
-      "urceService\022\032\012\022keycodes_supported\030\001 \003(\015\022" +
-      "k\012\013touchscreen\030\002 \001(\0132V.com.andrerinas.op" +
-      "enheadunit.aap.protocol.proto.Service.In" +
-      "putSourceService.TouchConfig\022h\012\010touchpad" +
-      "\030\003 \001(\0132V.com.andrerinas.openheadunit.aap" +
-      ".protocol.proto.Service.InputSourceServi" +
-      "ce.TouchConfig\032,\012\013TouchConfig\022\015\012\005width\030\001" +
-      " \002(\015\022\016\012\006height\030\002 \002(\015\032\335\001\012\022MediaSourceServ" +
-      "ice\022L\012\004type\030\001 \002(\0162>.com.andrerinas.openh" +
-      "eadunit.aap.protocol.proto.MediaCodecTyp" +
-      "e\022X\012\014audio_config\030\002 \002(\0132B.com.andrerinas" +
-      ".openheadunit.aap.protocol.proto.AudioCo" +
-      "nfiguration\022\037\012\027available_while_in_call\030\003" +
-      " \001(\010\032\222\001\012\020BluetoothService\022\023\012\013car_address" +
-      "\030\001 \002(\011\022i\012\031supported_pairing_methods\030\002 \003(" +
-      "\0162F.com.andrerinas.openheadunit.aap.prot" +
-      "ocol.proto.BluetoothPairingMethod\032\234\003\012\027Na" +
-      "vigationStatusService\022\033\012\023minimum_interva" +
-      "l_ms\030\001 \002(\015\022i\012\004type\030\002 \002(\0162[.com.andrerina" +
-      "s.openheadunit.aap.protocol.proto.Servic" +
-      "e.NavigationStatusService.ClusterType\022s\012" +
-      "\015image_options\030\003 \001(\0132\\.com.andrerinas.op" +
-      "enheadunit.aap.protocol.proto.Service.Na" +
-      "vigationStatusService.ImageOptions\032G\012\014Im" +
-      "ageOptions\022\015\012\005width\030\001 \002(\005\022\016\012\006height\030\002 \002(" +
-      "\005\022\030\012\020colour_deth_bits\030\003 \002(\005\";\012\013ClusterTy" +
-      "pe\022\030\012\024CustomImageSupported\020\001\022\022\012\016ImageCod" +
-      "esOnly\020\002\032\034\012\032MediaPlaybackStatusService\032\344" +
-      "\001\012\020PhoneStatus_Call\022X\012\005state\030\001 \001(\0162I.com" +
-      ".andrerinas.openheadunit.aap.protocol.pr" +
-      "oto.Service.PhoneStatus_State\022\035\012\025call_du" +
-      "ration_seconds\030\002 \001(\015\022\025\012\015caller_number\030\003 " +
-      "\001(\011\022\021\012\011caller_id\030\004 \001(\011\022\032\012\022caller_number_" +
-      "type\030\005 \001(\011\022\021\012\011thumbnail\030\006 \001(\014\032=\012\021PhoneSt" +
-      "atus_Input\022\025\012\015caller_number\030\001 \001(\011\022\021\012\011cal" +
-      "ler_id\030\002 \001(\011\032\206\001\012\022PhoneStatusService\022W\012\005c" +
-      "alls\030\001 \003(\0132H.com.andrerinas.openheadunit" +
-      ".aap.protocol.proto.Service.PhoneStatus_" +
-      "Call\022\027\012\017signal_strength\030\002 \001(\015\032P\012\026VendorE" +
-      "xtensionService\022\014\012\004name\030\001 \001(\011\022\032\012\022package" +
-      "_white_list\030\002 \003(\011\022\014\012\004data\030\003 \001(\014\032\034\012\032Gener" +
-      "icNotificationService\032/\012\025WifiProjectionS" +
-      "ervice\022\026\012\016car_wifi_bssid\030\001 \001(\011\"d\012\021PhoneS" +
-      "tatus_State\022\012\012\006InCall\020\001\022\012\012\006OnHold\020\002\022\015\012\011H" +
-      "angingUp\020\003\022\014\012\010Incoming\020\004\022\011\012\005Muted\020\005\022\017\012\013C" +
-      "onferenced\020\006\"B\012\027ServiceDiscoveryRequest\022" +
-      "\022\012\012phone_name\030\004 \002(\011\022\023\012\013phone_brand\030\005 \002(\011" +
-      "\"\340\004\012\030ServiceDiscoveryResponse\022I\012\010service" +
-      "s\030\001 \003(\01327.com.andrerinas.openheadunit.aa" +
-      "p.protocol.proto.Service\022\014\012\004make\030\002 \002(\011\022\015" +
-      "\012\005model\030\003 \002(\011\022\014\012\004year\030\004 \002(\011\022\022\012\012vehicle_i" +
-      "d\030\005 \002(\011\022W\012\017driver_position\030\006 \002(\0162>.com.a" +
+      "nkService.VideoConfiguration\022\037\n\027availabl" +
+      "e_while_in_call\030\005 \001(\010\022\022\n\ndisplay_id\030\006 \001(" +
+      "\r\022j\n\014display_type\030\007 \001(\0162T.com.andrerinas" +
+      ".openheadunit.aap.protocol.proto.Service" +
+      ".MediaSinkService.DisplayType\022\037\n\027initial" +
+      "_content_keycode\030\010 \001(\r\032\321\006\n\022VideoConfigur" +
+      "ation\022\216\001\n\020codec_resolution\030\001 \002(\0162t.com.a" +
       "ndrerinas.openheadunit.aap.protocol.prot" +
-      "o.DriverPosition\022\026\012\016head_unit_make\030\007 \002(\011" +
-      "\022\027\012\017head_unit_model\030\010 \002(\011\022 \012\030head_unit_s" +
-      "oftware_build\030\011 \002(\011\022\"\012\032head_unit_softwar" +
-      "e_version\030\012 \002(\011\022'\012\037can_play_native_media" +
-      "_during_vr\030\013 \002(\010\022\034\012\024hide_projected_clock" +
-      "\030\014 \001(\010\022\035\012\025session_configuration\030\015 \001(\005\022\024\012" +
-      "\014display_name\030\016 \001(\011\022\031\012\021probe_for_support" +
-      "\030\017 \001(\010\022S\012\015headunit_info\030\021 \001(\0132<.com.andr" +
-      "erinas.openheadunit.aap.protocol.proto.H" +
-      "eadUnitInfo\":\012\022ChannelOpenRequest\022\020\012\010pri" +
-      "ority\030\001 \002(\005\022\022\012\012service_id\030\002 \002(\005\"d\012\023Chann" +
-      "elOpenResponse\022M\012\006status\030\001 \002(\0162=.com.and" +
+      "o.Service.MediaSinkService.VideoConfigur" +
+      "ation.VideoCodecResolutionType\022\202\001\n\nframe" +
+      "_rate\030\002 \002(\0162n.com.andrerinas.openheaduni" +
+      "t.aap.protocol.proto.Service.MediaSinkSe" +
+      "rvice.VideoConfiguration.VideoFrameRateT" +
+      "ype\022\024\n\014margin_width\030\003 \002(\r\022\025\n\rmargin_heig" +
+      "ht\030\004 \002(\r\022\017\n\007density\030\005 \002(\r\022 \n\030decoder_add" +
+      "itional_depth\030\006 \001(\r\022\030\n\020viewing_distance\030" +
+      "\007 \001(\r\022\035\n\025pixel_aspect_ratio_e4\030\010 \001(\r\022\024\n\014" +
+      "real_density\030\t \001(\r\022X\n\020video_codec_type\030\n" +
+      " \001(\0162>.com.andrerinas.openheadunit.aap.p" +
+      "rotocol.proto.MediaCodecType\022K\n\tui_confi" +
+      "g\030\013 \001(\01328.com.andrerinas.openheadunit.aa" +
+      "p.protocol.proto.UiConfig\"\246\001\n\030VideoCodec" +
+      "ResolutionType\022\014\n\010_800x480\020\001\022\r\n\t_1280x72" +
+      "0\020\002\022\016\n\n_1920x1080\020\003\022\016\n\n_2560x1440\020\004\022\016\n\n_" +
+      "3840x2160\020\005\022\r\n\t_720x1280\020\006\022\016\n\n_1080x1920" +
+      "\020\007\022\016\n\n_1440x2560\020\010\022\016\n\n_2160x3840\020\t\"&\n\022Vi" +
+      "deoFrameRateType\022\007\n\003_60\020\001\022\007\n\003_30\020\002\"Z\n\013Di" +
+      "splayType\022\025\n\021DISPLAY_TYPE_MAIN\020\000\022\030\n\024DISP" +
+      "LAY_TYPE_CLUSTER\020\001\022\032\n\026DISPLAY_TYPE_AUXIL" +
+      "IARY\020\002\032\311\002\n\022InputSourceService\022\032\n\022keycode" +
+      "s_supported\030\001 \003(\r\022k\n\013touchscreen\030\002 \001(\0132V" +
+      ".com.andrerinas.openheadunit.aap.protoco" +
+      "l.proto.Service.InputSourceService.Touch" +
+      "Config\022h\n\010touchpad\030\003 \001(\0132V.com.andrerina" +
+      "s.openheadunit.aap.protocol.proto.Servic" +
+      "e.InputSourceService.TouchConfig\022\022\n\ndisp" +
+      "lay_id\030\005 \001(\r\032,\n\013TouchConfig\022\r\n\005width\030\001 \002" +
+      "(\r\022\016\n\006height\030\002 \002(\r\032\335\001\n\022MediaSourceServic" +
+      "e\022L\n\004type\030\001 \002(\0162>.com.andrerinas.openhea" +
+      "dunit.aap.protocol.proto.MediaCodecType\022" +
+      "X\n\014audio_config\030\002 \002(\0132B.com.andrerinas.o" +
+      "penheadunit.aap.protocol.proto.AudioConf" +
+      "iguration\022\037\n\027available_while_in_call\030\003 \001" +
+      "(\010\032\222\001\n\020BluetoothService\022\023\n\013car_address\030\001" +
+      " \002(\t\022i\n\031supported_pairing_methods\030\002 \003(\0162" +
+      "F.com.andrerinas.openheadunit.aap.protoc" +
+      "ol.proto.BluetoothPairingMethod\032\234\003\n\027Navi" +
+      "gationStatusService\022\033\n\023minimum_interval_" +
+      "ms\030\001 \002(\r\022i\n\004type\030\002 \002(\0162[.com.andrerinas." +
+      "openheadunit.aap.protocol.proto.Service." +
+      "NavigationStatusService.ClusterType\022s\n\ri" +
+      "mage_options\030\003 \001(\0132\\.com.andrerinas.open" +
+      "headunit.aap.protocol.proto.Service.Navi" +
+      "gationStatusService.ImageOptions\032G\n\014Imag" +
+      "eOptions\022\r\n\005width\030\001 \002(\005\022\016\n\006height\030\002 \002(\005\022" +
+      "\030\n\020colour_deth_bits\030\003 \002(\005\";\n\013ClusterType" +
+      "\022\030\n\024CustomImageSupported\020\001\022\022\n\016ImageCodes" +
+      "Only\020\002\032\034\n\032MediaPlaybackStatusService\032\344\001\n" +
+      "\020PhoneStatus_Call\022X\n\005state\030\001 \001(\0162I.com.a" +
+      "ndrerinas.openheadunit.aap.protocol.prot" +
+      "o.Service.PhoneStatus_State\022\035\n\025call_dura" +
+      "tion_seconds\030\002 \001(\r\022\025\n\rcaller_number\030\003 \001(" +
+      "\t\022\021\n\tcaller_id\030\004 \001(\t\022\032\n\022caller_number_ty" +
+      "pe\030\005 \001(\t\022\021\n\tthumbnail\030\006 \001(\014\032=\n\021PhoneStat" +
+      "us_Input\022\025\n\rcaller_number\030\001 \001(\t\022\021\n\tcalle" +
+      "r_id\030\002 \001(\t\032\206\001\n\022PhoneStatusService\022W\n\005cal" +
+      "ls\030\001 \003(\0132H.com.andrerinas.openheadunit.a" +
+      "ap.protocol.proto.Service.PhoneStatus_Ca" +
+      "ll\022\027\n\017signal_strength\030\002 \001(\r\032P\n\026VendorExt" +
+      "ensionService\022\014\n\004name\030\001 \001(\t\022\032\n\022package_w" +
+      "hite_list\030\002 \003(\t\022\014\n\004data\030\003 \001(\014\032\034\n\032Generic" +
+      "NotificationService\032/\n\025WifiProjectionSer" +
+      "vice\022\026\n\016car_wifi_bssid\030\001 \001(\t\"d\n\021PhoneSta" +
+      "tus_State\022\n\n\006InCall\020\001\022\n\n\006OnHold\020\002\022\r\n\tHan" +
+      "gingUp\020\003\022\014\n\010Incoming\020\004\022\t\n\005Muted\020\005\022\017\n\013Con" +
+      "ferenced\020\006\"B\n\027ServiceDiscoveryRequest\022\022\n" +
+      "\nphone_name\030\004 \002(\t\022\023\n\013phone_brand\030\005 \002(\t\"\340" +
+      "\004\n\030ServiceDiscoveryResponse\022I\n\010services\030" +
+      "\001 \003(\01327.com.andrerinas.openheadunit.aap." +
+      "protocol.proto.Service\022\014\n\004make\030\002 \002(\t\022\r\n\005" +
+      "model\030\003 \002(\t\022\014\n\004year\030\004 \002(\t\022\022\n\nvehicle_id\030" +
+      "\005 \002(\t\022W\n\017driver_position\030\006 \002(\0162>.com.and" +
       "rerinas.openheadunit.aap.protocol.proto." +
-      "MessageStatus\"4\012\013PingRequest\022\021\012\011timestam" +
-      "p\030\001 \002(\003\022\022\012\012bug_report\030\002 \001(\005\"!\012\014PingRespo" +
-      "nse\022\021\012\011timestamp\030\001 \002(\003\"]\012\015ByeByeRequest\022" +
-      "L\012\006reason\030\001 \002(\0162<.com.andrerinas.openhea" +
-      "dunit.aap.protocol.proto.ByeByeReason\"\020\012" +
-      "\016ByeByeResponse\"\314\001\012\030VoiceSessionNotifica" +
-      "tion\022k\012\006status\030\001 \002(\0162[.com.andrerinas.op" +
-      "enheadunit.aap.protocol.proto.VoiceSessi" +
-      "onNotification.VoiceSessionStatus\"C\012\022Voi" +
-      "ceSessionStatus\022\026\012\022VOICE_STATUS_START\020\001\022" +
-      "\025\012\021VOICE_STATUS_STOP\020\002\"\200\002\012\035AudioFocusReq" +
-      "uestNotification\022t\012\007request\030\001 \001(\0162c.com." +
-      "andrerinas.openheadunit.aap.protocol.pro" +
-      "to.AudioFocusRequestNotification.AudioFo" +
-      "cusRequestType\"i\012\025AudioFocusRequestType\022" +
-      "\010\012\004NONE\020\000\022\010\012\004GAIN\020\001\022\022\012\016GAIN_TRANSIENT\020\002\022" +
-      "\033\012\027GAIN_TRANSIENT_MAY_DUCK\020\003\022\013\012\007RELEASE\020" +
-      "\004\"\360\002\012\026AudioFocusNotification\022o\012\013focus_st" +
-      "ate\030\001 \002(\0162Z.com.andrerinas.openheadunit." +
-      "aap.protocol.proto.AudioFocusNotificatio" +
-      "n.AudioFocusStateType\022\023\012\013unsolicited\030\002 \001" +
-      "(\010\"\317\001\012\023AudioFocusStateType\022\016\012\012STATE_GAIN" +
-      "\020\001\022\030\012\024STATE_GAIN_TRANSIENT\020\002\022\016\012\012STATE_LO" +
-      "SS\020\003\022!\012\035STATE_LOSS_TRANSIENT_CAN_DUCK\020\004\022" +
-      "\030\012\024STATE_LOSS_TRANSIENT\020\005\022\031\012\025STATE_GAIN_" +
-      "MEDIA_ONLY\020\006\022&\012\"STATE_GAIN_TRANSIENT_GUI" +
-      "DANCE_ONLY\020\007\"o\012\033NavFocusRequestNotificat" +
-      "ion\022P\012\012focus_type\030\001 \001(\0162<.com.andrerinas" +
-      ".openheadunit.aap.protocol.proto.NavFocu" +
-      "sType\"h\012\024NavFocusNotification\022P\012\012focus_t" +
-      "ype\030\001 \002(\0162<.com.andrerinas.openheadunit." +
-      "aap.protocol.proto.NavFocusType\"f\012\031Batte" +
-      "ryStatusNotification\022\025\012\015battery_level\030\001 " +
-      "\002(\015\022\030\012\020time_remaining_s\030\002 \001(\015\022\030\012\020critica" +
-      "l_battery\030\003 \001(\010\"9\012\017ConnectedDevice\022\023\012\013de" +
-      "vice_name\030\001 \001(\011\022\021\012\011device_id\030\002 \001(\005\"\240\001\012\023C" +
-      "arConnectedDevices\022Z\012\021connected_devices\030" +
-      "\001 \003(\0132?.com.andrerinas.openheadunit.aap." +
-      "protocol.proto.ConnectedDevice\022\023\012\013unsoli" +
-      "cited\030\002 \001(\010\022\030\012\012final_list\030\003 \001(\010:\004true\"\366\001" +
-      "\012\022UserSwitchResponse\022c\012\006status\030\001 \001(\0162S.c" +
-      "om.andrerinas.openheadunit.aap.protocol." +
-      "proto.UserSwitchResponse.UserSwitchStatu" +
-      "s\022X\012\017selected_device\030\002 \001(\0132?.com.andreri" +
-      "nas.openheadunit.aap.protocol.proto.Conn" +
-      "ectedDevice\"!\012\020UserSwitchStatus\022\015\012\011STATU" +
-      "S_OK\020\000\"0\012\026CallAvailabilityStatus\022\026\012\016call" +
-      "_available\030\001 \001(\010*\255\007\012\016ControlMsgType\022\033\012\027M" +
-      "ESSAGE_VERSION_REQUEST\020\001\022\034\012\030MESSAGE_VERS" +
-      "ION_RESPONSE\020\002\022\034\012\030MESSAGE_ENCAPSULATED_S" +
-      "SL\020\003\022\031\012\025MESSAGE_AUTH_COMPLETE\020\004\022%\012!MESSA" +
-      "GE_SERVICE_DISCOVERY_REQUEST\020\005\022&\012\"MESSAG" +
-      "E_SERVICE_DISCOVERY_RESPONSE\020\006\022 \012\034MESSAG" +
-      "E_CHANNEL_OPEN_REQUEST\020\007\022!\012\035MESSAGE_CHAN" +
-      "NEL_OPEN_RESPONSE\020\010\022&\012\"MESSAGE_CHANNEL_C" +
-      "LOSE_NOTIFICATION\020\011\022\030\012\024MESSAGE_PING_REQU" +
-      "EST\020\013\022\031\012\025MESSAGE_PING_RESPONSE\020\014\022\035\012\031MESS" +
-      "AGE_NAV_FOCUS_REQUEST\020\015\022\"\012\036MESSAGE_NAV_F" +
-      "OCUS_NOTIFICATION\020\016\022\032\012\026MESSAGE_BYEBYE_RE" +
-      "QUEST\020\017\022\033\012\027MESSAGE_BYEBYE_RESPONSE\020\020\022&\012\"" +
-      "MESSAGE_VOICE_SESSION_NOTIFICATION\020\021\022\037\012\033" +
-      "MESSAGE_AUDIO_FOCUS_REQUEST\020\022\022$\012 MESSAGE" +
-      "_AUDIO_FOCUS_NOTIFICATION\020\023\022)\012%MESSAGE_C" +
-      "AR_CONNECTED_DEVICES_REQUEST\020\024\022*\012&MESSAG" +
-      "E_CAR_CONNECTED_DEVICES_RESPONSE\020\025\022\037\012\033ME" +
-      "SSAGE_USER_SWITCH_REQUEST\020\026\022'\012#MESSAGE_B" +
-      "ATTERY_STATUS_NOTIFICATION\020\027\022$\012 MESSAGE_" +
-      "CALL_AVAILABILITY_STATUS\020\030\022 \012\034MESSAGE_US" +
-      "ER_SWITCH_RESPONSE\020\031\022$\012 MESSAGE_SERVICE_" +
-      "DISCOVERY_UPDATE\020\032\022\037\012\032MESSAGE_UNEXPECTED" +
-      "_MESSAGE\020\377\001\022\033\012\025MESSAGE_FRAMING_ERROR\020\377\377\003" +
-      "*G\012\026BluetoothPairingMethod\022\014\012\010METHOD_1\020\001" +
-      "\022\010\012\004A2DP\020\002\022\014\012\010METHOD_3\020\003\022\007\012\003HFP\020\004*z\012\014Bye" +
-      "ByeReason\022\022\012\016USER_SELECTION\020\001\022\021\012\015DEVICE_" +
-      "SWITCH\020\002\022\021\012\015NOT_SUPPORTED\020\003\022\033\012\027NOT_CURRE" +
-      "NTLY_SUPPORTED\020\004\022\023\012\017PROBE_SUPPORTED\020\005*~\012" +
-      "\016DriverPosition\022\030\012\024DRIVER_POSITION_LEFT\020" +
-      "\000\022\031\012\025DRIVER_POSITION_RIGHT\020\001\022\032\012\026DRIVER_P" +
-      "OSITION_CENTER\020\002\022\033\012\027DRIVER_POSITION_UNKN" +
-      "OWN\020\003*0\012\014NavFocusType\022\017\012\013NAV_FOCUS_1\020\001\022\017" +
-      "\012\013NAV_FOCUS_2\020\002B\011B\007Control"
+      "DriverPosition\022\026\n\016head_unit_make\030\007 \002(\t\022\027" +
+      "\n\017head_unit_model\030\010 \002(\t\022 \n\030head_unit_sof" +
+      "tware_build\030\t \002(\t\022\"\n\032head_unit_software_" +
+      "version\030\n \002(\t\022\'\n\037can_play_native_media_d" +
+      "uring_vr\030\013 \002(\010\022\034\n\024hide_projected_clock\030\014" +
+      " \001(\010\022\035\n\025session_configuration\030\r \001(\005\022\024\n\014d" +
+      "isplay_name\030\016 \001(\t\022\031\n\021probe_for_support\030\017" +
+      " \001(\010\022S\n\rheadunit_info\030\021 \001(\0132<.com.andrer" +
+      "inas.openheadunit.aap.protocol.proto.Hea" +
+      "dUnitInfo\":\n\022ChannelOpenRequest\022\020\n\010prior" +
+      "ity\030\001 \002(\005\022\022\n\nservice_id\030\002 \002(\005\"d\n\023Channel" +
+      "OpenResponse\022M\n\006status\030\001 \002(\0162=.com.andre" +
+      "rinas.openheadunit.aap.protocol.proto.Me" +
+      "ssageStatus\"4\n\013PingRequest\022\021\n\ttimestamp\030" +
+      "\001 \002(\003\022\022\n\nbug_report\030\002 \001(\005\"!\n\014PingRespons" +
+      "e\022\021\n\ttimestamp\030\001 \002(\003\"]\n\rByeByeRequest\022L\n" +
+      "\006reason\030\001 \002(\0162<.com.andrerinas.openheadu" +
+      "nit.aap.protocol.proto.ByeByeReason\"\020\n\016B" +
+      "yeByeResponse\"\314\001\n\030VoiceSessionNotificati" +
+      "on\022k\n\006status\030\001 \002(\0162[.com.andrerinas.open" +
+      "headunit.aap.protocol.proto.VoiceSession" +
+      "Notification.VoiceSessionStatus\"C\n\022Voice" +
+      "SessionStatus\022\026\n\022VOICE_STATUS_START\020\001\022\025\n" +
+      "\021VOICE_STATUS_STOP\020\002\"\200\002\n\035AudioFocusReque" +
+      "stNotification\022t\n\007request\030\001 \001(\0162c.com.an" +
+      "drerinas.openheadunit.aap.protocol.proto" +
+      ".AudioFocusRequestNotification.AudioFocu" +
+      "sRequestType\"i\n\025AudioFocusRequestType\022\010\n" +
+      "\004NONE\020\000\022\010\n\004GAIN\020\001\022\022\n\016GAIN_TRANSIENT\020\002\022\033\n" +
+      "\027GAIN_TRANSIENT_MAY_DUCK\020\003\022\013\n\007RELEASE\020\004\"" +
+      "\360\002\n\026AudioFocusNotification\022o\n\013focus_stat" +
+      "e\030\001 \002(\0162Z.com.andrerinas.openheadunit.aa" +
+      "p.protocol.proto.AudioFocusNotification." +
+      "AudioFocusStateType\022\023\n\013unsolicited\030\002 \001(\010" +
+      "\"\317\001\n\023AudioFocusStateType\022\016\n\nSTATE_GAIN\020\001" +
+      "\022\030\n\024STATE_GAIN_TRANSIENT\020\002\022\016\n\nSTATE_LOSS" +
+      "\020\003\022!\n\035STATE_LOSS_TRANSIENT_CAN_DUCK\020\004\022\030\n" +
+      "\024STATE_LOSS_TRANSIENT\020\005\022\031\n\025STATE_GAIN_ME" +
+      "DIA_ONLY\020\006\022&\n\"STATE_GAIN_TRANSIENT_GUIDA" +
+      "NCE_ONLY\020\007\"o\n\033NavFocusRequestNotificatio" +
+      "n\022P\n\nfocus_type\030\001 \001(\0162<.com.andrerinas.o" +
+      "penheadunit.aap.protocol.proto.NavFocusT" +
+      "ype\"h\n\024NavFocusNotification\022P\n\nfocus_typ" +
+      "e\030\001 \002(\0162<.com.andrerinas.openheadunit.aa" +
+      "p.protocol.proto.NavFocusType\"f\n\031Battery" +
+      "StatusNotification\022\025\n\rbattery_level\030\001 \002(" +
+      "\r\022\030\n\020time_remaining_s\030\002 \001(\r\022\030\n\020critical_" +
+      "battery\030\003 \001(\010\"9\n\017ConnectedDevice\022\023\n\013devi" +
+      "ce_name\030\001 \001(\t\022\021\n\tdevice_id\030\002 \001(\005\"\240\001\n\023Car" +
+      "ConnectedDevices\022Z\n\021connected_devices\030\001 " +
+      "\003(\0132?.com.andrerinas.openheadunit.aap.pr" +
+      "otocol.proto.ConnectedDevice\022\023\n\013unsolici" +
+      "ted\030\002 \001(\010\022\030\n\nfinal_list\030\003 \001(\010:\004true\"\366\001\n\022" +
+      "UserSwitchResponse\022c\n\006status\030\001 \001(\0162S.com" +
+      ".andrerinas.openheadunit.aap.protocol.pr" +
+      "oto.UserSwitchResponse.UserSwitchStatus\022" +
+      "X\n\017selected_device\030\002 \001(\0132?.com.andrerina" +
+      "s.openheadunit.aap.protocol.proto.Connec" +
+      "tedDevice\"!\n\020UserSwitchStatus\022\r\n\tSTATUS_" +
+      "OK\020\000\"0\n\026CallAvailabilityStatus\022\026\n\016call_a" +
+      "vailable\030\001 \001(\010*\255\007\n\016ControlMsgType\022\033\n\027MES" +
+      "SAGE_VERSION_REQUEST\020\001\022\034\n\030MESSAGE_VERSIO" +
+      "N_RESPONSE\020\002\022\034\n\030MESSAGE_ENCAPSULATED_SSL" +
+      "\020\003\022\031\n\025MESSAGE_AUTH_COMPLETE\020\004\022%\n!MESSAGE" +
+      "_SERVICE_DISCOVERY_REQUEST\020\005\022&\n\"MESSAGE_" +
+      "SERVICE_DISCOVERY_RESPONSE\020\006\022 \n\034MESSAGE_" +
+      "CHANNEL_OPEN_REQUEST\020\007\022!\n\035MESSAGE_CHANNE" +
+      "L_OPEN_RESPONSE\020\010\022&\n\"MESSAGE_CHANNEL_CLO" +
+      "SE_NOTIFICATION\020\t\022\030\n\024MESSAGE_PING_REQUES" +
+      "T\020\013\022\031\n\025MESSAGE_PING_RESPONSE\020\014\022\035\n\031MESSAG" +
+      "E_NAV_FOCUS_REQUEST\020\r\022\"\n\036MESSAGE_NAV_FOC" +
+      "US_NOTIFICATION\020\016\022\032\n\026MESSAGE_BYEBYE_REQU" +
+      "EST\020\017\022\033\n\027MESSAGE_BYEBYE_RESPONSE\020\020\022&\n\"ME" +
+      "SSAGE_VOICE_SESSION_NOTIFICATION\020\021\022\037\n\033ME" +
+      "SSAGE_AUDIO_FOCUS_REQUEST\020\022\022$\n MESSAGE_A" +
+      "UDIO_FOCUS_NOTIFICATION\020\023\022)\n%MESSAGE_CAR" +
+      "_CONNECTED_DEVICES_REQUEST\020\024\022*\n&MESSAGE_" +
+      "CAR_CONNECTED_DEVICES_RESPONSE\020\025\022\037\n\033MESS" +
+      "AGE_USER_SWITCH_REQUEST\020\026\022\'\n#MESSAGE_BAT" +
+      "TERY_STATUS_NOTIFICATION\020\027\022$\n MESSAGE_CA" +
+      "LL_AVAILABILITY_STATUS\020\030\022 \n\034MESSAGE_USER" +
+      "_SWITCH_RESPONSE\020\031\022$\n MESSAGE_SERVICE_DI" +
+      "SCOVERY_UPDATE\020\032\022\037\n\032MESSAGE_UNEXPECTED_M" +
+      "ESSAGE\020\377\001\022\033\n\025MESSAGE_FRAMING_ERROR\020\377\377\003*G" +
+      "\n\026BluetoothPairingMethod\022\014\n\010METHOD_1\020\001\022\010" +
+      "\n\004A2DP\020\002\022\014\n\010METHOD_3\020\003\022\007\n\003HFP\020\004*z\n\014ByeBy" +
+      "eReason\022\022\n\016USER_SELECTION\020\001\022\021\n\rDEVICE_SW" +
+      "ITCH\020\002\022\021\n\rNOT_SUPPORTED\020\003\022\033\n\027NOT_CURRENT" +
+      "LY_SUPPORTED\020\004\022\023\n\017PROBE_SUPPORTED\020\005*~\n\016D" +
+      "riverPosition\022\030\n\024DRIVER_POSITION_LEFT\020\000\022" +
+      "\031\n\025DRIVER_POSITION_RIGHT\020\001\022\032\n\026DRIVER_POS" +
+      "ITION_CENTER\020\002\022\033\n\027DRIVER_POSITION_UNKNOW" +
+      "N\020\003*0\n\014NavFocusType\022\017\n\013NAV_FOCUS_1\020\001\022\017\n\013" +
+      "NAV_FOCUS_2\020\002B\tB\007Control"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -32506,19 +33433,19 @@ public final class Control {
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_descriptor,
-        new java.lang.String[] { "AvailableType", "AudioType", "AudioConfigs", "VideoConfigs", "AvailableWhileInCall", });
+        new java.lang.String[] { "AvailableType", "AudioType", "AudioConfigs", "VideoConfigs", "AvailableWhileInCall", "DisplayId", "DisplayType", "InitialContentKeycode", });
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_VideoConfiguration_descriptor =
       internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_descriptor.getNestedTypes().get(0);
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_VideoConfiguration_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_MediaSinkService_VideoConfiguration_descriptor,
-        new java.lang.String[] { "CodecResolution", "FrameRate", "MarginWidth", "MarginHeight", "Density", "DecoderAdditionalDepth", "PixelAspectRatioE4", "VideoCodecType", });
+        new java.lang.String[] { "CodecResolution", "FrameRate", "MarginWidth", "MarginHeight", "Density", "DecoderAdditionalDepth", "ViewingDistance", "PixelAspectRatioE4", "RealDensity", "VideoCodecType", "UiConfig", });
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_descriptor =
       internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_descriptor.getNestedTypes().get(2);
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_descriptor,
-        new java.lang.String[] { "KeycodesSupported", "Touchscreen", "Touchpad", });
+        new java.lang.String[] { "KeycodesSupported", "Touchscreen", "Touchpad", "DisplayId", });
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_TouchConfig_descriptor =
       internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_descriptor.getNestedTypes().get(0);
     internal_static_com_andrerinas_openheadunit_aap_protocol_proto_Service_InputSourceService_TouchConfig_fieldAccessorTable = new

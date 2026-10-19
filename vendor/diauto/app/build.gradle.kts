@@ -76,8 +76,8 @@ android {
 
         // Library BuildConfig has no application/version fields; the engine reads these.
         buildConfigField("String", "APPLICATION_ID", "\"$carlinkApplicationId\"")
-        buildConfigField("String", "VERSION_NAME", "\"0.3.11\"")
-        buildConfigField("int", "VERSION_CODE", "111")
+        buildConfigField("String", "VERSION_NAME", "\"0.3.12\"")
+        buildConfigField("int", "VERSION_CODE", "112")
 
         // Store available locales in BuildConfig for runtime access
         // This is scanned at build time from values-XX directories

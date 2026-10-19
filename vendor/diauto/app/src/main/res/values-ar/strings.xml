@@ -112,7 +112,7 @@
 
 
     <string name="not_set">غير محدد</string>
-    <string name="keymap_description">تغيير اختصارات المفاتيح لوحدة الرأس</string>
+    <string name="keymap_description">تغيير اختصارات المفاتيح لوحدة السيارة</string>
 
     <string name="key_soft_left">يسار</string>
     <string name="key_soft_right">يمين</string>
@@ -201,7 +201,7 @@
         <item>يدوي (قائمة)</item>
         <item>بحث تلقائي (خادم Headunit)</item>
         <item>مساعد لاسلكي (في انتظار الهاتف)</item>
-        <item>Native Android Auto</item>
+        <item>Android Auto الأصلي (التفاوض الرسمي للاتصال)</item>
     </string-array>
     <string name="auto_connect_last_session">الاتصال التلقائي بالجلسة الأخيرة</string>
     <string name="auto_connect_last_session_description">إعادة الاتصال تلقائيا بآخر جهاز مستخدم عند بدء التطبيق</string>
@@ -234,7 +234,7 @@
 
     <string name="category_audio">الصوت</string>
     <string name="enable_audio_sink">مخرج الصوت</string>
-    <string name="enable_audio_sink_description">إذا كان معطلا، لن تستقبل وحدة الرأس الصوت. سيشغل الصوت من الهاتف.</string>
+    <string name="enable_audio_sink_description">عند تعطيله، لن تستقبل وحدة السيارة الصوت. سيُشغَّل الصوت من الهاتف.</string>
     <string name="separate_audio_streams">فصل تيارات الصوت</string>
     <string name="separate_audio_streams_description">فصل قنوات الصوت للموسيقى والمكالمات والإشعارات بدلاً من تيار وسائط واحد (قد لا يعمل بشكل صحيح على بعض الأجهزة).</string>
     <string name="use_aac_audio">استخدام ترميز AAC للصوت</string>
@@ -456,13 +456,13 @@
     <string name="hotspot_permission_title">إذن مطلوب</string>
     <string name="hotspot_permission_message">تتطلب ميزة نقطة الاتصال إذن \"تعديل إعدادات النظام\". يرجى تفعيله في الشاشة التالية.</string>
     <string name="not_supported_nativeaa">يبدو أن الاتصال اللاسلكي الأصلي غير مدعوم</string>
-    <string name="not_supported_nativeaa_desc">قد لا يدعم جهازك ميزات Bluetooth أو Wi-Fi المطلوبة للاتصال اللاسلكي الأصلي. يمكنك تجربته على أي حال، ولكن إذا فشل، يرجى استخدام وضع \"Wireless Helper\" أو \"تلقائي (خادم وحدة الرأس)\" بدلاً من ذلك.</string>
+    <string name="not_supported_nativeaa_desc">قد لا يدعم جهازك ميزات Bluetooth أو Wi-Fi المطلوبة للاتصال اللاسلكي الأصلي. يمكنك تجربته على أي حال، ولكن إذا فشل، يرجى استخدام وضع \"Wireless Helper\" أو \"تلقائي (خادم وحدة السيارة)\" بدلاً من ذلك.</string>
     <string name="wait_for_wifi">انتظار WiFi قبل WiFi Direct</string>
     <string name="wait_for_wifi_description">عند بدء التشغيل، انتظر اتصال WiFi قبل بدء WiFi Direct. مفيد إذا كان جهازك يحتاج بضع ثوانٍ للاتصال بشبكة WiFi بعد التشغيل.</string>
     <string name="wait_for_wifi_timeout">مهلة انتظار WiFi</string>
     <string name="wireless_24ghz_warning">ملاحظة: يمكن أن يؤدي استخدام Android Auto اللاسلكي على أجهزة 2.4 جيجا هرتز إلى حدوث تأخير وتقطع وانقطاع في الاتصال. إذا واجهت مشكلات، يرجى الاختبار عبر USB للتأكد مما ifا كان ذلك بسبب قيود الشبكة.</string>
     <string name="supported_nativeaa">دعم لاسلكي محسّن</string>
-    <string name="supported_nativeaa_desc">أخبار رائعة! يدعم جهازك وضع \"لاسلكي أصلي\"، مما يوفر تجربة Android Auto أكثر سلاسة. \n\nلتفعيل هذا السمة، نحتاج إلى تحديث ذاكرة التخزين المؤقت للبلوتوث. يرجى: \n1. إزالة الاقتران الحالي على هاتفك \n2. النقر على موافق لإعادة تشغيل البلوتوث \n3. إعادة اقتران هاتفك \n\nهل ترغب في الانتقال إلى وضع AA الأصلي الآن؟</string>
+    <string name="supported_nativeaa_desc">يدعم جهازك وضع \"لاسلكي أصلي\"، مما يوفر تجربة Android Auto أكثر سلاسة. \n\nلتفعيل هذه الميزة، نحتاج إلى تحديث ذاكرة التخزين المؤقت للبلوتوث. يرجى: \n1. إزالة الاقتران الحالي على هاتفك \n2. النقر على موافق لإعادة تشغيل البلوتوث \n3. إعادة اقتران هاتفك \n\nهل ترغب في الانتقال إلى وضع AA الأصلي الآن؟</string>
     <string name="fake_speed_title">تعطيل قفل الفيديو (Fake Speed)</string>
     <string name="fake_speed_description">يبلغ الهاتف سرعة منخفضة ثابتة (0.5 م/ث) لمنع قفل محتوى الفيديو أثناء القيادة. استخدم بحذر.</string>
     <string name="wireless_mode_helper">Wireless Helper</string>
@@ -539,7 +539,7 @@
     <!-- New strings merged from 2.3.1 -->
     <string name="bt_devices_selected">أجهزة محددة</string>
     <string name="static_audio_focus">تركيز الصوت الثابت</string>
-    <string name="static_audio_focus_description">إجبار الهاتف على الاعتقاد بأن تركيز الصوت مستمر دائمًا، مما يمنع فقدان توجيه الصوت على وحدات الرأس العامة. يقوم أيضًا بخفض الصوت برمجيًا أثناء التوجيهات الصوتية للملاحة.</string>
+    <string name="static_audio_focus_description">إجبار الهاتف على الاعتقاد بأن تركيز الصوت مستمر دائمًا، مما يمنع فقدان توجيه الصوت على وحدات السيارة العامة. يقوم أيضًا بخفض الصوت برمجيًا أثناء التوجيهات الصوتية للملاحة.</string>
     <string name="bluetooth_adapter_label">محول البلوتوث</string>
     <string name="bluetooth_adapter_description">اختر محول/وحدة تحكم البلوتوث لاستخدامها في المصافحة. مفيد للأنظمة التي تحتوي على منفذي بلوتوث.</string>
     <string name="select_bt_adapter">حدد محول البلوتوث</string>
@@ -676,7 +676,7 @@
     <string name="onb_safety_accept">لقد قرأت الشروط وأوافق عليها</string>
     <string name="onb_connection_title">كيف تتصل؟</string>
     <string name="onb_connection_help">اختر كيفية اتصال هاتفك. يبقي هذا شاشة الإعدادات مركزة على ما ينطبق عليك.</string>
-    <string name="onb_connection_cable_detail">الهاتف موصول مباشرة بوحدة الرأس بكابل USB. تبقى الخيارات اللاسلكية بعيدة عن الطريق.</string>
+    <string name="onb_connection_cable_detail">يتصل الهاتف مباشرةً بوحدة السيارة بكابل USB. لا حاجة إلى إعداد خيارات الاتصال اللاسلكي.</string>
     <string name="onb_connection_adapter_detail">يربط محول USB الكابل بوصلة لاسلكية. يتم عرض الخيارات اللاسلكية.</string>
     <string name="onb_connection_wifi_detail">يتصل الهاتف عبر WiFi.</string>
     <string name="onb_display_title">العرض</string>
@@ -762,7 +762,7 @@
     <string name="support_rules_device_title">اذكر الجهاز الذي يشغّل التطبيق</string>
     <string name="support_rules_device_desc">إصدار Android للجهاز الذي يعرض Android Auto (وحدة الوسائط أو الشاشة)، وماركته وطرازه إن عرفتهما.</string>
     <string name="support_rules_connection_title">اذكر طريقة الاتصال</string>
-    <string name="support_rules_connection_desc">كابل USB، أو محول USB لاسلكي، أو WiFi Direct، أو WiFi (خادم وحدة الرأس)، أو Self Mode. إن كان الاتصال لاسلكيًا، أضف طراز المحول أو الدونغل.</string>
+    <string name="support_rules_connection_desc">كابل USB، أو محول USB لاسلكي، أو WiFi Direct، أو WiFi (خادم وحدة السيارة)، أو Self Mode. إن كان الاتصال لاسلكيًا، أضف طراز المحول أو الدونغل.</string>
     <string name="support_rules_appversion_title">أرفق إصدار التطبيق</string>
     <string name="support_rules_appversion_desc">إصدار Open Headunit، المعروض في شاشة حول.</string>
     <string name="support_rules_logs_title">أرفق السجلات فور حدوث المشكلة</string>
@@ -940,6 +940,29 @@
     <string name="no_files_found">لم يتم العثور على ملفات</string>
     <string name="byd_navigation_title">شاشة BYD الأمامية ولوحة العدادات</string>
     <string name="byd_navigation_description">عرض إرشادات Android Auto على شاشات BYD المدعومة. تجريبي؛ يختلف التوافق حسب السيارة.</string>
+    <string name="cluster_map_title">خريطة Android Auto على لوحة العدادات (تجريبي)</string>
+    <string name="cluster_map_description">عرض خريطة تطبيق الملاحة الخاصة بلوحة العدادات (Waze وخرائط Google) على لوحة عدادات BYD. يُطبَّق عند الاتصال التالي.</string>
+    <string name="cluster_map_size">حجم الخريطة</string>
+    <string name="cluster_map_size_normal">عادي (1920×720، واضح)</string>
+    <string name="cluster_map_size_large">كبير (مكبّر 1.5×)</string>
+    <string name="cluster_map_detail">حجم النصوص وعلامة السيارة</string>
+    <string name="cluster_map_detail_small">صغير</string>
+    <string name="cluster_map_detail_normal">عادي</string>
+    <string name="cluster_map_detail_large">كبير</string>
+    <string name="cluster_map_detail_extra_large">كبير جدًا</string>
+    <string name="cluster_map_width">عرض التخطيط</string>
+    <string name="cluster_map_width_compact">مضغوط (البطاقات فوق السيارة وتحتها)</string>
+    <string name="cluster_map_width_wide">عريض (قد تنتقل البطاقات إلى الزوايا)</string>
+    <string name="cluster_map_width_full">كامل العرض</string>
+    <string name="cluster_marker_horizontal">علامة السيارة: يسار / يمين</string>
+    <string name="cluster_marker_vertical">علامة السيارة: أعلى / أسفل</string>
+    <string name="cluster_marker_centre">الوسط</string>
+    <string name="cluster_map_hint">اضبط لوحة العدادات على وضع الملاحة الصغير أو الكامل من قائمة المقود. تبقى الخريطة ظاهرة ما دام Android Auto متصلاً، حتى خلف الكاميرا أو التطبيقات الأخرى. يدعم Waze وخرائط Google خريطة لوحة العدادات؛ أما بطاقة الانعطاف فتعتمد على التطبيق.</string>
+    <string name="cluster_map_overlay_hint">إذا اختفت الخريطة من لوحة العدادات عند فتح الكاميرا أو تطبيق آخر، اسمح لـ DiAuto بالظهور فوق التطبيقات الأخرى. اختياري: كثير من الشاشات تبقيها ظاهرة بدونه.</string>
+    <string name="cluster_map_overlay_grant">السماح بالظهور فوق التطبيقات الأخرى</string>
+    <string name="cluster_map_overlay_unavailable">لا توجد في هذه الشاشة صفحة لهذا الإذن.</string>
+    <string name="byd_left_hand_traffic_title">القيادة على اليسار</string>
+    <string name="byd_left_hand_traffic_description">الدوّارات تسير باتجاه عقارب الساعة، كما في المملكة المتحدة واليابان وأستراليا. اتركه متوقفًا حيث تكون القيادة على اليمين. يُستخدم لعرض رقم مخرج الدوّار على شاشات BYD.</string>
     <string name="da_connection_setup">إعداد الاتصال</string>
     <string name="da_connection_setup_hint">اختر طريقة الاتصال وأعدّ نقطة اتصال سيارتك.</string>
     <string name="da_diagnostics">التشخيص</string>
@@ -959,4 +982,20 @@
     <string name="audio_queue_backlog">بلا حد (أقصى تراكم)</string>
     <string name="keymap_test_hint">اضغط أي زر لاختباره…</string>
     <string name="keymap_test_event">الزر: %1$s (%2$d) · %3$s</string>
+    <string name="cluster_theme">سمة لوحة العدادات في السيارة</string>
+    <string name="cluster_theme_scenario">المشهد</string>
+    <string name="cluster_theme_map">الخريطة</string>
+    <string name="cluster_theme_simple">بسيط</string>
+    <string name="cluster_turn_card_overlay">بطاقة الانعطاف على خريطة لوحة العدادات</string>
+    <string name="cluster_turn_card_overlay_description">يعرض الانعطاف التالي والمسافة واسم الشارع فوق خريطة لوحة العدادات، كما في DiPlay.</string>
+    <string name="turn_card_now">الآن</string>
+    <string name="turn_card_distance_m">%1$d م</string>
+    <string name="turn_card_distance_km">%1$.1f كم</string>
+    <string name="turn_card_exit">مخرج %1$d</string>
+    <string name="turn_card_info_arrival">الوصول %1$s</string>
+    <string name="turn_card_info_duration_hm">%1$dس %2$dد</string>
+    <string name="turn_card_info_duration_m">%1$dد</string>
+    <string name="turn_card_info_km">%1$.1f كم</string>
+    <string name="cluster_usage_access_hint">في وضع «المشهد» تظهر الخريطة الجانبية في كل بطاقات لوحة العدادات. اسمح بـ«الوصول إلى بيانات الاستخدام» لـ DiAuto لتظهر فقط في بطاقة الخريطة. إذا لم يفتح الزر شيئًا، يمكن منح الإذن عبر ADB: appops set com.andrerinas.headunitrevived GET_USAGE_STATS allow</string>
+    <string name="cluster_usage_access_grant">السماح بالوصول إلى بيانات الاستخدام</string>
 </resources>

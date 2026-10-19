@@ -20,8 +20,10 @@ import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.R
 import com.andrerinas.openheadunit.aap.AapProjectionActivity
 import com.andrerinas.openheadunit.aap.AapService
+import com.andrerinas.openheadunit.aap.WirelessScopePolicy
 import com.andrerinas.openheadunit.connection.CommManager
 import com.andrerinas.openheadunit.utils.BluetoothHelper
+import com.andrerinas.openheadunit.utils.Settings
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
@@ -100,8 +102,14 @@ class HomeFragment : Fragment() {
                 .setItems(devices.map { it.name ?: getString(R.string.da_device) }.toTypedArray()) { _, index ->
                     val device = devices[index]
                     // The button explicitly selects native wireless AA, including on upgrades
-                    // from upstream installations that used the phone helper.
+                    // from upstream installations that used the phone helper. It is also a choice
+                    // of WiFi, so add it to the connection types; otherwise the USB-only gate
+                    // would keep the route the user just asked for down.
                     app.settings.wifiConnectionMode = 3
+                    if (!WirelessScopePolicy.allowsWireless(app.settings.connectionModes)) {
+                        app.settings.connectionModes =
+                            app.settings.connectionModes + Settings.ConnectionMode.WIFI
+                    }
                     (activity as? MainActivity)?.beginAutoConnect(
                         "manual native wireless", MainActivity.ConnectionUiMode.PILL)
                     ContextCompat.startForegroundService(requireContext(), Intent(requireContext(), AapService::class.java).apply {

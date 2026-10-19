@@ -260,6 +260,11 @@ object HeadUnitScreenConfig {
         val selectedResolution = Settings.Resolution.fromId(currentSettings.resolutionId)
         val isPortraitDisplay = screenHeightPx > screenWidthPx
         val canNegotiateHevc = canNegotiateHevcHighResolution()
+        // AUTO picks 1440p/4K only on a decoder from the HEVC reliability list (or software HEVC
+        // the user chose), the rule the Auto codec setting already used. Those sizes need H.265, and
+        // a hardware HEVC decoder outside the list got a 1440p H.264 profile and no picture (#35,
+        // MediaTek mt8676). A manual 1440p choice still gets H.265 on any hardware HEVC decoder.
+        val autoHevcHighResolution = canAutoNegotiateHevcHighResolution()
 
         // 1. Determine base negotiated resolution
         if (isResolutionLocked) {
@@ -274,7 +279,13 @@ object HeadUnitScreenConfig {
             }
         }
         
-        if (!isResolutionLocked && selectedResolution == Settings.Resolution.AUTO) {
+        if (isResolutionLocked) {
+            // A locked session keeps what it already negotiated. This used to fall through to the
+            // manual branch below, where AUTO carries no codec and the fallback landed on 480p: the
+            // margins re-announced for a surface change were then computed for an 800x480 stream
+            // while the phone still sent 1080p, and the next connection asked for 800x480 (#19).
+            // Upstream Open Headunit fixed the same fall-through in 9e1ce321.
+        } else if (selectedResolution == Settings.Resolution.AUTO) {
             if (isPortraitDisplay) {
                 negotiatedResolutionType = if (screenWidthPx > 720 || screenHeightPx > 1280) {
                     Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1080x1920
@@ -284,9 +295,9 @@ object HeadUnitScreenConfig {
             } else {
                 negotiatedResolutionType = when {
                     screenWidthPx <= 800 && screenHeightPx <= 480 -> Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._800x480
-                    (screenWidthPx >= 3840 || screenHeightPx >= 2160) && VideoDecoder.isHevcSupported() && Build.VERSION.SDK_INT >= 24 -> 
+                    (screenWidthPx >= 3840 || screenHeightPx >= 2160) && VideoDecoder.isHevcReliable() && Build.VERSION.SDK_INT >= 24 ->
                         Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._3840x2160
-                    (screenWidthPx >= 2560 || screenHeightPx >= 1440) && canNegotiateHevc && Build.VERSION.SDK_INT >= 24 ->
+                    (screenWidthPx >= 2560 || screenHeightPx >= 1440) && autoHevcHighResolution && Build.VERSION.SDK_INT >= 24 ->
                         Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._2560x1440
                     screenWidthPx > 1280 || screenHeightPx > 720 -> Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1920x1080
                     else -> Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1280x720
@@ -364,8 +375,14 @@ object HeadUnitScreenConfig {
         }
     }
 
-    private fun canNegotiateHevcHighResolution(): Boolean {
-        if (VideoDecoder.isHevcSupported()) return true
+    private fun canNegotiateHevcHighResolution(): Boolean =
+        VideoDecoder.isHevcSupported() || explicitSoftwareHevc()
+
+    /** HEVC that AUTO may use for 1440p: a decoder from the reliability list, or chosen software HEVC. */
+    private fun canAutoNegotiateHevcHighResolution(): Boolean =
+        VideoDecoder.isHevcReliable() || explicitSoftwareHevc()
+
+    private fun explicitSoftwareHevc(): Boolean {
         if (currentSettings.videoCodec != VideoDecoder.CodecType.H265.settingsValue || !currentSettings.forceSoftwareDecoding) return false
         return when (currentSettings.softwareVideoDecoder) {
             Settings.SoftwareVideoDecoder.BUNDLED_FFMPEG -> VideoDecoder.isBundledHevcDecoderAvailable()

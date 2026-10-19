@@ -525,6 +525,9 @@ class VideoDecoder(
      */
     fun isCurrentSurface(surface: Surface): Boolean = synchronized(this) { mSurface === surface }
 
+    /** Whether a live surface is attached, so a granted video focus has somewhere to draw. */
+    fun hasValidSurface(): Boolean = synchronized(this) { mSurface?.isValid == true }
+
     /**
      * Stops the decoder only if [surface] still owns it. Compare-and-stop is atomic under the
      * same monitor [setSurface] and [stop] already hold, so a stale teardown from a torn-down

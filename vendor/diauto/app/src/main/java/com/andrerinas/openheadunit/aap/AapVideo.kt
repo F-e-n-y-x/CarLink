@@ -6,7 +6,17 @@ import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.Settings
 import java.nio.ByteBuffer
 
-internal class AapVideo(private val videoDecoder: VideoDecoder, private val settings: Settings, private val onFrameCorrupted: () -> Unit) {
+/**
+ * @param codecName / [forceSoftware] override the user's video settings for a stream that is not
+ * the main screen: the dashboard is always H.264 on the hardware decoder.
+ */
+internal class AapVideo(
+    private val videoDecoder: VideoDecoder,
+    private val settings: Settings,
+    private val codecName: String? = null,
+    private val forceSoftware: Boolean? = null,
+    private val onFrameCorrupted: () -> Unit,
+) {
 
     companion object {
         /** Enough for H.264 at the resolutions most head units negotiate. ~2MB. */
@@ -243,7 +253,7 @@ internal class AapVideo(private val videoDecoder: VideoDecoder, private val sett
         return when (val action = decision.action) {
             is VideoFragmentAssembler.Action.DecodeWhole -> {
                 messageBuffer.clear()
-                videoDecoder.decode(buf, action.payloadOffset, len - action.payloadOffset, settings.forceSoftwareDecoding, settings.videoCodec)
+                videoDecoder.decode(buf, action.payloadOffset, len - action.payloadOffset, forceSoftware ?: settings.forceSoftwareDecoding, codecName ?: settings.videoCodec)
                 true
             }
 
@@ -296,9 +306,9 @@ internal class AapVideo(private val videoDecoder: VideoDecoder, private val sett
                         legacyAssembledBuffer = ByteArray(assembledSize + 1024)
                     }
                     messageBuffer.get(legacyAssembledBuffer!!, 0, assembledSize)
-                    videoDecoder.decode(legacyAssembledBuffer!!, 0, assembledSize, settings.forceSoftwareDecoding, settings.videoCodec)
+                    videoDecoder.decode(legacyAssembledBuffer!!, 0, assembledSize, forceSoftware ?: settings.forceSoftwareDecoding, codecName ?: settings.videoCodec)
                 } else {
-                    videoDecoder.decode(messageBuffer.array(), 0, assembledSize, settings.forceSoftwareDecoding, settings.videoCodec)
+                    videoDecoder.decode(messageBuffer.array(), 0, assembledSize, forceSoftware ?: settings.forceSoftwareDecoding, codecName ?: settings.videoCodec)
                 }
 
                 messageBuffer.clear()

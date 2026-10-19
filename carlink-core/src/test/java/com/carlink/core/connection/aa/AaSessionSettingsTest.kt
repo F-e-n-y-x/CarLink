@@ -34,6 +34,8 @@ class AaSessionSettingsTest {
             assertEquals("0", v["static-bssid"])
             assertEquals("My Car", v["vehicle-display-name"])
             assertEquals(true, v["wifi-direct-stable-identity"])
+            assertEquals(setOf("usb", "wifi"), v["connection-modes"])
+            assertEquals(false, v["cluster-map-enabled"])
         }
         assertEquals(false, values(transport = Transport.USB, path = null).values["auto-connect-last-session"])
     }

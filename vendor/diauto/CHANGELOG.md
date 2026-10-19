@@ -1,3 +1,20 @@
+# DiAuto 0.3.12 — 2026-10-17
+
+- Windshield HUD: re-send the instrument navigation state (0x43E0003A = 2) at most every 3.5 s while guidance shows, as the stock map does. The stock map resets it when the cluster display appears, the navi mode changes or the map app starts, which hid the arrows until the route was restarted (#41).
+- Answer the phone's main video focus request at once when a surface is ready. Reconnecting with an active route ended in "Connection lost" (#42).
+- Do not send Wi-Fi credentials after the phone's session has already started. A phone still on the car's network connected during the 1 s pause before them, and the late credentials made it open a second session that replaced the first, in a loop (#45).
+- Keep the negotiated resolution when the surface changes with the resolution locked, instead of falling through to 800x480 (#19, #42).
+- Ask for 1440p/4K automatically only with a decoder on the HEVC reliability list or chosen software HEVC; a manual 1440p uses H.265 on any hardware HEVC decoder (#35, #6, #42).
+- Android Auto map on the BYD dashboard, off by default (#44, by 07x01313480): a second display (CLUSTER) for Google Maps and Waze, decoded separately and shown on BYD's cluster projection display, with size, detail, layout width and car-marker settings.
+- On the measured DiLink 5.1 firmware (Han L, Leopard 5 Ultra 2025) the cluster theme is detected by itself through Usage access, as in DiPlay: the map goes on the layer the cluster shows (shared `_0` for Map, `_1` for Scenario and Simple), shows in Scenario and Simple only while the mini map card is open, and follows a theme change mid-session without involving the phone (one safe area per connection, the running decoder's surface handed to the new layer).
+- DiPlay's dashboard turn card (glyphs, distance, street, arrival strip) over the map. #44's "Dashboard shows" choice is removed; the dashboard always shows the map.
+- Numbered roundabouts reach the HUD and the turn card with their exit, using a new "traffic keeps left" setting for the direction (#26, by JuanGaVS).
+- DiLink 3.0: cluster/HUD guidance through com.example.amapservice (#25), and a long press on the steering-wheel voice button opens the phone's assistant (#27), by JuanGaVS.
+- Wi-Fi Direct: a working 5 GHz group on Android 10 (#22) and no retries of a 5 GHz request that failed deterministically (#24), by JuanGaVS.
+- Diagnostics: exception details (#23), hotspot and network interfaces (#29) and a read-only BYD interface inventory (#30), by JuanGaVS.
+- Arabic connection and head-unit wording (#36, by AlaaKanaan). Wireless stays down when Wi-Fi is left out of the connection types, and Connection setup adds Wi-Fi when it picks a wireless mode (#39, by 07x01313480).
+- An exit from the phone is kept as a user exit instead of reconnecting 1.5 s later, and a phone removed from auto-start is not added back on its next connection (#35).
+
 # DiAuto 0.3.11 — 2026-10-01
 
 - Recover when the built-in car hotspot is enabled after DiAuto opens, without restarting the app.

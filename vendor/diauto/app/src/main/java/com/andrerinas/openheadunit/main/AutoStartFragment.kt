@@ -169,6 +169,9 @@ class AutoStartFragment : Fragment() {
             settings.autoStartOnUsb = it
             Settings.syncAutoStartOnUsbToDeviceStorage(requireContext(), it)
         }
+        // Remember what the user deselected, so a connection does not add it back.
+        settings.autoStartBluetoothDeviceMacsRemoved = settings.autoStartBluetoothDeviceMacsRemoved +
+            (settings.autoStartBluetoothDeviceMacs - pendingAutoStartBtMacs) - pendingAutoStartBtMacs
         settings.autoStartBluetoothDeviceMacs = pendingAutoStartBtMacs
         Settings.syncAutoStartBtMacsToDeviceStorage(requireContext(), pendingAutoStartBtMacs)
         if (pendingAutoStartBtMacs.isNotEmpty()) {
@@ -413,6 +416,8 @@ class AutoStartFragment : Fragment() {
                 disabled = true
             }
             if (settings.autoStartBluetoothDeviceMacs.isNotEmpty()) {
+                settings.autoStartBluetoothDeviceMacsRemoved =
+                    settings.autoStartBluetoothDeviceMacsRemoved + settings.autoStartBluetoothDeviceMacs
                 settings.autoStartBluetoothDeviceMacs = emptySet()
                 settings.autoStartBluetoothDeviceName = ""
                 Settings.syncAutoStartBtMacsToDeviceStorage(requireContext(), emptySet())

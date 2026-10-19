@@ -102,9 +102,21 @@ message Service
             required uint32 margin_height = 4;
             required uint32 density = 5;
             optional uint32 decoder_additional_depth = 6;
+            optional uint32 viewing_distance = 7;
             // Pixel aspect ratio x 10000 (10000 = 1.0 = square pixels)
             optional uint32 pixel_aspect_ratio_e4 = 8;
+            optional uint32 real_density = 9;
             optional MediaCodecType video_codec_type = 10;
+            optional UiConfig ui_config = 11;
+        }
+
+        // Which screen of the car a video sink is: the main screen, the instrument cluster, or
+        // an auxiliary screen that opens on initial_content_keycode.
+        enum DisplayType
+        {
+            DISPLAY_TYPE_MAIN = 0;
+            DISPLAY_TYPE_CLUSTER = 1;
+            DISPLAY_TYPE_AUXILIARY = 2;
         }
 
         required MediaCodecType available_type = 1;
@@ -112,6 +124,9 @@ message Service
         repeated AudioConfiguration audio_configs = 3;
         repeated VideoConfiguration video_configs = 4;
         optional bool available_while_in_call = 5;
+        optional uint32 display_id = 6;
+        optional DisplayType display_type = 7;
+        optional uint32 initial_content_keycode = 8;
     }
 
     message InputSourceService
@@ -124,6 +139,7 @@ message Service
         repeated uint32 keycodes_supported = 1;
         optional TouchConfig touchscreen = 2;
         optional TouchConfig touchpad = 3;
+        optional uint32 display_id = 5;
     }
 
     message MediaSourceService

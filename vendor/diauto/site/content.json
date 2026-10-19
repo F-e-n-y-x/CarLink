@@ -27,9 +27,12 @@
     "bssid": "DiAuto 0.3.2 automatically recovers the Wi-Fi Direct address on supported DiLink firmware. Leave Static BSSID on Auto; no ADB setup is needed for this recovery. Some firmware and phone combinations may still have connection issues.",
     "whats": "What’s new",
     "features": [
-      "Connects when you turn on the car hotspot after opening DiAuto, without restarting the app.",
-      "Waits for the hotspot network to be ready instead of using the car’s wired or modem connection details.",
-      "Refreshes hotspot connection details after a failed phone join, and waits for a manually selected hotspot interface."
+      "Android Auto’s map on the instrument cluster (Google Maps, Waze) with DiPlay’s turn card, following the cluster theme by itself.",
+      "Windshield HUD arrows appear as soon as a route starts and stay on, and numbered roundabouts show their exit.",
+      "Reconnecting during a route no longer ends in “Connection lost”, and a reconnect loop on the car’s Wi-Fi is fixed.",
+      "Exiting Android Auto from the phone no longer reconnects by itself, and a phone removed from auto-start stays removed.",
+      "Hiding the status bar no longer drops the picture to 800x480, and head units without a verified HEVC decoder get 1080p.",
+      "DiLink 3.0: HUD and cluster guidance, and a long press on the voice button opens the phone’s assistant."
     ],
     "compat": "Compatibility",
     "compatText": "Tested on BYD DiLink 5.1 running Android 13, with wireless and physical USB connections. Other head units and firmware versions are not yet verified. Features and performance depend on your phone and car; constant 60 FPS is not promised.",
@@ -73,9 +76,12 @@
     "bssid": "يستخرج DiAuto 0.3.2 عنوان Wi-Fi Direct تلقائيًا على إصدارات DiLink المدعومة. اترك Static BSSID على Auto؛ لا تتطلب هذه الميزة إعداد ADB. قد تستمر مشكلات الاتصال مع بعض إصدارات النظام والهواتف.",
     "whats": "الجديد في هذا الإصدار",
     "features": [
-      "يتصل عند تشغيل نقطة اتصال السيارة بعد فتح DiAuto، دون الحاجة إلى إعادة تشغيل التطبيق.",
-      "ينتظر جاهزية شبكة نقطة الاتصال بدلاً من استخدام بيانات اتصال السيارة السلكي أو المودم.",
-      "يحدّث بيانات اتصال نقطة الاتصال بعد فشل انضمام الهاتف، وينتظر واجهة نقطة الاتصال المحددة يدوياً."
+      "خريطة Android Auto على لوحة العدادات (خرائط Google وWaze) مع بطاقة الانعطاف من DiPlay، وتتبع سمة لوحة العدادات تلقائيًا.",
+      "تظهر أسهم شاشة الزجاج الأمامي (HUD) فور بدء المسار وتبقى ظاهرة، وتعرض الدوّارات رقم المخرج.",
+      "إعادة الاتصال أثناء المسار لم تعد تنتهي برسالة «فُقد الاتصال»، وتم إصلاح حلقة إعادة الاتصال عبر Wi-Fi السيارة.",
+      "الخروج من Android Auto على الهاتف لم يعد يعيد الاتصال تلقائيًا، والهاتف الذي تزيله من التشغيل التلقائي يبقى محذوفًا.",
+      "إخفاء شريط الحالة لم يعد يخفض الصورة إلى 800x480، والشاشات التي لا تملك مفكك HEVC موثوقًا تحصل على 1080p.",
+      "DiLink 3.0: إرشادات الملاحة على HUD ولوحة العدادات، والضغط المطوّل على زر الصوت يفتح مساعد الهاتف."
     ],
     "compat": "التوافق",
     "compatText": "تم الاختبار على BYD DiLink 5.1 بنظام Android 13، لاسلكياً وبكابل USB فعلي. لم يُتحقق بعد من بقية الشاشات وإصدارات النظام. تعتمد الميزات والأداء على الهاتف والسيارة؛ لا نَعِد بثبات 60 إطاراً في الثانية.",
@@ -119,9 +125,12 @@
     "bssid": "DiAuto 0.3.2 автоматически определяет адрес Wi-Fi Direct на поддерживаемых прошивках DiLink. Оставьте Static BSSID в режиме Auto; для этого не нужна настройка ADB. На некоторых прошивках и телефонах проблемы подключения могут сохраняться.",
     "whats": "Что нового",
     "features": [
-      "Подключение после включения точки доступа автомобиля уже при открытом DiAuto, без перезапуска приложения.",
-      "Ожидание готовности сети точки доступа вместо использования параметров проводного соединения или модема автомобиля.",
-      "Обновление параметров точки доступа после неудачного подключения телефона и ожидание интерфейса, выбранного вручную."
+      "Карта Android Auto на приборной панели (Google Карты, Waze) с карточкой манёвра из DiPlay; тема панели определяется автоматически.",
+      "Стрелки на проекционном дисплее (HUD) появляются сразу после начала маршрута и не пропадают, а на кольцах показывается номер съезда.",
+      "Повторное подключение во время маршрута больше не заканчивается «Соединение потеряно», устранён цикл переподключений через Wi-Fi автомобиля.",
+      "Выход из Android Auto на телефоне больше не вызывает автоматического переподключения, а удалённый из автозапуска телефон больше не добавляется снова.",
+      "Скрытие строки состояния больше не снижает изображение до 800x480, а устройства без проверенного декодера HEVC получают 1080p.",
+      "DiLink 3.0: подсказки навигации на HUD и приборной панели, долгое нажатие кнопки голоса открывает ассистента телефона."
     ],
     "compat": "Совместимость",
     "compatText": "Проверено на BYD DiLink 5.1 с Android 13 по беспроводному соединению и USB. Другие устройства и версии прошивки пока не проверены. Возможности и производительность зависят от телефона и автомобиля; постоянные 60 кадров/с не гарантируются.",
@@ -165,9 +174,12 @@
     "bssid": "DiAuto 0.3.2 recupera automáticamente la dirección Wi-Fi Direct en firmware DiLink compatible. Deja Static BSSID en Auto; esta función no requiere configurar ADB. Algunas combinaciones de firmware y teléfono pueden seguir teniendo problemas de conexión.",
     "whats": "Novedades",
     "features": [
-      "Conecta al activar el punto de acceso del coche después de abrir DiAuto, sin reiniciar la aplicación.",
-      "Espera a que la red del punto de acceso esté lista en lugar de usar los datos de la conexión por cable o del módem del coche.",
-      "Actualiza los datos del punto de acceso si el teléfono no logra conectarse y espera a la interfaz seleccionada manualmente."
+      "El mapa de Android Auto en el cuadro de instrumentos (Google Maps, Waze) con la tarjeta de giro de DiPlay, siguiendo el tema del cuadro automáticamente.",
+      "Las flechas del HUD aparecen en cuanto empieza la ruta y no desaparecen, y las rotondas muestran el número de salida.",
+      "Reconectar durante una ruta ya no termina en «Conexión perdida», y se corrige un ciclo de reconexión por el Wi-Fi del coche.",
+      "Salir de Android Auto desde el teléfono ya no reconecta solo, y un teléfono quitado del inicio automático no vuelve a añadirse.",
+      "Ocultar la barra de estado ya no reduce la imagen a 800x480, y las unidades sin un decodificador HEVC verificado reciben 1080p.",
+      "DiLink 3.0: indicaciones en el HUD y el cuadro, y una pulsación larga del botón de voz abre el asistente del teléfono."
     ],
     "compat": "Compatibilidad",
     "compatText": "Probado en BYD DiLink 5.1 con Android 13, tanto inalámbrico como con cable USB. Otras unidades y versiones de firmware aún no están verificadas. Las funciones y el rendimiento dependen del teléfono y del coche; no se prometen 60 FPS constantes.",
@@ -211,9 +223,12 @@
     "bssid": "DiAuto 0.3.2 可在支持的 DiLink 固件上自动获取 Wi-Fi Direct 地址。请将 Static BSSID 保持为 Auto；此功能无需配置 ADB。部分固件与手机组合仍可能存在连接问题。",
     "whats": "本次更新",
     "features": [
-      "打开 DiAuto 后再开启车机热点，也可连接，无需重启应用。",
-      "等待热点网络就绪，避免误用车机有线网络或调制解调器的连接信息。",
-      "手机加入热点失败后重新获取连接信息，并等待手动指定的热点接口就绪。"
+      "在仪表盘上显示 Android Auto 地图（Google 地图、Waze）及 DiPlay 转向卡片，并自动跟随仪表主题。",
+      "开始导航后挡风玻璃 HUD 立即显示箭头且不再消失，环岛会显示出口编号。",
+      "导航中重新连接不再出现“连接中断”，并修复了通过车机 Wi-Fi 反复重连的问题。",
+      "在手机上退出 Android Auto 后不再自动重连，从自动启动中移除的手机也不会再被加回。",
+      "隐藏状态栏后画面不再降为 800x480，没有已验证 HEVC 解码器的车机使用 1080p。",
+      "DiLink 3.0：HUD 与仪表导航提示，长按语音键可打开手机助手。"
     ],
     "compat": "兼容性",
     "compatText": "已在搭载 Android 13 的比亚迪 DiLink 5.1 上测试无线及 USB 有线连接。其他车机和固件版本尚未验证。功能和性能取决于手机与车机，不保证稳定 60 FPS。",

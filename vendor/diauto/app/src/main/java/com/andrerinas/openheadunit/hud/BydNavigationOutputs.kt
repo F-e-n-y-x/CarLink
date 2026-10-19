@@ -18,13 +18,15 @@ object BydNavigationOutputs {
     private var initialized = false
 
     fun available(context: Context): Boolean = Build.VERSION.SDK_INT >= 28 &&
-        (BydStandaloneHudOutput.available(context) || installed(context, "com.byd.amapservice") || installed(context, "com.ts.car.someip.service"))
+        (BydStandaloneHudOutput.available(context) || clusterPackage(context) != null || installed(context, "com.ts.car.someip.service"))
+
+    private fun clusterPackage(context: Context): String? = BydClusterOutput.PACKAGES.firstOrNull { installed(context, it) }
 
     private fun installed(context: Context, pkg: String): Boolean =
         runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
 
     @Synchronized fun start(context: Context) {
-        Log.i("DiAuto-BYD", "start enabled=${Settings(context).bydNavigationEnabled} cluster=${installed(context, "com.byd.amapservice")} hud=${installed(context, "com.ts.car.someip.service")}")
+        Log.i("DiAuto-BYD", "start enabled=${Settings(context).bydNavigationEnabled} cluster=${clusterPackage(context)} hud=${installed(context, "com.ts.car.someip.service")}")
         active = true
         if (initialized || !available(context)) return
         initialized = true
@@ -38,8 +40,8 @@ object BydNavigationOutputs {
             }
             return // This firmware has one validated windshield transport.
         }
-        if (installed(app, "com.byd.amapservice")) {
-            val cluster = BydClusterOutput(app)
+        clusterPackage(app)?.let { target ->
+            val cluster = BydClusterOutput(app, target)
             schedule("diauto-cluster", app, cluster::update)
         }
         if (installed(app, "com.ts.car.someip.service")) {

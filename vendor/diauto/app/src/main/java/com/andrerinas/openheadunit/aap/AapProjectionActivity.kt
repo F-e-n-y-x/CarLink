@@ -937,6 +937,22 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Opens the dashboard map. It normally stays up when this screen is hidden (camera, other
+        // apps) and closes with the session; see ClusterMapScreen.show.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            com.andrerinas.openheadunit.hud.ClusterMapScreen.show(this)
+        }
+    }
+
+    override fun onStop() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            com.andrerinas.openheadunit.hud.ClusterMapScreen.onScreenHidden()
+        }
+        super.onStop()
+    }
+
     override fun onPause() {
         isForeground = false
         AppLog.i("AapProjectionActivity: onPause")

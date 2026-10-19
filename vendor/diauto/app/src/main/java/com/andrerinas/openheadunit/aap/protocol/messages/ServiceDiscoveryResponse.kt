@@ -57,8 +57,6 @@ class ServiceDiscoveryResponse(private val context: Context)
                                 }
                     val hevcAvailableForUserChoice =
                         com.andrerinas.openheadunit.decoder.VideoDecoder.isHevcSupported() || explicitSoftwareHevc
-                    val hevcAvailableForHighResolution =
-                        com.andrerinas.openheadunit.decoder.VideoDecoder.isHevcReliable() || explicitSoftwareHevc
 
                     val codecToRequest = when (settings.videoCodec) {
                         "H.265" -> if (hevcAvailableForUserChoice) {
@@ -85,11 +83,12 @@ class ServiceDiscoveryResponse(private val context: Context)
                     val phoneWidthMargin = HeadUnitScreenConfig.getWidthMargin()
                     val phoneHeightMargin = HeadUnitScreenConfig.getHeightMargin()
 
-                    // Enforce H.265 for 1440p resolution as required by Android Auto.
-                    // Software HEVC is allowed only when the user explicitly selected it.
+                    // Enforce H.265 for 1440p resolution as required by Android Auto: a 1440p H.264
+                    // profile gets no picture (#35). Any hardware HEVC decoder qualifies, as for the
+                    // resolution choice itself; software HEVC only when the user explicitly selected it.
                     val effectiveCodec = if ((negotiatedResolution == Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._2560x1440 ||
                         negotiatedResolution == Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1440x2560) &&
-                        hevcAvailableForHighResolution) {
+                        hevcAvailableForUserChoice) {
                         AppLog.i("Resolution is 1440p -> Enforcing H.265 codec")
                         Media.MediaCodecType.MEDIA_CODEC_VIDEO_H265
                     } else {
@@ -142,6 +141,9 @@ class ServiceDiscoveryResponse(private val context: Context)
             }.build()
 
             services.add(input)
+
+            // The BYD dashboard as a second display, only when the user turned it on.
+            services.addAll(ClusterDisplayServices.build(context, settings))
 
             val audioType = if (settings.useAacAudio) Media.MediaCodecType.MEDIA_CODEC_AUDIO_AAC_LC else Media.MediaCodecType.MEDIA_CODEC_AUDIO_PCM
 

@@ -82,6 +82,15 @@ class SettingsFragment : Fragment() {
     // Local state to hold changes before saving
     private var pendingUseGps: Boolean? = null
     private var pendingBydNavigationEnabled: Boolean? = null
+    private var pendingClusterMapEnabled: Boolean? = null
+    private var pendingClusterMapSize: Int? = null
+    private var pendingClusterMapDetail: Int? = null
+    private var pendingClusterMarkerX: Int? = null
+    private var pendingClusterMarkerY: Int? = null
+    private var pendingClusterMapWidth: Int? = null
+    private var pendingClusterTheme: Int? = null
+    private var pendingClusterTurnCardOverlay: Boolean? = null
+    private var pendingBydLeftHandTraffic: Boolean? = null
     private var pendingShowNavigationNotifications: Boolean? = null
     private var pendingSyncMediaSessionAaMetadata: Boolean? = null
     private var pendingResolution: Int? = null
@@ -208,6 +217,15 @@ class SettingsFragment : Fragment() {
         // Initialize local state with current values
         pendingUseGps = settings.useGpsForNavigation
         pendingBydNavigationEnabled = settings.bydNavigationEnabled
+        pendingClusterMapEnabled = settings.clusterMapEnabled
+        pendingClusterMapSize = settings.clusterMapSize
+        pendingClusterMapDetail = settings.clusterMapDetail
+        pendingClusterMarkerX = settings.clusterMarkerX
+        pendingClusterMarkerY = settings.clusterMarkerY
+        pendingClusterMapWidth = settings.clusterMapWidth
+        pendingClusterTheme = settings.clusterTheme
+        pendingClusterTurnCardOverlay = settings.clusterTurnCardOverlay
+        pendingBydLeftHandTraffic = settings.bydLeftHandTraffic
         pendingShowNavigationNotifications = settings.showNavigationNotifications
         pendingSyncMediaSessionAaMetadata = settings.syncMediaSessionWithAaMetadata
         pendingResolution = settings.resolutionId
@@ -323,6 +341,15 @@ class SettingsFragment : Fragment() {
     private fun reloadPendingStateFromSettings() {
         pendingUseGps = settings.useGpsForNavigation
         pendingBydNavigationEnabled = settings.bydNavigationEnabled
+        pendingClusterMapEnabled = settings.clusterMapEnabled
+        pendingClusterMapSize = settings.clusterMapSize
+        pendingClusterMapDetail = settings.clusterMapDetail
+        pendingClusterMarkerX = settings.clusterMarkerX
+        pendingClusterMarkerY = settings.clusterMarkerY
+        pendingClusterMapWidth = settings.clusterMapWidth
+        pendingClusterTheme = settings.clusterTheme
+        pendingClusterTurnCardOverlay = settings.clusterTurnCardOverlay
+        pendingBydLeftHandTraffic = settings.bydLeftHandTraffic
         pendingShowNavigationNotifications = settings.showNavigationNotifications
         pendingSyncMediaSessionAaMetadata = settings.syncMediaSessionWithAaMetadata
         pendingResolution = settings.resolutionId
@@ -445,6 +472,15 @@ class SettingsFragment : Fragment() {
 
         pendingUseGps?.let { settings.useGpsForNavigation = it }
         pendingBydNavigationEnabled?.let { settings.bydNavigationEnabled = it }
+        pendingClusterMapEnabled?.let { settings.clusterMapEnabled = it }
+        pendingClusterMapSize?.let { settings.clusterMapSize = it }
+        pendingClusterMapDetail?.let { settings.clusterMapDetail = it }
+        pendingClusterMarkerX?.let { settings.clusterMarkerX = it }
+        pendingClusterMarkerY?.let { settings.clusterMarkerY = it }
+        pendingClusterMapWidth?.let { settings.clusterMapWidth = it }
+        pendingClusterTheme?.let { settings.clusterTheme = it }
+        pendingClusterTurnCardOverlay?.let { settings.clusterTurnCardOverlay = it }
+        pendingBydLeftHandTraffic?.let { settings.bydLeftHandTraffic = it }
         pendingShowNavigationNotifications?.let { settings.showNavigationNotifications = it }
         pendingSyncMediaSessionAaMetadata?.let { settings.syncMediaSessionWithAaMetadata = it }
         pendingResolution?.let { settings.resolutionId = it }
@@ -568,6 +604,15 @@ class SettingsFragment : Fragment() {
         // Check for any changes
         val anyChange = pendingUseGps != settings.useGpsForNavigation ||
                         pendingBydNavigationEnabled != settings.bydNavigationEnabled ||
+                        pendingClusterMapEnabled != settings.clusterMapEnabled ||
+                        pendingClusterMapSize != settings.clusterMapSize ||
+                        pendingClusterMapDetail != settings.clusterMapDetail ||
+                        pendingClusterMarkerX != settings.clusterMarkerX ||
+                        pendingClusterMarkerY != settings.clusterMarkerY ||
+                        pendingClusterMapWidth != settings.clusterMapWidth ||
+                        pendingClusterTheme != settings.clusterTheme ||
+                        pendingClusterTurnCardOverlay != settings.clusterTurnCardOverlay ||
+                        pendingBydLeftHandTraffic != settings.bydLeftHandTraffic ||
                         pendingShowNavigationNotifications != settings.showNavigationNotifications ||
                         pendingSyncMediaSessionAaMetadata != settings.syncMediaSessionWithAaMetadata ||
                         pendingResolution != settings.resolutionId ||
@@ -1190,6 +1235,155 @@ class SettingsFragment : Fragment() {
                     updateSettingsList()
                 }
             ))
+            if (pendingBydNavigationEnabled == true) {
+                items.add(SettingItem.ToggleSettingEntry(
+                    stableId = "bydLeftHandTraffic",
+                    nameResId = R.string.byd_left_hand_traffic_title,
+                    descriptionResId = R.string.byd_left_hand_traffic_description,
+                    isChecked = pendingBydLeftHandTraffic ?: false,
+                    onCheckedChanged = { enabled ->
+                        pendingBydLeftHandTraffic = enabled
+                        checkChanges()
+                        updateSettingsList()
+                    }
+                ))
+            }
+        }
+
+
+        // Android Auto's own cluster map on the BYD dashboard. Declared to the phone at connection
+        // time, so every change here applies on the next connection.
+        val dashboardAvailable = com.andrerinas.openheadunit.hud.BydNavigationOutputs.available(requireContext()) ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                com.andrerinas.openheadunit.hud.ClusterMapScreen.findDisplay(requireContext()) != null)
+        if (dashboardAvailable) {
+            items.add(SettingItem.ToggleSettingEntry(
+                stableId = "clusterMap",
+                nameResId = R.string.cluster_map_title,
+                descriptionResId = R.string.cluster_map_description,
+                isChecked = pendingClusterMapEnabled ?: false,
+                onCheckedChanged = { enabled ->
+                    pendingClusterMapEnabled = enabled
+                    checkChanges()
+                    updateSettingsList()
+                }
+            ))
+            if (pendingClusterMapEnabled == true) {
+                fun choice(id: String, titleRes: Int, labels: Array<String>, current: Int, set: (Int) -> Unit) {
+                    val index = current.coerceIn(0, labels.size - 1)
+                    items.add(SettingItem.SettingEntry(
+                        stableId = id,
+                        nameResId = titleRes,
+                        value = labels[index],
+                        onClick = { _ ->
+                            MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                                .setTitle(titleRes)
+                                .setSingleChoiceItems(labels, index) { dialog, which ->
+                                    set(which)
+                                    checkChanges()
+                                    dialog.dismiss()
+                                    updateSettingsList()
+                                }
+                                .show()
+                        }
+                    ))
+                }
+                // DiLink 5.1 shows the map on a different layer and window per cluster theme.
+                // Picked by hand only when the cluster cannot report its theme (no Usage access).
+                if (com.andrerinas.openheadunit.hud.ClusterMapConfig.measured(Build.FINGERPRINT) &&
+                    !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                        com.andrerinas.openheadunit.hud.DiLink51ClusterMonitor.hasAccess(requireContext()))) {
+                    choice("clusterTheme", R.string.cluster_theme,
+                        arrayOf(getString(R.string.cluster_theme_scenario), getString(R.string.cluster_theme_map),
+                            getString(R.string.cluster_theme_simple)),
+                        pendingClusterTheme ?: 0) { pendingClusterTheme = it }
+                }
+                items.add(SettingItem.ToggleSettingEntry(
+                    stableId = "clusterTurnCardOverlay",
+                    nameResId = R.string.cluster_turn_card_overlay,
+                    descriptionResId = R.string.cluster_turn_card_overlay_description,
+                    isChecked = pendingClusterTurnCardOverlay ?: true,
+                    onCheckedChanged = { enabled ->
+                        pendingClusterTurnCardOverlay = enabled
+                        checkChanges()
+                    }
+                ))
+                choice("clusterMapSize", R.string.cluster_map_size,
+                    arrayOf(getString(R.string.cluster_map_size_normal), getString(R.string.cluster_map_size_large)),
+                    pendingClusterMapSize ?: 0) { pendingClusterMapSize = it }
+                choice("clusterMapDetail", R.string.cluster_map_detail,
+                    arrayOf(getString(R.string.cluster_map_detail_small), getString(R.string.cluster_map_detail_normal),
+                        getString(R.string.cluster_map_detail_large), getString(R.string.cluster_map_detail_extra_large)),
+                    pendingClusterMapDetail ?: 1) { pendingClusterMapDetail = it }
+                choice("clusterMapWidth", R.string.cluster_map_width,
+                    arrayOf(getString(R.string.cluster_map_width_compact), getString(R.string.cluster_map_width_wide),
+                        getString(R.string.cluster_map_width_full)),
+                    pendingClusterMapWidth ?: 0) { pendingClusterMapWidth = it }
+                val x = pendingClusterMarkerX ?: 0
+                items.add(SettingItem.SliderSettingEntry(
+                    stableId = "clusterMarkerX",
+                    nameResId = R.string.cluster_marker_horizontal,
+                    value = if (x == 0) getString(R.string.cluster_marker_centre) else "%+d".format(x),
+                    sliderValue = x.toFloat(),
+                    valueFrom = com.andrerinas.openheadunit.hud.ClusterMapConfig.HORIZONTAL_STEPS.first.toFloat(),
+                    valueTo = com.andrerinas.openheadunit.hud.ClusterMapConfig.HORIZONTAL_STEPS.last.toFloat(),
+                    stepSize = 1f,
+                    onValueChanged = { value ->
+                        pendingClusterMarkerX = value.toInt()
+                        checkChanges()
+                        updateSettingsList()
+                    }
+                ))
+                val y = pendingClusterMarkerY ?: 0
+                items.add(SettingItem.SliderSettingEntry(
+                    stableId = "clusterMarkerY",
+                    nameResId = R.string.cluster_marker_vertical,
+                    value = if (y == 0) getString(R.string.cluster_marker_centre) else "%+d".format(y),
+                    sliderValue = y.toFloat(),
+                    valueFrom = com.andrerinas.openheadunit.hud.ClusterMapConfig.VERTICAL_STEPS.first.toFloat(),
+                    valueTo = com.andrerinas.openheadunit.hud.ClusterMapConfig.VERTICAL_STEPS.last.toFloat(),
+                    stepSize = 1f,
+                    onValueChanged = { value ->
+                        pendingClusterMarkerY = value.toInt()
+                        checkChanges()
+                        updateSettingsList()
+                    }
+                ))
+                items.add(SettingItem.InfoBanner(
+                    stableId = "clusterMapHint",
+                    textResId = R.string.cluster_map_hint
+                ))
+                if (!com.andrerinas.openheadunit.utils.AppPermissions.isOverlayGranted(requireContext())) {
+                    items.add(SettingItem.InfoBanner(
+                        stableId = "clusterMapOverlayHint",
+                        textResId = R.string.cluster_map_overlay_hint
+                    ))
+                    items.add(SettingItem.ActionButton(
+                        stableId = "clusterMapOverlayGrant",
+                        textResId = R.string.cluster_map_overlay_grant,
+                        onClick = { openOverlaySettings() }
+                    ))
+                }
+                // DiLink 5.1 Scenario keeps the side layer up on every cluster card; with Usage
+                // access the map follows the cluster and shows only on its map card.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+                    com.andrerinas.openheadunit.hud.ClusterMapConfig.measured(Build.FINGERPRINT) &&
+                    !com.andrerinas.openheadunit.hud.DiLink51ClusterMonitor.hasAccess(requireContext())) {
+                    items.add(SettingItem.InfoBanner(
+                        stableId = "clusterUsageAccessHint",
+                        textResId = R.string.cluster_usage_access_hint
+                    ))
+                    items.add(SettingItem.ActionButton(
+                        stableId = "clusterUsageAccessGrant",
+                        textResId = R.string.cluster_usage_access_grant,
+                        onClick = {
+                            runCatching { startActivity(Intent(SystemSettings.ACTION_USAGE_ACCESS_SETTINGS)) }.onFailure {
+                                Toast.makeText(requireContext(), R.string.cluster_map_overlay_unavailable, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    ))
+                }
+            }
         }
 
         items.add(SettingItem.ToggleSettingEntry(
@@ -2250,6 +2444,16 @@ class SettingsFragment : Fragment() {
         settingsAdapter.submitList(filterSettings(fullSettingsList)) {
             scrollState?.let { settingsRecyclerView.layoutManager?.onRestoreInstanceState(it) }
         }
+    }
+
+    private fun openOverlaySettings() {
+        val packageUri = android.net.Uri.parse("package:" + requireContext().packageName)
+        val opened = runCatching {
+            startActivity(Intent(SystemSettings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri))
+        }.isSuccess || runCatching {
+            startActivity(Intent(SystemSettings.ACTION_MANAGE_OVERLAY_PERMISSION))
+        }.isSuccess
+        if (!opened) Toast.makeText(requireContext(), R.string.cluster_map_overlay_unavailable, Toast.LENGTH_LONG).show()
     }
 
     private fun openCarClientWifiSettings() {

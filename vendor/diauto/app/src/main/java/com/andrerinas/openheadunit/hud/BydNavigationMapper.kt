@@ -4,7 +4,12 @@ import com.andrerinas.openheadunit.aap.AapNavigationHelper.NavigationSnapshot
 import com.andrerinas.openheadunit.aap.protocol.proto.NavigationStatus
 
 internal object BydNavigationMapper {
-    fun from(snapshot: NavigationSnapshot): BydGuidance? {
+    /**
+     * @param leftHandTraffic the "traffic keeps left" setting. Legacy turn events carry no
+     * circulation direction for roundabouts, so this setting supplies it: clockwise where traffic
+     * keeps left, counter-clockwise where it keeps right (the default).
+     */
+    fun from(snapshot: NavigationSnapshot, leftHandTraffic: Boolean = false): BydGuidance? {
         val status = snapshot.clusterStatus?.payload?.status
         if (status != null && status != NavigationStatus.NavigationClusterStatus.NavigationStatusEnum.ACTIVE) return null
         val step = snapshot.navigationState?.payload?.stepsList?.firstOrNull()
@@ -12,7 +17,7 @@ internal object BydNavigationMapper {
         val legacy = snapshot.nextTurnDetail?.payload
         val modern = step?.takeIf { it.hasManeuver() && it.maneuver.hasType() }?.maneuver
         val type = modern?.type?.number ?: legacy?.takeIf { it.hasNextTurn() }?.let {
-            legacyType(it.nextTurn.number, if (it.hasSide()) it.side.number else 3)
+            legacyType(it.nextTurn.number, if (it.hasSide()) it.side.number else 3, it.turnNumber, leftHandTraffic)
         } ?: return null
         val codes = codes(type, modern?.roundaboutExitNumber ?: legacy?.turnNumber ?: 0) ?: return null
         val position = snapshot.currentPosition?.payload
@@ -55,16 +60,19 @@ internal object BydNavigationMapper {
         else -> null // Unknown instructions must not become a misleading straight arrow.
     }
 
-    fun legacyType(event: Int, side: Int): Int? = when (event) {
+    fun legacyType(event: Int, side: Int, roundaboutExit: Int = 0, leftHandTraffic: Boolean = false): Int? = when (event) {
         1 -> 1
         2 -> 2
         3, 7, 8, 9, 10 -> when(side) { 1 -> 5; 2 -> 6; else -> null }
         4 -> when(side) { 1 -> 7; 2 -> 8; else -> null }
         5 -> when(side) { 1 -> 9; 2 -> 10; else -> null }
         6 -> when(side) { 1 -> 11; 2 -> 12; else -> null }
-        11 -> 30
         12 -> 31
-        13 -> 30 // Legacy turn side does not establish roundabout circulation direction.
+        // Legacy turn side does not establish roundabout circulation direction. With an exit
+        // number, take the direction from the traffic-side setting so the exit reaches the cluster
+        // (enter-and-exit: 32 clockwise, 34 counter-clockwise), as DiPlay sends CarPlay's numbered
+        // roundabouts; without one keep the generic icon. An enter event can carry the number too.
+        11, 13 -> if (roundaboutExit in 1..10) (if (leftHandTraffic) 32 else 34) else 30
         14 -> 36
         16 -> 37
         17 -> 38

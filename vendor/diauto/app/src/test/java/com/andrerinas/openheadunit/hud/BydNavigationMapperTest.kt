@@ -31,6 +31,25 @@ class BydNavigationMapperTest {
         assertEquals(12, BydNavigationMapper.legacyType(6, 2))
         assertEquals(30, BydNavigationMapper.legacyType(13, 2))
     }
+    @Test fun `legacy roundabout keeps its exit using the traffic side setting`() {
+        // Right-hand traffic (default): counter-clockwise, exit reaches the cluster.
+        assertEquals(34, BydNavigationMapper.legacyType(13, 3, roundaboutExit = 2))
+        assertEquals(BydNavigationMapper.Codes(11, 26, 99, 2), BydNavigationMapper.codes(34, 2))
+        // Left-hand traffic setting: clockwise.
+        assertEquals(32, BydNavigationMapper.legacyType(13, 3, roundaboutExit = 2, leftHandTraffic = true))
+        // No usable exit number: the generic roundabout icon, unchanged.
+        assertEquals(30, BydNavigationMapper.legacyType(13, 3, roundaboutExit = 0))
+        assertEquals(30, BydNavigationMapper.legacyType(13, 3, roundaboutExit = 12))
+    }
+    @Test fun `a numbered roundabout reaches the HUD as the numbered icon DiPlay sends`() {
+        for (event in listOf(11, 13)) {
+            val codes = BydNavigationMapper.codes(BydNavigationMapper.legacyType(event, 3, roundaboutExit = 2)!!, 2)!!
+            // DiPlay: CarPlay "roundabout, exit 2" -> NEW_ICON 11 with exit 2 -> instrument code 26.
+            assertEquals(26, BydFactoryTurnCode.map(codes.cluster, codes.exit))
+        }
+        val clockwise = BydNavigationMapper.codes(BydNavigationMapper.legacyType(13, 3, 3, leftHandTraffic = true)!!, 3)!!
+        assertEquals(37, BydFactoryTurnCode.map(clockwise.cluster, clockwise.exit))
+    }
     private fun snapshot(distance: Int? = 75): AapNavigationHelper.NavigationSnapshot {
         val step = N.NavigationStep.newBuilder()
             .setManeuver(N.NavigationManeuver.newBuilder().setType(N.NavigationManeuver.NavigationType.TURN_NORMAL_LEFT))

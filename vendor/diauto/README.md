@@ -17,11 +17,14 @@ this is not Apple CarPlay.
 
 ![Android Auto with the current music card and a freely panned map, without a destination](site/assets/projection-music.png)
 
-## What’s new in 0.3.11
+## What’s new in 0.3.12
 
-- Connects when you turn on the car hotspot after opening DiAuto, without restarting the app.
-- Waits for the hotspot network to be ready instead of using the car’s wired or modem connection details.
-- Refreshes hotspot connection details after a failed phone join, and waits for a manually selected hotspot interface.
+- Android Auto’s map on the instrument cluster (Google Maps, Waze) with DiPlay’s turn card, following the cluster theme by itself.
+- Windshield HUD arrows appear as soon as a route starts and stay on, and numbered roundabouts show their exit.
+- Reconnecting during a route no longer ends in “Connection lost”, and a reconnect loop on the car’s Wi-Fi is fixed.
+- Exiting Android Auto from the phone no longer reconnects by itself, and a phone removed from auto-start stays removed.
+- Hiding the status bar no longer drops the picture to 800x480, and head units without a verified HEVC decoder get 1080p.
+- DiLink 3.0: HUD and cluster guidance, and a long press on the voice button opens the phone’s assistant.
 
 ## Features
 
