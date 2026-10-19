@@ -25,6 +25,8 @@ data class UnifiedSettings(
     val bydDirections: Boolean = true,
     val showAdvanced: Boolean = false,
     val labUnlocked: Boolean = false,
+    /** Learned steering-wheel buttons ([WheelKeys]); applies from the next connection. */
+    val wheelKeys: Map<WheelAction, Int> = emptyMap(),
 )
 
 data class WifiDetails(val ssid: String = "", val password: String = "")
@@ -57,6 +59,7 @@ class UnifiedSettingsStore(context: Context) {
         bydDirections = prefs.getBoolean("byd_directions", true),
         showAdvanced = prefs.getBoolean("show_advanced", false),
         labUnlocked = prefs.getBoolean("lab_unlocked", false),
+        wheelKeys = WheelKeys.decode(prefs.getString("wheel_keys", null)),
     )
 
     fun save(settings: UnifiedSettings) {
@@ -77,6 +80,7 @@ class UnifiedSettingsStore(context: Context) {
             .putBoolean("byd_directions", settings.bydDirections)
             .putBoolean("show_advanced", settings.showAdvanced)
             .putBoolean("lab_unlocked", settings.labUnlocked)
+            .putString("wheel_keys", WheelKeys.encode(settings.wheelKeys))
             .apply()
     }
 

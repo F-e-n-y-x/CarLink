@@ -6,6 +6,7 @@ import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.Picture
 import com.carlink.core.settings.UnifiedSettings
 import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WheelKeys
 import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
 import com.shilapi.xcertplay.AirPlayPersistence
@@ -47,6 +48,10 @@ data class CarPlayEngineSettings(
     val carHotspot: WifiDetails,
     val homeWifi: WifiDetails,
     val vehicle: CarPlayVehicleSettings,
+    /** Learned steering-wheel buttons, physical key code → standard key code ([WheelKeys.remap]), for the CarPlay screen. */
+    val wheelKeyRemap: Map<Int, Int> = emptyMap(),
+    /** DiPlay answers and ends CarPlay calls with the call keys (`BydOutputSettings.carPlayCallControls`). */
+    val callKeys: Boolean = false,
 )
 
 /** The vehicle-profile part of [CarPlayEngineSettings] (DIPLAY.md §12, F5). */
@@ -152,6 +157,9 @@ object CarPlaySettingsPolicy {
                 oemLabel = if (byd) DIPLAY_DEFAULT_OEM_LABEL else brandName,
                 replaceableOemLabels = setOf(DIPLAY_DEFAULT_OEM_LABEL, brandName, ""),
             ),
+            wheelKeyRemap = WheelKeys.remap(settings.wheelKeys),
+            // Only CarLink sets it (no CarLink screen shows DiPlay's switch): on exactly when a call key is learned.
+            callKeys = WheelKeys.needsCarPlayCallKeys(settings.wheelKeys),
         )
     }
 
@@ -181,6 +189,11 @@ object CarPlaySettingsPolicy {
         AirPlayPersistence.saveManualHotspotSecurity(context, ManualHotspotValidation.securityFor(values.carHotspot.password))
         // Same Wi-Fi: always CarLink's values, also when cleared (F17: stale details).
         AirPlayPersistence.saveExistingWifiCredentials(context, values.homeWifi.ssid, values.homeWifi.password)
+
+        CarPlayHostIntegration.keyRemap = values.wheelKeyRemap
+        if (BydOutputSettings.carPlayCallControls(context) != values.callKeys) {
+            BydOutputSettings.setCarPlayCallControls(context, values.callKeys)
+        }
 
         val vehicle = values.vehicle
         CarPlayHostIntegration.vehicleIntegrations = vehicle.integrations

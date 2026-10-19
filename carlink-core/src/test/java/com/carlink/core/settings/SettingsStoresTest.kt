@@ -36,6 +36,7 @@ class SettingsStoresTest {
             bydDirections = false,
             showAdvanced = true,
             labUnlocked = true,
+            wheelKeys = mapOf(WheelAction.VOICE to 84, WheelAction.HANG_UP to 3002),
         )
         UnifiedSettingsStore(app).save(settings)
         // A new instance reads what the old one wrote.

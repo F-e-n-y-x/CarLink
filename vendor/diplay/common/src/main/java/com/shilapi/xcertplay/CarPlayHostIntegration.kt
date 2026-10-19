@@ -26,6 +26,21 @@ object CarPlayHostIntegration {
     @JvmStatic
     var mediaSessionTag: String = "DiPlay CarPlay"
 
+    /**
+     * CarLink: the driver's learned steering-wheel keys, physical key code → the standard key code
+     * the CarPlay screen already handles (VOICE_ASSIST, CALL, ENDCALL, MEDIA_*). Empty for standalone DiPlay.
+     */
+    @Volatile
+    @JvmStatic
+    var keyRemap: Map<Int, Int> = emptyMap()
+
+    /** [event] with its key code replaced per [keyRemap], or [event] itself. */
+    internal fun remapKey(event: android.view.KeyEvent): android.view.KeyEvent {
+        val code = keyRemap[event.keyCode] ?: return event
+        return android.view.KeyEvent(event.downTime, event.eventTime, event.action, code, event.repeatCount,
+            event.metaState, event.deviceId, event.scanCode, event.flags, event.source)
+    }
+
     /** Sees the projection's informational toasts first; returns true when the host handled them. */
     @Volatile
     @JvmStatic

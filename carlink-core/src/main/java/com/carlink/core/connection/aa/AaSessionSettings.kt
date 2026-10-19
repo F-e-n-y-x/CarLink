@@ -12,6 +12,7 @@ import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.Picture
 import com.carlink.core.settings.UnifiedSettings
 import com.carlink.core.settings.VehicleProfile
+import com.carlink.core.settings.WheelKeys
 import com.carlink.core.settings.WifiEnvironment
 import com.carlink.core.settings.WirelessPath
 import com.carlink.core.settings.isValid
@@ -95,6 +96,9 @@ object AaSessionSettings {
             put("night-mode-manual-end", settings.nightEndMinute)
             put("right-hand-drive", settings.rightHandDrive)
             put("gps-navigation", settings.sendCarLocation)
+            // The learned steering-wheel buttons, in DiAuto's own keymap (logical-physical), which
+            // CommManager.sendKey applies to every key route. CarLink owns the keymap: always written.
+            put("key-codes", WheelKeys.diAutoKeyCodes(settings.wheelKeys))
             // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md); empty = Android's own.
             put(ExternalBtTransportPolicy.HOST_ROUTE_KEY, if (transport == Transport.WIRELESS) moduleRoute?.name.orEmpty() else "")
 
@@ -188,6 +192,8 @@ object AaSessionSettings {
                 is Int -> bundle.putInt(key, value)
                 is Boolean -> bundle.putBoolean(key, value)
                 is String -> bundle.putString(key, value)
+                // The provider stores an ArrayList as a string set (connection-modes, key-codes).
+                is Set<*> -> bundle.putStringArrayList(key, ArrayList(value.map { it.toString() }))
             }
         }
         AndroidAutoSettings.write(context, bundle)
