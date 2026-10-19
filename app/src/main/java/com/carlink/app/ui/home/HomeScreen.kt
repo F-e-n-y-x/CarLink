@@ -238,6 +238,7 @@ internal fun oneTapFix(problem: LinkProblem?): Pair<Int, Int>? = when (problem) 
     LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT -> R.string.carlink_home_fix_allow to R.drawable.carlink_ic_check
     LinkProblem.LOCATION_OFF -> R.string.carlink_home_fix_open_settings to R.drawable.carlink_ic_settings
     LinkProblem.SAME_WIFI_NOT_JOINED -> R.string.carlink_home_fix_open_wifi to R.drawable.carlink_ic_wifi
+    LinkProblem.CAR_HOTSPOT_OFF -> R.string.carlink_home_fix_open_hotspot to R.drawable.carlink_ic_wifi
     else -> null
 }
 
@@ -691,7 +692,7 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
     if (problem != null && fix != null) {
         IonButton(stringResource(fix.first), { actions.fix(problem) }, icon = fix.second)
         // Or leave Same Wi-Fi for the default.
-        if (problem == LinkProblem.SAME_WIFI_NOT_JOINED) {
+        if (problem == LinkProblem.SAME_WIFI_NOT_JOINED || problem == LinkProblem.CAR_HOTSPOT_OFF) {
             GlassButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.setConnectionMethod(ConnectionMethod.WIFI_DIRECT) },
                 icon = R.drawable.carlink_ic_p2p)
         }

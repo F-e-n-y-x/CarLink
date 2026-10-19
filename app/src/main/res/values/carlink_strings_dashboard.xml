@@ -53,7 +53,7 @@
     <string name="carlink_home_error_hotspot_details_title">Add the car hotspot</string>
     <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car\'s hotspot. Add them once.</string>
     <string name="carlink_home_error_hotspot_off_title">The car hotspot is off</string>
-    <string name="carlink_home_error_hotspot_off_body">Turn it on in the car\'s settings, or plug your phone in with a cable.</string>
+    <string name="carlink_home_error_hotspot_off_body">Turn on this screen\'s hotspot, or use Wi-Fi Direct, which needs no hotspot.</string>
     <string name="carlink_home_error_wifi_details_title">Add your Wi-Fi password</string>
     <string name="carlink_home_error_wifi_details_body">Same Wi-Fi is chosen in Settings › Connection. CarLink needs the network\'s name and password once.</string>
     <string name="carlink_home_error_wifi_not_joined_title">This screen isn\'t on your Wi-Fi</string>
@@ -161,6 +161,7 @@
     <string name="carlink_home_fix_open_settings">Open settings</string>
     <string name="carlink_home_fix_use_direct">Use Wi-Fi Direct</string>
     <string name="carlink_home_fix_open_wifi">Open Wi-Fi</string>
+    <string name="carlink_home_fix_open_hotspot">Open hotspot settings</string>
     <string name="carlink_switch_title">Switch to %1$s?</string>
     <string name="carlink_switch_body">%1$s will stop.</string>
     <string name="carlink_switch_confirm">Switch</string>

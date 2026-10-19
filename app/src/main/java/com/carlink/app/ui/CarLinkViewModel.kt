@@ -449,6 +449,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             Intent(if (android.os.Build.VERSION.SDK_INT >= 29) android.provider.Settings.Panel.ACTION_WIFI
                 else android.provider.Settings.ACTION_WIFI_SETTINGS)
         com.carlink.core.core.LinkProblem.LOCATION_OFF -> Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        // Android's hotspot screen has no public action; this one opens it on AOSP and most skins.
+        com.carlink.core.core.LinkProblem.CAR_HOTSPOT_OFF -> Intent("android.settings.TETHER_SETTINGS")
         com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
             android.net.Uri.parse("package:${app.packageName}"))
         else -> null
@@ -465,7 +467,14 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
                 updateSettings { it.copy(connectionMethod = com.carlink.core.settings.ConnectionMethod.WIFI_DIRECT) }
                 retry()
             }
-            else -> fixIntent(problem)?.let { runCatching { app.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            else -> fixIntent(problem)?.let { intent ->
+                runCatching { app.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure {
+                    // No hotspot screen on this skin: the wireless settings hold it everywhere.
+                    if (problem == com.carlink.core.core.LinkProblem.CAR_HOTSPOT_OFF) runCatching {
+                        app.startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
         }
     }
 
