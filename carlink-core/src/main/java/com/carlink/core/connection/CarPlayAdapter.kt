@@ -1,7 +1,12 @@
 package com.carlink.core.connection
 
+import android.app.Activity
+import android.app.ActivityManager
+import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -229,6 +234,32 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
         // The host recognises a wired iPhone from the attach action and device extra and forces
         // wired (CarPlayHostActivity.isIphoneUsbAttachment; DIPLAY.md §2.4).
         usbAttach?.let { host.action = it.action; it.extras?.let(host::putExtras) }
+        // Android silently drops an activity start from an app with no visible window (background
+        // launch rules, Android 10+), e.g. an iPhone already plugged in while CarLink's process is
+        // still starting. Open the host once one of CarLink's activities resumes.
+        if (!inFront()) {
+            Log.i("CarLink-CarPlay", "CarLink not in front yet; opening CarPlay when it resumes")
+            val application = app as Application
+            application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityResumed(activity: Activity) {
+                    application.unregisterActivityLifecycleCallbacks(this)
+                    runCatching { activity.startActivity(host) }
+                        .onFailure { Log.w("CarLink-CarPlay", "deferred CarPlay open failed: ${it.javaClass.simpleName}") }
+                }
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+                override fun onActivityStarted(activity: Activity) = Unit
+                override fun onActivityPaused(activity: Activity) = Unit
+                override fun onActivityStopped(activity: Activity) = Unit
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+                override fun onActivityDestroyed(activity: Activity) = Unit
+            })
+            return null
+        }
         return runCatching { app.startActivity(host) }.exceptionOrNull()
     }
+
+    // Only the caller's own processes are listed; IMPORTANCE_FOREGROUND is a resumed activity.
+    private fun inFront(): Boolean = Build.VERSION.SDK_INT < 29 ||
+        app.getSystemService(ActivityManager::class.java)?.runningAppProcesses.orEmpty()
+            .any { it.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
 }
