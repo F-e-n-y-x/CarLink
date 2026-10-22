@@ -5,6 +5,7 @@
 #include "libusb.h"
 
 #define LOG_TAG "UsbNative"
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__) /* CarLink */
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -89,7 +90,10 @@ Java_com_andrerinas_openheadunit_connection_UsbNative_nativeWrite(JNIEnv *env, j
     
     (*env)->ReleaseByteArrayElements(env, data, buf, JNI_ABORT);
     if (r < 0) {
-        LOGE("libusb_bulk_transfer write failed: %d", r);
+        // CarLink (open-headunit 26a0f691): log how far a failed write got; the result stays the
+        // error, so no caller takes an incomplete AAP frame for a success.
+        LOGE("libusb_bulk_transfer write failed: %d, transferred=%d/%d, endpoint=0x%02x, timeout=%dms",
+             r, transferred, length, (unsigned char)endpoint, timeout);
         return r;
     }
     return transferred;
@@ -124,6 +128,11 @@ Java_com_andrerinas_openheadunit_connection_UsbNative_nativeRead(JNIEnv *env, jo
         // CarLink (open-headunit fb840234): libusb reports bytes already delivered even when the
         // remaining transfer times out. They belong to the stream and must reach the Kotlin
         // receive buffer exactly once.
+        // CarLink (open-headunit 26a0f691): empty polling timeouts are routine; log only kept data.
+        if (transferred > 0) {
+            LOGD("libusb_bulk_transfer read timeout: preserved=%d/%lld, endpoint=0x%02x, timeout=%dms",
+                 transferred, (long long)capacity, (unsigned char)endpoint, timeout);
+        }
         return transferred;
     }
     return transferred;
