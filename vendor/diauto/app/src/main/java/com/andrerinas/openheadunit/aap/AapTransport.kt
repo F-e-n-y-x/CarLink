@@ -655,7 +655,11 @@ class AapTransport(
             // CarLink (open-headunit 67bcae27): read whole envelopes by their declared length.
             // Bounded reads leave the following TLS frame in the socket/USB receive buffer, and
             // one reader across retries keeps a partial response a timeout cut in two.
-            val frames = HandshakeFrameReader(SystemClock::elapsedRealtime, if (isUsb) 100 else 1) { bytes, length, timeout ->
+            // CarLink (open-headunit fbe128d0): a dongle or a phone left in an old session can still
+            // send that session's encrypted envelopes after the drain goes quiet. Consume them by
+            // their wire length here; TLS negotiation stays strict.
+            val frames = HandshakeFrameReader(SystemClock::elapsedRealtime, if (isUsb) 100 else 1,
+                skipEncryptedFrames = true) { bytes, length, timeout ->
                 val count = connection.recvBlocking(bytes, length, timeout, false)
                 if (count < 0) transportError = true   // EOF or IOException (or a USB timeout)
                 if (count > 0) peerSentBytes = true
@@ -691,7 +695,8 @@ class AapTransport(
                 val recvDeadline = if (attempt < 3) minOf(versionDeadline, SystemClock.elapsedRealtime() + 2000)
                     else versionDeadline
                 while (SystemClock.elapsedRealtime() < recvDeadline) {
-                    // An IOException (malformed framing) ends the handshake through the catch below.
+                    // Known encrypted envelopes are consumed by length. An unknown header has no safe
+                    // skip boundary: its IOException ends the handshake through the catch below.
                     val frame = frames.readFrame(recvDeadline) ?: break
                     if (HandshakeMessagePolicy.isTerminalResponse(frame)) {
                         AppLog.e("Handshake: peer terminated version negotiation")
