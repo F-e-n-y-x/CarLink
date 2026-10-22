@@ -131,6 +131,7 @@ class TelephonyMicrophoneTest {
     }
 
     @Test fun aCallWhileCarBluetoothIsOffUsesTheCabinMicrophone() {
+        val diagnostics = recordDiagnostics()
         context.getSharedPreferences("diplay_bt_suspend", 0).edit().putBoolean("restore_initially_enabled", true).commit()
         shadowOf(context.getSystemService(BluetoothManager::class.java).adapter).setState(BluetoothAdapter.STATE_OFF)
         manager.mode = AudioManager.MODE_NORMAL
@@ -138,22 +139,56 @@ class TelephonyMicrophoneTest {
         val record = awaitCapture()
         assertEquals(AudioManager.MODE_NORMAL, manager.mode)
         assertEquals(MediaRecorder.AudioSource.MIC, record.audioSource)
+        assertTrue(diagnostics.joinToString("\n"),
+            diagnostics.any { it.startsWith("Microphone: start type=telephony source=MIC ") })
         assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
         sink.onMicrophoneStopped(telephony)
         assertEquals(AudioManager.MODE_NORMAL, manager.mode)
     }
 
     @Test fun aCallInTheCarsPhoneStateRecordsFromVoiceRecognitionWithoutCallEffects() {
+        val diagnostics = recordDiagnostics()
         BydOutputSettings.setPhoneAudioRoute(context, true)
         PhoneAudioRoute.attach(context)
         try {
             sink.onMicrophoneStarted(telephony, config("telephony"))
             val record = awaitCapture()
             assertEquals(MediaRecorder.AudioSource.VOICE_RECOGNITION, record.audioSource)
+            // #987: the report said VOICE_COMMUNICATION for these calls, so it could not show the car's phone state.
+            assertTrue(diagnostics.joinToString("\n"),
+                diagnostics.any { it.startsWith("Microphone: start type=telephony source=VOICE_RECOGNITION ") })
             assertTrue(ShadowAudioEffect.getAudioEffects().isEmpty())
         } finally {
             BydOutputSettings.setPhoneAudioRoute(context, false)
         }
+    }
+
+    @Test @Config(sdk = [28])
+    fun aSilentWindowNamesTheModeAndWhatElseIsRecording() {
+        // #987: calls and Siri recorded only zeros on a head unit that stayed in communication mode, and the
+        // report could not show whether another app held the microphone.
+        val diagnostics = recordDiagnostics()
+        sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
+        val record = awaitCapture()
+        val audio = shadowOf(manager)
+        audio.setActiveRecordingConfigurations(listOf(
+            audio.createActiveRecordingConfiguration(record.audioSessionId, MediaRecorder.AudioSource.VOICE_RECOGNITION, context.packageName),
+            audio.createActiveRecordingConfiguration(record.audioSessionId + 1, MediaRecorder.AudioSource.VOICE_COMMUNICATION, "com.example.carphone"),
+        ), false)
+        manager.mode = AudioManager.MODE_IN_COMMUNICATION
+        sink.onMicrophoneStopped(speechRecognition)
+        val stats = diagnostics.last { it.startsWith("Microphone: stats") }
+        assertTrue(stats, stats.endsWith("peakDbfs=silent audioMode=3 otherRecordings=[VOICE_COMMUNICATION] ended=true"))
+    }
+
+    @Test @Config(sdk = [28])
+    fun aSilentWindowWithNoOtherRecordingSaysSo() {
+        val diagnostics = recordDiagnostics()
+        sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
+        awaitCapture()
+        sink.onMicrophoneStopped(speechRecognition)
+        val stats = diagnostics.last { it.startsWith("Microphone: stats") }
+        assertTrue(stats, stats.endsWith("peakDbfs=silent audioMode=0 otherRecordings=none ended=true"))
     }
 
     @Test fun anUnverifiedPauseFlagDoesNotSwitchCallAudioRouting() {
@@ -509,6 +544,13 @@ class TelephonyMicrophoneTest {
         sink.onMicrophoneStarted(speechRecognition, config("speechrecognition"))
         awaitCapture()
         assertFalse(microphoneLog().contains("echo canceller"))
+    }
+
+    private fun recordDiagnostics(): MutableList<String> {
+        sink.close()
+        val diagnostics = CopyOnWriteArrayList<String>()
+        sink = AndroidMediaSink(context = context, onAudioDiagnostic = diagnostics::add)
+        return diagnostics
     }
 
     private fun awaitCapture(): AudioRecord {

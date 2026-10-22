@@ -541,7 +541,8 @@ class AndroidMediaSink(
             val uplink = microphoneUplinks.computeIfAbsent(id) {
                 MicrophoneUplink(config, onAudioDiagnostic,
                     speakerphoneCall = speakerphoneCall,
-                    echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null)
+                    echoReference = if (config.audioType == TELEPHONY_AUDIO_TYPE) callEchoReferences[id] else null,
+                    audioManager = audioManager)
             }
             if (!uplink.start()) {
                 microphoneUplinks.remove(id, uplink)
@@ -567,7 +568,7 @@ class AndroidMediaSink(
         synchronized(audioModeLock) {
             if (communicationModeStream != null) return
             // Select the HAL communication path before AudioRecord is created.
-            val before = manager.mode // CarLink: from DiPlay PR #994
+            val before = manager.mode
             manager.mode = AudioManager.MODE_IN_COMMUNICATION
             communicationModeStream = id
             earpieceFallbackTried = false
@@ -617,7 +618,7 @@ class AndroidMediaSink(
                 // at the start would keep DiPlay asking for it after the process that set it, such as the Telecom
                 // call for the car's phone audio, lets go, and the head unit stays in the voice path (#987).
                 // MODE_NORMAL withdraws DiPlay's request: the mode returns to another process's, or to normal.
-                manager.mode = AudioManager.MODE_NORMAL // CarLink: from DiPlay PR #994
+                manager.mode = AudioManager.MODE_NORMAL
                 Log.i("xcertplay-usb", "audio mode restored to ${manager.mode}")
                 "Audio: mode restored requested=${AudioManager.MODE_NORMAL} now=${manager.mode} stream=$active"
             } catch (error: RuntimeException) {

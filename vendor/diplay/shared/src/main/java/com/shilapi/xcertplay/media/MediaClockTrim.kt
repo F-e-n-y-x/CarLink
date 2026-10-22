@@ -8,8 +8,9 @@ import kotlin.math.roundToInt
  *
  * The iPhone sends music at its own 48 kHz and the head unit plays it at its own. A Humax BHCN-T3103C played
  * 0.76 % fast, so the 300 ms start buffer ran dry about every 70 s and music paused while it refilled. After
- * each write the renderer reports how many frames are queued; a slow average of that level drives a PI
- * controller that, once a second, trims the track's playback rate so the level stays at the start threshold.
+ * each write the renderer reports how many frames are queued; a slow average of that level over time, as the
+ * track drains it between writes, drives a PI controller that, once a second, trims the track's playback rate
+ * so the level stays at the start threshold.
  * The trim is bounded by [MAX_TRIM] (26 cents at most) and settles at the head unit's own drift, which is a
  * hardware constant, so the next music stream starts from the trim this one learned.
  */
@@ -20,6 +21,7 @@ internal class MediaClockTrim(
 ) {
     private var level: Double? = null
     private var lastSampleNs = 0L
+    private var lastBuffered = 0L
     private var lastUpdateNs: Long? = null
     private var compressedBacklog = false
 
@@ -35,12 +37,28 @@ internal class MediaClockTrim(
         compressedBacklog = compressedFrames > targetFrames
         val buffered = queuedFrames.coerceAtLeast(0L) +
             compressedFrames.coerceIn(0L, sampleRate.toLong() * 16L)
-        val error = (buffered - targetFrames).toDouble() / targetFrames
         val previous = level
+        val elapsedNs = nowNs - lastSampleNs
         // After a pause, a rebuffer or the first write the average restarts from what is queued now.
-        level = if (previous == null || nowNs - lastSampleNs > STALE_NS) error
-        else previous + (error - previous) * (1.0 - exp(-(nowNs - lastSampleNs).toDouble() / AVERAGE_NS))
+        level = if (previous == null || elapsedNs > STALE_NS) error(buffered.toDouble())
+        else {
+            // Samples come only after writes, and over Wi-Fi the writes come in bursts 0.4 s apart: the level
+            // just after one is its peak. Average what was queued over the time since the last write, while
+            // the track drained it, or a 300 ms target reads as overfull and the trim plays fast (#807).
+            val meanSinceLastWrite = drainedMean(lastBuffered.toDouble(), rate * elapsedNs / 1e9)
+            previous + (error(meanSinceLastWrite) - previous) * (1.0 - exp(-elapsedNs.toDouble() / AVERAGE_NS))
+        }
+        lastBuffered = buffered
         lastSampleNs = nowNs
+    }
+
+    private fun error(frames: Double): Double = (frames - targetFrames) / targetFrames
+
+    /** The mean of a level that starts at [start] and drains [drained] frames at a steady pace, stopping at 0. */
+    private fun drainedMean(start: Double, drained: Double): Double = when {
+        drained <= 0.0 -> start
+        drained <= start -> start - drained / 2
+        else -> start * start / (2 * drained)
     }
 
     /** The playback rate to set now, or null to keep the current one. */
@@ -71,7 +89,8 @@ internal class MediaClockTrim(
         const val KI = 0.001
         const val AVERAGE_NS = 5_000_000_000.0
         const val UPDATE_NS = 1_000_000_000L
-        const val STALE_NS = 250_000_000L
+        /** Longer than the 0.4 s between the iPhone's bursts over Wi-Fi: a longer silence is a pause or a stall. */
+        const val STALE_NS = 1_000_000_000L
         const val MAX_STEP_SECONDS = 2.0
 
         /** The drift the last music stream settled on. Each process plays to one head unit. */

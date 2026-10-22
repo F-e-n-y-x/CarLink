@@ -39,6 +39,10 @@ class NcmUsbBridge internal constructor(
     private var closed = false
     private var failure: IphoneUsbException? = null
     private var sequence = 0
+
+    /** [System.nanoTime] when the iPhone first took a frame on bulk OUT, or null while it still NAKs the pipe. */
+    @Volatile var linkOpenedAtNanos: Long? = null
+        private set
     private val frames = ArrayDeque<ByteArray>()
     private var queuedBytes = 0
     private var buffered = ByteArray(0)
@@ -153,6 +157,7 @@ class NcmUsbBridge internal constructor(
                 if (transferred == block.size) {
                     outbound.removeHead()
                     traffic.sent() // CarLink: upstream counted in its synchronous send()
+                    if (linkOpenedAtNanos == null) linkOpenedAtNanos = System.nanoTime() // CarLink: upstream set it in send()
                     event = pacing.onAccepted()
                 } else {
                     // Before StartCarPlaySession, and until the phone's NCM link is up, the phone
@@ -216,6 +221,9 @@ class NcmUsbBridge internal constructor(
 
     /** Frames to and from the iPhone so far, for a report line; see [NcmTrafficCounter]. */
     fun trafficSummary(airPlayPort: Int?): String = traffic.summary(airPlayPort)
+
+    /** Whether the iPhone tried to connect to [port] at or after [sinceNanos]; see [NcmTrafficCounter]. */
+    fun connectionAttemptSince(port: Int, sinceNanos: Long): Boolean = traffic.connectionAttemptSince(port, sinceNanos)
 
     /**
      * Returns the next complete Ethernet frame, or null when [timeoutMillis] elapses without one.

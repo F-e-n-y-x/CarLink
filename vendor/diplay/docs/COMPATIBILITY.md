@@ -29,6 +29,23 @@ When the car's own music app is playing as well, the wheel reaches both it and C
 
 Tested on the car named above; other Geely/Lynk firmware is untested.
 
+## Geely / Lynk & Co instrument cluster map
+
+On the same head unit the instrument cluster is an ordinary 1920x720 presentation display (display 2), so an app can draw on it, but the panel keeps its factory layer over Android until the head unit is asked to project. DiPlay asks for that projection through the DIM service's switch (`DimNaviService`, `notifyDimProjectScreenSwitch`, transaction 9). The stock map drives the same head-unit-wide switch, so DiPlay also reads the state back (transaction 10) for as long as its presentation is up and asks for the projection again once the map hands it back: it never acts while the projection reads on (the map owning the cluster), and two consecutive off readings are required so a map switching through off is not fought. The switch carries no owner, so DiPlay also tracks whether the projection in force is the one its own call asked for, and hands it back on stop only then: leaving CarPlay while the wheel-key map owns the cluster leaves the map on the cluster.
+
+The process can also be killed without running `onStop` (measured: the car's SystemUI killed DiPlay about 5 s after Home), which can leave the switch on and the cluster on DiPlay's last frame. DiPlay therefore writes its claim to disk while it holds the switch and, on the next start, hands the switch back when DiPlay is not going to project — the **CarPlay map on instrument cluster** switch is off. With that switch on, DiPlay leaves the head unit alone and its next session replaces the leftover frame, because handing the switch back first would take the wheel-key map off the cluster when the map owns it.
+
+The cluster stream is the whole panel at 1920x720 and the safe area describes what the cluster keeps visible, so the scale presets and the BYD small/full-navigation stream pause do not apply there. The route is gated to the measured head unit — device `msmnile_gvmq`, product `geely_fx11` and model `CS11_A4` together, because that device name is Qualcomm's generic SA8155 board name that other brands' head units also report — and to a display that matches the panel size with the presentation flag; the existing **CarPlay map on instrument cluster** switch, off by default, is the only thing that turns it on, and every other head unit keeps its current behaviour.
+
+Four limits:
+
+- The panel is entirely DiPlay's, so the safe area has to be aligned on the car against the cluster's own readouts.
+- A kill that skips `onStop` can leave DiPlay's last frame on the cluster until its next session replaces it; pressing the wheel's View key switches the cluster to the stock map, and a later start with the cluster map switch off hands the projection back.
+- A stock-map takeover that closes and reopens the switch entirely between two reads (2 s apart) still looks like DiPlay's own projection, so stopping then would hand the switch back. The reads are what make that window small; it is not measured on the car.
+- HUD guidance is not part of this route. Writing navigation data to the head unit's DIM service was measured, but the cluster's navigation area needs the stock map's navigation session, so no HUD result is claimed.
+
+Tested on the car named above; other Geely/Lynk firmware is untested.
+
 ## Android 9 Wi-Fi Direct and experimental features
 
 The Android 9 path creates or reuses a persistent system profile with the public legacy group API, reads generated credentials and uses the firmware channel setter where available. It serializes pinning/cancellation, avoids foreign groups and removes only its owned active group; persistent profiles are not deleted. Unknown setter outcomes stop startup, and unreliable pinning/cleanup should use the manual car hotspot. See [legacy limits](ANDROID9_WIFI_DIRECT.md); the contributor's Redmi K20 Pro result does not validate every BYD Android 9 firmware.

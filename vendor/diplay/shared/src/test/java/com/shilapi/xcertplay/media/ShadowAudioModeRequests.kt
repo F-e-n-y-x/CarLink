@@ -1,4 +1,3 @@
-// CarLink: from DiPlay PR #994 (new test helper).
 package com.shilapi.xcertplay.media
 
 import android.media.AudioManager
