@@ -58,4 +58,14 @@ object NativeGroupBandPolicy {
         Band.GHZ_5 -> "5GHz"
         Band.UNSPECIFIED -> "unspecified"
     }
+
+    /**
+     * CarLink (open-headunit 30310b93): whether this bring-up goes straight to the no-band create.
+     * Some MediaTek units refuse every banded create on every session and then host the no-band
+     * group anyway; the ladder in front of it cost about 8.5 s per connection. The refusal is a
+     * property of the firmware, so it is remembered against the build fingerprint (an update asks
+     * again). A forced 2.4 GHz band is the user's choice and is still asked for.
+     */
+    fun skipsBandedRequest(force24Ghz: Boolean, refusedOnFingerprint: String?, currentFingerprint: String): Boolean =
+        !force24Ghz && !refusedOnFingerprint.isNullOrEmpty() && refusedOnFingerprint == currentFingerprint
 }

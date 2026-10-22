@@ -60,4 +60,21 @@ class NativeGroupBandPolicyTest {
         assertEquals("2.4GHz", NativeGroupBandPolicy.label(Band.GHZ_2_4))
         assertEquals("5GHz", NativeGroupBandPolicy.label(Band.GHZ_5))
     }
+
+    // --- CarLink (open-headunit 30310b93): remembered banded refusal ---
+
+    private val build = "Lenovo/L38043/L38043:10/QP1A/eng.test:userdebug/test-keys"
+
+    @Test
+    fun `the band request is skipped only on the build that refused it`() {
+        assertTrue(NativeGroupBandPolicy.skipsBandedRequest(false, build, build))
+        assertFalse(NativeGroupBandPolicy.skipsBandedRequest(false, null, build))
+        assertFalse(NativeGroupBandPolicy.skipsBandedRequest(false, "", build))
+        assertFalse(NativeGroupBandPolicy.skipsBandedRequest(false, build, "$build.1"))
+    }
+
+    @Test
+    fun `a forced 2_4GHz band keeps asking for that band`() {
+        assertFalse(NativeGroupBandPolicy.skipsBandedRequest(true, build, build))
+    }
 }
