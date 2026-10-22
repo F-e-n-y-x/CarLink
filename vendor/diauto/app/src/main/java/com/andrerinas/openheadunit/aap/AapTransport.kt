@@ -687,7 +687,8 @@ class AapTransport(
             // this deadline.
             val versionDeadline = SystemClock.elapsedRealtime() + HANDSHAKE_TIMEOUT_MS
             var versionFrameSize = 0
-            while (attempt < 3 && connection.isConnected) {
+            val versionRequests = HandshakeMessagePolicy.versionRequests(isUsb) // CarLink (open-headunit 68c2bbb5)
+            while (attempt < versionRequests && connection.isConnected) {
                 if (SystemClock.elapsedRealtime() >= versionDeadline) {
                     AppLog.e("Handshake: Version exchange timed out after $attempt attempt(s).")
                     return false
@@ -705,7 +706,7 @@ class AapTransport(
                     // one packet of the OUT endpoint: the phone got all of it or none, and a late
                     // duplicate answer is skipped by the TLS reader.
                     if (ret < 0 && isUsb && connection.isConnected && version.size <= connection.outMaxPacketSize &&
-                        attempt < 3 && versionDeadline - SystemClock.elapsedRealtime() > 200) {
+                        attempt < versionRequests && versionDeadline - SystemClock.elapsedRealtime() > 200) {
                         SystemClock.sleep(200)
                         continue
                     }
@@ -721,7 +722,7 @@ class AapTransport(
                 // until the deadline expires.
                 // The last request waits out the whole budget: a USB dongle relaying over WiFi can
                 // answer after 6 s, and giving up there leaves its answers for the next attempt.
-                val recvDeadline = if (attempt < 3) minOf(versionDeadline, SystemClock.elapsedRealtime() + 2000)
+                val recvDeadline = if (attempt < versionRequests) minOf(versionDeadline, SystemClock.elapsedRealtime() + 2000)
                     else versionDeadline
                 while (SystemClock.elapsedRealtime() < recvDeadline) {
                     // Known encrypted envelopes are consumed by length. An unknown header has no safe
@@ -745,7 +746,7 @@ class AapTransport(
                              "Waiting for VERSION_RESPONSE.")
                 }
                 if (received) break
-                AppLog.w("Handshake: No VERSION_RESPONSE within ${if (attempt < 3) "2s" else "the handshake budget"} (attempt $attempt), ret=$ret")
+                AppLog.w("Handshake: No VERSION_RESPONSE within ${if (attempt < versionRequests) "2s" else "the handshake budget"} (attempt $attempt), ret=$ret")
                 SystemClock.sleep(200)
             }
 
