@@ -647,22 +647,36 @@ class AapTransport(
             var peerSentBytes = false
             var transportError = false
             // Outer deadline prevents the loop from running for minutes on an unresponsive device.
-            // Each send+recv pair uses 2 s per operation; 3 attempts × 4 s ≈ 12 s worst-case,
-            // capped here at HANDSHAKE_TIMEOUT_MS so a stuck device fails fast.
+            // CarLink (open-headunit 67bcae27): the first two receive windows allow 2 s each; the
+            // last uses the remaining budget. Partial frames retain their bytes, but never extend
+            // this deadline.
             val versionDeadline = SystemClock.elapsedRealtime() + HANDSHAKE_TIMEOUT_MS
+            var versionFrameSize = 0
+            // CarLink (open-headunit 67bcae27): read whole envelopes by their declared length.
+            // Bounded reads leave the following TLS frame in the socket/USB receive buffer, and
+            // one reader across retries keeps a partial response a timeout cut in two.
+            val frames = HandshakeFrameReader(SystemClock::elapsedRealtime, if (isUsb) 100 else 1) { bytes, length, timeout ->
+                val count = connection.recvBlocking(bytes, length, timeout, false)
+                if (count < 0) transportError = true   // EOF or IOException (or a USB timeout)
+                if (count > 0) peerSentBytes = true
+                ret = count
+                count
+            }
             while (attempt < 3 && connection.isConnected) {
                 if (SystemClock.elapsedRealtime() >= versionDeadline) {
                     AppLog.e("Handshake: Version exchange timed out after $attempt attempt(s).")
                     return false
                 }
                 attempt++
-                ret = connection.sendBlocking(version, version.size, 2000)
+                ret = connection.sendBlocking(version, version.size,
+                    minOf(2000L, versionDeadline - SystemClock.elapsedRealtime()).coerceAtLeast(1).toInt())
                 AppLog.d("Handshake: Version request sent. ret: $ret. attempt: $attempt. TS: ${SystemClock.elapsedRealtime()}")
-                if (ret < 0) {
+                if (ret != version.size) {
                     AppLog.w("Handshake: Version request send failed (ret=$ret), attempt $attempt")
                     transportError = true
-                    SystemClock.sleep(200)
-                    continue
+                    // CarLink (open-headunit 67bcae27): re-sending after a partial write would put
+                    // a second header inside the first frame. Start a fresh connection instead.
+                    return false
                 }
 
                 AppLog.d("Handshake: Waiting for version response. TS: ${SystemClock.elapsedRealtime()}")
@@ -672,31 +686,32 @@ class AapTransport(
                 // "version response received" would hand a random payload to the SSL layer and
                 // cause a 15 s timeout. Instead, discard unexpected messages and keep reading
                 // until the deadline expires.
-                val recvDeadline = SystemClock.elapsedRealtime() + 2000
+                // The last request waits out the whole budget: a USB dongle relaying over WiFi can
+                // answer after 6 s, and giving up there leaves its answers for the next attempt.
+                val recvDeadline = if (attempt < 3) minOf(versionDeadline, SystemClock.elapsedRealtime() + 2000)
+                    else versionDeadline
                 while (SystemClock.elapsedRealtime() < recvDeadline) {
-                    val remaining = (recvDeadline - SystemClock.elapsedRealtime())
-                        .toInt().coerceAtLeast(100)
-                    ret = connection.recvBlocking(buffer, buffer.size, remaining, false)
-                    if (ret < 0) transportError = true   // EOF or IOException, not a timeout
-                    if (ret > 0) peerSentBytes = true
-                    if (ret <= 0) break  // timeout or error — fall through to outer retry
-                    if (ret >= 6
-                        && buffer[0] == 0.toByte()
-                        && buffer[4] == 0.toByte()
-                        && buffer[5] == 2.toByte()) {
-                        AppLog.i("Handshake: Version response received (ret=$ret, attempt=$attempt).")
+                    // An IOException (malformed framing) ends the handshake through the catch below.
+                    val frame = frames.readFrame(recvDeadline) ?: break
+                    if (HandshakeMessagePolicy.isTerminalResponse(frame)) {
+                        AppLog.e("Handshake: peer terminated version negotiation")
+                        return false
+                    }
+                    if (HandshakeMessagePolicy.isLateVersionResponse(frame)) {
+                        AppLog.i("Handshake: Version response received (len=${frame.size}, attempt=$attempt).")
                         received = true
+                        versionFrameSize = frame.size
                         break
                     }
                     // Wrong message — log and keep draining.
-                    val ch   = buffer[0].toInt() and 0xFF
-                    val type = ((buffer[4].toInt() and 0xFF) shl 8) or (buffer[5].toInt() and 0xFF)
+                    val ch   = frame[0].toInt() and 0xFF
+                    val type = ((frame[4].toInt() and 0xFF) shl 8) or (frame[5].toInt() and 0xFF)
                     AppLog.w("Handshake: Ignoring unexpected message " +
-                             "(ch=$ch, type=0x${type.toString(16)}, len=$ret). " +
+                             "(ch=$ch, type=0x${type.toString(16)}, len=${frame.size}). " +
                              "Waiting for VERSION_RESPONSE.")
                 }
                 if (received) break
-                AppLog.w("Handshake: No VERSION_RESPONSE within 2s (attempt $attempt), ret=$ret")
+                AppLog.w("Handshake: No VERSION_RESPONSE within ${if (attempt < 3) "2s" else "the handshake budget"} (attempt $attempt), ret=$ret")
                 SystemClock.sleep(200)
             }
 
@@ -714,7 +729,7 @@ class AapTransport(
                 }
                 return false
             }
-            AppLog.i("Handshake: Version response recv ret: %d", ret)
+            AppLog.i("Handshake: Version response recv ret: %d", versionFrameSize)
 
             AppLog.d("Handshake: Starting SSL handshake via performHandshake(). TS: ${SystemClock.elapsedRealtime()}")
             if (!ssl.performHandshake(connection)) {
