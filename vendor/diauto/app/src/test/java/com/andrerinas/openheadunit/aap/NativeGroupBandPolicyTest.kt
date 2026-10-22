@@ -77,4 +77,22 @@ class NativeGroupBandPolicyTest {
     fun `a forced 2_4GHz band keeps asking for that band`() {
         assertFalse(NativeGroupBandPolicy.skipsBandedRequest(true, build, build))
     }
+
+    // --- CarLink (open-headunit 79c67d57) ---
+
+    @Test
+    fun `only ERROR counts as a refusal of the band`() {
+        assertTrue(NativeGroupBandPolicy.isBandRefusal(reason = 0, crashed = false))
+        assertFalse(NativeGroupBandPolicy.isBandRefusal(reason = 2, crashed = false))
+        assertFalse(NativeGroupBandPolicy.isBandRefusal(reason = 1, crashed = false))
+        assertFalse(NativeGroupBandPolicy.isBandRefusal(reason = 0, crashed = true))
+    }
+
+    @Test
+    fun `the refusal is stored only when the no-band group is on 5GHz`() {
+        assertTrue(NativeGroupBandPolicy.storesBandedRefusalAt(5180))
+        assertTrue(NativeGroupBandPolicy.storesBandedRefusalAt(5745))
+        assertFalse(NativeGroupBandPolicy.storesBandedRefusalAt(2437))
+        assertFalse(NativeGroupBandPolicy.storesBandedRefusalAt(0))
+    }
 }

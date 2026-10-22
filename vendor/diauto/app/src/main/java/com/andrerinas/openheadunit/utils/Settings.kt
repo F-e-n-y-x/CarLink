@@ -425,7 +425,8 @@ class Settings(private val context: Context) {
             val editor = prefs.edit()
             if (value.isNullOrEmpty()) editor.remove("wifi-direct-banded-refused-on")
             else editor.putString("wifi-direct-banded-refused-on", value)
-            editor.apply()
+            // CarLink (open-headunit 79c67d57): commit(), written once per firmware; a force-stop must not lose it.
+            editor.commit()
         }
 
     /**

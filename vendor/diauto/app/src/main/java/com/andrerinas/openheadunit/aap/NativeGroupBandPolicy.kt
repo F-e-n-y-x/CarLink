@@ -68,4 +68,16 @@ object NativeGroupBandPolicy {
      */
     fun skipsBandedRequest(force24Ghz: Boolean, refusedOnFingerprint: String?, currentFingerprint: String): Boolean =
         !force24Ghz && !refusedOnFingerprint.isNullOrEmpty() && refusedOnFingerprint == currentFingerprint
+
+    /** CarLink (open-headunit 79c67d57): the P2P reason for a driver refusal; BUSY and the rest are transient. */
+    const val REASON_REFUSED = 0
+
+    /** CarLink (open-headunit 79c67d57): whether a failed rung refused the band rather than being busy or crashing. */
+    fun isBandRefusal(reason: Int, crashed: Boolean): Boolean = !crashed && reason == REASON_REFUSED
+
+    /**
+     * CarLink (open-headunit 79c67d57): whether the no-band group that followed may be stored. Only on
+     * 5 GHz: there skipping the band costs nothing, while a 2.4 GHz group would be chosen every drive.
+     */
+    fun storesBandedRefusalAt(frequencyMhz: Int): Boolean = frequencyMhz > MAX_24GHZ_FREQUENCY_MHZ
 }
