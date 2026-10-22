@@ -2,6 +2,7 @@ package com.andrerinas.openheadunit.aap
 
 import com.andrerinas.openheadunit.aap.protocol.messages.Messages
 import com.andrerinas.openheadunit.connection.AccessoryConnection
+import com.andrerinas.openheadunit.connection.SocketAccessoryConnection // CarLink
 import com.andrerinas.openheadunit.ssl.ConscryptInitializer
 import com.andrerinas.openheadunit.ssl.NoCheckTrustManager
 import com.andrerinas.openheadunit.ssl.SingleKeyKeyManager
@@ -25,7 +26,13 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
         // Buffer for unencrypted TLS records extracted from AAP messages.
         // We use a local queue or buffer to keep track of bytes ready for the SSLEngine.
         var pendingTlsData = ByteArray(0)
-        
+        // CarLink (open-headunit 67bcae27): whole envelopes by their declared length, with the
+        // same bounded reader as the version exchange.
+        val frames = HandshakeFrameReader(android.os.SystemClock::elapsedRealtime,
+            if (connection !is SocketAccessoryConnection && !connection.isSingleMessage) 100 else 1) { bytes, length, timeout ->
+            connection.recvBlocking(bytes, length, timeout, false)
+        }
+
         // Hard cap on the entire SSL phase.
         val deadline = android.os.SystemClock.elapsedRealtime() + SSL_HANDSHAKE_TIMEOUT_MS
 
@@ -41,7 +48,7 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
                 SSLEngineResult.HandshakeStatus.NEED_UNWRAP -> {
                     // If we don't have enough data for a meaningful unwrap, read a full AAP message
                     if (pendingTlsData.isEmpty()) {
-                        val messageData = readAapMessage(connection) ?: return false
+                        val messageData = readAapMessage(frames, deadline) ?: return false
                         pendingTlsData = messageData
                     }
 
@@ -60,7 +67,7 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
                         SSLEngineResult.Status.BUFFER_UNDERFLOW -> {
                             // The current pendingTlsData doesn't contain a full TLS record.
                             // Read another AAP message and append it.
-                            val nextMessage = readAapMessage(connection) ?: return false
+                            val nextMessage = readAapMessage(frames, deadline) ?: return false
                             pendingTlsData += nextMessage
                             AppLog.d("SSL Handshake: buffered ${pendingTlsData.size} B after underflow")
                         }
@@ -74,7 +81,7 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
                 SSLEngineResult.HandshakeStatus.NEED_WRAP -> {
                     val handshakeData = handshakeRead()
                     val bio = Messages.createRawMessage(0, 3, 3, handshakeData)
-                    if (connection.sendBlocking(bio, bio.size, 2000) < 0) {
+                    if (connection.sendBlocking(bio, bio.size, 2000) != bio.size) { // CarLink (open-headunit 67bcae27): a short write too
                         AppLog.e("SSL Handshake: Send failed")
                         return false
                     }
@@ -101,36 +108,30 @@ class AapSslContext(keyManager: SingleKeyKeyManager): AapSsl {
     }
 
     /**
-     * Reads a single complete AAP message from the connection.
-     * This ensures that we always respect AAP framing boundaries.
+     * CarLink (open-headunit 67bcae27): the next TLS record's AAP payload. Late answers to a
+     * retried version request are skipped (the SSLEngine would fail on them); anything else that
+     * is not a channel 0 SSL_HANDSHAKE message ends the handshake.
      */
-    private fun readAapMessage(connection: AccessoryConnection): ByteArray? {
-        val header = ByteArray(6)
-        // Read exactly 6 bytes for the AAP header
-        if (connection.recvBlocking(header, 6, 2000, true) != 6) {
-            AppLog.e("SSL Handshake: Failed to read AAP header")
+    private fun readAapMessage(frames: HandshakeFrameReader, deadline: Long): ByteArray? {
+        try {
+            while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                val frame = frames.readFrame(deadline) ?: return null
+                if (HandshakeMessagePolicy.isLateVersionResponse(frame)) {
+                    AppLog.i("SSL Handshake: discarded a late VERSION_RESPONSE")
+                    continue
+                }
+                if (frame[0] != 0.toByte() || frame[4] != 0.toByte() || frame[5] != 3.toByte()) {
+                    AppLog.e("SSL Handshake: expected channel 0 SSL_HANDSHAKE message")
+                    return null
+                }
+                return frame.copyOfRange(6, frame.size)
+            }
+        } catch (e: java.io.IOException) {
+            AppLog.e("SSL Handshake: ${e.message}")
             return null
         }
-
-        // AAP Header: [0]=Channel, [1]=Flags, [2..3]=Length (Big Endian), [4..5]=Type
-        // The length in the header includes the 4 bytes of channel/flags/length itself? 
-        // No, in Messages.kt: size + 2 is stored in bytes 2..3. 
-        // So payload length = (header[2]*256 + header[3]) - 2.
-        val totalLength = ((header[2].toInt() and 0xFF) shl 8) or (header[3].toInt() and 0xFF)
-        val payloadLength = totalLength - 2 // Minus the 2 bytes for the type field (bytes 4-5)
-
-        if (payloadLength < 0 || payloadLength > Messages.DEF_BUFFER_LENGTH) {
-            AppLog.e("SSL Handshake: Invalid AAP payload length: $payloadLength")
-            return null
-        }
-
-        val payload = ByteArray(payloadLength)
-        if (connection.recvBlocking(payload, payloadLength, 2000, true) != payloadLength) {
-            AppLog.e("SSL Handshake: Failed to read AAP payload ($payloadLength bytes)")
-            return null
-        }
-
-        return payload
+        AppLog.e("SSL Handshake: receive deadline expired")
+        return null
     }
 
     private fun prepare(): Int {

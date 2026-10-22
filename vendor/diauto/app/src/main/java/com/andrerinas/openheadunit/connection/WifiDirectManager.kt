@@ -56,6 +56,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         private const val NATIVE_GROUP_MODE_5GHZ_REQUESTED = "5GHz requested"
         private const val NATIVE_GROUP_MODE_24GHZ_FORCED = "2.4GHz forced (debug)"
         private const val NATIVE_GROUP_MODE_STANDARD_FALLBACK = "standard fallback"
+        private const val NATIVE_GROUP_MODE_STANDARD_REMEMBERED = "standard (banded refusal remembered)" // CarLink (open-headunit 30310b93)
         private const val NATIVE_GROUP_MODE_STANDARD_LEGACY = "standard (no 5GHz API)"
         private const val NATIVE_GROUP_MODE_KEPT_GROUP_READ = "kept group read" // CarLink (PR #1006)
         // Native AA join recovery: if no phone joins the quiet-host group within this window,
@@ -112,6 +113,16 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     private var isReceiverRegistered = false
     private var discoveredInterface: String? = null
     private var nativeGroupCreationMode = NATIVE_GROUP_MODE_UNKNOWN
+
+    // CarLink (open-headunit 30310b93): the banded ladder was just exhausted, so the no-band group
+    // that forms next can be recorded as this unit's standing answer. Only the ladder sets it.
+    @Volatile
+    private var bandedRefusalPending = false
+
+    // CarLink (open-headunit 79c67d57): every rung of the current banded ladder failed with ERROR;
+    // one BUSY or crash clears it.
+    @Volatile
+    private var bandedLadderAllRefused = true
     private var native5GhzBandMismatchRetries = 0
 
     /**
@@ -1244,6 +1255,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         lastNativeGroupStatusMessage = null
         native5GhzBandMismatchRetries = 0
         nativeRequestedBand = NativeGroupBandPolicy.Band.UNSPECIFIED
+        bandedRefusalPending = false // CarLink (open-headunit 30310b93)
         legacyChannelFallbackUsed = false
         lastUnfriendlyChannelSsid = null
         lastCoexistenceSsid = null
@@ -1343,6 +1355,17 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             }
         }
 
+        // CarLink (open-headunit 30310b93): only on the first rung; the ladder's own retries are
+        // already past this decision.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && retryCount == 0 &&
+            NativeGroupBandPolicy.skipsBandedRequest(force24, appSettings.wifiDirectBandedRefusedOn, Build.FINGERPRINT ?: "")) {
+            AppLog.i("WifiDirectManager: this unit refused every $bandLabel group request on this firmware before " +
+                "and then hosted the no-band group, so the band request is skipped.")
+            standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_REMEMBERED)
+            return
+        }
+        if (retryCount == 0) bandedLadderAllRefused = true // CarLink (open-headunit 79c67d57)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 // Builder.build() requires networkName+passphrase (or a peer address) or it
@@ -1406,6 +1429,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     override fun onFailure(reason: Int) {
                         if (supersededByStop(gen, "native create result")) return
                         val reasonStr = getP2pErrorString(reason)
+                        if (!NativeGroupBandPolicy.isBandRefusal(reason, crashed = false)) bandedLadderAllRefused = false // CarLink (open-headunit 79c67d57)
                         if (retryCount < MAX_NATIVE_5GHZ_CREATE_RETRIES) {
                             AppLog.w("WifiDirectManager: $bandLabel createGroup failed ($reasonStr), removing group and retrying $bandLabel in 2s (retry ${retryCount + 1}/$MAX_NATIVE_5GHZ_CREATE_RETRIES)...")
                             removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
@@ -1414,6 +1438,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                             })
                         } else {
                             AppLog.w("WifiDirectManager: $bandLabel createGroup retries exhausted ($reasonStr). Falling back to standard createGroup.")
+                            bandedRefusalPending = !force24 && bandedLadderAllRefused // CarLink (open-headunit 30310b93, 79c67d57)
                             standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_FALLBACK)
                         }
                     }
@@ -1428,6 +1453,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_FALLBACK)
                     return
                 }
+                bandedLadderAllRefused = false // CarLink (open-headunit 79c67d57): a crash says nothing about the band
                 if (retryCount < MAX_NATIVE_5GHZ_CREATE_RETRIES) {
                     AppLog.e("WifiDirectManager: $bandLabel createGroup crashed before async result. Retrying $bandLabel.", t)
                     postSessionDelayed({ createQuietGroup(retryCount + 1) }, 2000L)
@@ -1494,6 +1520,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 AppLog.i("WifiDirectManager: Standard createGroup SUCCESS!")
                 com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_CREATED, "mode=$groupMode") // CarLink
                 nativeGroupCreationMode = groupMode
+                // CarLink (open-headunit 30310b93, 79c67d57): the refusal is stored in
+                // notifyNativeGroupStarted(), once the group's frequency is known.
+                if (groupMode != NATIVE_GROUP_MODE_STANDARD_FALLBACK) bandedRefusalPending = false
                 // The platform chose the band here, so there is no mismatch to correct.
                 nativeRequestedBand = NativeGroupBandPolicy.Band.UNSPECIFIED
                 isGroupOwner = true
@@ -1533,6 +1562,12 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     }
                 } else {
                     AppLog.e("WifiDirectManager: createQuietGroup failed completely! Reason: $reasonStr")
+                    // CarLink (open-headunit 30310b93): the shortcut is kept only while it works.
+                    if (groupMode == NATIVE_GROUP_MODE_STANDARD_REMEMBERED) {
+                        App.provide(context).settings.wifiDirectBandedRefusedOn = null
+                        AppLog.w("WifiDirectManager: the remembered no-band route failed too; forgetting it so the next bring-up asks for the band again.")
+                    }
+                    bandedRefusalPending = false
                     isGroupCreatingOrCreated = false
                     nativeCreateRequestedAtMs = 0L // CarLink
                 }
@@ -1682,6 +1717,18 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     }
 
     private fun notifyNativeGroupStarted(ssid: String, frequency: Int, band: String) {
+        // CarLink (open-headunit 30310b93, 79c67d57): the ladder ended in refusals and the no-band
+        // group formed on 5 GHz, so the next bring-up on this firmware goes straight to it.
+        if (bandedRefusalPending && frequency > 0 && nativeGroupCreationMode == NATIVE_GROUP_MODE_STANDARD_FALLBACK) {
+            bandedRefusalPending = false
+            if (NativeGroupBandPolicy.storesBandedRefusalAt(frequency)) {
+                App.provide(context).settings.wifiDirectBandedRefusedOn = Build.FINGERPRINT
+                AppLog.i("WifiDirectManager: recorded that this unit refuses banded groups on this firmware; " +
+                    "the next bring-up goes straight to the no-band group.")
+            } else {
+                AppLog.i("WifiDirectManager: the no-band group is on $frequency MHz, so the banded refusal is not stored.")
+            }
+        }
         val frequencyText = if (frequency > 0) "$frequency MHz" else "frequency unknown"
         val message = "Native AA WiFi Direct: $band ($frequencyText), $nativeGroupCreationMode"
         if (message == lastNativeGroupStatusMessage) return

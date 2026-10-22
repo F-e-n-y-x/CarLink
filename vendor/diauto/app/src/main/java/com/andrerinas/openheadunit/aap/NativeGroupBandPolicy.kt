@@ -58,4 +58,26 @@ object NativeGroupBandPolicy {
         Band.GHZ_5 -> "5GHz"
         Band.UNSPECIFIED -> "unspecified"
     }
+
+    /**
+     * CarLink (open-headunit 30310b93): whether this bring-up goes straight to the no-band create.
+     * Some MediaTek units refuse every banded create on every session and then host the no-band
+     * group anyway; the ladder in front of it cost about 8.5 s per connection. The refusal is a
+     * property of the firmware, so it is remembered against the build fingerprint (an update asks
+     * again). A forced 2.4 GHz band is the user's choice and is still asked for.
+     */
+    fun skipsBandedRequest(force24Ghz: Boolean, refusedOnFingerprint: String?, currentFingerprint: String): Boolean =
+        !force24Ghz && !refusedOnFingerprint.isNullOrEmpty() && refusedOnFingerprint == currentFingerprint
+
+    /** CarLink (open-headunit 79c67d57): the P2P reason for a driver refusal; BUSY and the rest are transient. */
+    const val REASON_REFUSED = 0
+
+    /** CarLink (open-headunit 79c67d57): whether a failed rung refused the band rather than being busy or crashing. */
+    fun isBandRefusal(reason: Int, crashed: Boolean): Boolean = !crashed && reason == REASON_REFUSED
+
+    /**
+     * CarLink (open-headunit 79c67d57): whether the no-band group that followed may be stored. Only on
+     * 5 GHz: there skipping the band costs nothing, while a 2.4 GHz group would be chosen every drive.
+     */
+    fun storesBandedRefusalAt(frequencyMhz: Int): Boolean = frequencyMhz > MAX_24GHZ_FREQUENCY_MHZ
 }

@@ -415,6 +415,21 @@ class Settings(private val context: Context) {
         set(value) { prefs.edit().putBoolean("debug-force-p2p-band-24", value).apply() }
 
     /**
+     * CarLink (open-headunit 30310b93): the build fingerprint on which this unit refused every
+     * banded Native AA group request and then hosted the no-band group, or null. See
+     * [com.andrerinas.openheadunit.aap.NativeGroupBandPolicy.skipsBandedRequest].
+     */
+    var wifiDirectBandedRefusedOn: String?
+        get() = prefs.getString("wifi-direct-banded-refused-on", null)
+        set(value) {
+            val editor = prefs.edit()
+            if (value.isNullOrEmpty()) editor.remove("wifi-direct-banded-refused-on")
+            else editor.putString("wifi-direct-banded-refused-on", value)
+            // CarLink (open-headunit 79c67d57): commit(), written once per firmware; a force-stop must not lose it.
+            editor.commit()
+        }
+
+    /**
      * On a device with no band API, asks the P2P stack for a 5 GHz operating channel.
      *
      * Below API 29 there is no `WifiP2pConfig.Builder`, so the group's band is the driver's choice
