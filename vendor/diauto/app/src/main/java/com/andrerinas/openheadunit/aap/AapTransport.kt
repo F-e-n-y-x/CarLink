@@ -621,23 +621,6 @@ class AapTransport(
             // below clears stale bytes, the version request is retried, and a phone left in an old
             // session is reset by CarLink before this runs (S25/AA 17.8 measured).
 
-            val buffer = ByteArray(Messages.DEF_BUFFER_LENGTH)
-
-            // Drain any stale data left in the USB pipe from a previous session.
-            // MUST ONLY be run on USB; on TCP Sockets, draining discards initial response bytes!
-            var drained = 0
-            if (isUsb) {
-                while (true) {
-                    val n = try { connection.recvBlocking(buffer, buffer.size, 50, false) } catch (e: Exception) { -1 }
-                    if (n <= 0) break
-                    drained += n
-                }
-                if (drained > 0) {
-                    AppLog.i("Handshake: Drained $drained bytes of stale USB data before version request")
-                }
-            }
-
-            AppLog.d("Handshake: Starting version request. TS: ${SystemClock.elapsedRealtime()}")
             val version = Messages.versionRequest
             var ret = -1
             var attempt = 0
@@ -646,26 +629,64 @@ class AapTransport(
             // is worth reporting upwards: it is the one the user can do something about.
             var peerSentBytes = false
             var transportError = false
-            // Outer deadline prevents the loop from running for minutes on an unresponsive device.
-            // CarLink (open-headunit 67bcae27): the first two receive windows allow 2 s each; the
-            // last uses the remaining budget. Partial frames retain their bytes, but never extend
-            // this deadline.
-            val versionDeadline = SystemClock.elapsedRealtime() + HANDSHAKE_TIMEOUT_MS
-            var versionFrameSize = 0
+            var draining = isUsb
+            var drained = 0
             // CarLink (open-headunit 67bcae27): read whole envelopes by their declared length.
             // Bounded reads leave the following TLS frame in the socket/USB receive buffer, and
             // one reader across retries keeps a partial response a timeout cut in two.
             // CarLink (open-headunit fbe128d0): a dongle or a phone left in an old session can still
             // send that session's encrypted envelopes after the drain goes quiet. Consume them by
             // their wire length here; TLS negotiation stays strict.
+            // CarLink (open-headunit 754e257e): the same reader drains before the request, so an
+            // idle gap cannot discard a partial header or body.
             val frames = HandshakeFrameReader(SystemClock::elapsedRealtime, if (isUsb) 100 else 1,
                 skipEncryptedFrames = true) { bytes, length, timeout ->
                 val count = connection.recvBlocking(bytes, length, timeout, false)
-                if (count < 0) transportError = true   // EOF or IOException (or a USB timeout)
-                if (count > 0) peerSentBytes = true
+                if (draining) {
+                    if (count > 0) drained += count
+                } else {
+                    if (count < 0) transportError = true   // EOF or IOException (or a USB timeout)
+                    if (count > 0) peerSentBytes = true
+                }
                 ret = count
                 count
             }
+            if (isUsb) {
+                // Drain stale data left in the USB pipe from a previous session. MUST ONLY be run
+                // on USB; on TCP sockets, draining discards initial response bytes!
+                // CarLink (open-headunit 754e257e): complete old frames are discarded until the
+                // first idle read, within 500 ms; a partial one stays with the reader.
+                val drainDeadline = SystemClock.elapsedRealtime() + 500
+                try {
+                    while (connection.isConnected && frames.readFrame(drainDeadline, stopOnIdle = true) != null) {
+                        // Cleartext frames predate our request; encrypted ones are skipped inside.
+                    }
+                } catch (e: java.io.IOException) {
+                    // The reopened link may start inside an old frame. No answer to our request
+                    // exists yet, so discard unframed bytes until idle within the same budget.
+                    // After the VersionRequest an unknown boundary still fails closed.
+                    AppLog.i("Handshake: Discarding unframed USB data before version request")
+                    frames.discardPendingFrame()
+                    val discard = ByteArray(Messages.DEF_BUFFER_LENGTH)
+                    while (connection.isConnected && drainDeadline - SystemClock.elapsedRealtime() >= 100) {
+                        val n = try { connection.recvBlocking(discard, discard.size, 100, false) } catch (_: Exception) { -1 }
+                        if (n <= 0) break
+                        drained += n
+                    }
+                }
+                if (drained > 0) {
+                    AppLog.i("Handshake: Drained $drained bytes of stale USB data before version request")
+                }
+            }
+            draining = false
+
+            AppLog.d("Handshake: Starting version request. TS: ${SystemClock.elapsedRealtime()}")
+            // Outer deadline prevents the loop from running for minutes on an unresponsive device.
+            // CarLink (open-headunit 67bcae27): the first two receive windows allow 2 s each; the
+            // last uses the remaining budget. Partial frames retain their bytes, but never extend
+            // this deadline.
+            val versionDeadline = SystemClock.elapsedRealtime() + HANDSHAKE_TIMEOUT_MS
+            var versionFrameSize = 0
             while (attempt < 3 && connection.isConnected) {
                 if (SystemClock.elapsedRealtime() >= versionDeadline) {
                     AppLog.e("Handshake: Version exchange timed out after $attempt attempt(s).")
@@ -680,6 +701,14 @@ class AapTransport(
                     transportError = true
                     // CarLink (open-headunit 67bcae27): re-sending after a partial write would put
                     // a second header inside the first frame. Start a fresh connection instead.
+                    // CarLink (open-headunit 754e257e): except on USB when the whole request fits
+                    // one packet of the OUT endpoint: the phone got all of it or none, and a late
+                    // duplicate answer is skipped by the TLS reader.
+                    if (ret < 0 && isUsb && connection.isConnected && version.size <= connection.outMaxPacketSize &&
+                        attempt < 3 && versionDeadline - SystemClock.elapsedRealtime() > 200) {
+                        SystemClock.sleep(200)
+                        continue
+                    }
                     return false
                 }
 

@@ -18,7 +18,8 @@ class LibusbAccessoryConnection(private val usbMgr: UsbManager, private val devi
     private var usbDeviceConnection: UsbDeviceConnection? = null
     private var usbInterface: UsbInterface? = null
     private var endpointIn: UsbEndpoint? = null
-    private var endpointOut: UsbEndpoint? = null
+    @Volatile private var endpointOut: UsbEndpoint? = null
+    override val outMaxPacketSize: Int get() = endpointOut?.maxPacketSize ?: 0 // CarLink (open-headunit 754e257e)
     private var usbNative: UsbNative? = null
     private val stateLock = Any()
 

@@ -21,6 +21,7 @@ class UsbAccessoryConnection(private val usbMgr: UsbManager, private val device:
     // without holding sStateLock during the transfer.
     @Volatile private var endpointIn: UsbEndpoint? = null
     @Volatile private var endpointOut: UsbEndpoint? = null
+    override val outMaxPacketSize: Int get() = endpointOut?.maxPacketSize ?: 0 // CarLink (open-headunit 754e257e)
 
     // Internal buffer — only ever accessed by the poll thread (recvBlocking); no lock needed.
     private val internalBuffer = ByteArray(16384)

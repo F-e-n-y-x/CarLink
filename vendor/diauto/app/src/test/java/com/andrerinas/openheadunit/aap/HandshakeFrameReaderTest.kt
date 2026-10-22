@@ -1,6 +1,6 @@
 package com.andrerinas.openheadunit.aap
 
-// CarLink: ported from open-headunit 67bcae27 and fbe128d0.
+// CarLink: ported from open-headunit 67bcae27, fbe128d0 and 754e257e.
 
 import org.junit.Assert.*
 import org.junit.Test
@@ -11,9 +11,9 @@ class HandshakeFrameReaderTest {
     private val tls = byteArrayOf(0, 3, 0, 5, 0, 3, 22, 3, 3)
 
     @Test fun `stale encrypted envelopes survive every split and leave TLS untouched`() {
-        for (flags in 0x08..0x0b) for (length in listOf(0, 1, 8)) {
+        for (flags in 0x08..0x0f) for (length in listOf(0, 1, 8)) {
             // The total is deliberately enormous: only this envelope's u16 length is skipped.
-            val extra = if (flags == 9) byteArrayOf(-1, -1, -1, -1) else byteArrayOf()
+            val extra = if (HandshakeFrameReader.carriesTotalLength(flags)) byteArrayOf(-1, -1, -1, -1) else byteArrayOf()
             val stale = byteArrayOf(5, flags.toByte(), 0, length.toByte()) + extra + ByteArray(length)
             for (split in 1 until stale.size) {
                 val stream = stale + version + tls
@@ -63,7 +63,7 @@ class HandshakeFrameReaderTest {
     }
 
     @Test fun `version skipping still rejects unknown flags and malformed cleartext`() {
-        for (flags in listOf(1, 2, 4, 7, 12, 255, 3)) {
+        for (flags in listOf(1, 2, 4, 7, 16, 255, 3)) {
             val reader = HandshakeFrameReader({ 0L }, skipEncryptedFrames = true) { out, _, _ ->
                 byteArrayOf(0, flags.toByte(), 0, 1).copyInto(out)
                 4
