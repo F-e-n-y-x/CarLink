@@ -268,4 +268,17 @@ class VideoFragmentAssemblerTest {
         assertTrue("an unrelated flag must not close an open run", a.isAssembling)
         assertFalse(a.hasAnomalies())
     }
+
+    // CarLink (open-headunit d88b28d4)
+    @Test
+    fun `a whole or first message's type picks its one payload offset`() {
+        for (f in listOf(single, first)) {
+            assertTrue(VideoFragmentAssembler.typeAllows(f, 0, atTimestamp))
+            assertFalse("timestamp bytes are not CSD", VideoFragmentAssembler.typeAllows(f, 0, atMedia))
+            assertTrue(VideoFragmentAssembler.typeAllows(f, 1, atMedia))
+            assertFalse("a second NAL must not hide the CSD's first", VideoFragmentAssembler.typeAllows(f, 1, atTimestamp))
+            assertFalse("control traffic is not video", VideoFragmentAssembler.typeAllows(f, 0x8001, atMedia))
+        }
+        for (f in listOf(middle, last)) assertTrue(VideoFragmentAssembler.typeAllows(f, 0x1234, atMedia))
+    }
 }

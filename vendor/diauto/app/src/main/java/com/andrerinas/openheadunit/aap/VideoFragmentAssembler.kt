@@ -202,6 +202,22 @@ class VideoFragmentAssembler {
         /** The last fragment of a frame. */
         const val FLAG_LAST = 10
 
+        /**
+         * CarLink (open-headunit d88b28d4): whether a message of [type] may carry its payload at
+         * [offset]. A whole or first message's type is real: DATA (0) has its timestamp, so offset
+         * 10; CSD (1) has none, so offset 2. A second NAL at 10 must not hide a CSD's NAL at 2, and
+         * timestamp bytes must not pass for CSD. A continuation carries no type (its first two bytes
+         * are payload here: DiAuto does not carry the first's type forward), so it is not filtered.
+         */
+        fun typeAllows(flags: Int, type: Int, offset: Int): Boolean = when (flags) {
+            FLAG_SINGLE, FLAG_FIRST -> when (type) {
+                0 -> offset == OFFSET_TIMESTAMP_INDICATION
+                1 -> offset == OFFSET_MEDIA_INDICATION
+                else -> false
+            }
+            else -> true
+        }
+
         /** Payload offset for a timestamp indication: 2 bytes of message type, 8 of timestamp. */
         const val OFFSET_TIMESTAMP_INDICATION = 10
 
