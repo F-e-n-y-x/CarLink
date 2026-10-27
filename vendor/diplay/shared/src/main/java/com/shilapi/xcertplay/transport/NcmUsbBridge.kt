@@ -128,6 +128,9 @@ class NcmUsbBridge internal constructor(
 
     // CarLink
     private fun runWriter() = try {
+        // CarLink: every wired byte (video, audio, touch acks) funnels through the NCM threads;
+        // at default priority a busy little core delayed them behind the stereo's own services.
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY) }
         writeLoop()
     } catch (_: InterruptedException) {
         // close() or the owner interrupted the writer; nothing else to do.
@@ -520,12 +523,29 @@ class NcmUsbBridge internal constructor(
             if (transferred <= 0) return null
             directReadBuffer.flip()
             directReadBuffer.get(readBuffer, 0, transferred)
+            rearmRead() // CarLink
             return transferred
         } catch (error: IphoneUsbException) {
             throw error
         } catch (error: RuntimeException) {
             throw failSession("NCM read failed", error)
         }
+    }
+
+    /**
+     * CarLink: queues bulk IN again as soon as the last completion's bytes are copied out, so the
+     * phone can send the next NTB while this thread hands the current frames to the tun (upstream
+     * re-queued only once every frame was delivered, leaving the pipe unarmed meanwhile; Linux
+     * usbnet keeps its RX URBs queued). Best effort: on a failure readQueued stays false and the
+     * next readChunk queues with its full error handling.
+     */
+    private fun rearmRead() = synchronized(stateLock) {
+        val request = readRequest
+        if (closed || failure != null || readQueued || request == null) return@synchronized
+        directReadBuffer.clear()
+        readQueued = runCatching {
+            readQueuePolicy.queue(directReadBuffer, ::checkOpenLocked) { readRequests.queue(request, it) }.queued
+        }.getOrDefault(false)
     }
 
     private fun failSession(message: String, cause: Throwable? = null): IphoneUsbException.DeviceUnavailable {

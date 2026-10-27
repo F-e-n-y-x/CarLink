@@ -103,6 +103,13 @@ object ConnectionLog {
     private fun diPlayLevel(message: String): Char? {
         val lower = message.lowercase(Locale.ROOT)
         return when {
+            // DiPlay's 10 s wired io summary: an idle iAP2 control read times out every 100 ms in a
+            // healthy session (issue #5 reports were all such lines). Only a failure or end is a problem.
+            "wired io " in lower -> when {
+                "result=failed" in lower -> 'E'
+                "result=ended" in lower -> 'W'
+                else -> null
+            }
             "error" in lower || "failed" in lower || "exception" in lower -> 'E'
             "warn" in lower || "timeout" in lower || "timed out" in lower -> 'W'
             else -> null

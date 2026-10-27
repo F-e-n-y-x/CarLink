@@ -61,6 +61,7 @@ class Ipv6NcmBridge(
     }
 
     private fun runNcmToTun() {
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY) } // CarLink: see NcmUsbBridge.runWriter
         val output = FileOutputStream(tun.fileDescriptor)
         try {
             while (running.get()) {
@@ -89,6 +90,7 @@ class Ipv6NcmBridge(
     }
 
     private fun runTunToNcm() {
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY) } // CarLink: see NcmUsbBridge.runWriter
         val input = FileInputStream(tun.fileDescriptor)
         val buffer = ByteArray(TUN_READ_BYTES)
         try {

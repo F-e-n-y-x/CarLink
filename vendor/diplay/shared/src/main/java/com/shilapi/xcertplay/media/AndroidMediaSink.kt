@@ -1055,6 +1055,9 @@ private class VideoDecoder(
     }
 
     private fun run() {
+        // CarLink: feeds the decoder and, without a dedicated output thread (the default), also releases
+        // its frames; upstream left it at default priority while runOutput asks for DISPLAY.
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY) }
         try {
             while (running) {
                 val job = queue.poll(5)

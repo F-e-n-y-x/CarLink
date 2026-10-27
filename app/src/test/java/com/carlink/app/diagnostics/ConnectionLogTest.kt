@@ -71,6 +71,21 @@ class ConnectionLogTest {
         assertEquals('E', lines[0].level)
     }
 
+    @Test fun anIdleWiredControlReadIsNotAProblemButAFailureIs() {
+        val counters = "elapsedMs=100 readCalls=1833 writeCalls=40 readTimeouts=1797 ends=0 failures=0 maxReadMs=104 maxWriteMs=6"
+        val prefix = "CONNECTION_DIAGNOSTIC attempt=12 run=1 phase=CONTROL wired io"
+        val lines = ConnectionLog.parseDiPlay(listOf(
+            "DiPlay log started 2026-10-23 17:43:00.000 pid=1 path=x",
+            "17:46:52.356  $prefix operation=READ result=TIMED_OUT $counters", // issue #5, every 10 s
+            "17:46:52.400  $prefix operation=READ result=COMPLETED $counters",
+            "17:46:52.500  CONNECTION_DIAGNOSTIC attempt=12 run=1 phase=CONTROL wired io final readCalls=9 readTimeouts=8",
+            "17:46:53.000  $prefix operation=READ result=FAILED $counters",
+            "17:46:54.000  $prefix operation=READ result=ENDED $counters",
+            "17:46:55.000  AirPlay timeout waiting for RTSP SETUP",
+        ), 0)
+        assertEquals(listOf(null, null, null, 'E', 'W', 'W'), lines.map { it.level })
+    }
+
     @Test fun readsEngineFilesAndEventsNewestFirstAndExportsThem() {
         File(context.filesDir, "diagnostics").apply { mkdirs() }.resolve("current.log")
             .writeText("1760000001000 [4] aa first\n1760000003000 [4] aa second\n")

@@ -47,6 +47,20 @@ class NcmUsbBridgeFramingTest {
         assertEquals(1, NcmFramingReplay.completions)
     }
 
+    // CarLink: bulk IN is armed again while the frames of the last completion are still being handed out.
+    @Test fun bulkInIsRequeuedBeforeTheCompletionsFramesAreDelivered() {
+        NcmFramingReplay.chunks.add(Ntb16Codec.build(smallFrame, 1) + Ntb16Codec.build(smallFrame, 2))
+        NcmFramingReplay.chunks.add(Ntb16Codec.build(alignedFrame, 3))
+        withBridge { ncm ->
+            assertArrayEquals(smallFrame, ncm.recv(50))
+            assertEquals(1, NcmFramingReplay.completions)
+            assertEquals(2, NcmFramingReplay.queued)
+            assertArrayEquals(smallFrame, ncm.recv(50))
+            assertArrayEquals(alignedFrame, ncm.recv(50))
+            assertEquals(3, NcmFramingReplay.queued)
+        }
+    }
+
     @Test fun optionalZeroPadAndFollowingBlockCanShareACompletion() {
         NcmFramingReplay.chunks.add(Ntb16Codec.build(alignedFrame, 1) + Ntb16Codec.build(smallFrame, 2))
         withBridge { ncm ->
@@ -188,7 +202,8 @@ object NcmFramingReplay {
     var request: UsbRequest? = null
     var buffer: ByteBuffer? = null
     var completions = 0
-    fun reset() { chunks.clear(); request = null; buffer = null; completions = 0 }
+    var queued = 0 // CarLink
+    fun reset() { chunks.clear(); request = null; buffer = null; completions = 0; queued = 0 }
 }
 
 @Implements(UsbRequest::class)
@@ -198,6 +213,7 @@ class NcmFramingRequestShadow {
     @Implementation fun queue(buffer: ByteBuffer): Boolean {
         NcmFramingReplay.request = request
         NcmFramingReplay.buffer = buffer
+        NcmFramingReplay.queued += 1 // CarLink
         return true
     }
     @Implementation fun cancel() = true
