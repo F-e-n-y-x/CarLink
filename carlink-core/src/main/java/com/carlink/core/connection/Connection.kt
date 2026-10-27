@@ -43,6 +43,8 @@ object Connection {
     private fun watchRadios(app: Context, sessions: SessionManager) {
         val receiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: Context, intent: android.content.Intent) {
+                // Wi-Fi's state is a sticky broadcast: registering replays the current one, which is not a change.
+                if (isInitialStickyBroadcast) return
                 val turnedOn = when (intent.action) {
                     android.location.LocationManager.MODE_CHANGED_ACTION ->
                         app.getSystemService(android.location.LocationManager::class.java)
