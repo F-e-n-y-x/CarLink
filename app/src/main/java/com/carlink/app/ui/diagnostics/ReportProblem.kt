@@ -83,16 +83,19 @@ fun rememberReportProblem(vm: CarLinkViewModel): () -> Unit {
                 stage = if (route == GitHubIssueReport.Route.BROWSER && IssueReporter.open(context, report.url)) ReportStage.Closed
                 else ReportStage.Qr(report)
             },
+            onCopyLog = { scope.launch { copyConnectionLog(context) } },
             onCancel = { stage = ReportStage.Closed })
         is ReportStage.Qr -> IssueQrSheet(s.report,
             onShareLog = { scope.launch { shareConnectionLog(context) } },
+            onCopyLog = { scope.launch { copyConnectionLog(context) } },
             onDone = { stage = ReportStage.Closed })
     }
     return remember(vm) {
         {
             if (stage == ReportStage.Closed) {
                 stage = ReportStage.Confirm(null)
-                val inputs = IssueReporter.Inputs(vm.lastSession.value, vm.health.value, vm.carBrandName(), vm.savedSecrets())
+                val inputs = IssueReporter.Inputs(vm.lastSessions(), vm.health.value, vm.carBrandName(), vm.savedSecrets(),
+                    vm.reportSettings())
                 scope.launch {
                     val report = withContext(Dispatchers.IO) { runCatching { IssueReporter.build(context, inputs) }.getOrNull() }
                     if (stage is ReportStage.Confirm) stage = if (report != null) ReportStage.Confirm(report) else ReportStage.Closed
@@ -102,16 +105,41 @@ fun rememberReportProblem(vm: CarLinkViewModel): () -> Unit {
     }
 }
 
+private fun logHeader(context: Context) = context.getString(R.string.carlink_diag_log_report_header, AppInfo.versionName,
+    AppInfo.versionCode, AppInfo.carPlayEngineVersion, AppInfo.androidAutoEngineVersion, AppInfo.manufacturer, AppInfo.model,
+    AppInfo.androidRelease)
+
 /** Writes the combined log and opens the share sheet (Diagnostics' Share log). */
 internal suspend fun shareConnectionLog(context: Context) {
-    val header = context.getString(R.string.carlink_diag_log_report_header, AppInfo.versionName, AppInfo.versionCode,
-        AppInfo.carPlayEngineVersion, AppInfo.androidAutoEngineVersion, AppInfo.manufacturer, AppInfo.model, AppInfo.androidRelease)
-    val file = withContext(Dispatchers.IO) { runCatching { ConnectionLog.export(context, header) }.getOrNull() }
+    val file = withContext(Dispatchers.IO) { runCatching { ConnectionLog.export(context, logHeader(context)) }.getOrNull() }
     if (file != null) {
         CarLinkFileProvider.shareText(context, file, context.getString(R.string.carlink_diag_log_share_subject),
             context.getString(R.string.carlink_diag_log_share_chooser))
     }
 }
+
+/**
+ * Puts the combined log on the clipboard (Copy full log) for pasting into the issue. A clip travels
+ * through one Binder transaction (1 MB), so a log over [CLIP_MAX_CHARS] keeps its head (versions,
+ * stereo probe) and newest lines.
+ */
+internal suspend fun copyConnectionLog(context: Context) {
+    val text = withContext(Dispatchers.IO) {
+        runCatching { ConnectionLog.export(context, logHeader(context)).readText() }.getOrNull()
+    } ?: return
+    val clip = if (text.length <= CLIP_MAX_CHARS) text
+    else text.take(4_000) + "\n…\n" + text.takeLast(CLIP_MAX_CHARS - 4_000)
+    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java) ?: return
+    runCatching { clipboard.setPrimaryClip(android.content.ClipData.newPlainText(context.getString(R.string.carlink_diag_log_share_subject), clip)) }
+        .onSuccess {
+            // Android 13+ shows its own "Copied" confirmation.
+            if (android.os.Build.VERSION.SDK_INT < 33) {
+                android.widget.Toast.makeText(context, R.string.carlink_diag_log_copied, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+}
+
+private const val CLIP_MAX_CHARS = 300_000
 
 private val monoStyle: TextStyle
     @Composable get() = MaterialTheme.typography.bodySmall.merge(TextStyle(fontFamily = FontFamily.Monospace,
@@ -123,7 +151,7 @@ private val monoStyle: TextStyle
  * Open GitHub and Cancel stay docked under the scrolling details, as large targets.
  */
 @Composable
-internal fun IssueConfirmSheet(report: GitHubIssueReport.Report?, onOpen: () -> Unit, onCancel: () -> Unit) {
+internal fun IssueConfirmSheet(report: GitHubIssueReport.Report?, onOpen: () -> Unit, onCopyLog: () -> Unit, onCancel: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val dimens = CarLinkTokens.dimens
     CarSheet(stringResource(R.string.carlink_report_title), onDismiss = onCancel, scrollable = false) {
@@ -133,6 +161,8 @@ internal fun IssueConfirmSheet(report: GitHubIssueReport.Report?, onOpen: () -> 
             Note(R.drawable.carlink_ic_lock, stringResource(R.string.carlink_report_public))
             Spacer(Modifier.height(10.dp))
             Note(R.drawable.carlink_ic_info, stringResource(R.string.carlink_report_sign_in))
+            Spacer(Modifier.height(10.dp))
+            Note(R.drawable.carlink_ic_content_copy, stringResource(R.string.carlink_report_full_log))
             Spacer(Modifier.height(if (isCar) 24.dp else 16.dp))
             if (report == null) {
                 Text(stringResource(R.string.carlink_report_preparing), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface)
@@ -146,6 +176,7 @@ internal fun IssueConfirmSheet(report: GitHubIssueReport.Report?, onOpen: () -> 
         FlowRow(Modifier.fillMaxWidth().padding(vertical = if (isCar) 20.dp else 14.dp),
             horizontalArrangement = Arrangement.spacedBy(dimens.targetGap), verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
             IonButton(stringResource(R.string.carlink_report_open), { if (report != null) onOpen() }, icon = R.drawable.carlink_ic_open_in_new)
+            GlassButton(stringResource(R.string.carlink_diag_log_copy), onCopyLog, icon = R.drawable.carlink_ic_content_copy)
             GlassButton(stringResource(R.string.carlink_report_cancel), onCancel, icon = R.drawable.carlink_ic_close)
         }
     }
@@ -214,7 +245,7 @@ private fun FieldRow(label: String, value: String) {
  * for the phone to open, and Share log for the full log.
  */
 @Composable
-internal fun IssueQrSheet(report: GitHubIssueReport.Report, onShareLog: () -> Unit, onDone: () -> Unit) {
+internal fun IssueQrSheet(report: GitHubIssueReport.Report, onShareLog: () -> Unit, onCopyLog: () -> Unit, onDone: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val dimens = CarLinkTokens.dimens
     CarSheet(stringResource(R.string.carlink_report_qr_title), onDismiss = onDone) {
@@ -231,6 +262,7 @@ internal fun IssueQrSheet(report: GitHubIssueReport.Report, onShareLog: () -> Un
                 Spacer(Modifier.height(if (isCar) 20.dp else 14.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap), verticalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
                     IonButton(stringResource(R.string.carlink_diag_log_share), onShareLog, icon = R.drawable.carlink_ic_ios_share)
+                    GlassButton(stringResource(R.string.carlink_diag_log_copy), onCopyLog, icon = R.drawable.carlink_ic_content_copy)
                     GlassButton(stringResource(R.string.carlink_report_done), onDone, icon = R.drawable.carlink_ic_check)
                 }
             }
@@ -238,31 +270,48 @@ internal fun IssueQrSheet(report: GitHubIssueReport.Report, onShareLog: () -> Un
     }
 }
 
-/** A report for previews and the screenshot gallery: wireless Android Auto on an FYT stereo, the phone did not answer. */
-internal fun previewIssueReport(now: Long = System.currentTimeMillis()): GitHubIssueReport.Report = GitHubIssueReport.build(
-    GitHubIssueReport.Facts(
-        versionName = "1.2.0", versionCode = 10200,
-        device = GitHubIssueReport.Device("FYT", "UIS7862", "ums512", "s9863a", "10", 29, 1280, 720, 1280, 720),
-        session = GitHubIssueReport.Session(com.carlink.core.core.Engine.ANDROID_AUTO, com.carlink.core.core.Transport.WIRELESS,
-            com.carlink.core.settings.WirelessPath.WIFI_DIRECT, "Pixel 8", failed = true,
-            problem = com.carlink.core.core.LinkProblem.PHONE_DID_NOT_ANSWER,
-            reason = com.carlink.core.connection.FailureReason.PHONE_DID_NOT_ANSWER,
-            detail = "no RFCOMM answer within 30000 ms", sessionNumber = 4, atMillis = now - 40_000),
-        problemTitle = "Your phone didn’t answer",
-        problemBody = "Unlock your phone, make sure its Bluetooth is on and connected to this screen, then try again.",
-        carBrand = "Hyundai",
-        stereoBluetooth = GitHubIssueReport.StereoBluetooth("NONE", "signals none; DiAuto: none; module port CLOSED"),
-        log = listOf(
-            com.carlink.app.diagnostics.LogLine(now - 40_000, com.carlink.app.diagnostics.LogSource.CARLINK, null,
-                "Session: ANDROID_AUTO failed on WIFI_DIRECT (PHONE_DID_NOT_ANSWER) #s4"),
-            com.carlink.app.diagnostics.LogLine(now - 41_000, com.carlink.app.diagnostics.LogSource.ANDROID_AUTO, 'E',
-                "RFCOMM connect failed: read failed, socket might closed"),
-            com.carlink.app.diagnostics.LogLine(now - 52_000, com.carlink.app.diagnostics.LogSource.ANDROID_AUTO, 'I',
-                "WIRELESS_TIMING group-created start+1210ms"),
-            com.carlink.app.diagnostics.LogLine(now - 70_000, com.carlink.app.diagnostics.LogSource.CARLINK, null,
-                "Session: wireless paths [WIFI_DIRECT] for Pixel 8 #s4"),
-        ) + previewLog(now - 80_000),
-        secrets = emptyList(),
-        nowMillis = now,
-    ),
-)
+/** A report for previews and the screenshot gallery: wireless Android Auto on an FYT stereo, the phone did not answer; an earlier USB CarPlay session. */
+internal fun previewIssueReport(now: Long = System.currentTimeMillis()): GitHubIssueReport.Report {
+    val aa = com.carlink.app.diagnostics.LogSource.ANDROID_AUTO
+    val cp = com.carlink.app.diagnostics.LogSource.CARPLAY
+    val cl = com.carlink.app.diagnostics.LogSource.CARLINK
+    fun line(age: Long, source: com.carlink.app.diagnostics.LogSource, text: String, level: Char? = null) =
+        com.carlink.app.diagnostics.LogLine(now - age, source, level, text)
+    return GitHubIssueReport.build(
+        GitHubIssueReport.Facts(
+            versionName = "1.2.0", versionCode = 10200,
+            device = GitHubIssueReport.Device("FYT", "UIS7862", "ums512", "s9863a", "10", 29, 1280, 720, 1280, 720, 160),
+            sessions = listOf(
+                GitHubIssueReport.Session(com.carlink.core.core.Engine.ANDROID_AUTO, com.carlink.core.core.Transport.WIRELESS,
+                    com.carlink.core.settings.WirelessPath.WIFI_DIRECT, "Pixel 8", failed = true,
+                    problem = com.carlink.core.core.LinkProblem.PHONE_DID_NOT_ANSWER,
+                    reason = com.carlink.core.connection.FailureReason.PHONE_DID_NOT_ANSWER,
+                    detail = "no RFCOMM answer within 30000 ms", sessionNumber = 4, atMillis = now - 40_000, phoneModel = "Google Pixel 8"),
+                GitHubIssueReport.Session(com.carlink.core.core.Engine.CARPLAY, com.carlink.core.core.Transport.USB, null, "iPhone",
+                    failed = false, detail = "phase Connected", sessionNumber = 2, atMillis = now - 600_000,
+                    phoneModel = "iPhone13,1", phoneOs = "26.5.2"),
+            ),
+            problemTitle = "Your phone didn’t answer",
+            problemBody = "Unlock your phone, make sure its Bluetooth is on and connected to this screen, then try again.",
+            carBrand = "Hyundai",
+            stereoBluetooth = GitHubIssueReport.StereoBluetooth("NONE", "signals none; DiAuto: none; module port CLOSED"),
+            log = listOf(
+                line(40_000, cl, "CarLink: ANDROID_AUTO failed on WIFI_DIRECT (PHONE_DID_NOT_ANSWER) #s4"),
+                line(41_000, aa, "RFCOMM connect failed: read failed, socket might closed", 'E'),
+                line(52_000, aa, "WIRELESS_TIMING group-created start+1210ms"),
+                line(53_000, aa, "WIRELESS_TIMING begin start+0ms"),
+                line(53_500, cl, "CarLink: start ANDROID_AUTO WIRELESS known=true #s4"),
+                line(590_000, cp, "Video: video stats rx=29.8fps shown=29.6fps maxGap=67ms kbps=3789 decode p50=45ms p90=67ms late=0"),
+                line(595_000, cl, "CarLink: CARPLAY connected on USB in 3412 ms #s2"),
+                line(596_000, cp, "WIRED_TIMING first-frame plug+3300ms session+3100ms"),
+                line(598_000, cp, "WIRED_TIMING iphone-found plug+120ms session+0ms"),
+                line(598_400, cl, "CarLink: start CARPLAY USB known=true #s2"),
+            ) + previewLog(now - 600_000),
+            secrets = emptyList(),
+            nowMillis = now,
+            settings = "connection AUTOMATIC; picture AUTOMATIC; Direct video output off; root mode off; overlay granted; " +
+                "VPN consent granted; auto-connect USB on, Bluetooth on, on boot off; car HYUNDAI (GENERIC); UI profile AUTO, scale 1.0",
+            hardware = com.carlink.core.connection.DeviceSignals(2_900, false, 8, listOf("arm64-v8a"), 1_600, "PowerVR Rogue GE8322"),
+        ),
+    )
+}

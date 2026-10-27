@@ -243,13 +243,13 @@ private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
         }
     },
     // Report on GitHub: the confirmation sheet, and the QR code when the stereo has no browser.
-    GalleryEntry("diagnostics", "report-confirm", opensWindow = true, configs = setOf("tablet", "car-landscape")) {
+    GalleryEntry("diagnostics", "report-confirm", opensWindow = true, configs = setOf("tablet", "car-landscape", "phone-portrait")) {
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
-        com.carlink.app.ui.diagnostics.IssueConfirmSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onOpen = {}, onCancel = {})
+        com.carlink.app.ui.diagnostics.IssueConfirmSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onOpen = {}, onCopyLog = {}, onCancel = {})
     },
-    GalleryEntry("diagnostics", "report-qr", opensWindow = true, configs = setOf("tablet", "car-landscape")) {
+    GalleryEntry("diagnostics", "report-qr", opensWindow = true, configs = setOf("tablet", "car-landscape", "phone-portrait")) {
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
-        com.carlink.app.ui.diagnostics.IssueQrSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onShareLog = {}, onDone = {})
+        com.carlink.app.ui.diagnostics.IssueQrSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onShareLog = {}, onCopyLog = {}, onDone = {})
     },
     GalleryEntry("diagnostics", "phones-empty") {
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog(), emptyList()), GalleryDiagnosticsActions)

@@ -149,6 +149,8 @@
     <string name="carlink_diag_log_body">Recent activity from CarPlay, Android Auto and CarLink, newest first. Addresses are hidden.</string>
     <string name="carlink_diag_log_filter_all">All</string>
     <string name="carlink_diag_log_share">Share log</string>
+    <string name="carlink_diag_log_copy">Copy full log</string>
+    <string name="carlink_diag_log_copied">Full log copied. Paste it into the issue on GitHub.</string>
     <string name="carlink_diag_log_share_subject">CarLink connection log</string>
     <string name="carlink_diag_log_share_chooser">Share the connection log</string>
     <string name="carlink_diag_log_loading">Reading the logs…</string>
@@ -185,11 +187,12 @@
     </plurals>
     <string name="carlink_report_public">This opens a public issue that anyone can read. Addresses and passwords are removed.</string>
     <string name="carlink_report_sign_in">The browser must be signed in to GitHub. Sign in once; it stays signed in.</string>
+    <string name="carlink_report_full_log">The issue holds a short part of the log. Tap Copy full log, then paste it into the issue, or attach the file from Share log.</string>
     <string name="carlink_report_open">Open GitHub</string>
     <string name="carlink_report_cancel">Cancel</string>
     <string name="carlink_report_qr_title">Report from your phone</string>
     <string name="carlink_report_qr_body">This screen has no web browser. Scan the code with your phone: it opens the report on GitHub with the version, this screen and the error filled in.</string>
-    <string name="carlink_report_qr_log">The log does not fit in the code. Share log saves it so you can attach it to the issue.</string>
+    <string name="carlink_report_qr_log">The log does not fit in the code: Copy full log or Share log, then add it to the issue.</string>
     <string name="carlink_report_qr_a11y">QR code that opens the problem report on GitHub</string>
     <string name="carlink_report_done">Done</string>
 

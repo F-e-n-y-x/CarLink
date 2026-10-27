@@ -39,7 +39,7 @@ ICONS = {
     # Home and Connecting (DESIGN_SPEC §6.1, §6.2)
     "expand_more": False, "expand_less": False, "pause_circle": False,
     # Diagnostics and About
-    "gavel": False, "groups": False, "description": False, "bug_report": False,
+    "gavel": False, "groups": False, "description": False, "bug_report": False, "content_copy": False,
     # Updates (update/UpdateDialog.kt)
     "system_update": False, "download": False,
     # Steering-wheel buttons (Settings › Car)

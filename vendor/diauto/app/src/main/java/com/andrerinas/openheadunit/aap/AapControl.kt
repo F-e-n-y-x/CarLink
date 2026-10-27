@@ -331,7 +331,7 @@ internal class AapControlService(
 
 
     private fun serviceDiscoveryRequest(request: Control.ServiceDiscoveryRequest): Int {
-        AppLog.i("Service Discovery Request: %s", request.phoneName)
+        AppLog.i("Service Discovery Request: %s brand=%s", request.phoneName, request.phoneBrand) // CarLink: the phone's make and model for issue reports
 
         val msg = ServiceDiscoveryResponse(context)
         aapTransport.send(msg)

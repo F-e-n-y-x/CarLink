@@ -129,13 +129,44 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     val link: StateFlow<LinkState> = session.state.map { it.toLinkState(AirPlayPersistence.loadDirectVideoOutput(app)) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, session.state.value.toLinkState(AirPlayPersistence.loadDirectVideoOutput(app)))
 
-    private val _lastSession = MutableStateFlow(session.state.value.takeIf { it != SessionState.Idle }
-        ?.let { com.carlink.app.diagnostics.LastSession(it, System.currentTimeMillis()) })
-    /** The current or last session of this process (Idle never replaces it): the issue report describes it. */
-    val lastSession: StateFlow<com.carlink.app.diagnostics.LastSession?> = _lastSession.asStateFlow()
+    /** The current or last session of each engine in this process (Idle never replaces one): the issue report describes them. */
+    private val lastSessions = HashMap<Engine, com.carlink.app.diagnostics.LastSession>()
+    fun lastSessions(): Map<Engine, com.carlink.app.diagnostics.LastSession> = HashMap(lastSessions)
 
     /** The car brand's name for the issue report ("Other / Generic" until one is chosen). */
     fun carBrandName(): String? = vehicle.value.let { it.brand ?: it.detected }?.displayName
+
+    /** The phone's model and OS version from the engines' logs, kept for later issue reports. */
+    private fun rememberPhone(request: com.carlink.core.connection.SessionRequest) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        kotlinx.coroutines.delay(5_000) // the engines' files are written a moment after the picture
+        runCatching {
+            val log = com.carlink.app.diagnostics.ConnectionLog.read(app)
+            val start = com.carlink.app.diagnostics.GitHubIssueReport.lastStart(log, request.engine) ?: return@runCatching
+            com.carlink.app.diagnostics.IssueReporter.rememberPhone(app, request.engine, request.phoneName, start.timeMillis, log)
+        }
+    }
+
+    /** One line of the settings that shape a session, for the issue report. */
+    fun reportSettings(): String {
+        val u = _unified.value
+        val c = _connection.value
+        val d = _display.value
+        val v = _vehicle.value
+        fun on(b: Boolean) = if (b) "on" else "off"
+        val overlay = android.os.Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(app)
+        val vpn = runCatching { android.net.VpnService.prepare(app) == null }.getOrDefault(false)
+        return listOf(
+            "connection ${u.connectionMethod}",
+            "picture ${u.picture}",
+            "Direct video output ${on(AirPlayPersistence.loadDirectVideoOutput(app))}",
+            "root mode ${on(c.rootMode)}",
+            "overlay ${if (overlay) "granted" else "not granted"}",
+            "VPN consent ${if (vpn) "granted" else "not granted"}",
+            "auto-connect USB ${on(c.autoConnectUsb)}, Bluetooth ${on(c.autoConnectBluetooth)}, on boot ${on(c.startOnBoot)}",
+            "car ${(v.brand ?: v.detected)?.name ?: "not chosen"} (${v.profile})",
+            "UI profile ${d.uiProfileMode}, scale ${d.interfaceScale}",
+        ).joinToString("; ")
+    }
 
     /** Saved Wi-Fi and hotspot passwords, which the issue report removes wherever they appear. */
     fun savedSecrets(): List<String> = _unified.value.let { listOf(it.carHotspot.password, it.homeWifi.password) } +
@@ -244,7 +275,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         }
         viewModelScope.launch {
             session.state.collect { state ->
-                if (state != SessionState.Idle) _lastSession.value = com.carlink.app.diagnostics.LastSession(state, System.currentTimeMillis())
+                state.engine?.let { lastSessions[it] = com.carlink.app.diagnostics.LastSession(state, System.currentTimeMillis()) }
+                if (state is SessionState.Active && state.phase == SessionState.Phase.Connected) rememberPhone(state.request)
             }
         }
         viewModelScope.launch {

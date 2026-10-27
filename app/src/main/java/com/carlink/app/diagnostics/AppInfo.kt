@@ -23,12 +23,15 @@ object AppInfo {
     val androidRelease: String get() = Build.VERSION.RELEASE.orEmpty()
 
     /** The panel's full size in pixels (not the app window), landscape-first as head units list it. */
+    fun screenPixels(context: Context): Pair<Int, Int> = screenMetrics(context).let { it.widthPixels to it.heightPixels }
+
+    /** The panel's real metrics: full size and the display's density (not the app's scaled resources). */
     @Suppress("DEPRECATION") // getRealMetrics is the API-25-compatible way to read the panel size.
-    fun screenPixels(context: Context): Pair<Int, Int> {
+    fun screenMetrics(context: Context): DisplayMetrics {
         val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
         val metrics = DisplayMetrics()
         if (display != null) display.getRealMetrics(metrics) else metrics.setTo(context.resources.displayMetrics)
-        return metrics.widthPixels to metrics.heightPixels
+        return metrics
     }
 
     /** Where the source of each engine is published; CarLink's own repository is added when public. */

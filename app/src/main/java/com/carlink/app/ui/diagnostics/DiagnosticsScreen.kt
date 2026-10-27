@@ -131,6 +131,7 @@ internal interface DiagnosticsActions {
     fun fix(fix: CheckFix) {}
     fun openSettings(category: SettingsCategory) {}
     fun shareLog() {}
+    fun copyLog() {}
     /** "Report a problem on GitHub" ([rememberReportProblem]). */
     fun reportProblem() {}
     fun back() {}
@@ -198,6 +199,9 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
             override fun shareLog() {
                 scope.launch { shareConnectionLog(context) }
             }
+            override fun copyLog() {
+                scope.launch { copyConnectionLog(context) }
+            }
             override fun reportProblem() = reportProblem()
             override fun back() = onBack()
         }
@@ -257,7 +261,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     if (!checksFirst) ChecksCard(ui.checks, actions)
                 }
                 Spacer(Modifier.width(dimens.gutter * 1.5f))
-                LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::reportProblem,
+                LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::copyLog, actions::reportProblem,
                     Modifier.weight(0.53f).fillMaxHeight().padding(top = 8.dp, bottom = dimens.gutter))
             }
         } else {
@@ -274,7 +278,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     } else {
                         SessionCard(ui); PhonesHealthCard(ui.health); ChecksCard(ui.checks, actions)
                     }
-                    LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::reportProblem, Modifier.fillMaxWidth().height(logHeight))
+                    LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::copyLog, actions::reportProblem, Modifier.fillMaxWidth().height(logHeight))
                 }
             }
         }
@@ -539,8 +543,8 @@ private fun StatusGlyph(status: CheckStatus, size: Dp) {
 // ---- Connection log -----------------------------------------------------------------------
 
 @Composable
-private fun LogPanel(log: List<LogLine>?, filter: LogFilter, onFilter: (LogFilter) -> Unit, onShare: () -> Unit, onReport: () -> Unit,
-                     modifier: Modifier) {
+private fun LogPanel(log: List<LogLine>?, filter: LogFilter, onFilter: (LogFilter) -> Unit, onShare: () -> Unit, onCopy: () -> Unit,
+                     onReport: () -> Unit, modifier: Modifier) {
     val scheme = MaterialTheme.colorScheme
     val shown = remember(log, filter) { log?.let { lines -> filter.source?.let { s -> lines.filter { it.source == s } } ?: lines } }
     GlassCard(modifier, contentPadding = PaddingValues(0.dp)) {
@@ -551,12 +555,13 @@ private fun LogPanel(log: List<LogLine>?, filter: LogFilter, onFilter: (LogFilte
                 Text(stringResource(R.string.carlink_diag_log_body), style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant)
                 Spacer(Modifier.height(if (isCar) 14.dp else 10.dp))
-                // Share log and the GitHub report side by side; they wrap on a narrow pane.
+                // The GitHub report, Share log and Copy full log side by side; they wrap on a narrow pane.
                 androidx.compose.foundation.layout.FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap),
                     verticalArrangement = Arrangement.spacedBy(CarLinkTokens.dimens.targetGap)) {
                     GlassButton(stringResource(R.string.carlink_report_action), onReport, icon = R.drawable.carlink_ic_bug_report)
                     GlassButton(stringResource(R.string.carlink_diag_log_share), onShare, icon = R.drawable.carlink_ic_ios_share)
+                    GlassButton(stringResource(R.string.carlink_diag_log_copy), onCopy, icon = R.drawable.carlink_ic_content_copy)
                 }
                 Spacer(Modifier.height(if (isCar) 18.dp else 12.dp))
             }

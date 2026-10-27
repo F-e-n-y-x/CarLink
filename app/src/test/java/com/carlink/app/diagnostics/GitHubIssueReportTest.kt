@@ -30,7 +30,8 @@ class GitHubIssueReportTest {
         log: List<LogLine> = emptyList(),
         secrets: List<String> = emptyList(),
         title: String? = "Your phone didn’t answer",
-    ) = GitHubIssueReport.Facts("1.2.0", 10200, device, session, title,
+        others: List<GitHubIssueReport.Session> = emptyList(),
+    ) = GitHubIssueReport.Facts("1.2.0", 10200, device, listOfNotNull(session) + others, title,
         "Unlock your phone, make sure its Bluetooth is on and connected to this screen, then try again.",
         "Hyundai", GitHubIssueReport.StereoBluetooth("FYT_MODULE", "signals FYT_SETTING,FYT_SERIAL_PORT; DiAuto: none"),
         log, secrets, now, utc)
@@ -51,8 +52,8 @@ class GitHubIssueReportTest {
             p.keys.toList())
         assertEquals("Android Auto · wireless · couldn't connect: Your phone didn’t answer", p["title"])
         assertEquals("1.2.0 (10200)", p["version"])
-        assertEquals("FYT UIS7862 (hardware ums512, board s9863a), Android 10 (SDK 29), 1280x720 px, 1280x720 dp", p["screen"])
-        assertEquals("Pixel 8 (Android phone; add its iOS or Android version)", p["phone"])
+        assertEquals("FYT UIS7862 (hardware ums512, board s9863a), Android 10 (SDK 29), 1280x720 px at 160 dpi = 1280x720 dp", p["screen"])
+        assertEquals("Pixel 8 (add its Android version)", p["phone"])
         assertEquals("Android Auto", p["projection"])
         assertEquals("Wireless, Wi-Fi Direct (Automatic)", p["connection"])
         assertEquals("Hyundai", p["car_brand"])
@@ -166,7 +167,8 @@ class GitHubIssueReportTest {
         assertTrue("${report.url.length}", report.url.length > GitHubIssueReport.URL_BUDGET - 400)
         val excerpt = params(report.url).getValue("log")
         assertEquals(log.size - report.logLines.size, report.omittedLines)
-        assertTrue(excerpt, excerpt.endsWith("… ${report.omittedLines} more lines in Share log\n```"))
+        assertTrue(excerpt, excerpt.contains("… ${report.omittedLines} more lines in the full log.\nFull log: in CarLink open Settings"))
+        assertTrue(excerpt, excerpt.endsWith("paste or attach it below.\n```"))
         // The session's lines come first and are printed oldest first.
         assertTrue(excerpt.contains("-- last session #s7, CarLink --"))
         val steps = Regex("step (\\d+) of").findAll(excerpt).map { it.groupValues[1].toInt() }.toList()
@@ -222,5 +224,98 @@ class GitHubIssueReportTest {
         )
         assertEquals(2, GitHubIssueReport.sessionTag(log))
         assertEquals(listOf("connected on USB in 3400 ms #s2", "starting #s2"), GitHubIssueReport.sessionLines(log).map { it.text })
+    }
+
+    @Test fun screenShowsTheRealDensity() {
+        assertEquals("A B (hardware h, board b), Android 14 (SDK 34), 1920x1200 px at 240 dpi (panel 320 dpi) = 1280x800 dp",
+            GitHubIssueReport.screen(GitHubIssueReport.Device("A", "B", "h", "b", "14", 34, 1920, 1200, 1280, 800, 240, 320)))
+    }
+
+    @Test fun phoneFieldUsesWhatThePhoneReportedAndNoOwnerNames() {
+        val iphone = GitHubIssueReport.Session(Engine.CARPLAY, Transport.USB, null, "iPhone", failed = false)
+        assertEquals("iPhone (add its model and iOS version)", GitHubIssueReport.phone(iphone))
+        assertEquals("iPhone13,1, iOS 26.5.2", GitHubIssueReport.phone(iphone.copy(phoneModel = "iPhone13,1", phoneOs = "26.5.2")))
+        val android = GitHubIssueReport.Session(Engine.ANDROID_AUTO, Transport.WIRELESS, null, "Ayush's S25 Ultra", failed = false)
+        assertEquals("S25 Ultra (add its Android version)", GitHubIssueReport.phone(android))
+        assertEquals("samsung SM-S928B (add its Android version)", GitHubIssueReport.phone(android.copy(phoneModel = "samsung SM-S928B")))
+        assertEquals("iPhone", GitHubIssueReport.phoneLabel("iPhone de Carlos"))
+        assertEquals("iPhone", GitHubIssueReport.phoneLabel("Carlos’ iPhone"))
+        assertEquals("BT4652", GitHubIssueReport.phoneLabel("BT4652"))
+        assertNull(GitHubIssueReport.phoneLabel("  "))
+    }
+
+    @Test fun readsThePhonesModelAndVersionFromTheEngineLogs() {
+        val log = listOf(
+            line(1_000, LogSource.CARPLAY, "Phone display peer model=iPhone13,1 ios=26.5.2 airplay=950.7.1"),
+            line(2_000, LogSource.ANDROID_AUTO, "AapControl.serviceDiscoveryRequest | Service Discovery Request: Android brand=Ayush's Pixel 8"),
+            line(9_000, LogSource.CARPLAY, "Phone display peer model=not_reported ios=not_reported airplay=1"),
+        )
+        assertEquals("iPhone13,1" to "26.5.2", GitHubIssueReport.phoneFromLog(log, Engine.CARPLAY, now - 5_000))
+        assertEquals("Pixel 8" to null, GitHubIssueReport.phoneFromLog(log, Engine.ANDROID_AUTO, now - 5_000))
+        // Before the session started, or nothing reported: unknown.
+        assertNull(GitHubIssueReport.phoneFromLog(log, Engine.CARPLAY, now - 500))
+        assertNull(GitHubIssueReport.phoneFromLog(log.drop(2), Engine.CARPLAY, 0))
+    }
+
+    @Test fun collapsesRepeatedLines() {
+        val log = listOf(
+            line(1_000, LogSource.CARLINK, "Switcher: show=false"),
+            line(2_000, LogSource.CARLINK, "Switcher: show=true"),
+            line(3_000, LogSource.CARLINK, "Switcher: show=false"),
+            line(4_000, LogSource.CARPLAY, "Switcher: show=false"),
+            line(5_000, LogSource.CARLINK, "Switcher: show=false"),
+        )
+        val groups = GitHubIssueReport.collapse(log)
+        assertEquals(listOf(3, 1, 1), groups.map { it.lines.size })
+        assertEquals("03:46:39.000 CL - Switcher: show=false ×3 (03:46:35–03:46:39)",
+            GitHubIssueReport.format(groups[0], emptyList(), utc))
+        val excerpt = GitHubIssueReport.logExcerpt(facts(log = log), 100_000)
+        assertEquals(3, excerpt.lines.size)
+        assertEquals(0, excerpt.omitted)
+    }
+
+    @Test fun timelineOfEachEnginesLastSession() {
+        val log = listOf(
+            line(1_000, LogSource.CARLINK, "CarLink: start CARPLAY USB known=true #s9"),
+            line(2_000, LogSource.ANDROID_AUTO, "WIRELESS_TIMING first-frame start+4100ms"),
+            line(3_000, LogSource.CARLINK, "CarLink: ANDROID_AUTO connected on WIFI_DIRECT in 4300 ms #s8"),
+            line(4_000, LogSource.CARPLAY, "WIRED_TIMING iphone-found plug+100ms session+0ms"),
+            line(6_000, LogSource.ANDROID_AUTO, "WIRELESS_TIMING group-created start+900ms"),
+            line(7_000, LogSource.CARLINK, "CarLink: start ANDROID_AUTO WIRELESS known=true #s8"),
+            line(8_000, LogSource.CARLINK, "CarLink: start ANDROID_AUTO USB known=true #s7"),
+        )
+        assertEquals("start ANDROID_AUTO WIRELESS known=true +0ms · group-created +1000ms · " +
+            "ANDROID_AUTO connected on WIFI_DIRECT in 4300 ms +4000ms · first-frame +5000ms",
+            GitHubIssueReport.timeline(log, Engine.ANDROID_AUTO))
+        // The CarPlay session started later: only its own line; the earlier CarPlay milestone is not part of it.
+        assertEquals("start CARPLAY USB known=true +0ms", GitHubIssueReport.timeline(log, Engine.CARPLAY))
+        assertNull(GitHubIssueReport.timeline(emptyList(), Engine.CARPLAY))
+    }
+
+    @Test fun labelsEachEnginesSessionAndKeepsThePromptWithinBudget() {
+        val carPlay = GitHubIssueReport.Session(Engine.CARPLAY, Transport.USB, null, "iPhone", failed = false, detail = "phase Connected",
+            sessionNumber = 3, atMillis = now - 3_600_000, phoneModel = "iPhone13,1", phoneOs = "26.5.2")
+        val f = facts(others = listOf(carPlay)).copy(settings = "connection AUTOMATIC; overlay granted",
+            hardware = com.carlink.core.connection.DeviceSignals(2_900, true, 8, listOf("arm64-v8a"), 1_500, "Mali-G52"),
+            log = listOf(line(1_000, LogSource.ANDROID_AUTO,
+                "VideoDecoder.logThroughput | Throughput over 5003ms: rendered=279 (55fps), dropped=0, codec=c2.qti.hevc.decoder")))
+        val what = GitHubIssueReport.whatHappened(f, short = false)
+        assertTrue(what, what.contains("Session #s7 · Android Auto · WIRELESS WIFI_DIRECT · failed · 2025-10-15 03:46:20 +0000 (the form's dropdowns describe this one)"))
+        assertTrue(what, what.contains("Session #s3 · CarPlay · USB · no failure · 2025-10-15 02:46:40 +0000\n- Phone: iPhone13,1, OS 26.5.2"))
+        assertTrue(what, what.contains("Settings: connection AUTOMATIC; overlay granted"))
+        assertTrue(what, what.contains("- Hardware: RAM 2900 MB (low-RAM device), 8 CPU cores up to 1500 MHz, GPU Mali-G52"))
+        assertTrue(what, what.contains("- AA 03:46:39 Throughput over 5003ms: rendered=279 (55fps)"))
+        assertTrue(what, what.endsWith("What I did and what I expected:"))
+        // A tight budget drops the other session and the performance block first, never the prompt.
+        val budget = GitHubIssueReport.encode(what).length - GitHubIssueReport.encode(what.substringAfter("Performance:")).length
+        val tight = GitHubIssueReport.whatHappened(f, short = false, budget = budget)
+        assertFalse(tight, tight.contains("#s3") || tight.contains("Performance"))
+        assertTrue(tight, tight.contains("#s7") && tight.endsWith("What I did and what I expected:"))
+    }
+
+    @Test fun removesSerialsAndOwnerNames() {
+        assertEquals("Bluetooth: S25 Ultra connected, serial=[hidden]",
+            GitHubIssueReport.clean("Bluetooth: Ayush's S25 Ultra connected, serial=R5CT12345", emptyList()))
+        assertEquals("CarLink's own log", GitHubIssueReport.clean("CarLink's own log", emptyList()))
     }
 }

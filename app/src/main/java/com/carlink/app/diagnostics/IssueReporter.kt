@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.DisplayMetrics
 import com.carlink.app.R
 import com.carlink.app.ui.home.failureCopyRes
+import com.carlink.core.connection.DeviceCapabilities
 import com.carlink.core.connection.FailureReason
 import com.carlink.core.connection.PhoneHealth
 import com.carlink.core.connection.SessionState
@@ -27,18 +29,24 @@ object IssueReporter {
 
     /** Everything the report needs from the screens' state. */
     class Inputs(
-        val lastSession: LastSession?,
+        /** This process's last session of each engine. */
+        val lastSessions: Map<Engine, LastSession>,
         val health: List<PhoneHealth>,
         val carBrand: String?,
         val secrets: List<String>,
+        /** One line of the settings that shape a session ([GitHubIssueReport.Facts.settings]). */
+        val settings: String? = null,
     )
 
     /** Builds the report. Reads the logs and waits for the Bluetooth probe: call off the main thread. */
     fun build(context: Context, inputs: Inputs): GitHubIssueReport.Report {
         val log = runCatching { ConnectionLog.read(context) }.getOrDefault(emptyList())
-        val session = session(inputs.lastSession, inputs.health)?.let { s ->
-            if (inputs.lastSession != null) s.copy(sessionNumber = GitHubIssueReport.sessionTag(log)) else s
+        val sessions = sessions(inputs.lastSessions, inputs.health).map { s ->
+            val start = s.engine?.let { GitHubIssueReport.lastStart(log, it) }
+            val numbered = if (s.sessionNumber == null && start != null) s.copy(sessionNumber = GitHubIssueReport.sessionNumber(start)) else s
+            withPhone(context, numbered, log, start?.timeMillis)
         }
+        val session = sessions.firstOrNull()
         val (titleRes, bodyRes) = failureCopyRes(session?.problem)
         val engineName = session?.engine?.let {
             context.getString(if (it == Engine.CARPLAY) R.string.carlink_engine_carplay else R.string.carlink_engine_android_auto)
@@ -48,7 +56,7 @@ object IssueReporter {
             versionName = AppInfo.versionName,
             versionCode = AppInfo.versionCode,
             device = device(context),
-            session = session,
+            sessions = sessions,
             problemTitle = if (session?.failed == true) context.getString(titleRes,
                 context.getString(R.string.carlink_home_error_pairing_lost_phone)) else null,
             problemBody = if (session?.failed == true) context.getString(bodyRes, engineName) else null,
@@ -64,24 +72,58 @@ object IssueReporter {
             log = log,
             secrets = inputs.secrets,
             nowMillis = System.currentTimeMillis(),
+            settings = inputs.settings,
+            hardware = runCatching { DeviceCapabilities.signals(context) }.getOrNull(),
         )
         return GitHubIssueReport.build(facts)
     }
 
-    /** The session the report describes: this process's last one, else the last problem in a phone's record. */
-    fun session(last: LastSession?, health: List<PhoneHealth>): GitHubIssueReport.Session? {
-        when (val state = last?.state) {
-            is SessionState.Failed -> return GitHubIssueReport.Session(state.request.engine, state.request.transport, state.path,
-                state.request.phoneName, failed = true, problem = state.reason.toLinkProblem(), reason = state.reason,
-                detail = state.detail, atMillis = last.atMillis)
-            is SessionState.Blocked -> return GitHubIssueReport.Session(state.request.engine, state.request.transport, null,
-                state.request.phoneName, failed = true, problem = state.problems.firstOrNull()?.toLinkProblem(),
-                detail = "blocked: " + state.problems.joinToString(","), atMillis = last.atMillis)
-            is SessionState.Active -> return GitHubIssueReport.Session(state.request.engine, state.request.transport, state.path,
-                state.request.phoneName, failed = false, detail = "phase ${state.phase}", atMillis = last.atMillis)
-            SessionState.Idle, null -> Unit
-        }
-        val phone = health.firstOrNull() ?: return null
+    // ---- The phone's model and OS version, remembered per phone ----------------------------
+
+    private const val PHONES = "carlink_reported_phones"
+
+    private fun phoneKey(engine: Engine, phoneName: String?) = "${engine.name}|${GitHubIssueReport.phoneLabel(phoneName) ?: ""}"
+
+    /**
+     * Saves what the phone of [engine] reported about itself since [sinceMillis] (the engines log it
+     * while connecting), under its name; call off the main thread once a session is connected.
+     */
+    fun rememberPhone(context: Context, engine: Engine, phoneName: String?, sinceMillis: Long, log: List<LogLine>? = null) {
+        val (model, os) = GitHubIssueReport.phoneFromLog(log ?: ConnectionLog.read(context), engine, sinceMillis) ?: return
+        context.getSharedPreferences(PHONES, Context.MODE_PRIVATE).edit()
+            .putString(phoneKey(engine, phoneName), "${model.orEmpty()}\t${os.orEmpty()}").apply()
+    }
+
+    /** [s] with the phone's model and OS: from this log when the phone said it since [sinceMillis], else as last remembered. */
+    private fun withPhone(context: Context, s: GitHubIssueReport.Session, log: List<LogLine>, sinceMillis: Long?): GitHubIssueReport.Session {
+        val engine = s.engine ?: return s
+        if (sinceMillis != null) runCatching { rememberPhone(context, engine, s.phoneName, sinceMillis, log) }
+        val saved = context.getSharedPreferences(PHONES, Context.MODE_PRIVATE).getString(phoneKey(engine, s.phoneName), null)
+            ?.split('\t') ?: return s
+        return s.copy(phoneModel = saved.getOrNull(0)?.ifEmpty { null }, phoneOs = saved.getOrNull(1)?.ifEmpty { null })
+    }
+
+    /**
+     * The sessions the report describes, newest first: this process's last session of each engine,
+     * else the last problem in that engine's newest phone record.
+     */
+    fun sessions(last: Map<Engine, LastSession>, health: List<PhoneHealth>): List<GitHubIssueReport.Session> =
+        Engine.entries.mapNotNull { engine -> last[engine]?.let(::session) ?: health.firstOrNull { it.engine == engine }?.let(::session) }
+            .sortedByDescending { it.atMillis ?: 0L }
+
+    fun session(last: LastSession): GitHubIssueReport.Session? = when (val state = last.state) {
+        is SessionState.Failed -> GitHubIssueReport.Session(state.request.engine, state.request.transport, state.path,
+            state.request.phoneName, failed = true, problem = state.reason.toLinkProblem(), reason = state.reason,
+            detail = state.detail, atMillis = last.atMillis)
+        is SessionState.Blocked -> GitHubIssueReport.Session(state.request.engine, state.request.transport, null,
+            state.request.phoneName, failed = true, problem = state.problems.firstOrNull()?.toLinkProblem(),
+            detail = "blocked: " + state.problems.joinToString(","), atMillis = last.atMillis)
+        is SessionState.Active -> GitHubIssueReport.Session(state.request.engine, state.request.transport, state.path,
+            state.request.phoneName, failed = false, detail = "phase ${state.phase}", atMillis = last.atMillis)
+        SessionState.Idle -> null
+    }
+
+    fun session(phone: PhoneHealth): GitHubIssueReport.Session {
         val problem = phone.lastProblems.maxByOrNull { it.atMillis }
         val path = problem?.path ?: phone.bestPath
         return GitHubIssueReport.Session(
@@ -96,11 +138,16 @@ object IssueReporter {
         )
     }
 
+    /** The whole panel at the display's density, with the panel's own density when `wm density` overrides it. */
+    @Suppress("DEPRECATION")
     fun device(context: Context): GitHubIssueReport.Device {
-        val (w, h) = AppInfo.screenPixels(context)
-        val density = context.resources.displayMetrics.density.takeIf { it > 0f } ?: 1f
+        val m = AppInfo.screenMetrics(context)
+        val density = m.density.takeIf { it > 0f } ?: 1f
+        val stable = DisplayMetrics.DENSITY_DEVICE_STABLE
         return GitHubIssueReport.Device(AppInfo.manufacturer, AppInfo.model, Build.HARDWARE.orEmpty(), Build.BOARD.orEmpty(),
-            AppInfo.androidRelease, Build.VERSION.SDK_INT, w, h, (w / density).toInt(), (h / density).toInt())
+            AppInfo.androidRelease, Build.VERSION.SDK_INT, m.widthPixels, m.heightPixels,
+            Math.round(m.widthPixels / density), Math.round(m.heightPixels / density), m.densityDpi,
+            stable.takeIf { it != m.densityDpi } ?: 0)
     }
 
     private fun viewIntent(url: String) = Intent(Intent.ACTION_VIEW, Uri.parse(url))
