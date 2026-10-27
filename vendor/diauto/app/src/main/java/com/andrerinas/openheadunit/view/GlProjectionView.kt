@@ -427,8 +427,9 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
             }
             for (y in 0 until height) {
                 val rowStart = y * sourceStride
-                duplicate.position(rowStart)
+                // CarLink (open-headunit e929ef51): limit first; a padded row starts past the old limit.
                 duplicate.limit(rowStart + width)
+                duplicate.position(rowStart)
                 dest.put(duplicate)
             }
             dest.position(0)
@@ -559,6 +560,9 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
             AppLog.i("GlProjectionView: YUV handles pos=$yuvPositionHandle tex=$yuvTextureHandle mvp=$yuvMVPMatrixHandle st=$yuvSTMatrixHandle y=$yTextureHandle u=$uTextureHandle v=$vTextureHandle")
 
             GLES20.glGenTextures(3, yuvTextureIds, 0)
+            // CarLink (open-headunit e929ef51): storage belongs to these new textures, not the lost context.
+            uploadedPlaneWidths.fill(0)
+            uploadedPlaneHeights.fill(0)
             for (id in yuvTextureIds) {
                 GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, id)
                 GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
