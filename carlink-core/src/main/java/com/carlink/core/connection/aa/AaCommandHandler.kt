@@ -199,7 +199,9 @@ internal class AaCommandHandler(
         }
         Log.i(TAG, "stale accessory re-switch result=$result")
         emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))
-        if (result == "reset=true") switchAfterReset()
+        // A failed reset does not prove the phone stayed put: it may still drop off and come back,
+        // and nobody else switches it (open-headunit 1acf3792). Look at the bus either way.
+        if (result.startsWith("reset=")) switchAfterReset()
     }
 
     /**
@@ -210,6 +212,11 @@ internal class AaCommandHandler(
      */
     private fun switchAfterReset() {
         waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }
+        // A phone that left the bus is still re-enumerating: wait for it instead of giving up
+        // (open-headunit 1acf3792 waits 5 s for the detach, then 10 s for the return).
+        if (engine.accessoryDevice() == null && engine.plainAndroidPhone() == null) {
+            waitUntil(REATTACH_MILLIS) { engine.plainAndroidPhone() != null || engine.accessoryDevice() != null }
+        }
         val phone = engine.plainAndroidPhone() ?: engine.accessoryDevice()
         if (phone == null) {
             Log.w(TAG, "the phone did not come back after the USB reset")
@@ -351,6 +358,7 @@ internal class AaCommandHandler(
         const val RETRY_SWITCH_MILLIS = 700L
         const val STALE_ACCESSORY_MILLIS = 3_000L
         const val RESET_RETURN_MILLIS = 2_000L
+        const val REATTACH_MILLIS = 10_000L
         const val FRONT_MILLIS = 3_000L
     }
 }

@@ -82,15 +82,19 @@ class AaCommandHandlerTest {
             resets++
             plainPhone = phoneAfterReset
             if (phoneAfterReset != null) accessory = false // back in its normal USB mode
-            return true
+            offBusUntil = clock + offBusAfterReset
+            return resetWorks
         }
+        var resetWorks = true
+        var offBusAfterReset = 0L
+        private var offBusUntil = 0L
         var plainPhone: UsbDevice? = null
         var phoneAfterReset: UsbDevice? = null
-        override fun plainAndroidPhone() = plainPhone
+        override fun plainAndroidPhone() = plainPhone?.takeIf { clock >= offBusUntil }
         override fun deviceName(device: UsbDevice) = "Pixel"
         override fun currentDevice(previous: UsbDevice): UsbDevice? = previous
         var accessoryOnBus: UsbDevice? = null
-        override fun accessoryDevice(): UsbDevice? = accessoryOnBus
+        override fun accessoryDevice(): UsbDevice? = accessoryOnBus?.takeIf { clock >= offBusUntil }
         var usbOnly: Boolean? = null
         override fun setUsbOnlySession(usbOnly: Boolean) { this.usbOnly = usbOnly }
         override fun sleep(millis: Long) { clock += millis }
@@ -263,6 +267,19 @@ class AaCommandHandlerTest {
         handler.reswitchStaleAccessory()
         assertEquals(1, engine.resets)
         assertEquals(1, engine.switched)
+    }
+
+    @Test fun aPhoneSlowToReturnOrAFailedResetIsStillSwitched() { // open-headunit 1acf3792
+        engine.accessoryOnBus = device()
+        engine.phoneAfterReset = device()
+        engine.offBusAfterReset = 6_000L // longer than the first 2 s look
+        handler.reswitchStaleAccessory()
+        assertEquals(1, engine.switched)
+        engine.resetWorks = false
+        engine.offBusAfterReset = 0L
+        handler.reswitchStaleAccessory()
+        assertTrue(events.any { it.second == "result=reset=false;device=Pixel" })
+        assertEquals(2, engine.switched)
     }
 
     @Test fun aPermissionTheSystemGrantedWhileSettlingIsNotAskedAgain() {
