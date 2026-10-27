@@ -101,6 +101,8 @@ import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.BluetoothAvailability
 import com.carlink.core.detect.PairedPhone
+import com.carlink.core.detect.StereoBluetooth
+import com.carlink.core.connection.DeviceEnvironment
 import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
@@ -108,18 +110,23 @@ import com.carlink.core.settings.isValid
 
 /** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
 internal enum class HomeMode {
-    PERMISSION, BLUETOOTH_OFF, READY_EMPTY, READY_PHONE, CONNECTING,
+    PERMISSION, BLUETOOTH_OFF, READY_EMPTY, READY_PHONE,
+    /** Idle on a stereo where wireless cannot start for this phone (external Bluetooth module): the cable is the way. */
+    CABLE_ONLY,
+    CONNECTING,
     /** A wireless attempt the phone has not answered for a while: calm, caution, nothing animates. */
     NOT_ANSWERING,
     CONNECTED, FAILED,
 }
 
-internal fun homeMode(home: HomeState, permissionsNeeded: Boolean): HomeMode = when {
+internal fun homeMode(home: HomeState, permissionsNeeded: Boolean, cableOnly: Boolean = false): HomeMode = when {
     home.link.stage == LinkStage.CONNECTED -> HomeMode.CONNECTED
     phoneSilent(home.link) -> HomeMode.NOT_ANSWERING
     home.link.stage == LinkStage.WAITING || home.link.stage == LinkStage.CONNECTING -> HomeMode.CONNECTING
     home.link.stage == LinkStage.FAILED -> HomeMode.FAILED
     permissionsNeeded -> HomeMode.PERMISSION
+    // Before "Bluetooth is off" and "Pair a phone": neither helps when apps cannot use this stereo's Bluetooth.
+    cableOnly -> HomeMode.CABLE_ONLY
     home.bluetooth == BluetoothAvailability.OFF -> HomeMode.BLUETOOTH_OFF
     home.defaultPhone != null -> HomeMode.READY_PHONE
     else -> HomeMode.READY_EMPTY
@@ -138,7 +145,16 @@ internal data class HomeUi(
     val permissionsNeeded: Boolean,
     /** How the default phone usually connects (from its connection record), or null before it has one. */
     val usual: PhoneUsual? = null,
-)
+    /** What this stereo's Bluetooth is (null until the probe finished). */
+    val stereo: StereoBluetooth? = null,
+) {
+    /**
+     * Wireless cannot start for the default phone's engine here (for either engine when no phone is
+     * known), so Home offers the cable instead of a Connect that can only fail.
+     */
+    val cableOnly: Boolean get() = stereo != null && (home.defaultPhone?.kind?.engine?.let(::listOf) ?: Engine.entries)
+        .all { DeviceEnvironment.wirelessBlocked(stereo, connection.wirelessOnExternalBluetooth, it) }
+}
 
 internal interface HomeActions {
     fun requestPermissions() {}
@@ -171,6 +187,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val network by vm.network.collectAsStateWithLifecycle()
     val permissionsNeeded by vm.permissionsNeeded.collectAsStateWithLifecycle()
     val usual by vm.usual.collectAsStateWithLifecycle()
+    val stereo by vm.stereoBluetooth.collectAsStateWithLifecycle()
     val fixProblem = rememberProblemFix(vm)
     val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
     val actions = remember(vm) {
@@ -194,7 +211,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun turnOnDirectVideo() = vm.turnOnDirectVideo()
         }
     }
-    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual), actions)
+    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -276,7 +293,7 @@ private fun CableHelpDialog(onDismiss: () -> Unit) {
 @Composable
 private fun modeColor(mode: HomeMode): Color = when (mode) {
     HomeMode.CONNECTED -> CarLinkTokens.colors.success
-    HomeMode.CONNECTING, HomeMode.READY_PHONE -> MaterialTheme.colorScheme.primary
+    HomeMode.CONNECTING, HomeMode.READY_PHONE, HomeMode.CABLE_ONLY -> MaterialTheme.colorScheme.primary
     HomeMode.FAILED -> MaterialTheme.colorScheme.error
     HomeMode.PERMISSION, HomeMode.BLUETOOTH_OFF, HomeMode.NOT_ANSWERING -> CarLinkTokens.colors.warning
     HomeMode.READY_EMPTY -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -301,7 +318,7 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
 
 @Composable
 private fun HomeStageScreen(ui: HomeUi, actions: HomeActions, onPhones: () -> Unit, onNetwork: () -> Unit) {
-    val mode = homeMode(ui.home, ui.permissionsNeeded)
+    val mode = homeMode(ui.home, ui.permissionsNeeded, ui.cableOnly)
     val layout = CarLinkTokens.layout
     val dimens = CarLinkTokens.dimens
     val car = CarLinkTokens.profile == UiProfile.CAR
@@ -422,6 +439,8 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                         HomeMode.READY_EMPTY, HomeMode.PERMISSION -> CarLinkMark(Modifier.size(glyph))
                         HomeMode.BLUETOOTH_OFF -> Icon(painterResource(R.drawable.carlink_ic_bluetooth_disabled), null,
                             Modifier.size(glyph), tint = colors.warning)
+                        HomeMode.CABLE_ONLY -> Icon(painterResource(R.drawable.carlink_ic_usb), null, Modifier.size(glyph),
+                            tint = scheme.onSurface)
                         HomeMode.READY_PHONE, HomeMode.CONNECTING, HomeMode.NOT_ANSWERING -> Icon(painterResource(phoneIcon(kind)),
                             null, Modifier.size(glyph), tint = when (state) {
                                 HomeMode.CONNECTING -> scheme.primary
@@ -516,6 +535,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         HomeMode.PERMISSION -> stringResource(R.string.carlink_home_permission_title) to stringResource(R.string.carlink_home_permission_body)
         HomeMode.BLUETOOTH_OFF -> stringResource(R.string.carlink_home_bt_off_title) to stringResource(R.string.carlink_home_bt_off_body)
         HomeMode.READY_EMPTY -> stringResource(R.string.carlink_home_ready_title) to stringResource(R.string.carlink_home_ready_body)
+        HomeMode.CABLE_ONLY -> stringResource(R.string.carlink_home_cable_only_title) to stringResource(R.string.carlink_home_cable_only_body)
         HomeMode.READY_PHONE -> stringResource(R.string.carlink_home_ready_phone_title, phoneName) to
             stringResource(R.string.carlink_home_ready_phone_body, phone?.kind?.engine?.let { engineName(it) } ?: "",
                 pathName(ui.network?.path, Transport.WIRELESS))
@@ -607,6 +627,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 icon = R.drawable.carlink_ic_bluetooth)
             HomeMode.READY_EMPTY -> GlassButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
                 icon = R.drawable.carlink_ic_bluetooth)
+            HomeMode.CABLE_ONLY -> {
+                var cableHelp by rememberSaveable { mutableStateOf(false) }
+                IonButton(stringResource(R.string.carlink_home_how_to_connect), { cableHelp = true }, icon = R.drawable.carlink_ic_usb)
+                if (cableHelp) CableHelpDialog { cableHelp = false }
+            }
             HomeMode.READY_PHONE -> phone?.let {
                 IonButton(stringResource(R.string.carlink_home_connect), { actions.connect(it) }, icon = R.drawable.carlink_ic_link)
             }
