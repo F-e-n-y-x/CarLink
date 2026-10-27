@@ -27,7 +27,7 @@ class CarPlayLinkWatch {
 
     private var wifiConfigAt: Long? = null
     private var startAt: Long? = null
-    private var associated = false
+    private var associatedAt: Long? = null
     private var leasedAt: Long? = null
     private var tcp = false
     private var connected = false
@@ -37,7 +37,7 @@ class CarPlayLinkWatch {
 
     /** A new bring-up (DiPlay restarts inside the session, or a new attempt): forget everything. */
     fun reset() {
-        wifiConfigAt = null; startAt = null; associated = false; leasedAt = null
+        wifiConfigAt = null; startAt = null; associatedAt = null; leasedAt = null
         tcp = false; connected = false; hadClient = false; goneSince = null; reported = false
     }
 
@@ -45,7 +45,7 @@ class CarPlayLinkWatch {
         when (phase) {
             Phase.WIFI_CONFIG -> if (wifiConfigAt == null) wifiConfigAt = now
             Phase.START_SESSION -> if (startAt == null) startAt = now
-            Phase.PEER_ASSOCIATED -> associated = true
+            Phase.PEER_ASSOCIATED -> if (associatedAt == null) associatedAt = now
             Phase.TCP_ACCEPTED -> tcp = true
             else -> Unit
         }
@@ -61,7 +61,7 @@ class CarPlayLinkWatch {
     fun onClients(clients: Int, leased: Int, now: Long) {
         if (clients > 0) {
             hadClient = true
-            associated = true
+            if (associatedAt == null) associatedAt = now
             goneSince = null
         } else if (hadClient && goneSince == null) goneSince = now
         if (leased > 0 && leasedAt == null) leasedAt = now
@@ -77,10 +77,14 @@ class CarPlayLinkWatch {
                 val config = wifiConfigAt
                 val start = startAt
                 val leased = leasedAt
+                val joined = associatedAt
                 when {
                     config == null -> null
-                    start == null -> Verdict.NO_START_REQUEST.takeIf { now - config >= NO_START_MILLIS }
-                    !associated -> Verdict.NOT_JOINED.takeIf { now - config >= NOT_JOINED_MILLIS }
+                    joined == null -> Verdict.NOT_JOINED.takeIf { now - config >= NOT_JOINED_MILLIS }
+                    // Counted from the join: the first join of a network the iPhone has never seen
+                    // took 3.9 s and the start request followed it (Galaxy Tab, 2026-10-27 20:03:21);
+                    // counting from the Wi-Fi details cut that attempt 0.5 s after the join.
+                    start == null -> Verdict.NO_START_REQUEST.takeIf { now - joined >= NO_START_MILLIS }
                     leased != null -> Verdict.NO_TCP.takeIf { now - maxOf(start, leased) >= NO_TCP_MILLIS }
                     else -> null
                 }
@@ -91,12 +95,15 @@ class CarPlayLinkWatch {
     }
 
     companion object {
-        /** StartSession comes ≤ 0.25 s after the Wi-Fi details on every good start. */
+        /** StartSession comes ≤ 0.25 s after the Wi-Fi details on every good start; counted from the join. */
         const val NO_START_MILLIS = 4_000L
         /** Association took ≤ 5.1 s after the Wi-Fi details (a never-seen network: 3.3 s). */
         const val NOT_JOINED_MILLIS = 9_000L
-        /** TCP came ≤ 2.8 s after the lease; the 14.7 s outlier (2026-10-09) was a missing lease, not this. */
-        const val NO_TCP_MILLIS = 5_000L
+        /**
+         * TCP came ≤ 2.8 s after the lease on a known network; a never-seen one needs longer (5 s cut
+         * a first join on the Galaxy Tab, 2026-10-27 20:03:35, whose retry then worked).
+         */
+        const val NO_TCP_MILLIS = 8_000L
         /** A roam or a radio hiccup rejoins within this; an iPhone that turned Wi-Fi off does not. */
         const val PHONE_GONE_MILLIS = 2_000L
         /** How often the adapter asks for a [verdict]. */

@@ -191,10 +191,11 @@ class CarPlayAdapterTest {
     private val directPlan = wirelessPlan.copy(path = WirelessPath.WIFI_DIRECT)
     private fun advance(ms: Long) = shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(ms))
 
-    @Test fun aStartWithoutStartSessionIsReportedStuckWithinFourSeconds() {
+    @Test fun aJoinedIphoneWithoutStartSessionIsReportedStuckWithinFourSeconds() {
         adapter.start(directPlan) { events += it }; idle()
         assertTrue(hooks.wifiHeld)
-        hooks.milestones!!(WirelessStartupTimeline.Phase.WIFI_CONFIG); idle()
+        hooks.milestones!!(WirelessStartupTimeline.Phase.WIFI_CONFIG)
+        hooks.milestones!!(WirelessStartupTimeline.Phase.PEER_ASSOCIATED); idle()
         advance(4_600)
         assertEquals(AdapterEvent.Stalled::class, events.last()::class)
         assertEquals(FailureReason.PHONE_NEVER_REACHED_CAR, (events.last() as AdapterEvent.Stalled).reason)

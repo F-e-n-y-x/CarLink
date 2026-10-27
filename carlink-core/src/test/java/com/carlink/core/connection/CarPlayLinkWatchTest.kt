@@ -16,21 +16,29 @@ class CarPlayLinkWatchTest {
         for (t in 3_000L..60_000L step 500) assertNull(w.verdict(t))
     }
 
-    @Test fun noStartSessionAfterTheWifiDetailsIsCaughtInFourSeconds() { // #s5 02:31:34
+    @Test fun noStartSessionIsCaughtFourSecondsAfterTheJoin() { // #s5 02:31:34
         w.onMilestone(Phase.WIFI_CONFIG, 1_381)
         w.onClients(1, 0, 4_663)
-        assertNull(w.verdict(5_000))
-        assertEquals(Verdict.NO_START_REQUEST, w.verdict(5_381))
-        assertNull(w.verdict(9_000)) // once per bring-up
+        assertNull(w.verdict(8_000))
+        assertEquals(Verdict.NO_START_REQUEST, w.verdict(8_663))
+        assertNull(w.verdict(12_000)) // once per bring-up
     }
 
-    @Test fun aLeaseWithoutTcpIsCaughtFiveSecondsAfterTheLease() { // #s5 02:31:56
+    @Test fun aSlowFirstJoinIsNotCutJustAfterIt() { // Galaxy Tab 2026-10-27 20:03:12, first try
+        w.onMilestone(Phase.WIFI_CONFIG, 4_619)
+        w.onMilestone(Phase.PEER_ASSOCIATED, 8_533)
+        assertNull(w.verdict(9_100)) // the old count from the details fired here, 0.5 s after the join
+        w.onMilestone(Phase.START_SESSION, 9_500); w.onClients(1, 1, 9_800); w.onMilestone(Phase.TCP_ACCEPTED, 12_000)
+        for (t in 12_500L..30_000L step 500) assertNull(w.verdict(t))
+    }
+
+    @Test fun aLeaseWithoutTcpIsCaughtEightSecondsAfterTheLease() { // #s5 02:31:56
         w.onMilestone(Phase.WIFI_CONFIG, 1_330); w.onMilestone(Phase.START_SESSION, 1_412)
         w.onClients(1, 0, 2_212)
         assertNull(w.verdict(6_000)) // no lease yet: the generic deadline's case (a missed DHCP)
         w.onClients(1, 1, 2_330)
-        assertNull(w.verdict(7_000))
-        assertEquals(Verdict.NO_TCP, w.verdict(7_330))
+        assertNull(w.verdict(10_000))
+        assertEquals(Verdict.NO_TCP, w.verdict(10_330))
     }
 
     @Test fun anIphoneThatNeverJoinsHasItsWifiOff() {
@@ -54,10 +62,10 @@ class CarPlayLinkWatchTest {
 
     @Test fun resetStartsOver() {
         w.onMilestone(Phase.WIFI_CONFIG, 0)
-        assertEquals(Verdict.NO_START_REQUEST, w.verdict(4_000))
+        assertEquals(Verdict.NOT_JOINED, w.verdict(9_000))
         w.reset()
         assertNull(w.verdict(10_000))
         w.onMilestone(Phase.WIFI_CONFIG, 10_000)
-        assertEquals(Verdict.NO_START_REQUEST, w.verdict(14_000))
+        assertEquals(Verdict.NOT_JOINED, w.verdict(19_000))
     }
 }
