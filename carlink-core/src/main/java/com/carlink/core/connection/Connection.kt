@@ -29,7 +29,39 @@ object Connection {
     @Volatile private var instance: SessionManager? = null
 
     fun get(context: Context): SessionManager = instance ?: synchronized(this) {
-        instance ?: create(context.applicationContext).also { instance = it }
+        instance ?: create(context.applicationContext).also {
+            instance = it
+            watchRadios(context.applicationContext, it)
+        }
+    }
+
+    /**
+     * Location, Bluetooth or Wi-Fi switched on from anywhere (quick settings included): a start
+     * blocked on it checks again at once. Only returning through Home's own fix button did, so a
+     * driver who turned Location on from the panel stayed blocked (Galaxy Tab, 2026-10-27).
+     */
+    private fun watchRadios(app: Context, sessions: SessionManager) {
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: android.content.Intent) {
+                val turnedOn = when (intent.action) {
+                    android.location.LocationManager.MODE_CHANGED_ACTION ->
+                        app.getSystemService(android.location.LocationManager::class.java)
+                            ?.let(androidx.core.location.LocationManagerCompat::isLocationEnabled) == true
+                    android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED ->
+                        intent.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_STATE, -1) == android.bluetooth.BluetoothAdapter.STATE_ON
+                    android.net.wifi.WifiManager.WIFI_STATE_CHANGED_ACTION ->
+                        intent.getIntExtra(android.net.wifi.WifiManager.EXTRA_WIFI_STATE, -1) == android.net.wifi.WifiManager.WIFI_STATE_ENABLED
+                    else -> false
+                }
+                if (turnedOn) sessions.onSettingsChanged()
+            }
+        }
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.location.LocationManager.MODE_CHANGED_ACTION)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+            addAction(android.net.wifi.WifiManager.WIFI_STATE_CHANGED_ACTION)
+        }
+        androidx.core.content.ContextCompat.registerReceiver(app, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     /**
