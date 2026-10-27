@@ -39,7 +39,8 @@ internal object HomeFakes {
         network: NetworkPreview? = hotspot,
         connectedSince: Long? = null,
         permissionsNeeded: Boolean = false,
-    ) = HomeUi(HomeState(link, phones, bluetooth, defaultPhone, connectedSince), prefs, network, permissionsNeeded)
+        stereo: com.carlink.core.detect.StereoBluetooth? = null,
+    ) = HomeUi(HomeState(link, phones, bluetooth, defaultPhone, connectedSince), prefs, network, permissionsNeeded, stereo = stereo)
 
     fun failed(problem: LinkProblem, engine: Engine = Engine.CARPLAY, transport: Transport = Transport.WIRELESS) =
         LinkState(LinkStage.FAILED, engine, transport, if (engine == Engine.CARPLAY) iphone.name else pixel.name,

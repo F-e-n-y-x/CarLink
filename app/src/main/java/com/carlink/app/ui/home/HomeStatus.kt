@@ -65,7 +65,7 @@ internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<Sta
     val link = ui.home.link
     // A session in progress or running: its own transport and phone, not the idle defaults.
     val inSession = mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING || mode == HomeMode.CONNECTED
-    val path = if (inSession && link.transport == Transport.USB) null else ui.network?.path
+    val path = if ((inSession && link.transport == Transport.USB) || mode == HomeMode.CABLE_ONLY) null else ui.network?.path
     val phones = ui.home.phones
     val phone = ui.home.defaultPhone
     // USB sessions have no Bluetooth address, so the paired list may not hold the phone; its name still does.

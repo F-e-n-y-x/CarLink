@@ -182,6 +182,10 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-external-bluetooth") {
         HomeContent(ui(link = failed(LinkProblem.EXTERNAL_BLUETOOTH, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
     },
+    // Idle on such a stereo (issue #6, FYT/ZJ unit): the cable, before the driver taps a Connect that can only fail.
+    home("cable-only-iphone") {
+        HomeContent(ui(stereo = com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN, network = NetworkPreview(com.carlink.core.settings.WirelessPath.WIFI_DIRECT, null)), actions)
+    },
     // Wireless through the stereo's Bluetooth module (experimental) could not reach the module.
     home("failed-external-module") {
         HomeContent(ui(link = failed(LinkProblem.EXTERNAL_MODULE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)

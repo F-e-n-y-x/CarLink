@@ -60,7 +60,7 @@ private val lowEndEntries = setOf("home/ready-no-phone", "home/failed-same-wifi-
     "home/connecting-notice-wifi", "setup/permissions", "setup/permissions-recommended", "setup/pair-waiting",
     "setup/pair-found-iphone", "setup/pair-cable-waiting",
     // A stereo whose Bluetooth is an external module (the user's FYT unit is a 1280×720 cheap head unit).
-    "home/failed-external-bluetooth", "diagnostics/stereo-bluetooth-external", "setup/pair-external-bluetooth",
+    "home/failed-external-bluetooth", "home/cable-only-iphone", "diagnostics/stereo-bluetooth-external", "setup/pair-external-bluetooth",
     // Report on GitHub from the stereo itself (Diagnostics, Home's failure state).
     "diagnostics/idle", "diagnostics/report-confirm", "diagnostics/report-qr", "home/failed-engine",
     // Steering-wheel buttons are set up on the stereo itself.

@@ -152,9 +152,11 @@
     <string name="carlink_home_error_external_module_title">Couldn\'t reach the stereo\'s Bluetooth module</string>
     <string name="carlink_home_error_external_module_body">Wireless through the stereo\'s Bluetooth module is experimental, and it didn\'t work here. On an FYT stereo, disable the stereo\'s own “Car Link” app first. Otherwise connect your phone with a USB cable\u00A0— it works the same. Share the log from Diagnostics so this can be fixed.</string>
     <string name="carlink_home_error_external_bt_body">This stereo\'s Bluetooth is a separate module that apps can\'t use, so CarPlay and Android Auto can\'t start wirelessly. Connect your phone with a USB cable\u00A0— it works the same.</string>
-    <string name="carlink_home_how_to_connect">How to connect</string>
+    <string name="carlink_home_how_to_connect">How to connect with a cable</string>
+    <string name="carlink_home_cable_only_title">Plug in your phone</string>
+    <string name="carlink_home_cable_only_body">Wireless needs your phone to talk to this screen\'s own Bluetooth. On this stereo that is a separate module apps can\'t use, so connect with a USB cable\u00A0— CarPlay or Android Auto starts by itself.</string>
     <string name="carlink_home_cable_title">Connect with a USB cable</string>
-    <string name="carlink_home_cable_body">1. Plug your phone into the stereo\'s USB port with a cable that carries data (not a charge-only cable).\n2. iPhone: CarPlay starts by itself. Android phone: unlock it and allow Android Auto if it asks.\n\nWireless needs the stereo\'s Bluetooth, which apps can\'t reach on this stereo yet.</string>
+    <string name="carlink_home_cable_body">1. Plug your phone into the stereo\'s USB port with a cable that carries data (not a charge-only cable).\n2. iPhone: CarPlay starts by itself. Android phone: unlock it and allow Android Auto if it asks.\n\nWireless needs your phone to talk to this screen\'s own Bluetooth. On this stereo that is a separate module apps can\'t use.</string>
     <string name="carlink_home_cable_ok">Got it</string>
     <string name="carlink_home_error_usb_title">USB connection failed</string>
     <string name="carlink_home_error_usb_body">Unlock your phone and accept its prompt. Try another cable if it keeps failing.</string>

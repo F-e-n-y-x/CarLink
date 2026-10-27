@@ -210,7 +210,16 @@ that printed them in hex was changed).
 - **CarPlay**: DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither route carries iAP2.
   The setting therefore unblocks wireless Android Auto only: wireless CarPlay stays blocked before
   any engine starts ("Wireless isn't available on this stereo yet"), and Home's wireless auto-start
-  still skips an iPhone.
+  still skips an iPhone. Idle Home on such a stereo says so up front ("Plug in your phone", with
+  the cable help) instead of offering a Connect that can only fail (issue #6).
+  Research 2026-10-27: no public source shows iAP2 through a ZJ/GOC module. ZBT's 0x105 carries
+  the RFCOMM stream of the server the daemon opens for `RequestInit{enable_type=2}` (Android Auto);
+  other `enable_type` values (1, 3, 8) are undocumented. Units with `/dev/zj_bt_serial` and no
+  3152 daemon (issue #6's) may expose `/dev/socket/zj_bt_socket`, a raw RFCOMM stream, tested only
+  with Android Auto (open-headunit [#1082](https://github.com/andreknieriem/open-headunit/issues/1082),
+  draft [PR #1168](https://github.com/andreknieriem/open-headunit/pull/1168)). Whether the module
+  advertises CarPlay to an iPhone and passes iAP2 (`FF 5A` link packets) through that socket is
+  unknown; it would take a hex dump of the socket from such a stereo while an iPhone connects.
 
 ## Alternatives that work today
 
