@@ -177,7 +177,7 @@ class MapEmbedService : Service() {
             addView(waiting, FrameLayout.LayoutParams(-1, -1))
             // A tap opens CarPlay, as a tap on the dashboard card does.
             setOnClickListener {
-                context.startActivity(Intent(context, CarPlayHostActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                context.startActivity(CarPlayScreen.intent(context).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
 

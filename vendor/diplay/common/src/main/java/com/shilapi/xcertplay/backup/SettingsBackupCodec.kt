@@ -24,7 +24,7 @@ object SettingsBackupCodec {
         // The resolution percentage; display_scale_tenths is its older key, still read when this one is missing.
         "display_scale_percent",
         "advanced_audio_channel_mapping", "audio_focus_enabled", "audio_focus_auto_yield",
-        "disable_media_key_audio_focus", "media_audio_channel", "navigation_audio_channel",
+        "navigation_prompt_audio_focus", "disable_media_key_audio_focus", "media_audio_channel", "navigation_audio_channel",
         "navigation_stream_type", "wireless_enabled", "wireless_hotspot_mode", "wifi_p2p_preferred_channel", "wifi_direct_scan_pause",
         "navigation_audio_attenuation_db",
         "manual_hotspot_band", "manual_hotspot_channel", "manual_hotspot_security", "app_appearance",
@@ -37,7 +37,7 @@ object SettingsBackupCodec {
         "center_map_follows_dashboard", "settings_gesture_fingers", "display_width_physical_mm",
         "display_physical_size_basis", "right_hand_drive", "hide_top_bar", "hide_bottom_bar",
         "temporary_system_bars",
-        "harman_fullscreen", "safe_area_draw_outside", "main_display_disable_safe_area",
+        "harman_fullscreen", "carplay_same_task", "safe_area_draw_outside", "main_display_disable_safe_area",
         "black_corner_radius_dp",
         "adapt_pip_resolution", "auto_start_on_boot", "bt_suspend_during_carplay", "hide_byd_call_popup",
         "launcher_bubble", "launcher_bubble_size",

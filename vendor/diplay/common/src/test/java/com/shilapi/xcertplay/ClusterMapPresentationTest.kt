@@ -106,14 +106,15 @@ class ClusterMapPresentationTest {
     private fun withMeasuredPresentation(block: (ClusterMapPresentation) -> Unit) {
         val original = android.os.Build.FINGERPRINT
         org.robolectric.shadows.ShadowBuild.setFingerprint(DiLink51ClusterLayout.FINGERPRINT)
-        try { withPresentation(DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.Theme.MAP, block) }
+        try { withPresentation(DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.Theme.MAP, block = block) }
         finally { org.robolectric.shadows.ShadowBuild.setFingerprint(original) }
     }
 
     private fun withPresentation(name: String = DiLink51ClusterLayout.BASE,
         theme: DiLink51ClusterLayout.Theme = DiLink51ClusterLayout.Theme.SCENARIO,
+        spec: String = "w1920dp-h720dp-mdpi",
         block: (ClusterMapPresentation) -> Unit) {
-        val id = display(name, "w1920dp-h720dp-mdpi")
+        val id = display(name, spec)
         val presentation = ClusterMapPresentation(context, manager.getDisplay(id), theme) {}
         try { presentation.create(); block(presentation) }
         finally { presentation.dismiss(); ShadowDisplayManager.removeDisplay(id) }
@@ -130,6 +131,42 @@ class ClusterMapPresentationTest {
             setFlags(Display.FLAG_PRESENTATION)
         }
         return id
+    }
+
+    @Test fun sideMapViewportFollowsTheClusterWidth() {
+        assertSideViewport(DiLink51ClusterLayout.FINGERPRINT, "w1920dp-h720dp-mdpi", left = 1320, width = 600)
+        assertSideViewport(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT, "w2560dp-h720dp-mdpi", left = 1760, width = 800)
+    }
+
+    private fun assertSideViewport(fingerprint: String, spec: String, left: Int, width: Int) {
+        val original = android.os.Build.FINGERPRINT
+        org.robolectric.shadows.ShadowBuild.setFingerprint(fingerprint)
+        try {
+            withPresentation(DiLink51ClusterLayout.SIDE, DiLink51ClusterLayout.Theme.SCENARIO, spec) { presentation ->
+                val video: android.view.View = org.robolectric.util.ReflectionHelpers.getField(presentation, "videoView")
+                assertTrue(video is android.view.TextureView)
+                val params = video.layoutParams as android.widget.FrameLayout.LayoutParams
+                assertEquals(left, params.leftMargin)
+                assertEquals(width, params.width)
+                assertEquals(720, params.height)
+            }
+        } finally {
+            org.robolectric.shadows.ShadowBuild.setFingerprint(original)
+        }
+    }
+
+    @Test fun theDenzaN9SelectsItsWideSharedLayers() {
+        val original = android.os.Build.FINGERPRINT
+        org.robolectric.shadows.ShadowBuild.setFingerprint(DiLink51ClusterLayout.DENZA_N9_FINGERPRINT)
+        val (base, full, side) = listOf(DiLink51ClusterLayout.BASE, DiLink51ClusterLayout.FULL, DiLink51ClusterLayout.SIDE)
+            .map { display(it, "w2560dp-h720dp-mdpi") }
+        try {
+            assertEquals(side, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.SCENARIO)?.displayId)
+            assertEquals(full, ClusterMapPresentation.findDisplay(context, DiLink51ClusterLayout.Theme.MAP)?.displayId)
+        } finally {
+            listOf(side, full, base).forEach { ShadowDisplayManager.removeDisplay(it) }
+            org.robolectric.shadows.ShadowBuild.setFingerprint(original)
+        }
     }
 
     @Test fun legacyFirmwareKeepsOriginalBaseDisplayPreference() {

@@ -46,6 +46,7 @@ object AirPlayPersistence {
     private const val KEY_ADVANCED_AUDIO_CHANNEL_MAPPING = "advanced_audio_channel_mapping"
     private const val KEY_AUDIO_FOCUS_ENABLED = "audio_focus_enabled"
     private const val KEY_AUDIO_FOCUS_AUTO_YIELD = "audio_focus_auto_yield"
+    private const val KEY_NAVIGATION_PROMPT_AUDIO_FOCUS = "navigation_prompt_audio_focus"
     private const val KEY_DISABLE_MEDIA_KEY_AUDIO_FOCUS = "disable_media_key_audio_focus"
     private const val KEY_MEDIA_AUDIO_CHANNEL = "media_audio_channel"
     private const val KEY_NAVIGATION_AUDIO_CHANNEL = "navigation_audio_channel"
@@ -77,6 +78,7 @@ object AirPlayPersistence {
     private const val KEY_WIRED_MEDIA_BUFFER_MS = "wired_media_buffer_ms"
     private const val KEY_MAIN_BUFFERED_AUDIO = "main_buffered_audio"
     private const val KEY_SPEECH_WITHOUT_8_16_KHZ = "speech_without_8_16_khz"
+    private const val KEY_CALL_AT_CALL_RATE = "call_at_call_rate"
     private const val KEY_CAR_BLUETOOTH_AUDIO = "car_bluetooth_audio"
     private const val KEY_CALL_ECHO_CANCELLATION = "call_echo_cancellation"
     private const val KEY_CALL_VOICE_FILTER = "call_voice_filter"
@@ -122,6 +124,7 @@ object AirPlayPersistence {
     private const val KEY_HIDE_BOTTOM_BAR = "hide_bottom_bar"
     private const val KEY_TEMPORARY_SYSTEM_BARS = "temporary_system_bars"
     private const val KEY_HARMAN_FULLSCREEN = "harman_fullscreen"
+    private const val KEY_CARPLAY_SAME_TASK = "carplay_same_task"
     private const val KEY_SAFE_AREA_DRAW_OUTSIDE = "safe_area_draw_outside"
     private const val KEY_MAIN_DISPLAY_DISABLE_SAFE_AREA = "main_display_disable_safe_area"
     private const val KEY_BLACK_CORNER_RADIUS = "black_corner_radius_dp"
@@ -262,6 +265,17 @@ object AirPlayPersistence {
     fun saveAudioFocusAutoYield(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_AUDIO_FOCUS_AUTO_YIELD, enabled)
+            .apply()
+    }
+
+    /** Opt-in (#946, #545): each navigation prompt requests duckable focus. Applies only while audio focus is on. */
+    fun loadNavigationPromptAudioFocus(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_NAVIGATION_PROMPT_AUDIO_FOCUS, false)
+
+    fun saveNavigationPromptAudioFocus(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_NAVIGATION_PROMPT_AUDIO_FOCUS, enabled)
             .apply()
     }
 
@@ -706,6 +720,14 @@ object AirPlayPersistence {
 
     fun saveSpeechWithout8And16Khz(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_SPEECH_WITHOUT_8_16_KHZ, enabled).apply()
+    }
+
+    /** Offer calls only as PCM at the call's own rate instead of 48 kHz Opus; experimental, applies at reconnect. */
+    fun loadCallAtCallRate(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CALL_AT_CALL_RATE, false)
+
+    fun saveCallAtCallRate(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CALL_AT_CALL_RATE, enabled).apply()
     }
 
     /** Offer no CarPlay audio, so the iPhone keeps audio on its Bluetooth link with the car; applies at reconnect. */
@@ -1407,6 +1429,17 @@ object AirPlayPersistence {
     fun saveHarmanFullscreen(context: Context, enabled: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_HARMAN_FULLSCREEN, enabled)
+            .apply()
+    }
+
+    /** Opens CarPlay in DiPlay's own task, for launchers that show that task in a card (#463). */
+    fun loadCarPlaySameTask(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_CARPLAY_SAME_TASK, false)
+
+    fun saveCarPlaySameTask(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_CARPLAY_SAME_TASK, enabled)
             .apply()
     }
 

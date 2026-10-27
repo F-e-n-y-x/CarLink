@@ -6,6 +6,7 @@ import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.transport.BluetoothLinkCheck
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -37,6 +38,7 @@ class CarPlayEventMappingTest {
     private val usbStages: Map<CarPlayStatus, ProgressStage?> = mapOf(
         CarPlayStatus.DiscoveringIphone to ProgressStage.WAITING_FOR_PHONE,
         CarPlayStatus.WaitingForIphone to ProgressStage.WAITING_FOR_PHONE,
+        CarPlayStatus.IphoneNotListed(nonHubDeviceListed = false) to ProgressStage.WAITING_FOR_PHONE,
         CarPlayStatus.RequestingIphonePermission to ProgressStage.WAITING_FOR_PHONE,
         CarPlayStatus.SelectingConfiguration to ProgressStage.HANDSHAKE,
         CarPlayStatus.WaitingForReenumeration to ProgressStage.HANDSHAKE,
@@ -54,8 +56,8 @@ class CarPlayEventMappingTest {
         usbStages.forEach { (status, stage) ->
             assertEquals(status.toString(), stage, CarPlayEventMapping.stageOf(status, Transport.USB))
         }
-        // Together the tables name all 23 CarPlayStatus kinds (CarPlayController.kt:105-136).
-        assertEquals(23, (wirelessStages.keys + usbStages.keys).map { it.javaClass }.toSet().size)
+        // Together the tables name all 24 CarPlayStatus kinds (CarPlayController.kt:105-136).
+        assertEquals(24, (wirelessStages.keys + usbStages.keys).map { it.javaClass }.toSet().size)
     }
 
     @Test fun progressStepsFollowTheTransport() {
@@ -191,6 +193,17 @@ class CarPlayEventMappingTest {
         tracker.onStatus(CarPlayStatus.StartingHotspot)
         assertEquals(listOf(AdapterEvent.Failed(FailureReason.WIFI_SETUP_FAILED, off.message)),
             tracker.onHostState(HostState.RetriesStopped(off, WirelessStartupFailure.HOTSPOT_CONFIGURATION, 0, exhausted = false)))
+    }
+
+    @Test fun namedCausesNoRetryCanChangeStopAtOnce() {
+        fun classify(cause: ConnectionFailureCause, startup: WirelessStartupFailure? = null) = CarPlayEventMapping.classify(
+            CarPlayStatus.Failed("boom", startupFailure = startup, knownCause = cause), CarPlayStatus.ConnectingBluetooth, Transport.WIRELESS)
+        assertEquals(FailureReason.BLUETOOTH, classify(ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED).reason)
+        assertTrue(classify(ConnectionFailureCause.IPHONE_NOT_CHOSEN).hard)
+        val noInterface = classify(ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND, WirelessStartupFailure.HOTSPOT_NOT_READY)
+        assertEquals(FailureReason.WIFI_SETUP_FAILED, noInterface.reason)
+        assertTrue(noInterface.hard)
+        assertFalse(classify(ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT, WirelessStartupFailure.HOTSPOT_NOT_READY).hard)
     }
 
     @Test fun wifiDirectRefusedBesideTheCarHotspotStopsThatPath() {
