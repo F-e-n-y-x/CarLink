@@ -1169,6 +1169,10 @@ class NativeAaHandshakeManager(
             // Whether the credentials went out with no BSSID at all. A join failure means something
             // different when they did — see the Fail action below.
             var bssidOmitted = false
+            // CarLink (open-headunit cc195e12/2192c2e0): what Type 1 was sent under, and whether the
+            // group went away before Type 3.
+            var capturedNetwork: CredentialFreshnessPolicy.Network? = null
+            var credentialsWentStale = false
             // CarLink (PR #1029): the held channel's bookkeeping, for its periodic summary and its
             // release line.
             var holdingSince = 0L
@@ -1176,6 +1180,36 @@ class NativeAaHandshakeManager(
             var lastHoldSummaryAt = 0L
             // CarLink (ZbtRetransmitPolicy port): when the opening message last went out.
             var lastOpenerSentAt = 0L
+
+            // CarLink (open-headunit cc195e12/2192c2e0/7e126682): Type 3 names the group that is up
+            // now. A replacement at the same endpoint is sent instead; none, an incomplete one or one
+            // at another address (Type 1 already pointed the phone there) means nothing is sent.
+            fun liveCredentialsForType3(captured: CredentialFreshnessPolicy.Network?): Boolean {
+                if (captured == null) return true
+                val live = credentials?.let { CredentialFreshnessPolicy.Network(it.ssid, it.psk, it.ip, it.bssid.uppercase()) }
+                return when (CredentialFreshnessPolicy.decide(captured, live)) {
+                    CredentialFreshnessPolicy.Action.SEND_AS_CAPTURED -> true
+                    CredentialFreshnessPolicy.Action.ABORT -> {
+                        AppLog.e("NativeAA: WiFi credentials were withdrawn, incomplete, or moved to another endpoint before Type 3; waiting for a usable group.")
+                        false
+                    }
+                    CredentialFreshnessPolicy.Action.SEND_LIVE -> {
+                        val freshBssid = live!!.bssid
+                        val usable = NativeCredentialsPolicy.isUsableBssid(freshBssid)
+                        if (!usable && transport == NativeTransport.WIFI_DIRECT) {
+                            AppLog.e("NativeAA: the group changed before Type 3 and the new one has no readable address yet; nothing is sent.")
+                            false
+                        } else {
+                            AppLog.w("NativeAA: the group changed before Type 3; sending the live credentials instead.")
+                            credSsid = live.ssid
+                            credPsk = live.psk
+                            credBssid = if (usable) freshBssid else ""
+                            bssidOmitted = credBssid.isEmpty()
+                            true
+                        }
+                    }
+                }
+            }
 
             suspend fun runAction(action: WppAction, source: ProtobufMessage?) {
                 when (action) {
@@ -1207,6 +1241,12 @@ class NativeAaHandshakeManager(
                         if (commManager.isConnected ||
                             commManager.connectionState.value is CommManager.ConnectionState.Connecting) {
                             AppLog.i("NativeAA: The phone opened its session before the credentials went out; not sending them.")
+                        } else if (!liveCredentialsForType3(capturedNetwork)) {
+                            // CarLink (open-headunit cc195e12/2192c2e0): nothing is sent for a dead group.
+                            credentialsWentStale = true
+                            abortedLocally = true
+                            context.triggerWifiDirectRefresh()
+                            return
                         } else {
                             sendWifiSecurityResponse(output, credSsid, credPsk, credBssid, transport)
                             // CarLink: only when they went out (DiAuto 0.3.12 skips them for a
@@ -1461,6 +1501,7 @@ class NativeAaHandshakeManager(
             credSsid = snapshot.ssid
             credPsk = snapshot.psk
             credBssid = snapshot.bssid.uppercase()
+            capturedNetwork = CredentialFreshnessPolicy.Network(credSsid, credPsk, credIp, credBssid) // CarLink
 
             // [FIX] Ensure BSSID is uppercase and not zeroed if possible
             if (!NativeCredentialsPolicy.isUsableBssid(credBssid)) {
@@ -1530,7 +1571,7 @@ class NativeAaHandshakeManager(
             // not a grace period, since the phone needs however long it needs. Association has
             // been measured at 21 s on hardware where the 3 s close killed it dead. Wait for the
             // session, and where the phone reports its own progress, let it.
-            while (isRunning && isActive && !session.isTerminal()) {
+            while (isRunning && isActive && !session.isTerminal() && !credentialsWentStale) { // CarLink: stale
                 if (session.stage == WppStage.AWAIT_INFO_REQUEST) { // CarLink
                     resendOpener({ sendWifiStartRequest(output, credIp, 5288) }, "WifiStartRequest (Type 1)")
                 }
