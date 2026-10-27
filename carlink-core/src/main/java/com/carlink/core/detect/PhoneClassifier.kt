@@ -35,6 +35,8 @@ object PhoneClassifier {
         val vendorId: Int,
         val productId: Int,
         val interfaces: List<UsbInterfaceInfo>,
+        /** The USB product string ("iPhone", "iPad"), when Android could read it. */
+        val productName: String? = null,
     )
 
     data class BluetoothDeviceInfo(
@@ -52,7 +54,15 @@ object PhoneClassifier {
      * UsbDeviceCompat accepts (AOA, MTP, ADB, RNDIS, IAD, PTP). Flash drives, the CH341 MFi
      * bridge and other peripherals stay UNKNOWN and are ignored.
      */
+    /** An iPad or iPod: by its product string, else by the product IDs current ones use (0x12AB iPad, 0x12AA iPod). */
+    fun isAppleNonPhone(device: UsbDeviceInfo): Boolean = device.vendorId == APPLE_VENDOR_ID && (
+        device.productName?.let { it.contains("iPad", ignoreCase = true) || it.contains("iPod", ignoreCase = true) }
+            ?: (device.productId == 0x12AB || device.productId == 0x12AA))
+
     fun classifyUsb(device: UsbDeviceInfo): PhoneKind = when {
+        // CarPlay runs only on an iPhone; an iPad refuses the CarPlay configuration and the
+        // session retried forever (Galaxy Tab, 2026-10-27).
+        isAppleNonPhone(device) -> PhoneKind.UNKNOWN
         device.vendorId == APPLE_VENDOR_ID -> PhoneKind.IPHONE
         isAccessoryMode(device) -> PhoneKind.ANDROID
         device.interfaces.any(::isAndroidInterface) -> PhoneKind.ANDROID

@@ -70,6 +70,7 @@ class UsbRouterActivity : Activity() {
                         .any { usbInterface.getEndpoint(it).type == UsbConstants.USB_ENDPOINT_XFER_BULK },
                 )
             },
+            productName = runCatching { device.productName }.getOrNull(),
         )
     }
 }

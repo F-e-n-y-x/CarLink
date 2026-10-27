@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carlink_core_ipad_no_carplay">iPads and iPods can\'t run CarPlay. Plug in an iPhone.</string>
+</resources>

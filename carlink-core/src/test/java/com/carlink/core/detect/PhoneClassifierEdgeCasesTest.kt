@@ -120,4 +120,11 @@ class PhoneClassifierEdgeCasesTest {
         val samsungChargingOnly = PhoneClassifier.UsbDeviceInfo(0x04E8, 0x6860, listOf(PhoneClassifier.UsbInterfaceInfo(0xFF, 0xFF, 0x00)))
         assertEquals(PhoneKind.ANDROID, PhoneClassifier.classifyUsb(samsungChargingOnly))
     }
+
+    @Test fun anIpadOrIpodIsNotACarPlayPhone() {
+        assertEquals(PhoneKind.UNKNOWN, PhoneClassifier.classifyUsb(UsbDeviceInfo(0x05AC, 0x12AB, emptyList(), "iPad")))
+        assertEquals(PhoneKind.UNKNOWN, PhoneClassifier.classifyUsb(UsbDeviceInfo(0x05AC, 0x12AB, emptyList())))
+        assertEquals(PhoneKind.UNKNOWN, PhoneClassifier.classifyUsb(UsbDeviceInfo(0x05AC, 0x12AA, emptyList(), "iPod")))
+        assertEquals(PhoneKind.IPHONE, PhoneClassifier.classifyUsb(UsbDeviceInfo(0x05AC, 0x12A8, emptyList(), "iPhone")))
+    }
 }

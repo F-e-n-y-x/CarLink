@@ -73,7 +73,11 @@ class UsbWatcher private constructor(context: Context) {
 
     private fun route(device: UsbDevice) {
         if (!claim(device)) return
-        val kind = PhoneClassifier.classifyUsb(UsbRouterActivity.describe(device))
+        val info = UsbRouterActivity.describe(device)
+        val kind = PhoneClassifier.classifyUsb(info)
+        if (PhoneClassifier.isAppleNonPhone(info)) {
+            android.widget.Toast.makeText(app, com.carlink.core.R.string.carlink_core_ipad_no_carplay, android.widget.Toast.LENGTH_LONG).show()
+        }
         Log.i(TAG, "USB ${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         com.carlink.core.diagnostics.EventLog.add("USB", "${"%04x:%04x".format(device.vendorId, device.productId)} -> $kind")
         if (kind == PhoneKind.UNKNOWN) return
