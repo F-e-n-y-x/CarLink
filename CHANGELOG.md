@@ -4,6 +4,22 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.7] - 2026-10-27
+
+- Wireless CarPlay: a stuck start or an iPhone that left is noticed in seconds, and a slow first
+  join is no longer cut off early.
+- Turning on Location, Bluetooth or Wi-Fi from quick settings retries a blocked start right away.
+- Smoother CarPlay on slow head units (wired picture path runs ahead of other work).
+- Stereos with an external Bluetooth/Wi-Fi module: Home says "plug in your phone" up front.
+- iPads and iPods are no longer treated as iPhones (iPadOS has no CarPlay).
+- Android Auto engine fixes from open-headunit: steadier USB and wireless handshakes, fewer
+  broken frames after a stride change or GL context loss, and better 5 GHz fallback.
+- CarPlay engine updated to the latest DiPlay.
+- "Report a problem" now names the phone and session, shows a timeline and settings, hides
+  serials and MAC addresses, and can copy the full log.
+
+<!-- more -->
+
 ## [1.0.6] - 2026-10-20
 
 - Faster connections: USB Android Auto in about 1.3 s (was 3.2 s), wireless Android Auto in about 3 s.
@@ -23,8 +39,6 @@ is what the in-app update popup shows.
 - CarPlay shows CarLink's icon instead of BYD's on other car brands.
 - Root mode for rooted stereos (Settings › Connection, Show advanced): no permission popups, and
   Wi-Fi low-latency mode while a phone is connected.
-
-<!-- more -->
 
 ## [1.0.5] - 2026-10-20
 
