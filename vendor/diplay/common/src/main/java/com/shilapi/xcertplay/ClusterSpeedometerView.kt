@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import com.shilapi.xcertplay.airplay.ClusterSpeedometerOverlay
 
 /**
@@ -221,6 +222,21 @@ internal class ClusterSpeedometerView(
         val radius = h * 0.22f
         canvas.drawRoundRect(rect, radius, radius, backgroundPaint)
         canvas.drawRoundRect(rect, radius, radius, strokePaint)
+
+        // Use the displayed (interpolated) album color, not the final fade target.
+        // Never fade the text through low-contrast gray. The map behind this translucent
+        // view is a separate surface, so contrast is measured against the card RGB.
+        if (useAlbumColor) {
+            val luminance = ColorUtils.calculateLuminance(color)
+            val blackContrast = (luminance + 0.05) / 0.05
+            val whiteContrast = 1.05 / (luminance + 0.05)
+            val foreground = if (blackContrast >= whiteContrast) Color.BLACK else Color.WHITE
+            speedPaint.color = foreground
+            unitPaint.color = foreground
+        } else {
+            speedPaint.color = Color.WHITE
+            unitPaint.color = Color.argb(210, 220, 220, 225)
+        }
 
         speedPaint.textSize = h * 0.48f
         unitPaint.textSize = h * 0.16f

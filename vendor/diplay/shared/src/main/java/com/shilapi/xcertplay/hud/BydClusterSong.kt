@@ -289,15 +289,12 @@ internal object BydClusterSong {
         }
 
         try {
-            // CarPlay runs in its own task (root activity com.shilapi.xcertplay.CarPlayHostActivity,
-            // affinity .carplay), so after the gate we return the driver there — not to the DiPlay
-            // launcher or BYD's desktop. getRunningTasks is unreliable here (it reports BYD's desktop as
-            // foreground), so pick the CarPlay task from our own tasks by its root activity class.
+            // After the gate we return the driver to CarPlay, not to the DiPlay launcher or BYD's desktop.
+            // getRunningTasks is unreliable here (it reports BYD's desktop as foreground), so pick the
+            // CarPlay task from our own tasks by its activity classes (isCarPlayTask).
             val carplayTask = (app.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)
                 ?.appTasks?.firstOrNull { task ->
-                    val cls = task.taskInfo?.baseActivity?.className
-                        ?: task.taskInfo?.topActivity?.className ?: ""
-                    cls.endsWith("CarPlayHostActivity")
+                    isCarPlayTask(task.taskInfo?.baseActivity?.className, task.taskInfo?.topActivity?.className)
                 }
             // 1) Open the gate: launch the local music main UI to activate ECU display mode.
             val gate = Intent().apply {
@@ -329,6 +326,13 @@ internal object BydClusterSong {
         // on failure, it will be retried the next time the app restarts.
         sGateOpened = true
     }
+
+    /**
+     * CarPlay runs in its own task (root com.shilapi.xcertplay.CarPlayHostActivity, affinity .carplay). With "Keep
+     * CarPlay in the launcher card" it runs on top of DiPlay's own task instead, as SameTaskCarPlayHostActivity.
+     */
+    internal fun isCarPlayTask(baseActivity: String?, topActivity: String?): Boolean =
+        listOfNotNull(baseActivity, topActivity).any { it.endsWith("CarPlayHostActivity") }
 
     private fun clear(app: Context) {
         if (shown == null || synchronized(state) { wanted } != null) return

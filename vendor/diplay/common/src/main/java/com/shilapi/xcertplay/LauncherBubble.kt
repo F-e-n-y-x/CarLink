@@ -306,7 +306,7 @@ internal object LauncherBubble {
     /** CarPlay when a session is up, the settings screen otherwise. */
     private fun openCarPlay(context: Context) {
         val target = if (CarPlayGlance.snapshot().connected) {
-            CarPlayHostActivity::class.java
+            CarPlayScreen.target(context)
         } else {
             DiPlayActivity::class.java
         }

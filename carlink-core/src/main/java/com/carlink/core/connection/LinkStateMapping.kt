@@ -55,6 +55,8 @@ private fun SessionState.Active.linkNotice(directVideoOutput: Boolean): LinkNoti
         // never sends a frame; Direct video output fixed it for some drivers.
         // ponytail: DiPlay gives the host no audio or zero-frame signal, so "late in the picture step"
         // (the 10 s hint or the stall deadline) stands in; a slow but working start can see it too.
+        // DiPlay 9d8963303 detects it itself (CarPlayHostActivity.noPictureCheck, 10 s, #1097: "restart
+        // the iPhone"); publish that as a HostState if this heuristic misfires.
         if (!directVideoOutput && request.engine == Engine.CARPLAY && n.stage == ProgressStage.STARTING_PROJECTION) {
             return LinkNotice(LinkNoticeKind.NO_PICTURE)
         }

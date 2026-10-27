@@ -960,6 +960,38 @@ class AdaptiveSettingsUiTest {
 
     @Test
     @Config(sdk = [28, 33])
+    fun callAtCallRateIsOptInAndMarksTheActiveSessionForReconnectWithoutDroppingIt() {
+        AirPlayPersistence.saveCallAtCallRate(context, false)
+        val screen = openSettings()
+        val session = mock(CarPlayController::class.java)
+        var stops = 0
+        CarPlayBackgroundSession.store(session, mock(AndroidMediaSink::class.java), 800, 480, Any(),
+            CarPlaySessionDisplay(800, 480, Surface.ROTATION_0, false, false, 800, 480)) { stops++ }
+        CarPlayBackgroundSession.active = true
+        try {
+            ReflectionHelpers.setField(screen, "settingsCategory", SettingsCategory.ADVANCED)
+            PendingReconnect.clear()
+            ReflectionHelpers.callInstanceMethod<Unit>(screen, "render")
+            val setting = descendants(screen.window.decorView).filterIsInstance<Switch>()
+                .single { it.contentDescription == screen.getString(R.string.settings_call_at_call_rate) }
+            assertFalse(setting.isChecked)
+
+            setting.performClick()
+
+            assertTrue(AirPlayPersistence.loadCallAtCallRate(context))
+            assertTrue(PendingReconnect.isPending(session))
+            assertEquals(View.VISIBLE, ReflectionHelpers.getField<View>(screen, "reconnectBar").visibility)
+            assertSame(session, CarPlayBackgroundSession.snapshot()?.controller)
+            assertEquals(0, stops)
+        } finally {
+            AirPlayPersistence.saveCallAtCallRate(context, false)
+            CarPlayBackgroundSession.clear()
+            PendingReconnect.clear()
+        }
+    }
+
+    @Test
+    @Config(sdk = [28, 33])
     fun disablingMediaKeyAudioFocusIsOptInAndMarksTheActiveSessionForReconnect() {
         AirPlayPersistence.saveDisableMediaKeyAudioFocus(context, false)
         val screen = openSettings()

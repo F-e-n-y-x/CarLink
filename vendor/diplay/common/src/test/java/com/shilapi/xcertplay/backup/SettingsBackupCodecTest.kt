@@ -20,6 +20,14 @@ class SettingsBackupCodecTest {
     private fun prefs(name: String) = context.getSharedPreferences(name, Context.MODE_PRIVATE)
 
     @Test
+    fun navigationPromptAudioFocusTravelsWithTheAudioFocusSettings() {
+        AirPlayPersistence.saveNavigationPromptAudioFocus(context, true)
+        val document = JSONObject(String(SettingsBackupCodec.export(context, "0.2.22")))
+        val airplay = document.getJSONObject("settings").getJSONObject("xcertplay_airplay")
+        assertTrue(airplay.getBoolean("navigation_prompt_audio_focus"))
+    }
+
+    @Test
     fun exportOmitsSensitiveAndNavigationKeys() {
         prefs("xcertplay_airplay").edit()
             .putInt("display_fps", 60)

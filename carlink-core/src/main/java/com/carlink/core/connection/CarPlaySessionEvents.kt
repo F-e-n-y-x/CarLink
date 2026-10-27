@@ -5,6 +5,7 @@ import com.shilapi.xcertplay.CarPlayHostIntegration.HostState
 import com.shilapi.xcertplay.network.WirelessStartupFailure
 import com.shilapi.xcertplay.network.WirelessStartupPolicy
 import com.shilapi.xcertplay.orchestration.CarPlayStatus
+import com.shilapi.xcertplay.orchestration.ConnectionFailureCause
 import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 
@@ -52,7 +53,7 @@ object CarPlayEventMapping {
         CarPlayStatus.DiscoveringMfi, CarPlayStatus.WaitingForMfi, CarPlayStatus.RequestingMfiPermission,
         CarPlayStatus.MfiReady, CarPlayStatus.StartingHotspot, is CarPlayStatus.HotspotReady,
         CarPlayStatus.WaitingForPairedIphone, CarPlayStatus.DiscoveringIphone, CarPlayStatus.WaitingForIphone,
-        CarPlayStatus.RequestingIphonePermission -> ProgressStage.WAITING_FOR_PHONE
+        is CarPlayStatus.IphoneNotListed, CarPlayStatus.RequestingIphonePermission -> ProgressStage.WAITING_FOR_PHONE
         // Wireless: binding the AirPlay listener before the phone is called. Wired: the NCM link.
         CarPlayStatus.AttachingNetwork ->
             if (transport == Transport.WIRELESS) ProgressStage.WAITING_FOR_PHONE else ProgressStage.STARTING_PROJECTION
@@ -123,6 +124,15 @@ object CarPlayEventMapping {
         )
         // A stale P2P group: DiPlay shows "Reset CarPlay Wi-Fi" and does not retry (§2.3).
         if (failure.wifiResetRequired) return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
+        // DiPlay's named causes (#1058, #1062): pairing and hotspot settings no retry can change.
+        when (failure.knownCause) {
+            ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED, ConnectionFailureCause.NO_PAIRED_IPHONE,
+            ConnectionFailureCause.IPHONE_NOT_CHOSEN -> return result(FailureReason.BLUETOOTH, hard = true)
+            ConnectionFailureCause.CAR_HOTSPOT_OFF, ConnectionFailureCause.CAR_HOTSPOT_DETAILS_DIFFER,
+            ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
+            ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE, ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT,
+            ConnectionFailureCause.CAR_HOTSPOT_START_FAILED, null -> Unit
+        }
         when (failure.startupFailure) {
             // F1: the iPhone authenticated but never opened AirPlay TCP; reachability, a path problem.
             WirelessStartupFailure.FIRST_TCP_TIMEOUT -> return result(FailureReason.PHONE_NEVER_REACHED_CAR, hard = false)
@@ -163,7 +173,8 @@ object CarPlayEventMapping {
             CarPlayStatus.AttachingNetwork ->
                 if (transport == Transport.WIRELESS) FailureReason.ENGINE else FailureReason.USB
             CarPlayStatus.WirelessActive, CarPlayStatus.WirelessActiveFallback -> FailureReason.LINK_TOO_WEAK
-            CarPlayStatus.DiscoveringIphone, CarPlayStatus.WaitingForIphone, CarPlayStatus.RequestingIphonePermission,
+            CarPlayStatus.DiscoveringIphone, CarPlayStatus.WaitingForIphone, is CarPlayStatus.IphoneNotListed,
+            CarPlayStatus.RequestingIphonePermission,
             CarPlayStatus.SelectingConfiguration, CarPlayStatus.WaitingForReenumeration, CarPlayStatus.OpeningDataPaths,
             CarPlayStatus.Pairing, CarPlayStatus.ConnectingControl, CarPlayStatus.RunningControl -> FailureReason.USB
             null, CarPlayStatus.ControlEnded, is CarPlayStatus.Failed -> FailureReason.ENGINE

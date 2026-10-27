@@ -90,14 +90,13 @@ internal class ClusterMapPresentation(
             val textureView = TextureView(context)
             fun transform() {
                 textureView.setTransform(Matrix().apply {
-                    setScale(DiLink51ClusterLayout.STREAM_WIDTH.toFloat() / plan.width,
-                        DiLink51ClusterLayout.STREAM_HEIGHT.toFloat() / plan.height)
+                    setScale(plan.streamWidth.toFloat() / plan.width, plan.streamHeight.toFloat() / plan.height)
                     postTranslate(-plan.sourceLeft.toFloat(), -plan.sourceTop.toFloat())
                 })
             }
             textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                 override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
-                    texture.setDefaultBufferSize(DiLink51ClusterLayout.STREAM_WIDTH, DiLink51ClusterLayout.STREAM_HEIGHT)
+                    texture.setDefaultBufferSize(plan.streamWidth, plan.streamHeight)
                     transform()
                     outputSurface = Surface(texture).also(onSurface)
                 }
@@ -324,8 +323,10 @@ private class InstrumentContrastView(
             fade(left, top, left, top + 64, background, clear, left, top, right, top + 64)
             fade(left, bottom - 48, left, bottom, clear, background, left, bottom - 48, right, bottom)
             // The trip/menu readouts occupy the outer panels; keep the route and marker in the clear center.
-            fade(left, top, left + 460, top, soft, clear, left, top, left + 460, bottom)
-            fade(right - 460, top, right, top, clear, soft, right - 460, top, right, bottom)
+            // They are 460 px wide on the measured 1920 px cluster and assumed to scale with a wider one.
+            val panel = 460f * plan.width / DiLink51ClusterLayout.STREAM_WIDTH
+            fade(left, top, left + panel, top, soft, clear, left, top, left + panel, bottom)
+            fade(right - panel, top, right, top, clear, soft, right - panel, top, right, bottom)
         }
         paint.shader = null
     }

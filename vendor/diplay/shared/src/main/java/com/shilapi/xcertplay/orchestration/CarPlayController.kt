@@ -135,6 +135,7 @@ sealed class CarPlayStatus {
     data object WirelessActiveFallback : CarPlayStatus()
     data object DiscoveringIphone : CarPlayStatus()
     data object WaitingForIphone : CarPlayStatus()
+    data class IphoneNotListed(val nonHubDeviceListed: Boolean) : CarPlayStatus()
     data object RequestingIphonePermission : CarPlayStatus()
     data object WaitingForReenumeration : CarPlayStatus()
     data object SelectingConfiguration : CarPlayStatus()
@@ -145,7 +146,7 @@ sealed class CarPlayStatus {
     data object RunningControl : CarPlayStatus()
     data object ControlEnded : CarPlayStatus()
     data class Failed(val message: String, val wifiResetRequired: Boolean = false,
-        val startupFailure: WirelessStartupFailure? = null) : CarPlayStatus()
+        val startupFailure: WirelessStartupFailure? = null, val knownCause: ConnectionFailureCause? = null) : CarPlayStatus()
 }
 
 internal fun isWirelessHandoffInProgress(
@@ -319,6 +320,7 @@ class CarPlayController(
     private var ch341PermissionCloseable: Closeable? = null
     private var lastCh341Listing: String? = null
     private var lastIphoneListing: String? = null
+    private var iphoneWaitStartedAt: Long? = null
     private var vpnLatch = CountDownLatch(1)
     private val teardownComplete = CountDownLatch(1)
 
@@ -348,6 +350,14 @@ class CarPlayController(
     }
 
     private val sessionListener = object : AirPlaySessionListener {
+        override fun onVideoFrameRendered(session: AirPlaySession) {
+            if (!closed && !session.isClosed && activeSession === session) {
+                // CarLink: WIRED_TIMING first-frame (marked once); wireless wraps this listener.
+                if (config.transport == CarPlayTransport.WIRED) wiredTimeline.mark(WiredStartupTimeline.Milestone.FIRST_FRAME)
+                uiListener?.onVideoFrameRendered(session)
+            }
+        }
+
         override fun onCornerMask(session: AirPlaySession, png: ByteArray, displayWidth: Int) {
             if (closed || session.isClosed) return
             if (activeSession != null && activeSession !== session) return
@@ -473,30 +483,12 @@ class CarPlayController(
                 wiredTimeline.mark(WiredStartupTimeline.Milestone.TCP_ACCEPTED)
             }
         }
-
-        // CarLink: the wired path used this listener without forwarding rendered frames, so the
-        // host never heard of the first wired frame (CarLink's HostState.FirstFrame, "Connected").
-        // Wireless wraps this listener and overrides this method, so it is unaffected.
-        override fun onVideoFrameRendered(session: AirPlaySession) {
-            if (config.transport != CarPlayTransport.WIRED || activeSession !== session) return
-            val firstFrame = synchronized(wiredFrameLock) {
-                if (wiredFrameSession === session) false else {
-                    wiredFrameSession = session
-                    true
-                }
-            }
-            if (!firstFrame) return
-            wiredTimeline.mark(WiredStartupTimeline.Milestone.FIRST_FRAME)
-            uiListener?.onVideoFrameRendered(session)
-        }
     }
 
     // CarLink: always-on wired bring-up timing, in diplay.log and logcat.
     private val wiredTimeline = WiredStartupTimeline { line -> debugLog(line) }
     // CarLink: always-on wireless bring-up timing, in diplay.log and logcat.
     private val wirelessTimeline = WirelessStartupTimeline { line -> debugLog(line) }
-    private val wiredFrameLock = Any()
-    @Volatile private var wiredFrameSession: AirPlaySession? = null
 
     fun attachUi(
         listener: AirPlaySessionListener,
@@ -2013,6 +2005,7 @@ class CarPlayController(
         pendingUsbAdbGrants.clear()
         phase = Phase.IPHONE
         reenumerationAttempts = 0
+        iphoneWaitStartedAt = null
         onStatus(CarPlayStatus.DiscoveringIphone)
         checkIphoneAvailability()
     }
@@ -2022,7 +2015,12 @@ class CarPlayController(
         val device = iphoneHost.discover().firstOrNull()
         if (device == null) {
             reportIphoneMissing()
-            onStatus(CarPlayStatus.WaitingForIphone)
+            val now = SystemClock.elapsedRealtime()
+            val waitStarted = iphoneWaitStartedAt ?: now.also { iphoneWaitStartedAt = it }
+            onStatus(
+                if (now - waitStarted < IPHONE_NOT_LISTED_AFTER_MILLIS) CarPlayStatus.WaitingForIphone
+                else CarPlayStatus.IphoneNotListed(iphoneHost.listsNonHubDevice()),
+            )
             scheduleAvailabilityPoll(Phase.IPHONE, ::checkIphoneAvailability)
         } else {
             lastIphoneListing = null
@@ -2503,6 +2501,17 @@ class CarPlayController(
             onStatus(CarPlayStatus.RunningControl)
             wiredSessionActive = false
             wiredStartSentAtNanos = null
+            fun startAgain(): Iap2WiredControlClient.StartAgain {
+                val opened = ncm.linkOpenedAtNanos
+                return WiredStartAgain.decide(
+                    nowNanos = System.nanoTime(),
+                    startSentAtNanos = wiredStartSentAtNanos ?: System.nanoTime(),
+                    linkOpenedAtNanos = opened,
+                    sessionActive = wiredSessionActive,
+                    connectionAttemptSinceLinkOpened =
+                        opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
+                )
+            }
             lateinit var startWatchdog: WiredStartWatchdog
             startWatchdog = WiredStartWatchdog(
                 schedule = { delay, action ->
@@ -2514,12 +2523,24 @@ class CarPlayController(
                 },
                 onTimeout = {
                     if (!closed && wiredStartWatchdog === startWatchdog) {
+                        val waitedSeconds = wiredStartSentAtNanos?.let {
+                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - it)
+                        }
                         debugLog(
-                            "wired start: no AirPlay session ${WiredStartWatchdog.TIMEOUT_MILLIS / 1000} s " +
+                            "wired start: no AirPlay session $waitedSeconds s " +
                                 "after carplay-start-session; NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
                         )
                         fail(IphoneUsbException.TimedOut("The iPhone did not open CarPlay over USB in time"))
                     }
+                },
+                secondRequestCanStillGoOut = { startAgain() != Iap2WiredControlClient.StartAgain.DONE },
+                onHold = {
+                    debugLog(
+                        "wired start: no AirPlay session ${WiredStartWatchdog.TIMEOUT_MILLIS / 1000} s " +
+                            "after carplay-start-session; holding the limit until " +
+                            "${WiredStartWatchdog.HELD_TIMEOUT_MILLIS / 1000} s for the second request; " +
+                            "NCM ${ncm.trafficSummary(endpoint.airPlayPort)}",
+                    )
                 },
             )
             wiredStartWatchdog = startWatchdog
@@ -2547,17 +2568,7 @@ class CarPlayController(
                     debugLog("wired $message")
                     wiredTimeline.onIap2Progress(message) // CarLink
                 },
-                startSessionAgain = {
-                    val opened = ncm.linkOpenedAtNanos
-                    WiredStartAgain.decide(
-                        nowNanos = System.nanoTime(),
-                        startSentAtNanos = wiredStartSentAtNanos ?: System.nanoTime(),
-                        linkOpenedAtNanos = opened,
-                        sessionActive = wiredSessionActive,
-                        connectionAttemptSinceLinkOpened =
-                            opened != null && ncm.connectionAttemptSince(endpoint.airPlayPort, opened),
-                    )
-                },
+                startSessionAgain = ::startAgain,
             )
             onStatus(
                 when (result.terminal) {
@@ -2621,7 +2632,14 @@ class CarPlayController(
                     if (result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.TIMED_OUT ||
                         result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.FAILED)
                         WirelessStartupFailure.HOTSPOT_NOT_READY else WirelessStartupFailure.HOTSPOT_CONFIGURATION,
-                    "${result.diagnostic}. Open the car hotspot settings and connect again.")
+                    "${result.diagnostic}. Open the car hotspot settings and connect again.",
+                    when (result) {
+                        com.shilapi.xcertplay.network.CarHotspotTethering.Result.TIMED_OUT ->
+                            ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT
+                        com.shilapi.xcertplay.network.CarHotspotTethering.Result.FAILED ->
+                            ConnectionFailureCause.CAR_HOTSPOT_START_FAILED
+                        else -> null
+                    })
             }
         }
         var pastOffReport = false
@@ -2629,7 +2647,8 @@ class CarPlayController(
             val state = com.shilapi.xcertplay.network.CarHotspotStatus.isEnabled(appContext)
             if (com.shilapi.xcertplay.network.CarHotspotSettings.reportedOff(appContext, state)) {
                 throw WirelessStartupException(WirelessStartupFailure.HOTSPOT_CONFIGURATION,
-                    "The car hotspot is off. Turn it on in the car settings and connect again.")
+                    "The car hotspot is off. Turn it on in the car settings and connect again.",
+                    ConnectionFailureCause.CAR_HOTSPOT_OFF)
             }
             if (state == false) debugLog("car hotspot: Android reports it off; connecting anyway, as the driver chose")
             pastOffReport = state == false
@@ -2715,7 +2734,8 @@ class CarPlayController(
         val bonded = adapter.bondedDevices.orEmpty()
         config.wirelessBluetoothDeviceAddress?.let { selected ->
             return bonded.firstOrNull { it.address.equals(selected, ignoreCase = true) }
-                ?: throw IOException("The selected iPhone is no longer paired. Choose it again in DiPlay.")
+                ?: throw ConnectionFailureException(ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED,
+                    "The selected iPhone is no longer paired. Choose it again in DiPlay.")
         }
         val iPhones = bonded.filter { device ->
             device.name?.contains("iPhone", ignoreCase = true) == true
@@ -2736,20 +2756,21 @@ class CarPlayController(
         }
         if (connectedIPhones.size == 1) return connectedIPhones.single()
         if (connectedIPhones.size > 1) {
-            throw IOException(
+            throw ConnectionFailureException(ConnectionFailureCause.IPHONE_NOT_CHOSEN,
                 "Multiple connected iPhones found: " +
                     connectedIPhones.joinToString { "${it.name ?: "iPhone"} (${it.address})" },
             )
         }
         if (iPhones.size == 1) return iPhones.single()
         if (iPhones.size > 1) {
-            throw IOException(
+            throw ConnectionFailureException(ConnectionFailureCause.IPHONE_NOT_CHOSEN,
                 "Multiple bonded iPhones found and none is currently connected; " +
                     "connect one iPhone and retry",
             )
         }
         if (bonded.size == 1) return bonded.single()
-        throw IOException(
+        throw ConnectionFailureException(
+            if (bonded.isEmpty()) ConnectionFailureCause.NO_PAIRED_IPHONE else ConnectionFailureCause.IPHONE_NOT_CHOSEN,
             "No unambiguous bonded iPhone found; pair one iPhone and retry",
         )
     }
@@ -3226,7 +3247,10 @@ class CarPlayController(
             val causes = generateSequence(error) { it.cause }.toList()
             onStatus(CarPlayStatus.Failed(error.message ?: error.javaClass.simpleName,
                 causes.any { it is com.shilapi.xcertplay.network.P2pResetRequiredException },
-                causes.filterIsInstance<WirelessStartupException>().firstOrNull()?.reason),
+                causes.filterIsInstance<WirelessStartupException>().firstOrNull()?.reason,
+                causes.firstNotNullOfOrNull {
+                    (it as? ConnectionFailureException)?.reason ?: (it as? WirelessStartupException)?.knownCause
+                }),
                 if (wireless) wirelessGeneration.get() else null)
         }
     }
@@ -3330,6 +3354,9 @@ class CarPlayController(
             "STEP usb/discover: searching for an iPhone USB device"
         CarPlayStatus.WaitingForIphone ->
             "STEP usb/wait: iPhone USB device not present; polling"
+        is CarPlayStatus.IphoneNotListed ->
+            "STEP usb/wait: wired iPhone not listed after ${IPHONE_NOT_LISTED_AFTER_MILLIS / 1_000} s; " +
+                "other USB devices=$nonHubDeviceListed"
         CarPlayStatus.RequestingIphonePermission ->
             "STEP usb/permission: requesting USB access to the iPhone"
         CarPlayStatus.WaitingForReenumeration ->
@@ -3388,6 +3415,7 @@ class CarPlayController(
         private const val MAXIMUM_REENUMERATION_ATTEMPTS = 2
         /** An iPhone answers the mode request within about a second; one took six (#335). */
         const val REENUMERATION_WAIT_MILLIS = 10_000L
+        private const val IPHONE_NOT_LISTED_AFTER_MILLIS = 20_000L
         private const val START_SESSION_PROGRESS = "iap2 tx=0x4301"
         private const val EXECUTOR_CLOSE_TIMEOUT_MILLIS = 2_000L
         private const val ADAPTER_ADDRESS_PLACEHOLDER = "02:00:00:00:00:00"
