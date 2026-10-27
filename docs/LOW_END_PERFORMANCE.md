@@ -473,3 +473,25 @@ none (the emulator cannot carry a USB CarPlay session), so neither the GPU savin
 output's stability on cheap HWCs was measured. The user's FYT stereo (GE8322) and the reporter's
 unit are the next checks: DiPlay's log line `Video output mode=SURFACE … directVideoOutput=true`
 and CarLink's `Automatic picture: … direct video output` show the new path was taken.
+
+## Round 4 (2026-10-27): the wired CarPlay data path on a weak SoC (issues #4, #5)
+
+Reporter's unit (issue #5 report, CarLink 1.0.4): Unisoc UIS8581A (sprd s9863a1h10), 8 × 1.6 GHz,
+2 GB, reports "Android 12 (SDK 29)", 1280×720 panel. Picture was already panel-native 1280×720
+at 30 fps H.264 (round 3); audio on wired is already LPCM (`AirPlayInfoPlist.audioFormats`: only
+the buffered music stream is AAC-LC); video decryption already uses Conscrypt's native
+ChaCha20-Poly1305 (`AirPlayCrypto.platformChacha`; DiPlay logs `chacha=<provider>` on the first
+frame). What CarLink does per packet that a dongle does not:
+
+| Cost | Where | Changed |
+|---|---|---|
+| USB networking in Java: per Ethernet frame (~1 per 1.4 KB of video) a `copyOfRange`, a tun `write`; per TCP ack a tun `read`, 3 allocations and one bulk-OUT transfer | `NcmUsbBridge`, `Ntb16Codec.parse`, `Ipv6NcmBridge` | No (needs measuring; a zero-copy rewrite is not low-risk) |
+| One bulk-IN request, re-queued only after every frame of the last completion reached the tun: while the reader works or is descheduled the phone cannot send | `NcmUsbBridge.readChunk` | Re-armed right after the copy |
+| `ncm-ipv6-in`, `ncm-ipv6-out`, `ncm-bulk-out`, `airplay-screen` and the `carplay-video` worker at default priority, while the audio receive thread (`AUDIO`, upstream #737) and the decoder output thread (`DISPLAY`) were raised: on wired, audio too waits for the NCM threads | DiPlay threads | NCM threads `URGENT_DISPLAY`, video receive/worker `DISPLAY` |
+| Per frame: a body array, a decrypted array (plus two direct-buffer copies on API 31+), a decode-queue job | `ScreenStream`, `AirPlayCrypto` | No (~2 MB/s at 30 fps; small next to the per-packet path) |
+| Diagnostics: `CONNECTION_DIAGNOSTIC … wired io operation=READ result=TIMED_OUT` every 10 s in a healthy session, shown as a warning because its counters say `readTimeouts` (the iAP2 control read polls every 100 ms) | `ConnectionLog.diPlayLevel` | Not a problem unless `result=FAILED` (E) or `ENDED` (W) |
+
+**Verify on a slow unit** (no adb yet): `WIRED_TIMING first-frame`, DiPlay's video stats lines
+(decode latency, late frames, `recovery:`), `chacha=` on the first frame, and that a 10-minute
+session's Diagnostics shows no `wired io` warnings. **On the tablet**: a USB CarPlay session
+connects in ≈ 3.4 s as before and video/audio stay smooth for 10 minutes.

@@ -39,7 +39,7 @@ class UsbReadQueueCompatibilityTest {
         UsbQueueReplay.outcomes.addAll(listOf(false, true, false, true, true))
         val ncm = ncm()
         try { repeat(3) { assertEquals(payload.size, readChunk(ncm)) } } finally { ncm.close() }
-        assertEquals(listOf(32_768, 16_384, 16_384, 8_192, 8_192), UsbQueueReplay.sizes)
+        assertEquals(listOf(32_768, 16_384, 16_384, 8_192, 8_192, 8_192), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
     }
 
     @Test fun normalUsbmuxAndNcmRequestsKeepTheirOriginalSizes() {
@@ -50,7 +50,7 @@ class UsbReadQueueCompatibilityTest {
         UsbQueueReplay.reset()
         val ncm = ncm(diagnostics::add)
         try { assertEquals(payload.size, readChunk(ncm)) } finally { ncm.close() }
-        assertEquals(listOf(32_768), UsbQueueReplay.sizes)
+        assertEquals(listOf(32_768, 32_768), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
         assertTrue(diagnostics.isEmpty())
     }
 
@@ -71,7 +71,7 @@ class UsbReadQueueCompatibilityTest {
         val diagnostics = mutableListOf<String>()
         val ncm = ncm(diagnostics::add)
         try { repeat(2) { assertEquals(payload.size, readChunk(ncm)) } } finally { ncm.close() }
-        assertEquals(listOf(32_768, 16_384, 16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(32_768, 16_384, 16_384, 16_384), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
         assertTrue(UsbQueueReplay.buffers.all { it === UsbQueueReplay.buffers.first() })
         checkFallbackDiagnostic(diagnostics, "NCM", 32_768)
     }
@@ -89,7 +89,7 @@ class UsbReadQueueCompatibilityTest {
             assertArrayEquals(frame, ncm.recv(1_000))
             assertArrayEquals(followingFrame, ncm.recv(1_000))
         } finally { ncm.close() }
-        assertEquals(listOf(32_768, 16_384, 16_384, 16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(32_768, 16_384, 16_384, 16_384, 16_384), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
         assertEquals(listOf(16_384, 16_384, 37), UsbQueueReplay.completedBytes)
         assertEquals(UsbQueueReplay.transfer!!.size, UsbQueueReplay.transferOffset)
         checkFallbackDiagnostic(diagnostics, "NCM", 32_768)
@@ -139,7 +139,7 @@ class UsbReadQueueCompatibilityTest {
             UsbQueueReplay.timeout = false
             assertEquals(payload.size, readChunk(ncm))
         } finally { ncm.close() }
-        assertEquals(listOf(32_768, 16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(32_768, 16_384, 16_384), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
     }
 
     @Test fun closingUsbmuxAfterRejectedQueuePreventsTheCompatibilityRetry() {

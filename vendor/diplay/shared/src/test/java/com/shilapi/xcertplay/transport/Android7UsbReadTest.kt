@@ -38,8 +38,8 @@ class Android7UsbReadTest {
         try {
             repeat(2) { assertEquals(UsbReadQueueCompatibilityTest.payload.size, readChunk(ncm)) }
         } finally { ncm.close() }
-        assertEquals(listOf(32_768, 16_384, 16_384), UsbQueueReplay.sizes)
-        assertEquals(2, UsbQueueReplay.untimedWaits)
+        assertEquals(listOf(32_768, 16_384, 16_384, 16_384), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
+        assertEquals(3, UsbQueueReplay.untimedWaits) // CarLink: the reaper also waits on the re-armed read
         assertTrue(diagnostics.single().contains("api=25"))
     }
 

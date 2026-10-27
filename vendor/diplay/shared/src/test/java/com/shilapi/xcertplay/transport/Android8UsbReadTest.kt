@@ -41,7 +41,7 @@ class Android8UsbReadTest {
             assertArrayEquals(frame, ncm.recv(1_000))
             assertArrayEquals(following, ncm.recv(1_000))
         } finally { ncm.close() }
-        assertEquals(listOf(16_384, 8_192, 8_192, 8_192, 8_192, 8_192), UsbQueueReplay.sizes)
+        assertEquals(listOf(16_384, 8_192, 8_192, 8_192, 8_192, 8_192, 8_192), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
         assertEquals(listOf(8_192, 8_192, 8_192, 8_192, 32), UsbQueueReplay.completedBytes)
     }
 
@@ -65,7 +65,7 @@ class Android8UsbReadTest {
             assertArrayEquals(frame, ncm.recv(1_000))
             assertArrayEquals(following, ncm.recv(1_000))
         } finally { ncm.close() }
-        assertEquals(listOf(16_384, 16_384, 16_384), UsbQueueReplay.sizes)
+        assertEquals(listOf(16_384, 16_384, 16_384, 16_384), UsbQueueReplay.sizes) // CarLink: + the bulk-IN re-arm after the last completion
         assertEquals(listOf(16_384, 16_384, 32), UsbQueueReplay.completedBytes)
     }
 
