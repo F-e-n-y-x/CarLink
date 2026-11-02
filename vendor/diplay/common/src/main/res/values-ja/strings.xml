@@ -1048,6 +1048,8 @@
 
     <string name="settings_hotspot_interface">ホットスポットのインターフェース（任意）</string>
     <string name="settings_hotspot_interface_description">Android が Wi-Fi ホットスポットとして報告しないネットワークインターフェースでホットスポットを動かすヘッドユニット専用です。一部の Geely、Lynk &amp; Co、その他の Qualcomm ユニットでは eth0.3 です。空欄のままにすると自動で検出します。</string>
+    <string name="settings_existing_wifi_interface">ネットワークインターフェース（任意）</string>
+    <string name="settings_existing_wifi_interface_description">Android が Wi-Fi として報告しないネットワークインターフェース（例：USB アダプタの eth1）で LAN 接続を行うヘッドユニット専用です。空欄のままにすると自動で選択します。</string>
     <string name="cluster_projection_shape">ダッシュボード地図の表示形態</string>
     <string name="cluster_projection_shape_half">小画面（小画面ナビ）</string>
     <string name="cluster_projection_shape_full">全画面（全画面ナビ）</string>

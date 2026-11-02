@@ -1,6 +1,6 @@
 # Install and connect
 
-1. Park the car. Download `DiPlay-0.2.21.apk` from the [official release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.21), also linked on the [website](https://shihabal3amri.github.io/DiPlay/). The official app requires Android 7.0 or newer (API 24+); Android 7.0–8.1 support still needs vehicle testing.
+1. Park the car. Download `DiPlay-0.2.22.apk` from the [official release](https://github.com/shihabal3amri/DiPlay/releases/tag/v0.2.22), also linked on the [website](https://shihabal3amri.github.io/DiPlay/). The official app requires Android 7.0 or newer (API 24+); on Android 7.0–8.1, wired CarPlay is confirmed on one car and wireless still needs vehicle testing.
 2. Install on the Android head unit using its supported APK installation method. Do not install on the iPhone. Use the same package/variant and a matching signing certificate for an in-place update that preserves settings and pairing records. Release-specific build and signing checks are recorded in [validation](VALIDATION.md); do not infer update compatibility from the filename.
 3. Open DiPlay. Grant the permissions requested for the features you use: Bluetooth/Nearby devices, Wi-Fi/Location on older Android, and microphone for Siri/calls. Allow notifications for connection controls.
 4. Close other phone-projection apps before connecting.
@@ -40,7 +40,7 @@ Optional square-canvas rotation, split-screen areas and the side panel are under
 
 Independent experimental **CarPlay call keys** and **CarPlay calls on the dashboard** remain off by default. They appear under **Settings → Navigation → BYD navigation**, or under **Settings → Advanced → Advanced vehicle data** when the BYD navigation card is unavailable. The dashboard card needs authorized ADB and target firmware. Review [0.2.18 limits](RELEASE-NOTES-0.2.18.md) before opting in.
 
-The app includes nine languages, including Italian, Japanese and Traditional Chinese (Taiwan); the website has eight. Android 13+ app-language selection is synchronized with Android settings; Android 7.0–12 retain a saved context override. Hong Kong/Macao and Hant use the Taiwan app translation, not separate regional editions. See the [Traditional Chinese installation guide](INSTALL.zh-TW.md).
+The app and the website both include eleven languages, including Italian, Japanese, Korean, Turkish and Traditional Chinese (Taiwan). Android 13+ app-language selection is synchronized with Android settings; Android 7.0–12 retain a saved context override. Hong Kong/Macao and Hant use the Taiwan app translation, not separate regional editions. See the [Traditional Chinese installation guide](INSTALL.zh-TW.md).
 
 ## Connection recovery and reports
 
@@ -48,14 +48,14 @@ If the head unit's wallpaper shows through CarPlay's rounded picture corners (#6
 
 If reinstalling left an old group, close other projection apps, then use **Settings → Connection → Wireless connection help → Reset CarPlay Wi-Fi**. DiPlay asks before removing an unrecognized Wi-Fi Direct group. Updating in place is preferable to uninstalling.
 
-Please reproduce unresolved problems on **0.2.21** and export a fresh report, even if you already sent older logs. Capture from the first connection attempt through the failure; for boot/auto-start problems, reboot and then open DiPlay manually to export. Use **Settings → Diagnostics → Save diagnostic report**. Android 10+ normally saves to **Downloads/DiPlay**; Android 7.0–9 asks for storage access and saves there too. **Choose save location** is also available. If the picker or Downloads storage is unavailable, the fallback TXT file is saved in app-specific external storage; the confirmation shows its exact path. If external storage is also unavailable, DiPlay saves the report privately. Both fallbacks offer **View report** and **Share**; select/copy text in the report view when no sharing app is available. Review the `.txt` file, then attach it to your existing [GitHub issue](https://github.com/shihabal3amri/DiPlay/issues) or [create a new issue](https://github.com/shihabal3amri/DiPlay/issues/new/choose), with car/head-unit model, exact DiLink/Android/firmware versions, iPhone/iOS, connection backend (USB, built-in hotspot, Wi-Fi Direct or Same LAN), relevant settings, expected/actual behavior, reproduction steps and approximate failure time. Never include your hotspot password. Nothing is uploaded automatically.
+Please reproduce unresolved problems on **0.2.22** and export a fresh report, even if you already sent older logs. Capture from the first connection attempt through the failure; for boot/auto-start problems, reboot and then open DiPlay manually to export. Use **Settings → Diagnostics → Save diagnostic report**. Android 10+ normally saves to **Downloads/DiPlay**; Android 7.0–9 asks for storage access and saves there too. **Choose save location** is also available. If the picker or Downloads storage is unavailable, the fallback TXT file is saved in app-specific external storage; the confirmation shows its exact path. If external storage is also unavailable, DiPlay saves the report privately. Both fallbacks offer **View report** and **Share**; select/copy text in the report view when no sharing app is available. Review the `.txt` file, then attach it to your existing [GitHub issue](https://github.com/shihabal3amri/DiPlay/issues) or [create a new issue](https://github.com/shihabal3amri/DiPlay/issues/new/choose), with car/head-unit model, exact DiLink/Android/firmware versions, iPhone/iOS, connection backend (USB, built-in hotspot, Wi-Fi Direct or Same LAN), relevant settings, expected/actual behavior, reproduction steps and approximate failure time. Never include your hotspot password. Nothing is uploaded automatically.
 
-The additional wireless/media/theme/own-app-exit records help identify the failing stage; they do not establish Qin Plus startup, Wi-Fi Direct stutter, Siri, iOS 15 or day/night firmware reports as resolved. See [0.2.21 release notes](RELEASE-NOTES-0.2.21.md).
+The additional wireless/media/theme/own-app-exit records help identify the failing stage; they do not establish Qin Plus startup, Wi-Fi Direct stutter, Siri, iOS 15 or day/night firmware reports as resolved. See [0.2.22 release notes](RELEASE-NOTES-0.2.22.md).
 
 APK installation restrictions are controlled by your car's firmware. ADB is optional if your car supports it, not an app runtime requirement:
 
 ```sh
-adb install -r DiPlay-0.2.21.apk
+adb install -r DiPlay-0.2.22.apk
 ```
 
 Only use a trusted computer. A different signing certificate cannot update this build; do not uninstall until you have saved any reports you need.

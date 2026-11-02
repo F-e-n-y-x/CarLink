@@ -1006,6 +1006,8 @@
 
     <string name="settings_hotspot_interface">熱點網路介面（選填）</string>
     <string name="settings_hotspot_interface_description">僅用於把熱點放在 Android 不認為是 Wi-Fi 熱點的網路介面上的車機，例如部分吉利、領克及其它高通車機上的 eth0.3。留空則自動尋找。</string>
+    <string name="settings_existing_wifi_interface">網路介面（選填）</string>
+    <string name="settings_existing_wifi_interface_description">僅用於把同一區域網路連線放在 Android 不認為是 Wi-Fi 的網路介面上的車機，例如 USB 網卡上的 eth1。留空則自動選擇。</string>
     <string name="cluster_projection_shape">儀表板地圖形態</string>
     <string name="cluster_projection_shape_half">半螢幕（小螢幕導航）</string>
     <string name="cluster_projection_shape_full">全螢幕（全螢幕導航）</string>

@@ -293,6 +293,15 @@ class CarPlayControllerUsbServiceTest {
             if (receiver != null) receivers[receiver] = filter
             return super.registerReceiver(receiver, filter)
         }
+        // The USB permission receiver registers with a sender permission before Android 13 and with RECEIVER_NOT_EXPORTED after.
+        override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter, broadcastPermission: String?, scheduler: android.os.Handler?): Intent? {
+            if (receiver != null) receivers[receiver] = filter
+            return super.registerReceiver(receiver, filter, broadcastPermission, scheduler)
+        }
+        override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter, flags: Int): Intent? {
+            if (receiver != null) receivers[receiver] = filter
+            return super.registerReceiver(receiver, filter, flags)
+        }
         override fun unregisterReceiver(receiver: BroadcastReceiver) {
             if (receivers.remove(receiver) != null) unregistered++
             super.unregisterReceiver(receiver)

@@ -2,6 +2,7 @@ package com.shilapi.xcertplay.backup
 
 import android.content.Context
 import android.content.SharedPreferences.Editor
+import com.shilapi.xcertplay.CarPlayPicture
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -56,22 +57,31 @@ object SettingsBackupCodec {
         "picture_controls",
         "settings_gesture_fingers",
     )
+    private val PICTURE_KEYS = CarPlayPicture.keys.toSet()
+    // The driver's choices only. "ignore_off_report" records what one car's firmware reports, so it stays out.
+    private val CAR_HOTSPOT_KEYS = setOf("auto_enable", "config_write")
     private val FILES = mapOf(
         "xcertplay_airplay" to Policy.Allow(AIRPLAY_KEYS, AIRPLAY_PREFIXES),
         "diplay" to Policy.Allow(DIPLAY_KEYS),
-        "carplay_picture" to Policy.All,
-        "diplay_car_hotspot" to Policy.All,
+        // These readers call getInt and getBoolean, which throw on any other stored type. A key that is not stored yet
+        // has no type to compare with, so the type is declared here.
+        "carplay_picture" to Policy.Allow(PICTURE_KEYS, types = PICTURE_KEYS.associateWith { KeyType.INT }),
+        "diplay_car_hotspot" to Policy.Allow(CAR_HOTSPOT_KEYS, types = CAR_HOTSPOT_KEYS.associateWith { KeyType.BOOLEAN }),
     )
+
+    private enum class KeyType { BOOLEAN, INT }
 
     private sealed interface Policy {
         fun includes(key: String): Boolean
+        fun typeOf(key: String): KeyType?
 
-        data object All : Policy {
-            override fun includes(key: String) = true
-        }
-
-        data class Allow(val keys: Set<String>, val prefixes: List<String> = emptyList()) : Policy {
+        data class Allow(
+            val keys: Set<String>,
+            val prefixes: List<String> = emptyList(),
+            val types: Map<String, KeyType> = emptyMap(),
+        ) : Policy {
             override fun includes(key: String) = key in keys || prefixes.any(key::startsWith)
+            override fun typeOf(key: String) = types[key]
         }
     }
 
@@ -122,7 +132,8 @@ object SettingsBackupCodec {
                     skipped++
                     continue
                 }
-                val stored = when (val target = current[key]) {
+                val declared = policy.typeOf(key)
+                val stored = if (declared != null) storeTyped(editor, key, value, declared) else when (val target = current[key]) {
                     is Boolean -> if (value is Boolean) { editor.putBoolean(key, value); true } else false
                     is Int -> integral(value)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.let { editor.putInt(key, it.toInt()); true } ?: false
                     is Long -> integral(value)?.let { editor.putLong(key, it); true } ?: false
@@ -137,6 +148,11 @@ object SettingsBackupCodec {
             editor.apply()
         }
         return SettingsImportOutcome(applied, skipped, invalid = false)
+    }
+
+    private fun storeTyped(editor: Editor, key: String, value: Any?, type: KeyType): Boolean = when (type) {
+        KeyType.BOOLEAN -> if (value is Boolean) { editor.putBoolean(key, value); true } else false
+        KeyType.INT -> integral(value)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.let { editor.putInt(key, it.toInt()); true } ?: false
     }
 
     private fun inferred(editor: Editor, key: String, value: Any?): Boolean = when (value) {

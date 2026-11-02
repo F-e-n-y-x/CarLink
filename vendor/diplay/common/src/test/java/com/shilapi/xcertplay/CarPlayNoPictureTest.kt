@@ -191,7 +191,10 @@ class CarPlayNoPictureTest {
     private fun stage(host: CarPlayHostActivity) =
         ReflectionHelpers.getField<TextView>(host, "stageStatusView").text.toString()
 
-    private fun reportLines() = log.readLines().count { "Screen stream open 10 s with no video frame" in it }
+    private fun reportLines(): Int {
+        hosts.forEach { assertTrue(ReflectionHelpers.getField<SessionLogFile>(it, "sessionLog").awaitIdle(2_000)) }
+        return log.readLines().count { "Screen stream open 10 s with no video frame" in it }
+    }
 
     private fun idle(millis: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
 

@@ -260,6 +260,7 @@ class WirelessStartupRecoveryTest {
         assertTrue(ReflectionHelpers.getField(activity, "reconnectScheduled"))
         assertFalse(ReflectionHelpers.getField(activity, "startupRetryStopped"))
         assertEquals(View.GONE, retry.visibility)
+        assertTrue(ReflectionHelpers.getField<SessionLogFile>(activity, "sessionLog").awaitIdle(2_000))
         assertTrue(log.readText(), log.readText().contains("Failed: $notPaired; retrying in 2000ms generation=0 startupFailure=null"))
     }
 
@@ -289,6 +290,7 @@ class WirelessStartupRecoveryTest {
             ReflectionHelpers.setField(activity, "reconnectScheduled", false)
             report(generation, status)
         }
+        assertTrue(ReflectionHelpers.getField<SessionLogFile>(activity, "sessionLog").awaitIdle(2_000))
         return Retries(log.readLines().map { it.substringAfter("  ") }, budget().retries)
     }
 

@@ -198,8 +198,13 @@ class CurrentScreenListenerTest {
         }
     }
 
+    // onScreen needs the control peer's address.
+    private fun connectedSocket(): Socket = java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+        Socket(server.inetAddress, server.localPort)
+    }
+
     private fun testSession(listener: AirPlaySessionListener = object : AirPlaySessionListener {}): AirPlaySession = AirPlaySession(
-        socket = Socket(),
+        socket = connectedSocket(),
         config = AirPlayConfig(
             deviceName = "test",
             deviceId = "02:00:00:00:00:02",

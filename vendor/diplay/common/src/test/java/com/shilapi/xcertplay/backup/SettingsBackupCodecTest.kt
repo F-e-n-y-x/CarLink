@@ -2,10 +2,12 @@ package com.shilapi.xcertplay.backup
 
 import android.content.Context
 import com.shilapi.xcertplay.AirPlayPersistence
+import com.shilapi.xcertplay.CarPlayPicture
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import com.shilapi.xcertplay.network.CarHotspotSettings
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -114,6 +116,58 @@ class SettingsBackupCodecTest {
         assertTrue(AirPlayPersistence.loadLegacyClusterEnabled(context))
         assertTrue(AirPlayPersistence.loadLauncherBubble(context))
         assertEquals(16, AirPlayPersistence.loadLauncherBubbleSize(context))
+    }
+
+    @Test
+    fun importedPictureAndHotspotFilesTakeOnlyTheirOwnKeys() {
+        val document = """
+            {"format": "diplay-settings", "version": 1, "settings": {
+              "carplay_picture": {"brightness": 10, "contrast": 120, "saturation": 90, "warmth": -5, "planted_key": "x"},
+              "diplay_car_hotspot": {"auto_enable": true, "config_write": true, "planted_key": true}
+            }}
+        """.trimIndent()
+        val outcome = SettingsBackupCodec.import(context, document.toByteArray())
+        assertEquals(6, outcome.applied)
+        assertEquals(2, outcome.skipped)
+        assertEquals(10, prefs("carplay_picture").getInt("brightness", 0))
+        assertEquals(120, prefs("carplay_picture").getInt("contrast", 0))
+        assertEquals(90, prefs("carplay_picture").getInt("saturation", 0))
+        assertEquals(-5, prefs("carplay_picture").getInt("warmth", 0))
+        assertTrue(prefs("diplay_car_hotspot").getBoolean("auto_enable", false))
+        assertTrue(prefs("diplay_car_hotspot").getBoolean("config_write", false))
+        assertFalse(prefs("carplay_picture").contains("planted_key"))
+        assertFalse(prefs("diplay_car_hotspot").contains("planted_key"))
+    }
+
+    @Test
+    fun anImportedPictureValueOfAnotherTypeNeverReachesTheReaderOfThatKey() {
+        // On a fresh install the key does not exist yet, so nothing tells the codec its type. The reader calls getInt.
+        for (wrong in listOf("\"x\"", "1.5", "99999999999", "true")) {
+            prefs("carplay_picture").edit().clear().commit()
+            SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"carplay_picture": {"brightness": $wrong}}}""".toByteArray())
+            CarPlayPicture.value(prefs("carplay_picture"), "brightness") // ClassCastException when a String, Float or Long was stored
+        }
+    }
+
+    @Test
+    fun anImportedHotspotValueOfAnotherTypeNeverReachesTheReaderOfThatKey() {
+        for (wrong in listOf("\"yes\"", "1", "1.5")) {
+            prefs("diplay_car_hotspot").edit().clear().commit()
+            SettingsBackupCodec.import(context, """{"format": "diplay-settings", "version": 1, "settings": {"diplay_car_hotspot": {"auto_enable": $wrong, "config_write": $wrong}}}""".toByteArray())
+            CarHotspotSettings.enabled(context) // ClassCastException when a String, Int or Float was stored
+            CarHotspotSettings.configWrite(context)
+        }
+    }
+
+    @Test
+    fun exportKeepsUnlistedKeysOfPictureAndHotspotFilesOut() {
+        prefs("carplay_picture").edit().putInt("brightness", 5).putString("stray", "x").apply()
+        prefs("diplay_car_hotspot").edit().putBoolean("auto_enable", true).putString("stray", "x").apply()
+        val settings = JSONObject(String(SettingsBackupCodec.export(context, "0.2.22"))).getJSONObject("settings")
+        assertEquals(5, settings.getJSONObject("carplay_picture").getInt("brightness"))
+        assertTrue(settings.getJSONObject("diplay_car_hotspot").getBoolean("auto_enable"))
+        assertFalse(settings.getJSONObject("carplay_picture").has("stray"))
+        assertFalse(settings.getJSONObject("diplay_car_hotspot").has("stray"))
     }
 
     @Test

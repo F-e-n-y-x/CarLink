@@ -1049,6 +1049,8 @@
 
     <string name="settings_hotspot_interface">Hotspot interface (optional)</string>
     <string name="settings_hotspot_interface_description">Only for head units that run their hotspot on a network interface Android does not report as a Wi-Fi hotspot, for example eth0.3 on some Geely, Lynk &amp; Co and other Qualcomm units. Leave empty to find it automatically.</string>
+    <string name="settings_existing_wifi_interface">Network interface (optional)</string>
+    <string name="settings_existing_wifi_interface_description">Only for units whose LAN connection runs on an interface Android does not report as Wi-Fi, for example a USB network card on eth1. Leave empty to pick it automatically.</string>
     <string name="cluster_projection_shape">Dashboard map shape</string>
     <string name="cluster_projection_shape_half">Half screen</string>
     <string name="cluster_projection_shape_full">Full screen</string>

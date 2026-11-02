@@ -457,6 +457,16 @@ object AirPlayPersistence {
             .putString("existing_wifi_passphrase", passphrase).apply()
     }
 
+    /** Interface that carries the station LAN when Android does not report it as Wi-Fi, e.g. a USB NIC on eth1. */
+    fun loadExistingWifiInterface(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("existing_wifi_interface", null).orEmpty()
+
+    fun saveExistingWifiInterface(context: Context, interfaceName: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("existing_wifi_interface", interfaceName.trim()).apply()
+    }
+
     fun loadManualHotspotSsid(context: Context): String =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_MANUAL_HOTSPOT_SSID, null)
