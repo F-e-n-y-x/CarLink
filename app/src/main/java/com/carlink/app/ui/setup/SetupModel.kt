@@ -117,6 +117,8 @@ data class SetupUi(
     val cable: Boolean = false,
     /** This stereo's Bluetooth is an external module apps cannot use: wireless cannot start here yet. */
     val wirelessUnavailable: Boolean = false,
+    /** Opened from Home's "Pair a phone" after setup: only the pairing step, without the wizard's frame. */
+    val pairOnly: Boolean = false,
 ) {
     /** Required and recommended items not allowed yet; while any is, "Allow all" is the lit action. */
     val missingNeeded: Int get() = permissions.count { !it.granted && it.item.need != Need.OPTIONAL }

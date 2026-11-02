@@ -211,6 +211,8 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     val chooseCable: (Boolean) -> Unit = { cable = it }
     val actions = object : SetupActions {
         override fun next() {
+            // Pairing from Home returns to Home; only first-time setup goes on to its summary.
+            if (start == SetupStep.PAIR) return exit()
             step = SetupStep.entries.getOrElse(step.ordinal + 1) { SetupStep.DONE }
         }
         override fun back() {
@@ -285,6 +287,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     }
 
     val ui = SetupUi(
+        pairOnly = start == SetupStep.PAIR,
         step = step,
         permissions = permissions,
         carBrand = vehicle.brand,
@@ -370,7 +373,7 @@ internal fun SetupContent(ui: SetupUi, actions: SetupActions) {
     Atmosphere(Modifier.fillMaxSize(), glow = light.copy(alpha = 0.55f), glowCenter = Offset(0.74f, 0.5f),
         lightCenter = Offset(0.7f, -0.2f)) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            SetupTopBar(ui.step, actions, margin)
+            SetupTopBar(ui.step, ui.pairOnly, actions, margin)
             BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
                 val landscape = maxWidth > maxHeight && maxWidth >= 720.dp
                 val viewport = maxHeight
@@ -412,7 +415,7 @@ private fun ScrollPane(modifier: Modifier, viewport: Dp, content: @Composable Co
 }
 
 @Composable
-private fun SetupTopBar(step: SetupStep, actions: SetupActions, margin: Dp) {
+private fun SetupTopBar(step: SetupStep, pairOnly: Boolean, actions: SetupActions, margin: Dp) {
     val dimens = CarLinkTokens.dimens
     val wide = CarLinkTokens.layout.width != WidthClass.COMPACT
     Row(
@@ -423,13 +426,15 @@ private fun SetupTopBar(step: SetupStep, actions: SetupActions, margin: Dp) {
         Spacer(Modifier.width(if (isCar) 16.dp else 12.dp))
         // Narrow windows (BYD ⅓ split) keep the mark, the meter and Close; the step names itself below.
         if (CarLinkTokens.layout.widthDp >= (if (isCar) 560.dp else 360.dp)) {
-            Text(stringResource(R.string.carlink_setup_title), Modifier.semantics { heading() },
+            Text(stringResource(if (pairOnly) R.string.carlink_home_pair_action else R.string.carlink_setup_title), Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
         }
         Spacer(Modifier.weight(1f))
         Spacer(Modifier.width(dimens.targetGap))
-        StepMeter(step, showLabel = wide)
-        Spacer(Modifier.width(dimens.gutter))
+        if (!pairOnly) {
+            StepMeter(step, showLabel = wide)
+            Spacer(Modifier.width(dimens.gutter))
+        }
         RoundGlassIconButton(R.drawable.carlink_ic_close, stringResource(R.string.carlink_setup_close), actions::exit)
     }
 }
@@ -467,7 +472,7 @@ private fun SetupBottomBar(ui: SetupUi, actions: SetupActions, margin: Dp) {
         Modifier.fillMaxWidth().padding(start = margin, end = margin, top = dimens.targetGap, bottom = dimens.gutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (ui.step != SetupStep.WELCOME && ui.step != SetupStep.DONE) {
+        if (ui.step != SetupStep.WELCOME && ui.step != SetupStep.DONE && !ui.pairOnly) {
             GlassButton(stringResource(R.string.carlink_setup_back), actions::back, icon = R.drawable.carlink_ic_arrow_back)
         }
         Spacer(Modifier.weight(1f))
@@ -483,7 +488,14 @@ private fun SetupBottomBar(ui: SetupUi, actions: SetupActions, margin: Dp) {
             }
             SetupStep.CAR -> IonButton(stringResource(R.string.carlink_setup_continue), actions::next,
                 icon = R.drawable.carlink_ic_arrow_forward)
-            SetupStep.PAIR -> if (session?.stage == LinkStage.CONNECTED) {
+            SetupStep.PAIR -> if (ui.pairOnly) {
+                // Close in the top bar also leaves; this is the one lit way back to Home.
+                if (session?.stage == LinkStage.CONNECTED) {
+                    IonButton(stringResource(R.string.carlink_setup_step_done), actions::exit, icon = R.drawable.carlink_ic_home)
+                } else {
+                    GlassButton(stringResource(R.string.carlink_home_cancel), actions::exit, icon = R.drawable.carlink_ic_close)
+                }
+            } else if (session?.stage == LinkStage.CONNECTED) {
                 IonButton(stringResource(R.string.carlink_setup_continue), actions::next, icon = R.drawable.carlink_ic_arrow_forward)
             } else {
                 GlassButton(stringResource(R.string.carlink_setup_pair_skip), actions::next, icon = R.drawable.carlink_ic_arrow_forward)
