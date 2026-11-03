@@ -1,9 +1,7 @@
 package com.carlink.app.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,6 +55,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
     var askKind by remember { mutableStateOf<PairedPhone?>(null) }
     var confirmSwitch by remember { mutableStateOf<PairedPhone?>(null) }
     var confirmForget by remember { mutableStateOf<PairedPhone?>(null) }
+    var showModulePairing by remember { mutableStateOf(false) }
     val live = ui.home.link.stage == LinkStage.CONNECTED
 
     fun choose(phone: PairedPhone) {
@@ -81,8 +80,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                     }
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = dimens.rowTwoLine)
-                            // A long press forgets a phone CarLink remembers (a module stereo lists them).
-                            .combinedClickable(role = Role.Button, onLongClick = { confirmForget = phone }) { choose(phone) }
+                            .clickable(role = Role.Button) { choose(phone) }
                             .padding(horizontal = dimens.gutter, vertical = if (car) 16.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -117,18 +115,42 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                                 if (current) colors.success else if (plugged) scheme.primary else scheme.onSurfaceVariant)
                         }
                         Spacer(Modifier.width(12.dp))
-                        Icon(painterResource(R.drawable.carlink_ic_chevron_right), null, Modifier.size(dimens.iconTertiary),
-                            tint = colors.onSurfaceTertiary)
+                        // Delete: forget and unpair this phone (asks first).
+                        androidx.compose.material3.IconButton(onClick = { confirmForget = phone }) {
+                            Icon(painterResource(R.drawable.carlink_ic_delete),
+                                stringResource(R.string.carlink_home_forget_title, phone.name), Modifier.size(dimens.iconTertiary),
+                                tint = scheme.onSurfaceVariant)
+                        }
                     }
+                }
+                // Add a new phone: the last row of the list.
+                if (ui.home.phones.isNotEmpty()) {
+                    Box(Modifier.fillMaxWidth().padding(start = dimens.gutter * 2 + dimens.avatarRow, end = dimens.gutter)
+                        .height(1.dp).background(colors.hairline))
+                }
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = dimens.rowTwoLine)
+                        .clickable(role = Role.Button) { if (ui.bluetoothViaModule) showModulePairing = true else { actions.pairPhone(); onDismiss() } }
+                        .padding(horizontal = dimens.gutter, vertical = if (car) 16.dp else 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconTile(R.drawable.carlink_ic_add, tint = scheme.primary, size = dimens.avatarRow)
+                    Spacer(Modifier.width(dimens.gutter))
+                    Text(stringResource(R.string.carlink_home_add_phone), style = MaterialTheme.typography.titleMedium,
+                        color = scheme.primary, modifier = Modifier.weight(1f))
                 }
             }
         }
-        Spacer(Modifier.height(dimens.gutter))
-        // On a module stereo phones pair in the stereo's own Bluetooth settings, not Android's.
-        if (ui.bluetoothViaModule) Text(stringResource(R.string.carlink_home_ready_module_body), style = MaterialTheme.typography.bodyMedium)
-        else GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.pairPhone(); onDismiss() },
-            icon = R.drawable.carlink_ic_bluetooth)
     }
+
+    // On a module stereo phones pair in the stereo's own Bluetooth settings, not Android's.
+    if (showModulePairing) AlertDialog(
+        onDismissRequest = { showModulePairing = false },
+        title = { Text(stringResource(R.string.carlink_home_add_phone)) },
+        text = { Text(stringResource(R.string.carlink_home_ready_module_body)) },
+        confirmButton = { GlassButton(stringResource(R.string.carlink_home_cable_ok), { showModulePairing = false }) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
 
     confirmForget?.let { phone ->
         AlertDialog(
