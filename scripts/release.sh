@@ -127,6 +127,10 @@ CERT_SHA="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$CERTS" | 
 [ "$CERT_SHA" = "$PIN_NORM" ] || die "the APK is signed with $CERT_SHA, not the pinned release key $PIN_NORM"
 echo "signed with the release key ($PIN)"
 LISTING="$(unzip -l "$APK")" || die "cannot list the APK"
+# Never again: 1.0.0-1.0.7 carried assets/release/ (the signing key and its passwords).
+if grep -qiE ' assets/(release/|[^ ]*\.(jks|keystore|p12)$|[^ ]*signing\.env$)' <<<"$LISTING"; then
+  die "the APK contains signing material under assets/; refusing to release it"
+fi
 grep -q ' assets/offline-mfi/' <<<"$LISTING" || die "the APK has no assets/offline-mfi/ (CarPlay authentication); DIPLAY_AUTH_ASSETS_DIR was not picked up"
 echo "contains assets/offline-mfi/"
 BADGING="$("$AAPT2" dump badging "$APK")" || die "aapt2 cannot read the APK"

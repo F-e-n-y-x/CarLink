@@ -73,7 +73,13 @@ android {
         missingDimensionStrategy("distribution", "github")
     }
 
-    localAuthenticationAssets?.let { sourceSets.getByName("main").assets.directories.add(it.path) }
+    // Only offline-mfi/ goes into the APK. Adding the whole private folder shipped release/ (the
+    // signing key and its passwords) inside every APK from 1.0.0 to 1.0.7.
+    localAuthenticationAssets?.let { dir ->
+        val onlyMfi = layout.buildDirectory.dir("generated/carlinkAuthAssets").get().asFile
+        copy { from(dir.resolve("offline-mfi")); into(onlyMfi.resolve("offline-mfi")) }
+        sourceSets.getByName("main").assets.directories.add(onlyMfi.path)
+    }
 
     signingConfigs {
         create("release") {
