@@ -45,6 +45,9 @@ object GitHubIssueReport {
      */
     const val SHORT_URL_BUDGET = 2_200
 
+    /** The quick QR link: about a version-20 code, easy for a phone camera off a glossy screen. */
+    const val QUICK_URL_BUDGET = 900
+
     /** Engine problem lines are taken from this window before the report. */
     const val ENGINE_PROBLEM_WINDOW_MILLIS = 10 * 60_000L
 
@@ -132,6 +135,8 @@ object GitHubIssueReport {
         val fields: LinkedHashMap<String, String>,
         val url: String,
         val shortUrl: String,
+        /** The easy-to-scan QR link: the form's fields and the error, no log (a few hundred characters). */
+        val quickUrl: String,
         /** The log lines in the excerpt (without its headings), and how many were left for Share log. */
         val logLines: List<String>,
         val omittedLines: Int,
@@ -155,6 +160,13 @@ object GitHubIssueReport {
         // code holds (drivers found the scanned report empty without it; Home shows the code full size).
         val shortFields = LinkedHashMap(head)
         shortFields["what_happened"] = clean(whatHappened(facts, short = true), facts.secrets)
+        // The quick link: no log and a short error, so the QR code stays coarse enough to scan off a screen.
+        val quickFields = LinkedHashMap(shortFields)
+        var quickUrl = url(quickFields)
+        while (quickUrl.length > QUICK_URL_BUDGET && quickFields["what_happened"]!!.length > 40) {
+            quickFields["what_happened"] = quickFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
+            quickUrl = url(quickFields)
+        }
         var shortUrl = url(shortFields)
         while (shortUrl.length > SHORT_URL_BUDGET / 2 && shortFields["what_happened"]!!.length > 40) {
             shortFields["what_happened"] = shortFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
@@ -174,7 +186,7 @@ object GitHubIssueReport {
         val room = URL_BUDGET - url(fields).length - "&log=".length
         val excerpt = logExcerpt(facts, room)
         fields["log"] = excerpt.text
-        return Report(title, fields, url(fields), shortUrl, excerpt.lines, excerpt.omitted)
+        return Report(title, fields, url(fields), shortUrl, quickUrl, excerpt.lines, excerpt.omitted)
     }
 
     // ---- Fields --------------------------------------------------------------------------

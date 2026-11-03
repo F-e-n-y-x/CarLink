@@ -152,8 +152,10 @@ internal data class HomeUi(
     val usual: PhoneUsual? = null,
     /** What this stereo's Bluetooth is (null until the probe finished). */
     val stereo: StereoBluetooth? = null,
-    /** After a failure: the prefilled GitHub report's short address, shown as a QR code to scan with a phone. */
+    /** After a failure: the prefilled GitHub report's quick address, shown as a QR code to scan with a phone. */
     val reportUrl: String? = null,
+    /** The same report with an error-log excerpt (a denser code), offered in the large view. */
+    val reportUrlWithLog: String? = null,
 ) {
     /**
      * Wireless cannot start for the default phone's engine here (for either engine when no phone is
@@ -212,13 +214,13 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
     // A failure gets its report ready at once, so the driver only scans the code on Home.
     val reportContext = androidx.compose.ui.platform.LocalContext.current
-    var failureReport by remember { mutableStateOf<String?>(null) }
+    var failureReport by remember { mutableStateOf<com.carlink.app.diagnostics.GitHubIssueReport.Report?>(null) }
     LaunchedEffect(home.link.stage, home.link.problem, home.link.detail) {
         failureReport = if (home.link.stage != com.carlink.core.core.LinkStage.FAILED) null
         else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             runCatching {
                 com.carlink.app.diagnostics.IssueReporter.build(reportContext, com.carlink.app.diagnostics.IssueReporter.Inputs(
-                    vm.lastSessions(), vm.health.value, vm.carBrandName(), vm.savedSecrets(), vm.reportSettings())).shortUrl
+                    vm.lastSessions(), vm.health.value, vm.carBrandName(), vm.savedSecrets(), vm.reportSettings()))
             }.getOrNull()
         }
     }
@@ -246,7 +248,8 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun startSelf() = vm.startSelf()
         }
     }
-    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification, failureReport), actions)
+    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification,
+        failureReport?.quickUrl, failureReport?.shortUrl), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -262,15 +265,22 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
 
 /** The failure report's QR code, as large as the screen allows. */
 @Composable
-private fun ReportQrDialog(url: String, onDismiss: () -> Unit) {
+private fun ReportQrDialog(url: String, withLog: String?, onDismiss: () -> Unit) {
+    // The simple code scans easily; the one with the log is denser, offered for a closer scan.
+    var includeLog by rememberSaveable { mutableStateOf(false) }
+    val shown = if (includeLog && withLog != null) withLog else url
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.carlink_report_qr_title)) },
         text = {
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                com.carlink.app.ui.components.QrCode(url, minOf(maxWidth, 420.dp), stringResource(R.string.carlink_report_qr_a11y),
+                com.carlink.app.ui.components.QrCode(shown, minOf(maxWidth, 420.dp), stringResource(R.string.carlink_report_qr_a11y),
                     Modifier.clickable(onClick = onDismiss))
             }
+        },
+        dismissButton = withLog?.let {
+            { GlassButton(stringResource(if (includeLog) R.string.carlink_report_qr_simple else R.string.carlink_report_qr_with_log),
+                { includeLog = !includeLog }) }
         },
         confirmButton = { GlassButton(stringResource(R.string.carlink_home_cable_ok), onDismiss) },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -744,7 +754,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 ui.reportUrl?.let { url ->
                     // A tap shows the code full size: easier for a phone camera from the passenger seat.
                     var expanded by rememberSaveable { mutableStateOf(false) }
-                    if (expanded) ReportQrDialog(url) { expanded = false }
+                    if (expanded) ReportQrDialog(url, ui.reportUrlWithLog) { expanded = false }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.clickable(onClickLabel = stringResource(R.string.carlink_home_report_expand)) { expanded = true }) {
                         com.carlink.app.ui.components.QrCode(url, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))
@@ -1023,7 +1033,8 @@ internal fun WifiPasswordDialog(hotspot: Boolean, knownSsid: String?, onSave: (s
 /** Wireless Android Auto waiting for the phone to start it (it only does when its Bluetooth connects). */
 private fun androidWaiting(ui: HomeUi): Boolean {
     val link = ui.home.link
-    return link.engine == Engine.ANDROID_AUTO && link.transport == Transport.WIRELESS && link.step <= 1
+    // Not on a module stereo: the phone connects through the module, not Android's Bluetooth settings.
+    return link.engine == Engine.ANDROID_AUTO && link.transport == Transport.WIRELESS && link.step <= 1 && !ui.bluetoothViaModule
 }
 
 /** Whether the phone of the current attempt has a Bluetooth link to this head unit right now. */

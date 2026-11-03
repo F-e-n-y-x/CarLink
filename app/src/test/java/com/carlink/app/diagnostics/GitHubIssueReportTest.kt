@@ -205,6 +205,8 @@ class GitHubIssueReportTest {
         assertTrue("${report.shortUrl.length}", report.shortUrl.length <= GitHubIssueReport.SHORT_URL_BUDGET)
         val p = params(report.shortUrl)
         assertNotNull("the scanned report has the error log", p["log"])
+        assertTrue("${report.quickUrl.length}", report.quickUrl.length <= GitHubIssueReport.QUICK_URL_BUDGET)
+        assertNull("the quick code has no log", params(report.quickUrl)["log"])
         // It must fit an error-correction-M QR code, as the stereo draws it (a too-long link drew a blank square).
         com.google.zxing.qrcode.QRCodeWriter().encode(report.shortUrl, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
             mapOf(com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M))
