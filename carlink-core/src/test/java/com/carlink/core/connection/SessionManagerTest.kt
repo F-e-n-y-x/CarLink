@@ -84,6 +84,8 @@ class SessionManagerTest {
         override fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String?) {}
         var connected: List<PhoneOption> = emptyList()
         var moduleWait: Long? = null
+        var serials: (Intent?) -> String? = { null }
+        override fun usbSerial(attach: Intent?) = serials(attach)
         override fun modulePhoneWaitMillis(request: SessionRequest) = moduleWait
         override fun connectedPhones() = connected
         override fun usbPhonePresent(engine: Engine) = usbPresent
@@ -559,6 +561,17 @@ class SessionManagerTest {
         assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
         assertEquals(DETAIL_PHONE_NOT_ANSWERING, link(m).detail)
         assertEquals(Notice.Kind.PHONE_NOT_ANSWERING, active(m).notice?.kind)
+    }
+
+    @Test fun anotherPhoneSwappedOntoTheCableIsOfferedNotTakenForReEnumeration() {
+        val first = Intent("first"); val second = Intent("second")
+        env.serials = { it?.action?.let { a -> "SERIAL-$a" } }
+        val m = manager()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone A", first); idle()
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone A", first); idle()
+        assertEquals("the same phone re-enumerating is left to the engine", null, m.pendingSwitch.value)
+        m.onUsbPhone(PhoneKind.IPHONE, "iPhone B", second); idle()
+        assertEquals("iPhone B", m.pendingSwitch.value?.phoneName)
     }
 
     @Test fun aModuleStereoWaitsForTheModulesOwnPageBeforeSayingNotAnswering() {

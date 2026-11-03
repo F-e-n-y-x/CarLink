@@ -130,7 +130,7 @@ androidComponents {
 
 dependencies {
     // Conscrypt 2.6.1 is 16 KB page aligned; CarLink's minSdk 25 no longer needs 2.5.3.
-    implementation("org.conscrypt:conscrypt-android:2.6.1")
+    implementation("org.conscrypt:conscrypt-android:2.8.0") // CarLink: 2.6.1 -> 2.8.0
 
     implementation("com.google.protobuf:protobuf-java:3.25.1")
     implementation("androidx.activity:activity-ktx:1.8.2")

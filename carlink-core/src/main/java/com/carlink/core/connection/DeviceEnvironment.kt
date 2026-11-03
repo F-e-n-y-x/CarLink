@@ -82,6 +82,13 @@ class DeviceEnvironment(
         lastPhone(app).edit().putString(KEY_LAST_PHONE, phoneAddress).apply()
     }
 
+    override fun usbSerial(attach: android.content.Intent?): String? = runCatching {
+        val device = if (android.os.Build.VERSION.SDK_INT >= 33)
+            attach?.getParcelableExtra(UsbManager.EXTRA_DEVICE, android.hardware.usb.UsbDevice::class.java)
+        else @Suppress("DEPRECATION") attach?.getParcelableExtra<android.hardware.usb.UsbDevice>(UsbManager.EXTRA_DEVICE)
+        device?.serialNumber?.takeIf { it.isNotBlank() }
+    }.getOrNull() // SecurityException without permission: unknown
+
     override fun modulePhoneWaitMillis(request: SessionRequest): Long? {
         if (request.transport != com.carlink.core.core.Transport.WIRELESS) return null
         val stereo = ExternalBluetoothProbe.current(app).classification

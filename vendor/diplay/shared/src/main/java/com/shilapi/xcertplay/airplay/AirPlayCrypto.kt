@@ -47,8 +47,26 @@ object AirPlayCrypto {
     // ThreadLocal.withInitial needs API 26.
     private val platformState = object : ThreadLocal<PlatformChacha?>() {
         override fun initialValue(): PlatformChacha? =
-            PLATFORM_CHACHA_NAMES.firstNotNullOfOrNull { runCatching { Cipher.getInstance(it) }.getOrNull() }
+            (PLATFORM_CHACHA_NAMES.firstNotNullOfOrNull { runCatching { Cipher.getInstance(it) }.getOrNull() }
+                ?: bundledConscryptChacha()) // CarLink: Android 7.1-8.1 have no platform ChaCha20-Poly1305
                 ?.let(::PlatformChacha)
+    }
+
+    /**
+     * CarLink: the Conscrypt copy CarLink bundles (DiAuto's org.conscrypt:conscrypt-android), for
+     * releases whose platform lacks ChaCha20-Poly1305: there every packet otherwise went through
+     * BouncyCastle's pure Java code, the largest CPU cost on weak head units (hshshs12/DiPlay
+     * 2433eb8e, tenderne13 21fb2c69). Reflection keeps DiPlay free of a build dependency; absent
+     * Conscrypt this returns null and BouncyCastle stays the fallback.
+     */
+    private val bundledConscrypt: java.security.Provider? by lazy {
+        runCatching {
+            Class.forName("org.conscrypt.Conscrypt").getMethod("newProvider").invoke(null) as java.security.Provider
+        }.getOrNull()
+    }
+
+    private fun bundledConscryptChacha(): Cipher? = bundledConscrypt?.let { provider ->
+        PLATFORM_CHACHA_NAMES.firstNotNullOfOrNull { runCatching { Cipher.getInstance(it, provider) }.getOrNull() }
     }
 
     /** Implementation used by this thread's last successful operation, for diagnostics. */

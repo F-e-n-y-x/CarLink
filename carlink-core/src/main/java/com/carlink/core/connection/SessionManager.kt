@@ -172,6 +172,9 @@ class SessionManager(
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
         fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String? = null)
 
+        /** The USB serial of the phone in [attach] (readable while CarLink has USB permission for it); null when unknown. */
+        fun usbSerial(attach: Intent?): String? = null
+
         /** How long the stereo's Bluetooth module may take to reach the phone for [request]; null when Android's radio is used. */
         fun modulePhoneWaitMillis(request: SessionRequest): Long? = null
 
@@ -324,6 +327,15 @@ class SessionManager(
         // Both engines re-enumerate the phone on purpose while connecting (CarPlay's
         // configuration switch, Android Auto's accessory switch); each is a new attach.
         if (current is SessionState.Active && current.request.engine == engine && current.request.transport == Transport.USB) {
+            // A different phone (another serial) swapped onto the cable is not a re-enumeration:
+            // the driver is offered it, and the old phone's session ends when it is found gone.
+            val was = environment.usbSerial(current.request.usbAttach)
+            val now = environment.usbSerial(attach)
+            if (was != null && now != null && was != now) {
+                note("USB $engine phone with another serial during the $engine session; asking the driver")
+                _pendingSwitch.value = SessionRequest(engine, Transport.USB, null, phoneName, attach)
+                return
+            }
             main.removeCallbacks(usbGoneCheck)
             return note("USB re-attach during the $engine session; left to the engine")
         }
