@@ -243,6 +243,9 @@ class CarPlayAdapter internal constructor(
             }
             CarPlayHostIntegration.vehicleIntegrations = profile == VehicleProfile.BYD_DILINK
             CarPlayHostIntegration.onHostState = HostStates::dispatch
+            // The default-grant wait counts from the iPhone's attach (UsbAttachTimes).
+            com.shilapi.xcertplay.orchestration.CarPlayController.usbAttachAgeMillis =
+                { com.carlink.core.detect.UsbAttachTimes.ageMillis(it.deviceName) }
             CarPlayWaitingView.install()
             // A BYD restores a journaled cluster/HUD output at app start, as DiPlay's own home does
             // (DiPlayActivity.kt:318; §12 "CarLink never calls onAppOpened").
