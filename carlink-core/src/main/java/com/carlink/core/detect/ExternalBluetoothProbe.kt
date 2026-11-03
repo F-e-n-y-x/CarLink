@@ -31,6 +31,12 @@ enum class StereoBluetooth {
     /** A ZLink-type module daemon (`gocsdk_zj`) answers on 127.0.0.1:3152 (upstream's ZBT route). */
     ZLINK_DAEMON,
 
+    /**
+     * ZLink-type markers, nothing on 3152, but the ZJ daemon's `/dev/socket/zj_bt_socket` accepts a
+     * connect (Unisoc UIS7862 units; upstream's ZJ socket route, open-headunit PR #1168).
+     */
+    ZJ_SOCKET,
+
     /** FYT's DUDUAUTO module: `sys.fyt.bluetooth_type` > 0 or `/dev/auto_serial` (upstream's BLINK route). */
     FYT_MODULE,
 
@@ -45,7 +51,7 @@ enum class StereoBluetooth {
     ;
 
     /** CarLink does not start wireless sessions here (unless the driver overrides it). */
-    val blocksWireless: Boolean get() = this == ZLINK_DAEMON || this == FYT_MODULE || this == EXTERNAL_UNKNOWN
+    val blocksWireless: Boolean get() = this == ZLINK_DAEMON || this == ZJ_SOCKET || this == FYT_MODULE || this == EXTERNAL_UNKNOWN
 
     /** Any sign of an external module was found, even a doubtful one. */
     val hasSignals: Boolean get() = this != NONE
@@ -102,6 +108,8 @@ data class StereoBluetoothReport(
     val tookMillis: Long = 0,
     /** False for the quick, main-thread-safe version (no port check, no package scan). */
     val complete: Boolean = true,
+    /** Whether `/dev/socket/zj_bt_socket` accepted a connect; checked only with ZLink markers and 3152 closed. */
+    val zjSocket: PortState = PortState.NOT_CHECKED,
 ) {
     /** One structured block for carlink.log and the shared log. Never holds a hardware address. */
     fun format(): String = buildString {
@@ -113,6 +121,7 @@ data class StereoBluetoothReport(
         properties.forEach { (k, v) -> append("  prop ").append(k).append('=').append(v ?: "<unset>").append('\n') }
         nodes.forEach { (k, v) -> append("  node ").append(k).append('=').append(if (v) "exists" else "absent").append('\n') }
         append("  port 127.0.0.1:").append(ExternalBluetoothProbe.DAEMON_PORT).append('=').append(daemonPort).append('\n')
+        append("  socket ").append(ExternalBluetoothProbe.ZJ_SOCKET_PATH).append('=').append(zjSocket).append('\n')
         append("  packages=").append(
             if (!complete) "not checked"
             else packages.joinToString(", ") { "${it.packageName} ${it.versionName ?: "?"} (${it.versionCode})" }.ifEmpty { "none" },
@@ -144,6 +153,7 @@ object ExternalBluetoothProbe {
     const val ZLINK_TYPE_PROPERTY = "rw.zlink.bt.type"
     const val ZJ_TYPE_PROPERTY = "rw.zj.bt.type"
     const val AUTO_SERIAL = "/dev/auto_serial"
+    const val ZJ_SOCKET_PATH = com.andrerinas.openheadunit.connection.zjsocket.ZjSocketPolicy.SOCKET_PATH
     val NODES = listOf(AUTO_SERIAL, "/dev/BT_serial", "/dev/rf_serial", "/dev/zj_bt_serial")
     private val ZLINK_NODES = setOf("/dev/rf_serial", "/dev/zj_bt_serial")
     val PROPERTIES = listOf(FYT_TYPE_PROPERTY, ZLINK_TYPE_PROPERTY, ZJ_TYPE_PROPERTY)
@@ -160,6 +170,8 @@ object ExternalBluetoothProbe {
     fun interface FileCheck { fun exists(path: String): Boolean }
     fun interface PropertyReader { fun get(key: String): String? }
     fun interface PortCheck { fun check(host: String, port: Int, timeoutMillis: Int): PortState }
+    /** Whether a Unix socket accepts a connect (OPEN), refuses (CLOSED) or does not answer (TIMEOUT). */
+    fun interface SocketCheck { fun check(path: String): PortState }
     fun interface PackageSource { fun installed(): List<InstalledApp> }
     interface BluetoothSource {
         fun adapter(): AdapterFacts
@@ -177,6 +189,7 @@ object ExternalBluetoothProbe {
         val knownPhones: KnownPhoneSource,
         val hardware: String? = null,
         val ownPackages: Set<String> = emptySet(),
+        val zjSocket: SocketCheck = SocketCheck { PortState.NOT_CHECKED },
     )
 
     /** Collects the evidence. [complete] = false skips the port check and the package scan. */
@@ -195,8 +208,12 @@ object ExternalBluetoothProbe {
         val known = runCatching { sources.knownPhones.phones() }.getOrDefault(emptyMap())
             .map { (address, kind) -> KnownPhoneBond(kind, bonded?.contains(normalize(address))) }
         val signals = signals(properties, nodes, port)
+        // Asked only where ZBT has nothing to talk to, as upstream does after ZBT's refusal.
+        val zjSocket = if (complete && wantsZjSocket(signals)) {
+            runCatching { sources.zjSocket.check(ZJ_SOCKET_PATH) }.getOrDefault(PortState.ERROR)
+        } else PortState.NOT_CHECKED
         return StereoBluetoothReport(
-            classification = classify(signals, adapter, known),
+            classification = classify(signals, adapter, known, zjSocket), zjSocket = zjSocket,
             signals = signals, diAutoEvidence = diAuto, properties = properties, nodes = nodes, daemonPort = port,
             packages = packages, adapter = adapter, bondedCount = bonded?.size, knownPhones = known,
             hardware = sources.hardware, tookMillis = clock() - started, complete = complete,
@@ -218,18 +235,31 @@ object ExternalBluetoothProbe {
             }
         }
 
+    /** ZLink markers, no daemon on 3152 and no FYT signal: the only case the ZJ socket can decide. */
+    fun wantsZjSocket(signals: List<StereoBluetoothSignal>): Boolean =
+        StereoBluetoothSignal.MODULE_SERVICE_ANSWERS !in signals &&
+            StereoBluetoothSignal.FYT_SETTING !in signals && StereoBluetoothSignal.FYT_SERIAL_PORT !in signals &&
+            (StereoBluetoothSignal.MODULE_SERIAL_PORT in signals || StereoBluetoothSignal.MODULE_SETTING in signals)
+
     /**
      * The rule: no signal → [StereoBluetooth.NONE]; a known phone bonded to Android's adapter that
      * has a real address → [StereoBluetooth.LIKELY_FALSE_POSITIVE] (Android's radio reaches the
      * phone, so the markers may describe a second, unused module); a daemon on 3152 →
      * [StereoBluetooth.ZLINK_DAEMON]; FYT signals → [StereoBluetooth.FYT_MODULE]; ZLink markers
+     * and a [zjSocket] that accepted a connect → [StereoBluetooth.ZJ_SOCKET]; ZLink markers
      * alone → [StereoBluetooth.EXTERNAL_UNKNOWN]. `/dev/BT_serial` is recorded but decides nothing.
      */
-    fun classify(signals: List<StereoBluetoothSignal>, adapter: AdapterFacts, knownPhones: List<KnownPhoneBond>): StereoBluetooth = when {
+    fun classify(
+        signals: List<StereoBluetoothSignal>,
+        adapter: AdapterFacts,
+        knownPhones: List<KnownPhoneBond>,
+        zjSocket: PortState = PortState.NOT_CHECKED,
+    ): StereoBluetooth = when {
         signals.isEmpty() -> StereoBluetooth.NONE
         adapter.addressReal == true && knownPhones.any { it.bondedToAndroid == true } -> StereoBluetooth.LIKELY_FALSE_POSITIVE
         StereoBluetoothSignal.MODULE_SERVICE_ANSWERS in signals -> StereoBluetooth.ZLINK_DAEMON
         StereoBluetoothSignal.FYT_SETTING in signals || StereoBluetoothSignal.FYT_SERIAL_PORT in signals -> StereoBluetooth.FYT_MODULE
+        zjSocket == PortState.OPEN && wantsZjSocket(signals) -> StereoBluetooth.ZJ_SOCKET
         else -> StereoBluetooth.EXTERNAL_UNKNOWN
     }
 
@@ -305,6 +335,7 @@ object ExternalBluetoothProbe {
         knownPhones = KnownPhoneSource { KnownPhones(app).all() },
         hardware = "${Build.HARDWARE}/${Build.BOARD}",
         ownPackages = setOf(app.packageName),
+        zjSocket = SocketCheck(::checkZjSocket),
     )
 
     private fun systemProperty(key: String): String? = runCatching {
@@ -321,6 +352,18 @@ object ExternalBluetoothProbe {
         PortState.TIMEOUT
     } catch (e: Exception) {
         PortState.ERROR
+    }
+
+    /** One connect with DiAuto's 2 s deadline, closed at once; nothing is sent. */
+    private fun checkZjSocket(path: String): PortState {
+        if (!File(path).exists()) return PortState.CLOSED
+        val attempt = com.andrerinas.openheadunit.connection.zjsocket.ZjSocketConnector.connect(path)
+        attempt.socket?.let(com.andrerinas.openheadunit.connection.zjsocket.ZjSocketConnector::close)
+        return when (attempt.outcome) {
+            com.andrerinas.openheadunit.connection.zjsocket.ZjSocketPolicy.Outcome.CONNECTS -> PortState.OPEN
+            com.andrerinas.openheadunit.connection.zjsocket.ZjSocketPolicy.Outcome.TIMED_OUT -> PortState.TIMEOUT
+            else -> PortState.CLOSED
+        }
     }
 
     @Suppress("DEPRECATION")

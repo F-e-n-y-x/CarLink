@@ -220,6 +220,9 @@ that printed them in hex was changed).
   draft [PR #1168](https://github.com/andreknieriem/open-headunit/pull/1168)). Whether the module
   advertises CarPlay to an iPhone and passes iAP2 (`FF 5A` link packets) through that socket is
   unknown; it would take a hex dump of the socket from such a stereo while an iPhone connects.
+  PR #1168 merged 2026-10-30 and is ported for Android Auto only (docs/VENDOR_CHANGES.md): the
+  probe classifies a ZLink-marker stereo whose socket accepts a connect (3152 closed) as
+  `StereoBluetooth.ZJ_SOCKET`, and the driver's opt-in gives it DiAuto's `ZJ_SOCKET` route.
 
 ## Alternatives that work today
 

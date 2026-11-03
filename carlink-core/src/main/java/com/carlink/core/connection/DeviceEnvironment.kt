@@ -189,11 +189,13 @@ class DeviceEnvironment(
         /**
          * The route wireless Android Auto takes through the stereo's Bluetooth module when it is on
          * ([moduleEnabled]), or null for Android's own Bluetooth (design/EXTERNAL_BLUETOOTH.md):
-         * a ZLink-type daemon, or ZLink markers with no daemon seen yet, take ZBT; FYT's module takes BLINK.
+         * a ZLink-type daemon, or ZLink markers with no daemon seen yet, take ZBT; ZLink markers whose
+         * `/dev/socket/zj_bt_socket` accepts a connect take ZJ_SOCKET; FYT's module takes BLINK.
          */
         fun moduleRoute(stereo: StereoBluetooth, moduleOn: Boolean): ExternalBtTransportPolicy.Route? = when {
             !moduleEnabled(stereo, moduleOn) -> null
             stereo == StereoBluetooth.ZLINK_DAEMON || stereo == StereoBluetooth.EXTERNAL_UNKNOWN -> ExternalBtTransportPolicy.Route.ZBT
+            stereo == StereoBluetooth.ZJ_SOCKET -> ExternalBtTransportPolicy.Route.ZJ_SOCKET
             stereo == StereoBluetooth.FYT_MODULE -> ExternalBtTransportPolicy.Route.BLINK
             else -> null
         }
