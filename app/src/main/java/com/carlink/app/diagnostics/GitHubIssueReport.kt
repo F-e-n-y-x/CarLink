@@ -39,7 +39,8 @@ object GitHubIssueReport {
     const val URL_BUDGET = 7_500
 
     /** The QR fallback's link: title, version, device and the error only, so a phone can scan it. */
-    const val SHORT_URL_BUDGET = 2_000
+    /** A QR code at its largest (version 40, low correction) holds 2,953 bytes; the link stays under it. */
+    const val SHORT_URL_BUDGET = 2_800
 
     /** Engine problem lines are taken from this window before the report. */
     const val ENGINE_PROBLEM_WINDOW_MILLIS = 10 * 60_000L
@@ -147,13 +148,18 @@ object GitHubIssueReport {
         head["car_brand"] = facts.carBrand ?: "Other / Generic"
         for (key in head.keys.toList()) head[key] = clean(head.getValue(key), facts.secrets)
 
-        // The short link (QR code): title, version, device and the error; a phone scans it from the stereo,
-        // so it stays small (a denser code is harder to read off a glossy screen).
-        val shortFields = LinkedHashMap(head.filterKeys { it == "title" || it == "version" || it == "screen" })
+        // The short link (QR code): the form's fields, the error and as much of the error log as a QR
+        // code holds (drivers found the scanned report empty without it; Home shows the code full size).
+        val shortFields = LinkedHashMap(head)
         shortFields["what_happened"] = clean(whatHappened(facts, short = true), facts.secrets)
         var shortUrl = url(shortFields)
-        while (shortUrl.length > SHORT_URL_BUDGET && shortFields["what_happened"]!!.length > 40) {
+        while (shortUrl.length > SHORT_URL_BUDGET / 2 && shortFields["what_happened"]!!.length > 40) {
             shortFields["what_happened"] = shortFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
+            shortUrl = url(shortFields)
+        }
+        val shortRoom = SHORT_URL_BUDGET - shortUrl.length - "&log=".length
+        if (shortRoom > 200) {
+            shortFields["log"] = logExcerpt(facts, shortRoom).text
             shortUrl = url(shortFields)
         }
 

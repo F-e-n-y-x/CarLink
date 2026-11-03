@@ -199,12 +199,12 @@ class GitHubIssueReportTest {
         sizes.forEach { s -> assertEquals(all.take(s.size), s) }
     }
 
-    @Test fun shortLinkForTheQrCodeHasNoLog() {
+    @Test fun shortLinkForTheQrCodeCarriesTheErrorAndALogExcerptWithinAQrCode() {
         val report = GitHubIssueReport.build(facts(log = busyLog(),
             session = failedSession.copy(detail = "x".repeat(5_000))))
-        assertTrue("${report.shortUrl.length}", report.shortUrl.length < GitHubIssueReport.SHORT_URL_BUDGET)
+        assertTrue("${report.shortUrl.length}", report.shortUrl.length <= GitHubIssueReport.SHORT_URL_BUDGET)
         val p = params(report.shortUrl)
-        assertNull(p["log"])
+        assertNotNull("the scanned report has the error log", p["log"])
         assertNotNull(p["title"]); assertNotNull(p["version"]); assertNotNull(p["screen"])
         assertTrue(p.getValue("what_happened").contains("LinkProblem: PHONE_DID_NOT_ANSWER"))
     }
