@@ -4,6 +4,28 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.8] - 2026-11-04
+
+- Stereos with an external Bluetooth module: wireless Android Auto and CarPlay can now go through
+  the stereo's module. It is detected and turned on automatically. Tap the Bluetooth chip on Home
+  to choose between the module and the screen's own Bluetooth.
+- Two phones at once: when an iPhone and an Android phone both try to connect, Home asks which one
+  to use instead of guessing.
+- Phone list: a delete icon on each phone (forgets and unpairs it), an "Add a new phone" row, and
+  phones with the same name told apart.
+- A failure on Home shows a QR code: scan it with your phone to open a ready-filled GitHub issue
+  with the details and log.
+- Faster starts: wireless Android Auto and CarPlay, re-plugged USB phones, and quicker recovery
+  when a wired iPhone drops and comes back.
+- Android Auto on this screen (experimental, Settings › Connection, Show advanced) where Android
+  Auto is installed and allows it.
+- iPhone charging over USB (Settings › Connection, Show advanced): offer less current if wired
+  CarPlay drops after a few seconds.
+- Diagnostics names more problems: another projection or mirroring app, the stereo's clock, low
+  storage, another VPN, the stereo joined to the phone's own hotspot, and Unisoc UMS512 chips.
+- A phone that is no longer paired no longer blocks every automatic start.
+- Faster CarPlay encryption on Android 7.1-8.1, CarPlay and Android Auto engine fixes from upstream.
+
 ## [1.0.7] - 2026-10-27
 
 - Wireless CarPlay: a stuck start or an iPhone that left is noticed in seconds, and a slow first
@@ -17,6 +39,7 @@ is what the in-app update popup shows.
 - CarPlay engine updated to the latest DiPlay.
 - "Report a problem" now names the phone and session, shows a timeline and settings, hides
   serials and MAC addresses, and can copy the full log.
+
 
 <!-- more -->
 
