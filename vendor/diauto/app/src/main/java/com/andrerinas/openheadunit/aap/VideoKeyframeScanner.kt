@@ -30,61 +30,46 @@ object VideoKeyframeScanner {
     /** H.264: coded slice of an IDR picture. */
     private const val AVC_NAL_IDR = 5
 
-    /** H.265 IRAP range - BLA_W_LP (16) through CRA_NUT (21). Any of them is a decoder entry point. */
+    /** H.265 IRAP range. The decoder still determines reference and leading-picture validity. */
     private val HEVC_IRAP_RANGE = 16..21
 
     /**
-     * How many NAL headers to look at before giving up.
-     *
-     * A keyframe access unit leads with its parameter sets - SPS/PPS then the IDR slice on H.264,
-     * VPS/SPS/PPS then the slice on H.265 - so the interesting NAL is never deep. Bounding the walk
-     * keeps this off the profile on a path that runs per frame at 60fps.
-     */
-    private const val MAX_NAL_HEADERS_SCANNED = 8
-
-    /**
      * Whether the access unit in [data] between [offset] and [offset] + [size] contains a keyframe.
+     * The view is clipped to the array end; an invalid offset or nonpositive size has no keyframe.
      *
      * @param isHevc the codec the decoder has **pinned** for this session, never a user preference.
      */
+    // CarLink: open-headunit 228a0402, scans the whole access unit and checks NAL header validity.
     fun containsKeyframe(data: ByteArray, offset: Int, size: Int, isHevc: Boolean): Boolean {
-        if (size < 4) return false
-        val end = (offset + size).coerceAtMost(data.size)
+        if (offset < 0 || offset >= data.size || size <= 0) return false
+        val end = offset + minOf(size, data.size - offset)
+        val headerSize = if (isHevc) 2 else 1
+        val lastStart = end - headerSize - 3
         var i = offset
-        var headersSeen = 0
 
-        while (i + 3 < end && headersSeen < MAX_NAL_HEADERS_SCANNED) {
-            val headerPos = startCodeHeaderPos(data, i, end)
-            if (headerPos < 0) {
+        while (i <= lastStart) {
+            // Search for 00 00 01, which also covers the suffix of a four-byte start code.
+            // A nonzero third byte rules out prefixes at i+1 and i+2, so skip all three.
+            val third = data[i + 2].toInt()
+            if (third == 0) {
                 i++
                 continue
             }
-            headersSeen++
-            val b = data[headerPos].toInt()
-            val isKeyframe = if (isHevc) {
-                ((b and 0x7E) shr 1) in HEVC_IRAP_RANGE
-            } else {
-                (b and 0x1F) == AVC_NAL_IDR
+            if (third == 1 && data[i].toInt() == 0 && data[i + 1].toInt() == 0) {
+                val headerPos = i + 3
+                val b = data[headerPos].toInt()
+                val isKeyframe = if (isHevc) {
+                    (b and 0x80) == 0 &&
+                        ((b and 0x7E) shr 1) in HEVC_IRAP_RANGE &&
+                        (data[headerPos + 1].toInt() and 0x07) != 0
+                } else {
+                    (b and 0x80) == 0 && (b and 0x60) != 0 && (b and 0x1F) == AVC_NAL_IDR
+                }
+                if (isKeyframe) return true
             }
-            if (isKeyframe) return true
-            i = headerPos + 1
+            i += 3
         }
         return false
     }
 
-    /**
-     * Position of the NAL header byte if a 3- or 4-byte start code begins at [i], else -1.
-     *
-     * Same shape as VideoDecoder.isCodecConfigData's walk, kept separate because that one answers a
-     * different question about the first NAL only.
-     */
-    private fun startCodeHeaderPos(data: ByteArray, i: Int, end: Int): Int {
-        if (data[i].toInt() != 0 || data[i + 1].toInt() != 0) return -1
-        val headerPos = when {
-            data[i + 2].toInt() == 1 -> i + 3
-            data[i + 2].toInt() == 0 && i + 3 < end && data[i + 3].toInt() == 1 -> i + 4
-            else -> return -1
-        }
-        return if (headerPos < end) headerPos else -1
-    }
 }

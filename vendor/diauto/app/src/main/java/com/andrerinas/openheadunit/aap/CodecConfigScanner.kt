@@ -135,9 +135,8 @@ object CodecConfigScanner {
     /**
      * Position of the NAL header byte if a 3- or 4-byte start code begins at [i], else -1.
      *
-     * Same walk as [VideoKeyframeScanner]'s, deliberately duplicated rather than shared: the two
-     * answer different questions and the temptation to fuse them into one pass over the frame is how
-     * a change for one silently alters the other.
+     * Kept separate from [VideoKeyframeScanner] (CarLink: comment from open-headunit 228a0402): an incomplete config scan must preserve picture
+     * data, while keyframe detection searches the entire view for a recovery candidate.
      */
     private fun startCodeHeaderPos(data: ByteArray, i: Int, end: Int): Int {
         if (data[i].toInt() != 0 || data[i + 1].toInt() != 0) return -1

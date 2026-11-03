@@ -6,13 +6,14 @@ import org.junit.Test
 
 class VideoKeyframeScannerTest {
 
-    /** Builds an access unit from (nalHeaderByte, payloadBytes) pairs, 4-byte start codes. */
+    /** Four-byte start codes, with a second header byte for HEVC and dummy payload. */
     private fun accessUnit(vararg nals: Int): ByteArray {
         val out = ArrayList<Byte>()
         for (header in nals) {
             out.add(0); out.add(0); out.add(0); out.add(1)
             out.add(header.toByte())
-            repeat(3) { out.add(0x42) }
+            out.add(0x01)
+            repeat(2) { out.add(0x42) }
         }
         return out.toByteArray()
     }
@@ -106,10 +107,79 @@ class VideoKeyframeScannerTest {
     }
 
     @Test
-    fun `a keyframe buried past the header cap is not scanned for`() {
-        // Bounding the walk is deliberate - a keyframe access unit leads with its parameter sets, so
-        // anything this deep is not one. Pinned here so the bound cannot be widened silently.
-        val nals = IntArray(9) { if (it == 8) 0x65 else 0x41 }
-        assertFalse(scan(accessUnit(*nals), isHevc = false))
+    fun `an idr is found after many metadata nals and a large payload`() {
+        val metadata = accessUnit(*IntArray(12) { 0x06 })
+        val data = metadata + ByteArray(4096) { 0x42 } + accessUnit(0x65)
+        assertTrue(scan(data, isHevc = false))
+    }
+
+    @Test
+    fun `a non-idr nal does not hide a later idr`() {
+        assertTrue(scan(accessUnit(0x41, 0x65), isHevc = false))
+        assertTrue(scan(accessUnit(0x02, 19 shl 1), isHevc = true))
+    }
+
+    @Test
+    fun `start codes are found at every skip alignment`() {
+        for (padding in 0..5) {
+            for (prefix in arrayOf(byteArrayOf(0, 0, 1), byteArrayOf(0, 0, 0, 1))) {
+                val leading = ByteArray(padding) { 0x42 }
+                assertTrue(scan(leading + prefix + byteArrayOf(0x65), isHevc = false))
+                assertTrue(scan(leading + prefix + byteArrayOf(0x26, 0x01), isHevc = true))
+            }
+        }
+    }
+
+    @Test
+    fun `mixed prefixes and emulation prevention bytes do not hide an idr`() {
+        val data = byteArrayOf(0, 0, 1, 0x41, 0, 0, 3, 1, 0x65, 0, 0, 0, 1, 0x65)
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, 0, 9, isHevc = false))
+        assertTrue(scan(data, isHevc = false))
+    }
+
+    @Test
+    fun `a prefix or header outside the requested view is not read`() {
+        val avc = byteArrayOf(0, 0, 1, 0x65)
+        assertFalse(VideoKeyframeScanner.containsKeyframe(avc, 1, 3, isHevc = false))
+        assertFalse(VideoKeyframeScanner.containsKeyframe(avc, 0, 3, isHevc = false))
+        assertTrue(scan(avc, isHevc = false))
+
+        val hevc = byteArrayOf(0, 0, 1, 0x26, 0x01)
+        assertFalse(VideoKeyframeScanner.containsKeyframe(hevc, 0, 4, isHevc = true))
+        assertTrue(scan(hevc, isHevc = true))
+        assertFalse(scan(hevc.copyOf(4), isHevc = true))
+    }
+
+    @Test
+    fun `oversized views clip to the array without integer overflow`() {
+        val data = byteArrayOf(0x42) + accessUnit(0x65)
+        assertTrue(VideoKeyframeScanner.containsKeyframe(data, 1, Int.MAX_VALUE, isHevc = false))
+        assertFalse(
+            VideoKeyframeScanner.containsKeyframe(byteArrayOf(0, 0, 1), 0, Int.MAX_VALUE, isHevc = false)
+        )
+    }
+
+    @Test
+    fun `invalid or empty views contain no keyframe`() {
+        val data = accessUnit(0x65)
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, -1, data.size, isHevc = false))
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, data.size, 4, isHevc = false))
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, Int.MAX_VALUE, 4, isHevc = false))
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, 0, -1, isHevc = false))
+        assertFalse(VideoKeyframeScanner.containsKeyframe(data, 0, 0, isHevc = false))
+    }
+
+    @Test
+    fun `invalid nal headers are not keyframes`() {
+        // An AVC IDR must have forbidden_zero_bit=0 and nonzero nal_ref_idc.
+        assertFalse(scan(accessUnit(0xE5), isHevc = false))
+        assertFalse(scan(accessUnit(0x05), isHevc = false))
+        // HEVC requires forbidden_zero_bit=0 and nonzero nuh_temporal_id_plus1.
+        assertFalse(scan(byteArrayOf(0, 0, 1, 0xA6.toByte(), 0x01), isHevc = true))
+        assertFalse(scan(byteArrayOf(0, 0, 1, 0x26, 0x00), isHevc = true))
+        assertTrue(scan(accessUnit(0xE5, 0x65), isHevc = false))
+        assertTrue(
+            scan(byteArrayOf(0, 0, 1, 0x26, 0x00) + accessUnit(0x26), isHevc = true)
+        )
     }
 }
