@@ -39,8 +39,11 @@ object GitHubIssueReport {
     const val URL_BUDGET = 7_500
 
     /** The QR fallback's link: title, version, device and the error only, so a phone can scan it. */
-    /** A QR code at its largest (version 40, low correction) holds 2,953 bytes; the link stays under it. */
-    const val SHORT_URL_BUDGET = 2_800
+    /**
+     * The QR code uses error correction M, whose largest code (version 40) holds 2,331 bytes; 2,800
+     * left the code blank on the stereo (2026-11-04). The link stays under it with a margin.
+     */
+    const val SHORT_URL_BUDGET = 2_200
 
     /** Engine problem lines are taken from this window before the report. */
     const val ENGINE_PROBLEM_WINDOW_MILLIS = 10 * 60_000L

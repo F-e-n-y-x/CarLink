@@ -123,8 +123,28 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                         }
                     }
                 }
+                // A module stereo cannot list the phones paired with its module: a new one connects
+                // through it without being known first, and is listed once it has connected.
+                if (ui.bluetoothViaModule) {
+                    listOf(PhoneKind.IPHONE to R.string.carlink_home_new_iphone, PhoneKind.ANDROID to R.string.carlink_home_new_android)
+                        .forEach { (kind, label) ->
+                            Box(Modifier.fillMaxWidth().padding(start = dimens.gutter * 2 + dimens.avatarRow, end = dimens.gutter)
+                                .height(1.dp).background(colors.hairline))
+                            Row(
+                                Modifier.fillMaxWidth().heightIn(min = dimens.rowTwoLine)
+                                    .clickable(role = Role.Button) { actions.connectNew(kind); onDismiss() }
+                                    .padding(horizontal = dimens.gutter, vertical = if (car) 16.dp else 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                IconTile(phoneIcon(kind), size = dimens.avatarRow)
+                                Spacer(Modifier.width(dimens.gutter))
+                                Text(stringResource(label), style = MaterialTheme.typography.titleMedium, color = scheme.onSurface,
+                                    modifier = Modifier.weight(1f))
+                            }
+                        }
+                }
                 // Add a new phone: the last row of the list.
-                if (ui.home.phones.isNotEmpty()) {
+                if (ui.home.phones.isNotEmpty() || ui.bluetoothViaModule) {
                     Box(Modifier.fillMaxWidth().padding(start = dimens.gutter * 2 + dimens.avatarRow, end = dimens.gutter)
                         .height(1.dp).background(colors.hairline))
                 }

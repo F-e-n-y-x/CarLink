@@ -106,8 +106,13 @@ fun StatGrid(count: Int, modifier: Modifier = Modifier, minTileWidth: Dp = if (C
  * drawn). Error correction M; the quiet zone is drawn by [QrCode]'s padding.
  */
 fun qrBitmap(content: String, dark: Int, light: Int): ImageBitmap? = runCatching {
-    val hints = mapOf(EncodeHintType.MARGIN to 0, EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.M)
-    val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 0, 0, hints)
+    // M first; L holds ~25 % more, so a link too long for M still shows a code instead of a blank square.
+    val matrix = listOf(ErrorCorrectionLevel.M, ErrorCorrectionLevel.L).firstNotNullOf { level ->
+        runCatching {
+            QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 0, 0,
+                mapOf(EncodeHintType.MARGIN to 0, EncodeHintType.ERROR_CORRECTION to level))
+        }.getOrNull()
+    }
     val pixels = IntArray(matrix.width * matrix.height) { i ->
         if (matrix[i % matrix.width, i / matrix.width]) dark else light
     }

@@ -176,6 +176,8 @@ internal interface HomeActions {
     fun switchTo(phone: PairedPhone) {}
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) {}
     fun forgetPhone(phone: PairedPhone) {}
+    /** A phone not known yet (paired with the stereo's module): connect it through the module. */
+    fun connectNew(kind: PhoneKind) {}
     fun retry() {}
     fun disconnect() {}
     fun returnToProjection() {}
@@ -229,6 +231,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun switchTo(phone: PairedPhone) = vm.switchTo(phone)
             override fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = vm.setPhoneKind(phone, kind)
             override fun forgetPhone(phone: PairedPhone) = vm.forgetPhone(phone)
+            override fun connectNew(kind: PhoneKind) = vm.connectNew(kind)
             override fun retry() = vm.retry()
             override fun disconnect() = vm.disconnect()
             override fun returnToProjection() = vm.returnToProjection()
