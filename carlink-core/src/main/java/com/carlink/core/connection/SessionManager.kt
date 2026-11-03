@@ -834,11 +834,19 @@ class SessionManager(
      * A stereo's Bluetooth module pages the phone itself and takes up to its own wait (a cold page
      * took 25 s): saying "not answering" at 10 s made drivers tap again and restart it.
      */
-    private fun moduleWait(a: Attempt): Long? =
-        if (a.stage == ProgressStage.WAITING_FOR_PHONE || a.stage == ProgressStage.PHONE_NOT_ANSWERING)
-            environment.modulePhoneWaitMillis(a.request) else null
+    private fun moduleWait(a: Attempt): Long? {
+        val wait = environment.modulePhoneWaitMillis(a.request) ?: return null
+        return when (a.stage) {
+            ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> wait
+            // Over the module the engine repeats its opener while the phone is silent and ends a
+            // dead attempt itself (15 s); a restart at the 6 s floor only redid Wi-Fi Direct (2026-11-04).
+            ProgressStage.HANDSHAKE -> MODULE_HANDSHAKE_MILLIS
+            else -> null
+        }
+    }
 
-    private fun hintAfter(a: Attempt, deadline: Long) = moduleWait(a) ?: minOf(AdaptiveDeadlines.HINT_MILLIS, deadline)
+    private fun hintAfter(a: Attempt, deadline: Long) =
+        moduleWait(a)?.takeIf { a.stage != ProgressStage.HANDSHAKE } ?: minOf(AdaptiveDeadlines.HINT_MILLIS, deadline)
     private fun totalDeadline(a: Attempt) = profiles.deadline(a.request, a.plan.path, null)
 
     private fun armWatchdog() {
@@ -1008,6 +1016,9 @@ class SessionManager(
 
         /** How long a phone may stay silent before Home says it is not answering (USB too). */
         const val NOT_ANSWERING_MILLIS = AdaptiveDeadlines.HINT_MILLIS
+
+        /** The handshake's least deadline over a stereo's Bluetooth module: DiAuto's 15 s wait for the phone's request, plus a margin. */
+        const val MODULE_HANDSHAKE_MILLIS = 16_000L
 
         /** A failed or cancelled automatic start is not retried every time Home reappears. */
         const val HOME_AUTO_START_COOLDOWN_MILLIS = 60_000L

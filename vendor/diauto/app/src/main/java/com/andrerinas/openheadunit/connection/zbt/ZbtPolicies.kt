@@ -101,10 +101,11 @@ object ZbtAttemptPolicy {
         sinceLastAttemptMs: Long?,
         minIntervalMs: Long = MIN_ATTEMPT_INTERVAL_MS,
         channelOpenForMs: Long? = null,
-        everSawPresence: Boolean = false
+        everSawPresence: Boolean = false,
+        reportedDisconnected: Boolean = false // CarLink
     ): Boolean {
         if (attemptInFlight || sessionConnected) return false
-        if (!phonePresent && !mayAttemptBlind(channelOpenForMs, everSawPresence)) return false
+        if (!phonePresent && !mayAttemptBlind(channelOpenForMs, everSawPresence, reportedDisconnected)) return false
         // A failed attempt costs the phone nothing, but back-to-back attempts would spend the whole
         // window in setup rather than waiting for a phone that is simply not ready yet.
         return sinceLastAttemptMs == null || sinceLastAttemptMs >= minIntervalMs
@@ -120,8 +121,18 @@ object ZbtAttemptPolicy {
      * [everSawPresence] means a *usable* presence: a phone the module reported but did not classify
      * as Android Auto leaves it false, and is spoken to.
      */
-    fun mayAttemptBlind(channelOpenForMs: Long?, everSawPresence: Boolean): Boolean =
-        !everSawPresence && channelOpenForMs != null && channelOpenForMs >= BLIND_ATTEMPT_AFTER_MS
+    fun mayAttemptBlind(channelOpenForMs: Long?, everSawPresence: Boolean, reportedDisconnected: Boolean = false): Boolean =
+        !everSawPresence && channelOpenForMs != null &&
+            channelOpenForMs >= if (reportedDisconnected) BLIND_WHEN_DISCONNECTED_AFTER_MS else BLIND_ATTEMPT_AFTER_MS
+
+    /**
+     * CarLink: the grace when the module's last link state said no phone is connected. Speaking
+     * then only feeds a link with nobody on it (the daemon drops the bytes), and the attempt held
+     * the channel while the phone arrived (2026-11-04, AA right after CarPlay: 17 s lost). Kept as
+     * a later safety net for a module whose `is_connect` is wrong; the wake is repeated meanwhile
+     * ([ZbtWakePolicy.shouldRewake]).
+     */
+    const val BLIND_WHEN_DISCONNECTED_AFTER_MS = 20_000L
 
     /**
      * How long a channel must be open in silence before we speak anyway.
@@ -195,6 +206,34 @@ object ZbtWakePolicy {
         return elapsed >= MIN_INTERVAL_MS
     }
 
+    /**
+     * CarLink: gap between repeated `RequestReconn`s while the module says the phone is not
+     * connected. Longer than a Bluetooth page (5.12 s) so a repeat never lands on a page in progress.
+     */
+    const val REWAKE_INTERVAL_MS = 6_000L
+
+    /** CarLink: repeats per channel; after them the host's own nudges ([MIN_INTERVAL_MS]) take over. */
+    const val MAX_REWAKES = 3
+
+    /**
+     * CarLink: whether to repeat `RequestReconn` now. A phone that ignored the first one (it did not
+     * open its Android Auto channel to the module right after a CarPlay session, 2026-11-04) was
+     * otherwise asked again only when the host restarted the whole session.
+     *
+     * @param reportedDisconnected the module's last link state named no connected phone
+     * @param rewakesSent repeats already sent on this channel
+     * @param lastSentAtMs when the last `RequestReconn` went out, or 0 if none has
+     */
+    fun shouldRewake(
+        reportedDisconnected: Boolean,
+        rewakesSent: Int,
+        lastSentAtMs: Long,
+        nowMs: Long,
+        handshakeInFlight: Boolean,
+        sessionConnected: Boolean
+    ): Boolean = reportedDisconnected && rewakesSent < MAX_REWAKES && lastSentAtMs != 0L &&
+        !handshakeInFlight && !sessionConnected && nowMs - lastSentAtMs >= REWAKE_INTERVAL_MS
+
     /** How long a wake asked for before it could go out is still worth sending. */
     const val PENDING_MAX_MS = 60_000L
 
@@ -240,6 +279,21 @@ object ZbtReopenPolicy {
 
     /** CarLink: a channel that ended sooner than this after it opened counts as a refusal for the reopen delay. */
     const val SHORT_LIVED_MS = 2_000L
+
+    /**
+     * CarLink: the daemon serves one client and silently ignores a second (DiPlay's CarPlay link or
+     * the stereo's own app still holding it); a channel it has not answered in this long is closed
+     * and dialled again, so a phone switch picks the daemon up once the other client lets go.
+     * Upstream's probe budgets 8 s for the whole opening burst; the first frame comes in milliseconds.
+     */
+    const val UNANSWERED_REOPEN_MS = 5_000L
+
+    /** CarLink: redials of an unanswered channel in a row; then a silent daemon is kept, as upstream does (it may still carry bytes). */
+    const val MAX_UNANSWERED_REOPENS = 3
+
+    /** CarLink: whether to give up on a channel the daemon has not answered ([UNANSWERED_REOPEN_MS]). */
+    fun reopensUnanswered(answered: Boolean, openForMs: Long, reopensSoFar: Int): Boolean =
+        !answered && openForMs >= UNANSWERED_REOPEN_MS && reopensSoFar < MAX_UNANSWERED_REOPENS
 }
 
 /**

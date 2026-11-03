@@ -589,6 +589,22 @@ class SessionManagerTest {
         assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
     }
 
+    @Test fun aModuleHandshakeIsNotRestartedAtTheFastPhonesFloor() {
+        // 2026-11-04 #s7: the 6 s floor restarted Android Auto while the engine was still repeating its opener over the module.
+        val request = SessionRequest(Engine.ANDROID_AUTO, Transport.WIRELESS, "AA:BB", "Pixel")
+        repeat(3) { profiles.recordStage(request, WirelessPath.WIFI_DIRECT, ProgressStage.HANDSHAKE, 900) }
+        env.moduleWait = 20_000L
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)); idle()
+        advance(10_001)
+        assertEquals("the driver is still told", Notice.Kind.SLOW, active(m).notice?.kind)
+        advance(SessionManager.MODULE_HANDSHAKE_MILLIS - 10_001 - 1)
+        assertEquals(1, starts.size)
+        advance(2)
+        assertEquals(2, starts.size)
+    }
+
     @Test fun aDialLoopCannotHideThatThePhoneIsNotAnswering() {
         // K4.2 / C8: Progress and Retrying every 7.7 s re-armed the 10 s timer forever.
         val m = manager()

@@ -66,14 +66,29 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
 
     private val reader = Thread({ readLoop() }, "zbt-iap2-reader").apply { isDaemon = true }
 
-    /** Blocks until the module reports the phone connected; false on timeout or a closed channel. */
-    fun awaitPhone(timeoutMillis: Long): Boolean {
+    /**
+     * Blocks until the module reports the phone connected; false on timeout or a closed channel.
+     * Repeats `RequestReconn` every [rewakeMillis] (at most [MAX_REWAKES] times) while it waits.
+     */
+    fun awaitPhone(timeoutMillis: Long, rewakeMillis: Long = REWAKE_MILLIS): Boolean {
         // The daemon serves one client and silently ignores a second (ZLink's own app, or Android
         // Auto's carrier still holding it): no InitInfo soon means busy, not a slow phone.
         if (!answered.await(ANSWER_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
             throw IOException("the stereo's Bluetooth module did not answer; another app may be using it")
         }
-        if (!phonePresent.await(timeoutMillis, TimeUnit.MILLISECONDS)) return false
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+        var rewakes = 0
+        while (true) {
+            val left = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+            if (left <= 0) return false
+            val slice = if (rewakes < MAX_REWAKES) minOf(left, rewakeMillis) else left
+            if (phonePresent.await(slice, TimeUnit.MILLISECONDS)) break
+            // A phone that ignored the first request was otherwise asked again only by a whole retry.
+            if (rewakes < MAX_REWAKES && slice < left) {
+                rewakes++
+                runCatching { sendReconnect() }
+            }
+        }
         if (closed) throw IOException("the module daemon closed the CarPlay channel")
         return true
     }
@@ -126,6 +141,9 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
         out.write(header(msgId, body.size) + body)
         out.flush()
     }
+
+    private fun sendReconnect() = send(REQUEST_RECONN,
+        varintField(1, REQUEST_RECONN) + varintField(2, 1) + varintField(3, ModuleIap2Route.ENABLE_TYPE_CARPLAY))
 
     private fun readLoop() {
         try {
@@ -184,6 +202,9 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
         private const val MAX_BODY = 1 shl 20
         private const val CONNECT_TIMEOUT_MILLIS = 4_000
         private const val ANSWER_TIMEOUT_MILLIS = 3_000L
+        /** Longer than a Bluetooth page (5.12 s), so a repeat never lands on a page in progress (DiAuto ZbtWakePolicy). */
+        const val REWAKE_MILLIS = 6_000L
+        const val MAX_REWAKES = 3
         /** LinkInfo phone_type of an Android Auto phone (DiAuto ZbtPolicies.PHONE_TYPE_ANDROID_AUTO). */
         const val PHONE_TYPE_ANDROID_AUTO = 1L
 
@@ -202,7 +223,7 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
             try {
                 val type = ModuleIap2Route.ENABLE_TYPE_CARPLAY
                 link.send(REQUEST_INIT, varintField(1, 1) + varintField(2, type))
-                link.send(REQUEST_RECONN, varintField(1, REQUEST_RECONN) + varintField(2, 1) + varintField(3, type))
+                link.sendReconnect()
             } catch (e: IOException) {
                 link.close()
                 throw e
