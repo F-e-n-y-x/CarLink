@@ -20,17 +20,20 @@ internal object UsbConfigurationSelection {
         val before: Int?,
         val after: Int?,
         val detached: List<Int>,
+        val alreadyActive: Boolean = false,
     ) {
         /** Android reported the switch as failed and the iPhone still reads another configuration. */
         val wrongConfiguration: Boolean get() = !selected && after != null && after != target
 
         fun diagnostic(): String =
             "USB configuration select target=$target ok=$selected before=${before ?: "unknown"} " +
-                "detached=${detached.joinToString(",").ifEmpty { "none" }} after=${after ?: "unknown"}"
+                "detached=${detached.joinToString(",").ifEmpty { "none" }} after=${after ?: "unknown"}" +
+                if (alreadyActive) " action=already-active" else ""
     }
 
     /**
-     * Returns null when the first [setConfiguration] succeeds. Otherwise, unless
+     * Reuses an already active target without resetting its interfaces. Returns null when the
+     * first [setConfiguration] succeeds. Otherwise, unless
      * [activeConfiguration] already reads [target], detaches drivers from [interfaceIds] with a
      * claim that stays held, lets [reopen] close and reopen the connection to drop those claims,
      * and tries once more on the new connection.
@@ -43,6 +46,11 @@ internal object UsbConfigurationSelection {
         detach: (Int) -> Boolean,
         reopen: () -> Unit,
     ): Outcome? {
+        // CarLink: upstream PR #1212
+        // This is only an optimization: some Android USB stacks throw on GET_CONFIGURATION.
+        // Preserve the existing SET_CONFIGURATION path when the initial read is unavailable.
+        val initial = try { activeConfiguration() } catch (_: RuntimeException) { null }
+        if (initial == target) return Outcome(target, selected = true, initial, initial, emptyList(), alreadyActive = true)
         if (setConfiguration()) return null
         val before = activeConfiguration()
         if (before == target) return Outcome(target, selected = false, before, before, emptyList())

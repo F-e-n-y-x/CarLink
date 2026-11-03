@@ -179,6 +179,10 @@ class CarPlayController(
     private val locationProvider: Iap2LocationProvider? = null,
     private val vehicleStatusProvider: com.shilapi.xcertplay.transport.VehicleStatusProvider? = null,
 ) : Closeable {
+    // CarLink: upstream PR #1212
+    /** Wired restarts must not claim the iPhone while this controller still owns USB work. */
+    val isWiredTransport: Boolean get() = config.transport == CarPlayTransport.WIRED
+
     init {
         require(!config.locationReportingEnabled || locationProvider != null) {
             "A location provider is required when location reporting is enabled"
@@ -783,11 +787,18 @@ class CarPlayController(
                 } finally {
                     executor.shutdownNow()
                     var executorTerminated = false
-                    try {
-                        executorTerminated = executor.awaitTermination(EXECUTOR_CLOSE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-                    } catch (_: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                    }
+                    var interrupted = false // CarLink: upstream PR #1212: wait out a wired USB worker
+                    do {
+                        try {
+                            executorTerminated = executor.awaitTermination(EXECUTOR_CLOSE_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                        } catch (_: InterruptedException) {
+                            interrupted = true
+                        }
+                        if (!executorTerminated && isWiredTransport) {
+                            connectionDiagnostic("teardown waiting for wired USB worker to finish")
+                        }
+                    } while (!executorTerminated && isWiredTransport)
+                    if (interrupted) Thread.currentThread().interrupt()
                     connectionDiagnostic(
                         "teardown end elapsedMs=${elapsedMillis(teardownStarted)} " +
                             "executorTerminated=$executorTerminated",

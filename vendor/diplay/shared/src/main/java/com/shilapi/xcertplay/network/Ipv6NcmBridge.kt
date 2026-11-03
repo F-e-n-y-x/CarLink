@@ -4,6 +4,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.shilapi.xcertplay.transport.EthernetIpv6Codec
 import com.shilapi.xcertplay.transport.NcmUsbBridge
+import com.shilapi.xcertplay.transport.UsbNeighborDiscovery
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -16,17 +17,19 @@ import java.util.concurrent.locks.LockSupport
  * Moves IPv6 packets between an Android VpnService tun and the iPhone NCM Ethernet link.
  *
  * NCM carries Ethernet frames while the tun is a layer-3 device, so this bridge strips and
- * restores the Ethernet II header. Link-local neighbor discovery stays in the Android kernel,
- * mirroring LIVI's reliance on the host kernel for NDP on its TAP interface.
+ * restores the Ethernet II header. Solicitations for our USB address are answered on the
+ * Ethernet side, avoiding Android kernel multicast routing through the physical Wi-Fi network.
  */
 class Ipv6NcmBridge(
     private val ncm: NcmUsbBridge,
     private val tun: ParcelFileDescriptor,
     private val hostMac: ByteArray,
+    private val hostAddress: ByteArray, // CarLink: upstream PR #1212
     private val onError: (Throwable) -> Unit,
 ) : Closeable {
     init {
         require(hostMac.size == EthernetIpv6Codec.MAC_BYTES) { "hostMac must be 6 bytes" }
+        require(hostAddress.size == 16) { "hostAddress must be IPv6" }
     }
 
     @Volatile
@@ -54,10 +57,22 @@ class Ipv6NcmBridge(
 
     override fun close() {
         if (!running.compareAndSet(true, false)) return
-        ncm.close()
-        tun.close()
-        join(ncmToTunThread)
-        join(tunToNcmThread)
+        // CarLink: upstream PR #1212
+        // Stop the TUN side before the USB side. Closing the NCM connection first left
+        // runTunToNcm() free to sit inside NcmUsbBridge.send() while Android tore that same
+        // connection down, and unlinking the in-flight bulk URB panics the MT6580 musb driver
+        // (musb_advance_schedule, NULL qh). Closing the tun stops new frames and the join lets
+        // the writer leave send() before the USB connection is closed.
+        try {
+            tun.close()
+        } finally {
+            join(tunToNcmThread)
+            try {
+                ncm.close()
+            } finally {
+                join(ncmToTunThread)
+            }
+        }
     }
 
     private fun runNcmToTun() {
@@ -79,6 +94,25 @@ class Ipv6NcmBridge(
                 if (inboundLogBudget > 0) {
                     inboundLogBudget--
                     Log.i(TAG, "ncm inbound ${frame.summary(ipv6.payloadOffset)}")
+                }
+                // CarLink: upstream PR #1212: answer neighbor solicitations for our USB address here.
+                // Avoid allocating an extra packet copy for video/audio/TCP traffic.
+                val advertisement = if (ipv6.payloadLength >= 64 &&
+                    frame[ipv6.payloadOffset + 6].toInt() == 58 &&
+                    (frame[ipv6.payloadOffset + 40].toInt() and 0xff) == 135
+                ) {
+                    UsbNeighborDiscovery.advertisement(
+                        frame.copyOfRange(ipv6.payloadOffset, ipv6.payloadOffset + ipv6.payloadLength),
+                        hostAddress,
+                        hostMac,
+                    )
+                } else null
+                if (advertisement != null && ncm.send(
+                        EthernetIpv6Codec.build(hostMac, ipv6.sourceMac, advertisement), WRITE_TIMEOUT_MILLIS,
+                    )
+                ) {
+                    Log.i(TAG, "ncm answered USB neighbor solicitation directly")
+                    continue
                 }
                 output.write(frame, ipv6.payloadOffset, ipv6.payloadLength)
             }

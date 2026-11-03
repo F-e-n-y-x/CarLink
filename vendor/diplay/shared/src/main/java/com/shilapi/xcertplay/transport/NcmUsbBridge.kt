@@ -96,8 +96,10 @@ class NcmUsbBridge internal constructor(
      * within [timeoutMillis]. The block now waits in a bounded queue until the phone accepts it, so
      * the first replies after link-up are not lost. When the queue is full this waits up to
      * [timeoutMillis] for room (upstream's backpressure), then drops the oldest block.
+     * Returns true once queued (upstream PR #1212 returns whether the phone accepted the write;
+     * here the queue keeps a refused frame until it does).
      */
-    fun send(frame: ByteArray, timeoutMillis: Int) = synchronized(writeLock) {
+    fun send(frame: ByteArray, timeoutMillis: Int): Boolean = synchronized(writeLock) { // CarLink: #1212's Boolean
         checkOpen()
         require(timeoutMillis > 0) { "timeoutMillis must be positive" }
         val sequence = synchronized(stateLock) {
@@ -124,6 +126,7 @@ class NcmUsbBridge internal constructor(
             }
             outLock.notifyAll()
         }
+        true
     }
 
     // CarLink
@@ -269,7 +272,9 @@ class NcmUsbBridge internal constructor(
         runCatching { statusToClose?.cancel() } // CarLink
         if (Thread.currentThread() !== writerThread) {
             try {
-                writerThread.join(WRITER_JOIN_MILLIS)
+                // CarLink: upstream PR #1212. Wait out an in-flight bulkTransfer before closing the
+                // connection: unlinking that URB panics the MT6580 musb driver (musb_advance_schedule).
+                writerThread.join(writeTimeoutMillis + WRITER_JOIN_MILLIS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
