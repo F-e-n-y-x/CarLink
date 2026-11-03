@@ -74,10 +74,12 @@
     <string name="carlink_choose_phone_title">Two phones are trying to connect</string>
     <string name="carlink_choose_phone_body">An iPhone and an Android phone are both connecting to this stereo. Pick the one to use.</string>
     <string name="carlink_choose_phone_later">Not now</string>
-    <string name="carlink_choose_bt_title">Which Bluetooth?</string>
-    <string name="carlink_choose_bt_body">This stereo has its own Bluetooth module as well as Android\'s. Pick the one your phone is paired with.</string>
+    <string name="carlink_choose_bt_title">Bluetooth</string>
+    <string name="carlink_choose_bt_body">This stereo has two: its own module and Android\'s. Use the one your phone is paired with.</string>
     <string name="carlink_choose_bt_module">Stereo\'s Bluetooth module</string>
-    <string name="carlink_choose_bt_android">This screen\'s own Bluetooth (Android)</string>
+    <string name="carlink_choose_bt_module_body">Pair phones in the stereo\'s own Bluetooth app</string>
+    <string name="carlink_choose_bt_android">This screen\'s Bluetooth</string>
+    <string name="carlink_choose_bt_android_body">Android\'s own Bluetooth; pair phones in Android\'s settings</string>
     <string name="carlink_home_bt_chip_module">Stereo\'s module</string>
     <string name="carlink_home_ready_module_body">This stereo\'s Bluetooth is a separate module. Pair your phone in the stereo\'s own Bluetooth settings or phone app; after its first connection CarLink lists it here.</string>
     <string name="carlink_home_bt_chip_off">Off</string>

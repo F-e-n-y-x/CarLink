@@ -268,33 +268,8 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     }
     val pendingChoice by vm.pendingChoice.collectAsStateWithLifecycle()
     pendingChoice?.let { phones -> ChoosePhoneDialog(phones, onPick = vm::choosePhone, onDismiss = vm::dismissChoice) }
-    if (choosingBluetooth) ChooseBluetoothDialog(connection.useAndroidBluetooth,
-        onPick = { vm.setUseAndroidBluetooth(it); choosingBluetooth = false },
-        onSettings = { vm.openBluetoothSettings(); choosingBluetooth = false },
-        onDismiss = { choosingBluetooth = false })
-}
-
-/** The stereo has its own Bluetooth module besides Android's: the driver picks which one phones use. */
-@Composable
-private fun ChooseBluetoothDialog(useAndroid: Boolean, onPick: (Boolean) -> Unit, onSettings: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.carlink_choose_bt_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.carlink_choose_bt_body), style = MaterialTheme.typography.bodyLarge)
-                listOf(false to R.string.carlink_choose_bt_module, true to R.string.carlink_choose_bt_android).forEach { (android, label) ->
-                    val current = android == useAndroid
-                    IonButton(stringResource(label) + if (current) " ✓" else "", { onPick(android) },
-                        icon = R.drawable.carlink_ic_bluetooth)
-                }
-                if (useAndroid) GlassButton(stringResource(R.string.carlink_home_bluetooth_settings), onSettings)
-            }
-        },
-        confirmButton = {},
-        dismissButton = { GlassButton(stringResource(R.string.carlink_choose_phone_later), onDismiss) },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-    )
+    if (choosingBluetooth) BluetoothSheet(connection.useAndroidBluetooth, onPick = vm::setUseAndroidBluetooth,
+        onSettings = vm::openBluetoothSettings, onDismiss = { choosingBluetooth = false })
 }
 
 /** The failure report's QR code, as large as the screen allows. */
