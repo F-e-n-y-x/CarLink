@@ -1775,7 +1775,9 @@ private class AudioRenderer(
     private val echoReference: EchoReference? = null,
     voiceFilter: Boolean = false,
 ) : Closeable {
-    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long)
+    private data class AudioPacket(val rtp: ByteArray, val sample: Int, val arrivedNs: Long) {
+        var afterLoss = false // CarLink: upstream PR #1206 (lost music fill)
+    }
 
     private val pcmChannels = if (format.channels >= 2) 2 else 1
     private val voiceFilter = if (voiceFilter && format.sampleRate > 0) VoiceFilter(format.sampleRate, pcmChannels) else null
@@ -1789,6 +1791,11 @@ private class AudioRenderer(
     private val mediaLagGuard = if (format.audioType == "media") MediaPacketLagGuard(format.rtpClockRate) else null
     @Volatile private var newestRtpSample = 0
     private var lagRecoveryReports = 0
+    // CarLink: upstream PR #1206 (lost music fill)
+    private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
+    private var lastSequence = -1
+    private var silence = ByteArray(0)
+    private var lostFramesFilled = 0L
     @Volatile private var running = true
     @Volatile private var started = false
     private var codec: MediaCodec? = null
@@ -1876,7 +1883,7 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now))) {
+        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { afterLoss = followsLoss(rtp) })) { // CarLink: #1206
             if (started) {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
@@ -1890,6 +1897,18 @@ private class AudioRenderer(
                 }
             }
         }
+    }
+
+    // CarLink: upstream PR #1206 (lost music fill)
+    /** Whether RTP sequence numbers skip ahead before [rtp]; late and repeated packets do not count. */
+    private fun followsLoss(rtp: ByteArray): Boolean {
+        if (lostMusicFill == null || rtp.size < 4) return false
+        val sequence = ((rtp[2].toInt() and 0xff) shl 8) or (rtp[3].toInt() and 0xff)
+        val previous = lastSequence
+        val step = (sequence - previous) and 0xffff
+        if (previous >= 0 && (step == 0 || step >= 0x8000)) return false
+        lastSequence = sequence
+        return previous >= 0 && step > 1
     }
 
     override fun close() {
@@ -2254,6 +2273,8 @@ private class AudioRenderer(
         }
         val rtp = packet.rtp
         val timestampUs = sampleTimestampUs(packet.sample)
+        // CarLink: upstream PR #1206 (lost music fill)
+        if (packet.afterLoss && format.codec != AudioCodecKind.LPCM) lostMusicFill?.lossBefore(timestampUs)
         when (format.codec) {
             AudioCodecKind.LPCM -> writePcm(byteSwapS16(rtp.copyOfRange(12, rtp.size)))
             AudioCodecKind.AAC_LC -> {
@@ -2389,12 +2410,25 @@ private class AudioRenderer(
                     } finally {
                         codec.releaseOutputBuffer(index, false)
                     }
-                    if (copied) writePcm(pcm, 0, size)
+                    if (copied) { // CarLink: upstream PR #1206 (lost music fill)
+                        val fill = lostMusicFill?.silenceBefore(info.presentationTimeUs, size / frameBytes) ?: 0
+                        if (fill > 0) writeSilence(fill)
+                        writePcm(pcm, 0, size)
+                    }
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
                 }
                 else -> return
             }
         }
+    }
+
+    // CarLink: upstream PR #1206 (lost music fill)
+    private fun writeSilence(frames: Int) {
+        val bytes = frames * frameBytes
+        if (silence.size < bytes) silence = ByteArray(bytes) else silence.fill(0, 0, bytes)
+        if (lostFramesFilled == 0L) Log.i(TAG, "audio first lost music filled frames=$frames")
+        lostFramesFilled += frames
+        writePcm(silence, 0, bytes)
     }
 
     private fun writePcm(data: ByteArray, offset: Int = 0, length: Int = data.size) {
@@ -2611,7 +2645,8 @@ private class AudioRenderer(
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
                 "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
-                "outputBuffersTotal=$outputBuffers ended=$force"
+                "outputBuffersTotal=$outputBuffers " +
+                (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
             runCatching { report(decoderLine) }
         }
