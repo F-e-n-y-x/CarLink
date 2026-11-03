@@ -120,6 +120,7 @@ The hooks CarLink sets (where):
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 | DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |
+| | `usbAttachAgeMillis` (default-grant wait counted from the attach, `detect/UsbAttachTimes`) | `CarPlayAdapter.install` |
 
 ## Build and test loop
 

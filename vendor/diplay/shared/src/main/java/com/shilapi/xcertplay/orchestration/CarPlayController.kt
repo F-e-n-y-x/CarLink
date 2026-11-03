@@ -2129,7 +2129,9 @@ class CarPlayController(
 
     private fun requestIphonePermission(device: UsbDevice) {
         wiredTimeline.mark(WiredStartupTimeline.Milestone.IPHONE_FOUND) // CarLink
-        mainHandler.post { awaitDefaultGrantThenRequest(device, waitedMs = 0L) }
+        // CarLink: the grant comes as Android dispatches the attach, so count from the attach when the host heard it.
+        val waited = usbAttachAgeMillis?.invoke(device)?.coerceIn(0L, DEFAULT_GRANT_WAIT_MS) ?: 0L
+        mainHandler.post { awaitDefaultGrantThenRequest(device, waitedMs = waited) }
     }
 
     /**
@@ -3471,6 +3473,10 @@ class CarPlayController(
         @Volatile
         @JvmStatic
         var openCarScreen: (() -> Unit)? = null
+        /** CarLink: how long ago the host heard this USB device attach; null when it did not (full default-grant wait). */
+        @Volatile
+        @JvmStatic
+        var usbAttachAgeMillis: ((UsbDevice) -> Long?)? = null
         /** CarLink: how long Bonjour waits for the group's IPv6 link-local before starting without it. */
         private const val BONJOUR_LINK_LOCAL_WAIT_MILLIS = 600L
 

@@ -88,6 +88,8 @@ object CarLinkCore {
      */
     fun install(app: Application, config: CarLinkConfig) {
         installed = config
+        // Both processes ask for USB access; each times the attaches itself (UsbAttachTimes).
+        com.carlink.core.detect.UsbAttachTimes.watch(app)
         if (isAndroidAutoProcess(app)) {
             nameCarForPhone(app, config.accessoryName)
             // No sticky or self-restarting engine (DA§10.6.1), no BYD window claim off a BYD
