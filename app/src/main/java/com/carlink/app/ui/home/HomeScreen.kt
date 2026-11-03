@@ -154,8 +154,8 @@ internal data class HomeUi(
     val stereo: StereoBluetooth? = null,
     /** After a failure: the prefilled GitHub report's quick address, shown as a QR code to scan with a phone. */
     val reportUrl: String? = null,
-    /** The same report with an error-log excerpt (a denser code), offered in the large view. */
-    val reportUrlWithLog: String? = null,
+    /** The same report as plain text with a log excerpt (copy it from the phone), offered in the large view. */
+    val reportText: String? = null,
 ) {
     /**
      * Wireless cannot start for the default phone's engine here (for either engine when no phone is
@@ -249,7 +249,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
         }
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification,
-        failureReport?.quickUrl, failureReport?.shortUrl), actions)
+        failureReport?.quickUrl, failureReport?.qrText), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -265,10 +265,11 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
 
 /** The failure report's QR code, as large as the screen allows. */
 @Composable
-private fun ReportQrDialog(url: String, withLog: String?, onDismiss: () -> Unit) {
-    // The simple code scans easily; the one with the log is denser, offered for a closer scan.
-    var includeLog by rememberSaveable { mutableStateOf(false) }
-    val shown = if (includeLog && withLog != null) withLog else url
+private fun ReportQrDialog(url: String, text: String?, onDismiss: () -> Unit) {
+    // The link opens the issue page; the text code carries the whole report and log to copy, since
+    // the GitHub app keeps only a link's title.
+    var asText by rememberSaveable { mutableStateOf(false) }
+    val shown = if (asText && text != null) text else url
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.carlink_report_qr_title)) },
@@ -278,9 +279,9 @@ private fun ReportQrDialog(url: String, withLog: String?, onDismiss: () -> Unit)
                     Modifier.clickable(onClick = onDismiss))
             }
         },
-        dismissButton = withLog?.let {
-            { GlassButton(stringResource(if (includeLog) R.string.carlink_report_qr_simple else R.string.carlink_report_qr_with_log),
-                { includeLog = !includeLog }) }
+        dismissButton = text?.let {
+            { GlassButton(stringResource(if (asText) R.string.carlink_report_qr_simple else R.string.carlink_report_qr_with_log),
+                { asText = !asText }) }
         },
         confirmButton = { GlassButton(stringResource(R.string.carlink_home_cable_ok), onDismiss) },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -754,7 +755,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 ui.reportUrl?.let { url ->
                     // A tap shows the code full size: easier for a phone camera from the passenger seat.
                     var expanded by rememberSaveable { mutableStateOf(false) }
-                    if (expanded) ReportQrDialog(url, ui.reportUrlWithLog) { expanded = false }
+                    if (expanded) ReportQrDialog(url, ui.reportText) { expanded = false }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.clickable(onClickLabel = stringResource(R.string.carlink_home_report_expand)) { expanded = true }) {
                         com.carlink.app.ui.components.QrCode(url, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))

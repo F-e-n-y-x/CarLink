@@ -207,8 +207,8 @@
     <string name="carlink_diag_competing_found">Another phone-projection app is installed</string>
     <string name="carlink_diag_competing_body">%1$s can take your phone\'s Bluetooth or USB before CarLink. If CarLink cannot connect, disable or force-stop it.</string>
     <string name="carlink_home_report_expand">Show the code larger</string>
-    <string name="carlink_report_qr_with_log">Include the log</string>
-    <string name="carlink_report_qr_simple">Simple code</string>
+    <string name="carlink_report_qr_with_log">Details as text</string>
+    <string name="carlink_report_qr_simple">Link to the issue page</string>
     <string name="carlink_home_report_scan">Scan with your phone to report this problem. The details are already filled in.</string>
     <string name="carlink_report_qr_body">This screen has no web browser. Scan the code with your phone: it opens the report on GitHub with the version, this screen and the error filled in.</string>
     <string name="carlink_report_qr_log">The log does not fit in the code: Copy full log or Share log, then add it to the issue.</string>

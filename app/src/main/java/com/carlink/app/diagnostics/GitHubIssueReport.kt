@@ -45,6 +45,9 @@ object GitHubIssueReport {
      */
     const val SHORT_URL_BUDGET = 2_200
 
+    /** The plain-text report QR: within an error-correction-M code (2,331 bytes) with room for UTF-8. */
+    const val QR_TEXT_BUDGET = 1_800
+
     /** The quick QR link: about a version-20 code, easy for a phone camera off a glossy screen. */
     const val QUICK_URL_BUDGET = 900
 
@@ -137,6 +140,11 @@ object GitHubIssueReport {
         val shortUrl: String,
         /** The easy-to-scan QR link: the form's fields and the error, no log (a few hundred characters). */
         val quickUrl: String,
+        /**
+         * The report as plain text for a QR code (fields, error, log excerpt): a phone shows it with
+         * Copy, whatever opens GitHub links there (the GitHub app keeps only a link's title).
+         */
+        val qrText: String,
         /** The log lines in the excerpt (without its headings), and how many were left for Share log. */
         val logLines: List<String>,
         val omittedLines: Int,
@@ -191,7 +199,14 @@ object GitHubIssueReport {
         val room = URL_BUDGET - url(fields).length - "&log=".length
         val excerpt = logExcerpt(facts, room)
         fields["log"] = excerpt.text
-        return Report(title, fields, url(fields), shortUrl, quickUrl, excerpt.lines, excerpt.omitted)
+        val textHead = buildString {
+            append(title).append('\n')
+            head.filterKeys { it != "title" }.forEach { (k, v) -> append(k.replace('_', ' ')).append(": ").append(v).append('\n') }
+            append('\n').append(clean(whatHappened(facts, short = true), facts.secrets).take(600)).append('\n')
+        }
+        val textLog = logExcerpt(facts, (QR_TEXT_BUDGET - textHead.length).coerceAtLeast(0)).text
+        val qrText = (textHead + "\n" + textLog).take(QR_TEXT_BUDGET)
+        return Report(title, fields, url(fields), shortUrl, quickUrl, qrText, excerpt.lines, excerpt.omitted)
     }
 
     // ---- Fields --------------------------------------------------------------------------

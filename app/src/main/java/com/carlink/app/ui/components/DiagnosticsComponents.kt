@@ -110,7 +110,7 @@ fun qrBitmap(content: String, dark: Int, light: Int): ImageBitmap? = runCatching
     val matrix = listOf(ErrorCorrectionLevel.M, ErrorCorrectionLevel.L).firstNotNullOf { level ->
         runCatching {
             QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 0, 0,
-                mapOf(EncodeHintType.MARGIN to 0, EncodeHintType.ERROR_CORRECTION to level))
+                mapOf(EncodeHintType.MARGIN to 0, EncodeHintType.ERROR_CORRECTION to level, EncodeHintType.CHARACTER_SET to "UTF-8"))
         }.getOrNull()
     }
     val pixels = IntArray(matrix.width * matrix.height) { i ->

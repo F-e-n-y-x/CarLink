@@ -206,6 +206,11 @@ class GitHubIssueReportTest {
         val p = params("https://github.com" + java.net.URLDecoder.decode(report.shortUrl.substringAfter("return_to="), "UTF-8"))
         assertNotNull("the scanned report has the error log", p["log"])
         assertTrue("${report.quickUrl.length}", report.quickUrl.length <= GitHubIssueReport.QUICK_URL_BUDGET)
+        assertTrue("${report.qrText.length}", report.qrText.length <= GitHubIssueReport.QR_TEXT_BUDGET)
+        assertTrue("the text code carries the error", report.qrText.contains("PHONE_DID_NOT_ANSWER"))
+        com.google.zxing.qrcode.QRCodeWriter().encode(report.qrText, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
+            mapOf(com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M,
+                com.google.zxing.EncodeHintType.CHARACTER_SET to "UTF-8"))
         assertTrue("QR links open the browser, not the GitHub app", report.quickUrl.startsWith("https://github.com/login?return_to=%2F"))
         val inner = java.net.URLDecoder.decode(report.quickUrl.substringAfter("return_to="), "UTF-8")
         assertTrue(inner.startsWith("/F-e-n-y-x/CarLink/issues/new?template="))
