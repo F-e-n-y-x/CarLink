@@ -68,6 +68,8 @@ data class ConnectionPrefs(
     val floatingSwitcher: Boolean = true,
     /** "Wireless through the stereo's Bluetooth module (experimental)" (Settings › Connection, advanced). */
     val wirelessOnExternalBluetooth: Boolean = false,
+    /** Home's Bluetooth chooser: this screen's own Bluetooth instead of the stereo's module. */
+    val useAndroidBluetooth: Boolean = false,
     /** Settings › Connection › Root mode (advanced). */
     val rootMode: Boolean = false,
     /** "Android Auto on this screen (experimental)" (Settings › Connection, advanced). */
@@ -263,7 +265,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     /** Wireless cannot start on this stereo (external Bluetooth module, and the driver did not override it). */
     val wirelessUnavailable: StateFlow<Boolean> = combine(_stereoBluetooth, _connection) { report, prefs ->
         // Setup's pairing step: the module setting only ever unblocks Android Auto.
-        report != null && com.carlink.core.connection.DeviceEnvironment.wirelessBlocked(report.classification,
+        report != null && com.carlink.core.connection.DeviceEnvironment.wirelessBlocked(
+            com.carlink.core.connection.DeviceEnvironment.effective(prefs.useAndroidBluetooth, report.classification),
             prefs.wirelessOnExternalBluetooth, com.carlink.core.core.Engine.ANDROID_AUTO)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
@@ -568,6 +571,13 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         phonesRepository.refresh()
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Wireless through the stereo's Bluetooth module (experimental): ${if (on) "on" else "off"}")
     }
+    /** Home's Bluetooth chooser: the stereo's module, or this screen's own Bluetooth. */
+    fun setUseAndroidBluetooth(on: Boolean) {
+        preferences.useAndroidBluetooth = on
+        _connection.value = readConnection()
+        phonesRepository.refresh()
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Bluetooth: ${if (on) "this screen's own" else "the stereo's module"}")
+    }
     /** Root mode: turning it on asks the root manager once and grants everything setup asks for. */
     fun setRootMode(on: Boolean) {
         preferences.rootMode = on
@@ -630,7 +640,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
         floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth,
-        rootMode = preferences.rootMode, androidAutoOnScreen = preferences.androidAutoOnScreen,
+        useAndroidBluetooth = preferences.useAndroidBluetooth, rootMode = preferences.rootMode, androidAutoOnScreen = preferences.androidAutoOnScreen,
         androidAutoInstalled = runCatching { app.packageManager.getPackageInfo(ANDROID_AUTO_PACKAGE, 0) }.isSuccess,
         // The check Android Auto itself fails on: it starts this activity when a head unit connects.
         androidAutoCanRunCar = runCatching {

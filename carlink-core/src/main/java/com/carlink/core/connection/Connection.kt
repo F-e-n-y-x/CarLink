@@ -213,7 +213,7 @@ object Connection {
             Engine.CARPLAY -> {
                 // CarLink: wireless CarPlay's iAP2 link through the stereo's module (opt-in).
                 com.shilapi.xcertplay.transport.ModuleIap2Route.enabled = plan.transport == com.carlink.core.core.Transport.WIRELESS &&
-                    DeviceEnvironment.moduleCarPlay(com.carlink.core.detect.ExternalBluetoothProbe.current(app).classification,
+                    DeviceEnvironment.moduleCarPlay(DeviceEnvironment.effectiveStereo(app),
                         com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
                 if (com.shilapi.xcertplay.transport.ModuleIap2Route.enabled) {
                     com.carlink.core.diagnostics.EventLog.add("CarLink", "CarPlay Bluetooth through the stereo's module (experimental)")
@@ -223,7 +223,7 @@ object Connection {
                     brandName = CarLinkCore.config.accessoryName, picture = picture))
             }
             Engine.ANDROID_AUTO -> {
-                val moduleRoute = DeviceEnvironment.moduleRoute(com.carlink.core.detect.ExternalBluetoothProbe.current(app).classification,
+                val moduleRoute = DeviceEnvironment.moduleRoute(DeviceEnvironment.effectiveStereo(app),
                     com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
                 if (moduleRoute != null && plan.transport == com.carlink.core.core.Transport.WIRELESS) {
                     com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto Bluetooth through the stereo's module: $moduleRoute (experimental)")

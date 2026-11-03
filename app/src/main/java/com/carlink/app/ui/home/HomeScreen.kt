@@ -42,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -172,6 +173,8 @@ internal data class HomeUi(
 internal interface HomeActions {
     fun requestPermissions() {}
     fun openBluetoothSettings() {}
+    /** The Bluetooth chip: a chooser when the stereo has its own module, else Android's settings. */
+    fun chooseBluetooth() = openBluetoothSettings()
     /** Guided first-time pairing (the setup's pairing step); Android's Bluetooth settings where there is none. */
     fun pairPhone() = openBluetoothSettings()
     fun connect(phone: PairedPhone) {}
@@ -224,8 +227,11 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             }.getOrNull()
         }
     }
+    var choosingBluetooth by remember { mutableStateOf(false) }
+    val moduleDetected by rememberUpdatedState(stereo?.classification?.blocksWireless == true)
     val actions = remember(vm) {
         object : HomeActions {
+            override fun chooseBluetooth() = if (moduleDetected) choosingBluetooth = true else vm.openBluetoothSettings()
             override fun requestPermissions() = fixProblem(LinkProblem.PERMISSIONS)
             override fun openBluetoothSettings() = vm.openBluetoothSettings()
             override fun pairPhone() = navigate(Route.SETUP_PAIR)
@@ -248,7 +254,8 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun startSelf() = vm.startSelf()
         }
     }
-    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification,
+    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual,
+        stereo?.classification?.let { com.carlink.core.connection.DeviceEnvironment.effective(connection.useAndroidBluetooth, it) },
         failureReport?.quickUrl, failureReport?.qrText), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
@@ -261,6 +268,33 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     }
     val pendingChoice by vm.pendingChoice.collectAsStateWithLifecycle()
     pendingChoice?.let { phones -> ChoosePhoneDialog(phones, onPick = vm::choosePhone, onDismiss = vm::dismissChoice) }
+    if (choosingBluetooth) ChooseBluetoothDialog(connection.useAndroidBluetooth,
+        onPick = { vm.setUseAndroidBluetooth(it); choosingBluetooth = false },
+        onSettings = { vm.openBluetoothSettings(); choosingBluetooth = false },
+        onDismiss = { choosingBluetooth = false })
+}
+
+/** The stereo has its own Bluetooth module besides Android's: the driver picks which one phones use. */
+@Composable
+private fun ChooseBluetoothDialog(useAndroid: Boolean, onPick: (Boolean) -> Unit, onSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.carlink_choose_bt_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.carlink_choose_bt_body), style = MaterialTheme.typography.bodyLarge)
+                listOf(false to R.string.carlink_choose_bt_module, true to R.string.carlink_choose_bt_android).forEach { (android, label) ->
+                    val current = android == useAndroid
+                    IonButton(stringResource(label) + if (current) " ✓" else "", { onPick(android) },
+                        icon = R.drawable.carlink_ic_bluetooth)
+                }
+                if (useAndroid) GlassButton(stringResource(R.string.carlink_home_bluetooth_settings), onSettings)
+            }
+        },
+        confirmButton = {},
+        dismissButton = { GlassButton(stringResource(R.string.carlink_choose_phone_later), onDismiss) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
 }
 
 /** The failure report's QR code, as large as the screen allows. */
@@ -430,7 +464,7 @@ private fun HomeStageScreen(ui: HomeUi, actions: HomeActions, onPhones: () -> Un
                 val landscape = maxWidth > maxHeight && layout.width >= WidthClass.MEDIUM
                 val compact = layout.width == WidthClass.COMPACT
                 val margin = if (compact) dimens.compactMargin else dimens.screenMargin
-                val taps = StatusTaps(onBluetooth = actions::openBluetoothSettings, onNetwork = onNetwork, onPhones = onPhones)
+                val taps = StatusTaps(onBluetooth = actions::chooseBluetooth, onNetwork = onNetwork, onPhones = onPhones)
                 HomeStage(
                     Modifier.fillMaxSize().padding(start = margin, end = margin, bottom = if (car) dimens.gutter else dimens.targetGap * 2),
                     landscape = landscape,

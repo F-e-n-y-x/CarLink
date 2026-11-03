@@ -42,13 +42,13 @@ class DeviceEnvironment(
         set(value) { preferences.autoConnectPaused = value }
 
     override fun wirelessUnavailable(engine: Engine): Boolean =
-        wirelessBlocked(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth, engine)
+        wirelessBlocked(effectiveStereo(app), preferences.wirelessOnExternalBluetooth, engine)
 
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()
         val wifi = WifiEnvironmentReader.read(app, settings)
         val facts = DevicePreflight.facts(app, request.phoneAddress)
-        val stereo = ExternalBluetoothProbe.current(app).classification
+        val stereo = effectiveStereo(app)
         val moduleOn = preferences.wirelessOnExternalBluetooth
         val viaModule = when (request.engine) {
             Engine.ANDROID_AUTO -> moduleRoute(stereo, moduleOn) != null
@@ -92,7 +92,7 @@ class DeviceEnvironment(
 
     override fun modulePhoneWaitMillis(request: SessionRequest): Long? {
         if (request.transport != com.carlink.core.core.Transport.WIRELESS) return null
-        val stereo = ExternalBluetoothProbe.current(app).classification
+        val stereo = effectiveStereo(app)
         val moduleOn = preferences.wirelessOnExternalBluetooth
         return when (request.engine) {
             Engine.CARPLAY -> com.shilapi.xcertplay.transport.ModuleIap2Route.CONNECT_TIMEOUT_MILLIS.takeIf { moduleCarPlay(stereo, moduleOn) }
@@ -134,7 +134,7 @@ class DeviceEnvironment(
 
     override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean {
         // The stereo's module reaches the phone itself; paging it on Android's radio only cost 6 s.
-        val stereo = ExternalBluetoothProbe.current(app).classification
+        val stereo = effectiveStereo(app)
         val moduleOn = preferences.wirelessOnExternalBluetooth
         val viaModule = when (request.engine) {
             Engine.ANDROID_AUTO -> moduleRoute(stereo, moduleOn) != null
@@ -161,12 +161,22 @@ class DeviceEnvironment(
          * ([StereoBluetooth.ZLINK_DAEMON], verified end to end 2026-11-04), otherwise only with the
          * driver's "Wireless through the stereo's Bluetooth module (experimental)" ([moduleOn]).
          */
+        /** The stereo as CarLink routes it: no module when the driver chose Android's own Bluetooth (Home's chip). */
+        fun effective(context: Context, stereo: StereoBluetooth): StereoBluetooth =
+            effective(CarLinkPreferences(context).useAndroidBluetooth, stereo)
+
+        /** The driver picked this screen's own Bluetooth on Home: the module is ignored, as if absent. */
+        fun effective(useAndroidBluetooth: Boolean, stereo: StereoBluetooth): StereoBluetooth =
+            if (useAndroidBluetooth) StereoBluetooth.NONE else stereo
+
+        fun effectiveStereo(context: Context): StereoBluetooth = effective(context, ExternalBluetoothProbe.current(context).classification)
+
         fun moduleEnabled(stereo: StereoBluetooth, moduleOn: Boolean): Boolean =
             moduleOn || stereo == StereoBluetooth.ZLINK_DAEMON
 
         /** This stereo's module carries Bluetooth for at least one engine (probe finished; [moduleEnabled]). */
         fun moduleCarriesBluetooth(context: Context): Boolean =
-            ExternalBluetoothProbe.cached()?.classification?.let { stereo ->
+            ExternalBluetoothProbe.cached()?.classification?.let { effective(context, it) }?.let { stereo ->
                 stereo.blocksWireless && moduleEnabled(stereo, CarLinkPreferences(context).wirelessOnExternalBluetooth)
             } == true
 

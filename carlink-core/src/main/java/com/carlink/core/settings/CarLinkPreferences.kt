@@ -43,6 +43,14 @@ class CarLinkPreferences(context: Context) {
 
     // On by default (2026-11-04): a stereo with an external module connects wirelessly through it
     // out of the box, CarPlay included; the driver can still turn it off (Settings › Connection).
+    /**
+     * The driver chose this screen's own (Android) Bluetooth over a detected external module (Home's
+     * Bluetooth chip). CarLink then treats the stereo as one without a module.
+     */
+    var useAndroidBluetooth: Boolean
+        get() = prefs.getBoolean(KEY_USE_ANDROID_BT, false)
+        set(value) = prefs.edit().putBoolean(KEY_USE_ANDROID_BT, value).apply()
+
     var wirelessOnExternalBluetooth: Boolean
         get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, true)
         set(value) = prefs.edit().putBoolean(KEY_WIRELESS_EXTERNAL_BT, value).apply()
@@ -66,6 +74,7 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_AUTO_BLUETOOTH = "auto_connect_bluetooth"
         private const val KEY_START_ON_BOOT = "start_on_boot"
         private const val KEY_WIRELESS_EXTERNAL_BT = "wireless_on_external_bluetooth"
+        private const val KEY_USE_ANDROID_BT = "use_android_bluetooth"
         private const val KEY_ROOT_MODE = "root_mode"
         private const val KEY_AA_ON_SCREEN = "android_auto_on_screen"
         private const val KEY_PAUSED_AT = "auto_connect_paused_at"
