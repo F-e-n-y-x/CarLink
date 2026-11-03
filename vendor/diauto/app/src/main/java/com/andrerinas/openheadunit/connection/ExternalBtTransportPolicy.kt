@@ -10,6 +10,7 @@ import com.andrerinas.openheadunit.aap.WirelessTimeline
 import com.andrerinas.openheadunit.aap.WirelessTiming
 import com.andrerinas.openheadunit.connection.blink.BlinkAaCarrier
 import com.andrerinas.openheadunit.connection.zbt.ZbtAaCarrier
+import com.andrerinas.openheadunit.connection.zjsocket.ZjSocketCarrier
 import com.andrerinas.openheadunit.utils.AppLog
 import com.andrerinas.openheadunit.utils.BluetoothHelper
 import com.andrerinas.openheadunit.utils.Settings
@@ -29,11 +30,14 @@ object ExternalBtTransportPolicy {
 
         /** FYT's external module, through `/dev/auto_serial`. */
         BLINK,
+
+        /** CarLink (open-headunit 754e6c01): the ZJ daemon's raw RFCOMM socket, `/dev/socket/zj_bt_socket`. */
+        ZJ_SOCKET,
     }
 
     /**
      * Key in DiAuto's settings file where the host names the module route for the next session:
-     * "ZBT", "BLINK", or empty for none. Written by CarLink's AaSessionSettings before every start.
+     * "ZBT", "BLINK", "ZJ_SOCKET", or empty for none. Written by CarLink's AaSessionSettings before every start.
      */
     const val HOST_ROUTE_KEY = "carlink-external-bt-route"
 
@@ -45,7 +49,7 @@ object ExternalBtTransportPolicy {
     fun route(externalBtEvidence: String?, hostRoute: Route?, overridden: Boolean): Route = when {
         // The host's opt-in wins even where this engine's own markers cannot see the module (an
         // FYT unit carries none of the ZLink markers ExternalBtPolicy knows).
-        hostRoute == Route.ZBT || hostRoute == Route.BLINK -> hostRoute
+        hostRoute == Route.ZBT || hostRoute == Route.BLINK || hostRoute == Route.ZJ_SOCKET -> hostRoute
         externalBtEvidence == null -> Route.NORMAL
         overridden -> Route.NORMAL
         else -> Route.BLOCKED
@@ -56,6 +60,7 @@ object ExternalBtTransportPolicy {
         when (context.getSharedPreferences(Settings.PREFS_NAME, Context.MODE_PRIVATE).getString(HOST_ROUTE_KEY, "")) {
             "ZBT" -> Route.ZBT
             "BLINK" -> Route.BLINK
+            "ZJ_SOCKET" -> Route.ZJ_SOCKET
             else -> null
         }
 
@@ -86,6 +91,7 @@ object ExternalBtTransportPolicy {
     fun carrier(context: Context, route: Route, hooks: Hooks): ExternalModuleCarrier? = when (route) {
         Route.ZBT -> ZbtAaCarrier(hooks)
         Route.BLINK -> BlinkAaCarrier(hooks, context.packageManager)
+        Route.ZJ_SOCKET -> ZjSocketCarrier(hooks)
         else -> null
     }
 

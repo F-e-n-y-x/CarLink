@@ -295,7 +295,8 @@ class NativeAaHandshakeManager(
         // opened must not be reported as up.
         // CarLink: the route decision (ExternalBtTransportPolicy) replaces the blanket refusal.
         when (val route = ExternalBtTransportPolicy.routeFor(context)) {
-            ExternalBtTransportPolicy.Route.ZBT, ExternalBtTransportPolicy.Route.BLINK -> return startOverModule(route)
+            ExternalBtTransportPolicy.Route.ZBT, ExternalBtTransportPolicy.Route.BLINK,
+            ExternalBtTransportPolicy.Route.ZJ_SOCKET -> return startOverModule(route)
             ExternalBtTransportPolicy.Route.BLOCKED -> { externalBtDiagnostic()?.let { AppLog.e(it) }; return }
             ExternalBtTransportPolicy.Route.NORMAL -> externalBtDiagnostic()?.let {
                 AppLog.w("$it\nNativeAA: starting anyway — a secondary Bluetooth service is configured manually.")

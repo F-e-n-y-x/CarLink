@@ -26,7 +26,11 @@ class ExternalBtTransportPolicyTest {
         // An FYT unit carries none of the markers ExternalBtPolicy knows.
         assertEquals(Route.BLINK, route(null, Route.BLINK))
         assertEquals(Route.ZBT, route(null, Route.ZBT))
+        assertEquals(Route.ZJ_SOCKET, route(null, Route.ZJ_SOCKET))
     }
+
+    @Test fun `the host's ZJ socket opt-in takes the socket route`() =
+        assertEquals(Route.ZJ_SOCKET, route("/dev/zj_bt_serial exists", Route.ZJ_SOCKET))
 
     @Test fun `the module route wins over the manual override`() =
         assertEquals(Route.BLINK, route("/dev/rf_serial exists", Route.BLINK, overridden = true))

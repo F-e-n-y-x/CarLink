@@ -360,9 +360,10 @@ class SessionManagerTest {
     }
 
     @Test fun theModuleSettingUnblocksWirelessAndroidAutoOnly() {
-        // DeviceEnvironment: blocked only for the three external classifications; the setting lifts it for Android Auto only.
+        // DeviceEnvironment: blocked only for the four external classifications; the setting lifts it for Android Auto only.
         for (stereo in com.carlink.core.detect.StereoBluetooth.entries) {
             val expected = stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON ||
+                stereo == com.carlink.core.detect.StereoBluetooth.ZJ_SOCKET ||
                 stereo == com.carlink.core.detect.StereoBluetooth.FYT_MODULE ||
                 stereo == com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN
             for (engine in Engine.entries) {
@@ -408,12 +409,14 @@ class SessionManagerTest {
     @Test fun theModuleSettingPicksTheEngineRouteOnlyWhereAModuleWasFound() {
         val zbt = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.ZBT
         val blink = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLINK
+        val zj = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.ZJ_SOCKET
         for (stereo in com.carlink.core.detect.StereoBluetooth.entries) {
             val auto = if (stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON) zbt else null
             assertEquals(stereo.name, auto, DeviceEnvironment.moduleRoute(stereo, moduleOn = false))
             val expected = when (stereo) {
                 com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON, com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN -> zbt
                 com.carlink.core.detect.StereoBluetooth.FYT_MODULE -> blink
+                com.carlink.core.detect.StereoBluetooth.ZJ_SOCKET -> zj
                 else -> null
             }
             assertEquals(stereo.name, expected, DeviceEnvironment.moduleRoute(stereo, moduleOn = true))

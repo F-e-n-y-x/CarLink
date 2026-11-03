@@ -21,8 +21,10 @@ class ExternalBluetoothProbeTest {
         val adapter: AdapterFacts = AdapterFacts(present = true, enabled = true, addressReal = false),
         val bonded: List<String>? = emptyList(),
         val known: Map<String, PhoneKind> = emptyMap(),
+        val socket: PortState = PortState.CLOSED,
     ) {
         val portChecks = mutableListOf<String>()
+        val socketChecks = mutableListOf<String>()
         var packageScans = 0
 
         fun sources() = Sources(
@@ -36,6 +38,7 @@ class ExternalBluetoothProbeTest {
             },
             knownPhones = { known },
             ownPackages = setOf("com.carlink.app.hudtest"),
+            zjSocket = { socketChecks += it; socket },
         )
 
         fun probe(complete: Boolean = true) = ExternalBluetoothProbe.probe(sources(), complete)
@@ -96,6 +99,34 @@ class ExternalBluetoothProbeTest {
         assertEquals(listOf(StereoBluetoothSignal.MODULE_SETTING), bySetting.signals)
         assertEquals("rw.zj.bt.type=Extra", bySetting.diAutoEvidence)
         assertTrue(bySetting.classification.blocksWireless)
+    }
+
+    @Test fun zlinkMarkersWhoseZjSocketConnectsTakeTheSocketRoute() {
+        val stereo = Stereo(nodes = setOf("/dev/zj_bt_serial"), props = mapOf("rw.zj.bt.type" to "extra"), socket = PortState.OPEN)
+        val report = stereo.probe()
+        assertEquals(StereoBluetooth.ZJ_SOCKET, report.classification)
+        assertEquals(listOf("/dev/socket/zj_bt_socket"), stereo.socketChecks)
+        assertEquals(PortState.OPEN, report.zjSocket)
+        assertTrue(report.classification.blocksWireless)
+        assertTrue("socket /dev/socket/zj_bt_socket=OPEN" in report.format())
+        // A socket that refuses, or does not answer in time, leaves the markers unexplained.
+        assertEquals(StereoBluetooth.EXTERNAL_UNKNOWN, Stereo(nodes = setOf("/dev/rf_serial"), socket = PortState.CLOSED).probe().classification)
+        assertEquals(StereoBluetooth.EXTERNAL_UNKNOWN, Stereo(nodes = setOf("/dev/rf_serial"), socket = PortState.TIMEOUT).probe().classification)
+    }
+
+    @Test fun theZjSocketIsAskedOnlyWhereZbtAndFytHaveNoAnswer() {
+        // A daemon on 3152 wins and the socket is never dialled.
+        val daemon = Stereo(nodes = setOf("/dev/zj_bt_serial"), port = PortState.OPEN, socket = PortState.OPEN)
+        assertEquals(StereoBluetooth.ZLINK_DAEMON, daemon.probe().classification)
+        assertTrue(daemon.socketChecks.isEmpty())
+        // FYT signals, no markers at all, and the quick probe: no dial either.
+        val fyt = Stereo(nodes = setOf("/dev/rf_serial", "/dev/auto_serial"), socket = PortState.OPEN)
+        assertEquals(StereoBluetooth.FYT_MODULE, fyt.probe().classification)
+        val plain = Stereo(socket = PortState.OPEN)
+        assertEquals(StereoBluetooth.NONE, plain.probe().classification)
+        val quick = Stereo(nodes = setOf("/dev/rf_serial"), socket = PortState.OPEN)
+        assertEquals(StereoBluetooth.EXTERNAL_UNKNOWN, quick.probe(complete = false).classification)
+        assertTrue(fyt.socketChecks.isEmpty() && plain.socketChecks.isEmpty() && quick.socketChecks.isEmpty())
     }
 
     @Test fun btSerialAloneDecidesNothing() {
