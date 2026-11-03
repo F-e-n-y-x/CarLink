@@ -37,7 +37,9 @@ SETUP/RECORD/TEARDOWN/`/command` before pair-verify and #1130 caps idle AirPlay 
 connections (both close an unauthenticated hotspot attack surface); #1178 keeps the Wi-Fi tunnel on
 an RFCOMM EOF after setup; #1071 advertises every hotspot address. 615b32ce0's data-socket peer
 check (#1123) logs "rejected sender outside the control session" when it refuses a connection: look
-for that line first if a wireless or USB session has control but no picture.
+for that line first if a wireless or USB session has control but no picture. CarLink already carries ports of
+the open PRs #1206, #1212 and #1218 (rows below): when an update brings one, take upstream's version
+and drop its row (for #1212 keep CarLink's writer-thread `close` wait in `NcmUsbBridge`).
 
 Every edit inside `vendor/` is listed below, so a conflicting pull is easy to resolve. Code edits
 carry a `// CarLink` comment (new files say so in their header); the build-file changes, the
