@@ -232,7 +232,7 @@ class CarButtonImagePickerTest {
         object : ActivityResultLauncher<I>() {
             override fun launch(input: I, options: ActivityOptionsCompat?) = onLaunch(input)
             override fun unregister() = Unit
-            override fun getContract() = contract
+            override val contract = contract // CarLink: activity 1.13 made getContract() a property
         }
 
     private fun withHome(check: (DiPlayActivity) -> Unit) {
