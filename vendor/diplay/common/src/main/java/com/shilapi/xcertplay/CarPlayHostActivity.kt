@@ -6195,6 +6195,33 @@ open class CarPlayHostActivity : ComponentActivity() {
         pendingReconnect = retry
         reconnectWaitsForBluetooth = englishReason.contains(BluetoothRadioCheck.RADIO_OFF_MARK, true)
         mainHandler.postDelayed(retry, delayMillis)
+        if (!wirelessEnabled && startupDelay == null) watchWiredReturn(retry) // CarLink
+    }
+
+    /**
+     * CarLink: a wired loss is often the iPhone re-enumerating; it was back on USB 0.46 s later while
+     * the retry waited its full 2 s (tablet, 2026-11-03). Runs [retry] as soon as the iPhone left USB
+     * and is listed again; an iPhone that never left keeps the normal delay.
+     */
+    private fun watchWiredReturn(retry: Runnable) {
+        val usb = getSystemService(UsbManager::class.java) ?: return
+        val watch = WiredReturnWatch()
+        val poll = object : Runnable {
+            override fun run() {
+                if (pendingReconnect !== retry) return
+                val listed = runCatching {
+                    usb.deviceList.values.any { it.vendorId == IphoneUsbMatcher.APPLE_VENDOR_ID }
+                }.getOrDefault(false)
+                if (watch.back(listed)) {
+                    mainHandler.removeCallbacks(retry)
+                    appendLog("iPhone back on USB; reconnecting now")
+                    retry.run()
+                } else {
+                    mainHandler.postDelayed(this, WiredReturnWatch.POLL_MILLIS)
+                }
+            }
+        }
+        mainHandler.postDelayed(poll, WiredReturnWatch.POLL_MILLIS)
     }
 
     /** The waiting screen's Retry after startup recovery stopped. CarLink: a function for retryNow. */
