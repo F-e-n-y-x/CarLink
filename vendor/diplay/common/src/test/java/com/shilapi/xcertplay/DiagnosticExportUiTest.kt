@@ -36,7 +36,7 @@ class DiagnosticExportUiTest {
                 throw ActivityNotFoundException("No DocumentsUI")
             }
             override fun unregister() = Unit
-            override fun getContract() = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+            override val contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain") // CarLink: activity 1.13 made getContract() a property
         }
         ReflectionHelpers.setField(activity, "export", missingPicker)
         try {

@@ -205,6 +205,9 @@ dependencies {
     implementation(project(":carplay-common"))
     implementation(project(":carplay-shared"))
     implementation(project(":androidauto"))
+    // Kotlin 2.4 needs AapProjectionActivity's AppCompatActivity supertype visible for `is` checks;
+    // the APK gets appcompat at runtime from :androidauto (same version).
+    compileOnly("androidx.appcompat:appcompat:1.6.1")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -215,12 +218,12 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:${libs.versions.lifecycleRuntimeKtx.get()}")
     // Hands the APK's baseline profile to ART on a sideloaded install (no Play Store to do it);
     // declared explicitly rather than relying on Compose pulling it in.
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:${libs.versions.lifecycleRuntimeKtx.get()}")
     debugImplementation(libs.androidx.compose.ui.tooling)
     // QR codes for source and project links in About (same version the Android Auto engine uses).
     implementation("com.google.zxing:core:3.5.3")

@@ -220,7 +220,7 @@ class CarPlayVpnConsentTest {
         ReflectionHelpers.setField(activity, "vpnConsent", object : ActivityResultLauncher<Intent>() {
             override fun launch(input: Intent, options: ActivityOptionsCompat?) = launch(input)
             override fun unregister() = Unit
-            override fun getContract() = ActivityResultContracts.StartActivityForResult()
+            override val contract = ActivityResultContracts.StartActivityForResult() // CarLink: activity 1.13 made getContract() a property
         })
     }
 

@@ -1324,7 +1324,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         setPadding(dp(24), dp(10), dp(24), dp(10))
         isClickable = true
         isFocusable = true
-        foreground = android.graphics.drawable.LayerDrawable(arrayOf(
+        foreground = android.graphics.drawable.LayerDrawable(arrayOf<android.graphics.drawable.Drawable>( // CarLink: Kotlin 2.4 rejects the inferred intersection type
             android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE), null, null),
             focusRing((layoutCornerRadius() * 1.35f / resources.displayMetrics.density).roundToInt())))
         contentDescription = getString(R.string.settings_open_category, settingsCategoryTitle(category))
@@ -1647,7 +1647,7 @@ class DiPlayActivity : ComponentActivity(), AppAppearanceOwner {
         isClickable = true
         isFocusable = true
         contentDescription = "${result.title}, $category"
-        foreground = android.graphics.drawable.LayerDrawable(arrayOf(
+        foreground = android.graphics.drawable.LayerDrawable(arrayOf<android.graphics.drawable.Drawable>( // CarLink: Kotlin 2.4 rejects the inferred intersection type
             android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(RIPPLE), null, null), focusRing(12)))
         minimumHeight = dp(56)
         gravity = Gravity.CENTER_VERTICAL
