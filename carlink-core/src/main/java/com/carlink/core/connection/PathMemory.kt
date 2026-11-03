@@ -16,5 +16,9 @@ class PathMemory(context: Context) {
         prefs.edit().putString(key(engine, phoneAddress), path.name).apply()
     }
 
+    fun forget(phoneAddress: String) {
+        prefs.edit().apply { Engine.entries.forEach { remove(key(it, phoneAddress)) } }.apply()
+    }
+
     private fun key(engine: Engine, address: String) = "${engine.name}:${KnownPhones.normalize(address)}"
 }

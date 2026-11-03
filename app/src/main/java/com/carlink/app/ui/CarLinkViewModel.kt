@@ -537,6 +537,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = phonesRepository.setKind(phone.address, kind)
+    /** Forgets [phone] and unpairs it; where Android refuses the unpair, its Bluetooth settings open. */
+    fun forgetPhone(phone: PairedPhone) {
+        if (!phonesRepository.forget(phone.address)) openBluetoothSettings()
+    }
 
     // ---- Preferences -------------------------------------------------------------------
 

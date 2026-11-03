@@ -109,6 +109,25 @@ class PhonesRepository(
         proxies.clear()
     }
 
+    /**
+     * The driver forgot this phone: CarLink drops its type, name and connection history and asks
+     * Android to unpair it (hidden `removeBond`, allowed on most head units). Returns whether
+     * Android's pairing is gone (true when there was none).
+     */
+    @SuppressLint("MissingPermission")
+    fun forget(address: String): Boolean {
+        knownPhones.forget(address)
+        paths.forget(address)
+        val device = runCatching { adapter?.getRemoteDevice(address) }.getOrNull()
+        val bonded = hasPermission() && device != null &&
+            runCatching { device.bondState == BluetoothDevice.BOND_BONDED }.getOrDefault(false)
+        val unpaired = !bonded || runCatching {
+            BluetoothDevice::class.java.getMethod("removeBond").invoke(device) as? Boolean == true
+        }.getOrDefault(false)
+        refresh()
+        return unpaired
+    }
+
     /** The driver corrected the detected type (Phone detail). */
     fun setKind(address: String, kind: PhoneKind) {
         knownPhones.remember(address, kind)

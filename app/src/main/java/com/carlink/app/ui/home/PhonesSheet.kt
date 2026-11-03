@@ -1,7 +1,9 @@
 package com.carlink.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +56,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
     val car = CarLinkTokens.profile == UiProfile.CAR
     var askKind by remember { mutableStateOf<PairedPhone?>(null) }
     var confirmSwitch by remember { mutableStateOf<PairedPhone?>(null) }
+    var confirmForget by remember { mutableStateOf<PairedPhone?>(null) }
     val live = ui.home.link.stage == LinkStage.CONNECTED
 
     fun choose(phone: PairedPhone) {
@@ -78,7 +81,8 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                     }
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = dimens.rowTwoLine)
-                            .clickable(role = Role.Button) { choose(phone) }
+                            // A long press forgets a phone CarLink remembers (a module stereo lists them).
+                            .combinedClickable(role = Role.Button, onLongClick = { confirmForget = phone }) { choose(phone) }
                             .padding(horizontal = dimens.gutter, vertical = if (car) 16.dp else 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -124,6 +128,18 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
         if (ui.bluetoothViaModule) Text(stringResource(R.string.carlink_home_ready_module_body), style = MaterialTheme.typography.bodyMedium)
         else GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.pairPhone(); onDismiss() },
             icon = R.drawable.carlink_ic_bluetooth)
+    }
+
+    confirmForget?.let { phone ->
+        AlertDialog(
+            onDismissRequest = { confirmForget = null },
+            title = { Text(stringResource(R.string.carlink_home_forget_title, phone.name)) },
+            text = { Text(stringResource(R.string.carlink_home_forget_body)) },
+            confirmButton = { GlassButton(stringResource(R.string.carlink_home_forget_action), {
+                actions.forgetPhone(phone); confirmForget = null }) },
+            dismissButton = { GlassButton(stringResource(R.string.carlink_home_cancel), { confirmForget = null }) },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
     }
 
     askKind?.let { phone ->

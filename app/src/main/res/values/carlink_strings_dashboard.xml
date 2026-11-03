@@ -65,6 +65,9 @@
     <string name="carlink_home_chip_network">Network</string>
     <string name="carlink_home_chip_phone">Phone</string>
     <string name="carlink_home_bt_chip_on">On</string>
+    <string name="carlink_home_forget_title">Forget %1$s?</string>
+    <string name="carlink_home_forget_body">CarLink unpairs it from this screen\'s Bluetooth and forgets how it connected. If Android does not allow that, Bluetooth settings open to unpair it there. On a stereo with a separate Bluetooth module, remove it in the stereo\'s own Bluetooth settings too.</string>
+    <string name="carlink_home_forget_action">Forget</string>
     <string name="carlink_choose_phone_title">Two phones are trying to connect</string>
     <string name="carlink_choose_phone_body">An iPhone and an Android phone are both connecting to this stereo. Pick the one to use.</string>
     <string name="carlink_choose_phone_later">Not now</string>
