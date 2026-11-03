@@ -87,6 +87,16 @@ class WirelessStartupTimeline(
         var milestoneListener: ((Phase) -> Unit)? = null
 
         /**
+         * CarLink: runs on the RFCOMM dial thread right before the wireless dial to the iPhone
+         * (address). The host may block here, bounded, while its own Bluetooth page of the iPhone
+         * finishes, so the two never run SDP at once; the access point, listener and Bonjour keep
+         * starting meanwhile.
+         */
+        @Volatile
+        @JvmStatic
+        var beforeBluetoothDial: ((address: String) -> Unit)? = null
+
+        /**
          * CarLink: six hex digits of SHA-256 of [address] (a BSSID), so logs show whether it changed
          * between sessions without the address itself; `unknown` when Android hides it.
          */
