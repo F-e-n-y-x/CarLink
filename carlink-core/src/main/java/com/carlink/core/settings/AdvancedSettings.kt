@@ -6,6 +6,7 @@ import com.carlink.core.core.Engine
 import com.carlink.core.engine.AndroidAutoSettings
 import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.CarPlayDock
+import com.shilapi.xcertplay.UsbChargingCurrent
 
 /** Where an Advanced or Lab setting appears (the same categories as the Essentials). */
 enum class SettingsCategory { CONNECTION, DISPLAY, SOUND, NAVIGATION, CAR, GENERAL }
@@ -184,6 +185,14 @@ object AdvancedSettings {
             Applies.NEXT_CONNECTION, carPlayIntChoice(options(0 to "Automatic", -5 to "Automatic, 5 GHz", -2 to "Automatic, 2.4 GHz",
                 36 to "Channel 36", 149 to "Channel 149", 1 to "Channel 1", 6 to "Channel 6", 11 to "Channel 11"),
                 AirPlayPersistence::loadWifiP2pPreferredChannel, AirPlayPersistence::saveWifiP2pPreferredChannel)),
+        // Upstream DiPlay #514 / CarLink #11: a weak USB port drops the iPhone ("could not queue USBMUX read").
+        AdvancedSetting("cp_usb_charging", Engine.CARPLAY, SettingsCategory.CONNECTION, Tier.ADVANCED,
+            "iPhone charging over USB", "Offer the iPhone less charging current if wired CarPlay drops after a few seconds.",
+            Applies.NEXT_CONNECTION, Control.Choice(
+                options(UsbChargingCurrent.NORMAL.key to "Normal", UsbChargingCurrent.REDUCED.key to "Reduced (1.5 A)",
+                    UsbChargingCurrent.LOW.key to "Low (0.5 A)"),
+                { AirPlayPersistence.loadUsbChargingCurrent(it.context).key },
+                { access, value -> AirPlayPersistence.saveUsbChargingCurrent(access.context, UsbChargingCurrent.fromKey(value)) })),
         AdvancedSetting("cp_fingers", Engine.CARPLAY, SettingsCategory.CAR, Tier.ADVANCED,
             "Gesture for the session menu", "Swipe down with this many fingers on CarPlay to open its menu.",
             Applies.NOW, carPlayIntChoice(options(2 to "Two fingers", 3 to "Three fingers", 4 to "Four fingers"),

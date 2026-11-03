@@ -286,7 +286,10 @@ object GitHubIssueReport {
                 val said = (if (short) home.take(1) else home).joinToString(" ") { if (it.last() in ".!?…") it else "$it." }
                 append("Home said: ").append(said).append("\n\n")
             } else if (s?.failed != true) {
-                append("No failure on screen; reported from Diagnostics.\n\n")
+                append("No failure on screen; reported from Diagnostics.\n")
+                // #15/#16 arrived with nothing else: say up front that the description is what makes it actionable.
+                if (!short) append("Please write below what you tried and what went wrong; without it the report cannot be acted on.\n")
+                append('\n')
             }
         }
         // (priority, text) in display order; a lower priority number is kept longer.
@@ -298,7 +301,7 @@ object GitHubIssueReport {
         if (!short) facts.settings?.let { blocks += 1 to "Settings: $it" }
         facts.stereoBluetooth?.let { blocks += 2 to "Stereo Bluetooth: ${it.classification}" + if (short) "" else " (${it.evidence})" }
         if (!short) performance(facts)?.let { blocks += 3 to it }
-        val tail = if (short) "" else "\nWhat I did and what I expected: "
+        val tail = if (short) "" else "\nWhat I did and what I expected (please fill in): "
         var used = encode(head + "Technical detail:\n" + tail).length
         val kept = HashSet<Int>()
         for (i in blocks.indices.sortedBy { blocks[it].first }) {
@@ -520,7 +523,11 @@ object GitHubIssueReport {
     /** One excerpt line: time, source, level and the text, masked again and cut to [MAX_LINE_CHARS]. */
     fun format(line: LogLine, secrets: List<String>, zone: TimeZone): String {
         val time = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).apply { timeZone = zone }.format(Date(line.timeMillis))
-        val text = clean(line.text, secrets).let { if (it.length > MAX_LINE_CHARS) it.take(MAX_LINE_CHARS - 1) + "…" else it }
+        // A multi-line entry (the Bluetooth probe) keeps its first line: its detail is in the report already,
+        // and in #15/#16 it filled the excerpt's whole budget.
+        val lines = clean(line.text, secrets).lines()
+        val first = lines.first() + if (lines.size > 1) " (+${lines.size - 1} lines in the full log)" else ""
+        val text = if (first.length > MAX_LINE_CHARS) first.take(MAX_LINE_CHARS - 1) + "…" else first
         return "$time ${ConnectionLog.sourceTag(line.source)} ${line.level ?: '-'} $text"
     }
 

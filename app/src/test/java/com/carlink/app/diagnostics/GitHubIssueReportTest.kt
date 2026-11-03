@@ -287,6 +287,13 @@ class GitHubIssueReportTest {
         assertEquals(0, excerpt.omitted)
     }
 
+    @Test fun multiLineEntryKeepsItsFirstLine() {
+        // #15/#16: the Bluetooth probe's many lines filled the whole excerpt.
+        val probe = line(1_000, LogSource.CARLINK, "External Bluetooth probe: classification=NONE\n  signals=none\n  hardware=ums512")
+        assertEquals("03:46:39.000 CL - External Bluetooth probe: classification=NONE (+2 lines in the full log)",
+            GitHubIssueReport.format(probe, emptyList(), utc))
+    }
+
     @Test fun timelineOfEachEnginesLastSession() {
         val log = listOf(
             line(1_000, LogSource.CARLINK, "CarLink: start CARPLAY USB known=true #s9"),
@@ -318,12 +325,12 @@ class GitHubIssueReportTest {
         assertTrue(what, what.contains("Settings: connection AUTOMATIC; overlay granted"))
         assertTrue(what, what.contains("- Hardware: RAM 2900 MB (low-RAM device), 8 CPU cores up to 1500 MHz, GPU Mali-G52"))
         assertTrue(what, what.contains("- AA 03:46:39 Throughput over 5003ms: rendered=279 (55fps)"))
-        assertTrue(what, what.endsWith("What I did and what I expected:"))
+        assertTrue(what, what.endsWith("What I did and what I expected (please fill in):"))
         // A tight budget drops the other session and the performance block first, never the prompt.
         val budget = GitHubIssueReport.encode(what).length - GitHubIssueReport.encode(what.substringAfter("Performance:")).length
         val tight = GitHubIssueReport.whatHappened(f, short = false, budget = budget)
         assertFalse(tight, tight.contains("#s3") || tight.contains("Performance"))
-        assertTrue(tight, tight.contains("#s7") && tight.endsWith("What I did and what I expected:"))
+        assertTrue(tight, tight.contains("#s7") && tight.endsWith("What I did and what I expected (please fill in):"))
     }
 
     @Test fun removesSerialsAndOwnerNames() {

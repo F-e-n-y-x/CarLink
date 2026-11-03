@@ -194,6 +194,8 @@
     <string name="carlink_diag_hotspot_ok">Not on a phone\'s hotspot</string>
     <string name="carlink_diag_hotspot_on_phone">This screen is on a phone\'s hotspot</string>
     <string name="carlink_diag_hotspot_body">Its Wi-Fi is joined to %1$s. Wireless CarPlay and Android Auto turn that hotspot off and the connection drops in a loop. Forget that network here, or use the car\'s Wi-Fi.</string>
+    <string name="carlink_diag_unisoc_usb">Unisoc UMS512 chip</string>
+    <string name="carlink_diag_unisoc_usb_body">On some screens with this chip, wired CarPlay connects but the iPhone\'s data never arrives over USB. If the cable never gets past connecting, use wireless CarPlay instead.</string>
     <string name="carlink_diag_clock_ok">Clock is set</string>
     <string name="carlink_diag_clock_wrong">The stereo\'s clock is wrong</string>
     <string name="carlink_diag_clock_body">The date is far in the past, as after a start without network time. Updates and some connections can fail; set the date or let the stereo get network time.</string>
@@ -205,7 +207,7 @@
     <string name="carlink_diag_vpn_body">Wired CarPlay needs Android\'s VPN slot. Turn off the other VPN, or its Always-on, while driving.</string>
     <string name="carlink_diag_competing_ok">No other phone-projection app</string>
     <string name="carlink_diag_competing_found">Another phone-projection app is installed</string>
-    <string name="carlink_diag_competing_body">%1$s can take your phone\'s Bluetooth or USB before CarLink. If CarLink cannot connect, disable or force-stop it.</string>
+    <string name="carlink_diag_competing_body">%1$s can take your phone\'s Bluetooth, USB or the Wi-Fi Direct link before CarLink. If CarLink cannot connect, disable or force-stop it.</string>
     <string name="carlink_home_report_expand">Show the code larger</string>
     <string name="carlink_report_qr_with_log">Details as text</string>
     <string name="carlink_report_qr_simple">Link to the issue page</string>

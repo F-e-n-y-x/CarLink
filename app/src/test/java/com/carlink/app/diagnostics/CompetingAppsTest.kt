@@ -6,12 +6,14 @@ import org.junit.Test
 
 class CompetingAppsTest {
     @Test fun vendorProjectionAppsAreNamed() {
-        listOf("com.zjinnova.zlink", "com.syu.carlink", "cn.manstep.autokit", "net.easyconn.carman", "com.carbit.http")
+        listOf("com.zjinnova.zlink", "com.syu.carlink", "cn.manstep.autokit", "net.easyconn.carman", "com.carbit.http",
+            "com.hpplay.happycast")
             .forEach { assertTrue(it, Checks.isCompeting(it)) }
     }
 
     @Test fun ordinaryAppsAndAndroidAutoAreNot() {
-        listOf("com.google.android.projection.gearhead", "com.carlink.app", "com.spotify.music", "com.android.settings")
+        listOf("com.google.android.projection.gearhead", "com.carlink.app", "com.spotify.music", "com.android.settings",
+            "com.samsung.android.smartmirroring")
             .forEach { assertFalse(it, Checks.isCompeting(it)) }
     }
 }

@@ -50,6 +50,8 @@ enum class CheckId {
     OTHER_VPN,
     /** The stereo's Wi-Fi is joined to a phone's own hotspot: wireless start turns it off and the session loops. */
     PHONE_HOTSPOT,
+    /** A Unisoc UMS512 chip, whose USB host lost the iPhone's data on some units (DiPlay #1030). Listed only there. */
+    UNISOC_USB,
 }
 
 /** The single recovery action a failing check offers (DESIGN_SPEC §6.5). */
@@ -180,6 +182,7 @@ object Checks {
         results += clock(System.currentTimeMillis())
         results += storage(runCatching { android.os.StatFs(app.filesDir.path).availableBytes }.getOrDefault(Long.MAX_VALUE))
         results += otherVpn(app)
+        unisocUsb(android.os.Build.HARDWARE.orEmpty())?.let { results += it }
         results += phoneHotspot(joinedSsid(app), inputs.phones.map { it.name } +
             com.carlink.core.detect.KnownPhones(app).let { k -> k.all().keys.mapNotNull(k::nameOf) })
         return results
@@ -203,6 +206,13 @@ object Checks {
 
     fun clock(nowMillis: Long): CheckResult =
         CheckResult(CheckId.CLOCK, if (nowMillis < EARLIEST_SANE_MILLIS) CheckStatus.WARN else CheckStatus.PASS)
+
+    /**
+     * Info only, not a warning: one UMS512 tablet's USB host never delivered the iPhone's data (DiPlay
+     * #1030), yet other Unisoc stereos run wired CarPlay fine (CarLink #5), so this only names the way out.
+     */
+    fun unisocUsb(hardware: String): CheckResult? =
+        if (hardware.contains("ums512", ignoreCase = true)) CheckResult(CheckId.UNISOC_USB, CheckStatus.INFO) else null
 
     const val LOW_STORAGE_BYTES = 100L * 1024 * 1024
 
@@ -246,7 +256,10 @@ object Checks {
     }
 
     private val COMPETING_PACKAGES = setOf("com.zjinnova.zlink", "com.syu.carlink")
-    private val COMPETING_FRAGMENTS = listOf("zlink", "zjinnova", "autokit", "easyconn", "carbit", "tlink.", "phonelink")
+    // The last two are screen-mirroring receivers (LeBo/HappyCast and the like): they hold the Wi-Fi Direct group wireless needs.
+    // Android has no public call naming a group's owner, so the installed app is what can be named.
+    private val COMPETING_FRAGMENTS = listOf("zlink", "zjinnova", "autokit", "easyconn", "carbit", "tlink.", "phonelink",
+        "hpplay", "screenmirror")
 
     /** Problems first (fail, warn), then notes, then passes; the order inside a group is kept. */
     fun sorted(results: List<CheckResult>): List<CheckResult> = results.sortedBy { it.status.rank() }
