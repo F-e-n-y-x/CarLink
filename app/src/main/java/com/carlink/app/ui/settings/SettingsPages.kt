@@ -118,8 +118,10 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
         // Advanced, and only where Android Auto itself is installed (Self Mode dials its head unit server).
         if (ui.unified.showAdvanced && c.androidAutoInstalled) {
             GroupDivider()
-            SwitchRow(stringResource(R.string.carlink_settings_aa_on_screen), c.androidAutoOnScreen, actions::setAndroidAutoOnScreen,
-                description = stringResource(R.string.carlink_settings_aa_on_screen_detail), icon = R.drawable.carlink_ic_android)
+            SwitchRow(stringResource(R.string.carlink_settings_aa_on_screen), c.androidAutoOnScreen && c.androidAutoCanRunCar,
+                actions::setAndroidAutoOnScreen, enabled = c.androidAutoCanRunCar,
+                description = stringResource(if (c.androidAutoCanRunCar) R.string.carlink_settings_aa_on_screen_detail
+                    else R.string.carlink_settings_aa_on_screen_unsupported), icon = R.drawable.carlink_ic_android)
         }
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_phones)) }) {

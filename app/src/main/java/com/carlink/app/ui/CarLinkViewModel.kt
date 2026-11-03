@@ -74,10 +74,16 @@ data class ConnectionPrefs(
     val androidAutoOnScreen: Boolean = false,
     /** Android Auto (Gearhead) is installed on this device: Self Mode needs it. */
     val androidAutoInstalled: Boolean = false,
+    /**
+     * Android Auto can run a car session here (its car-setup activity is enabled). On devices Google
+     * does not support as phones, e.g. a Samsung tablet, it is off and Self Mode can only fail.
+     */
+    val androidAutoCanRunCar: Boolean = false,
 )
 
 /** Home's "Run Android Auto on this screen": the switch is on, Android Auto is here, and Home is idle. */
-fun ConnectionPrefs.offersAndroidAutoOnScreen(idle: Boolean): Boolean = androidAutoOnScreen && androidAutoInstalled && idle
+fun ConnectionPrefs.offersAndroidAutoOnScreen(idle: Boolean): Boolean =
+    androidAutoOnScreen && androidAutoInstalled && androidAutoCanRunCar && idle
 
 /** The wireless path the next session would use, for Home's Network chip. */
 data class NetworkPreview(
@@ -625,7 +631,12 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
         floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth,
         rootMode = preferences.rootMode, androidAutoOnScreen = preferences.androidAutoOnScreen,
-        androidAutoInstalled = runCatching { app.packageManager.getPackageInfo(ANDROID_AUTO_PACKAGE, 0) }.isSuccess)
+        androidAutoInstalled = runCatching { app.packageManager.getPackageInfo(ANDROID_AUTO_PACKAGE, 0) }.isSuccess,
+        // The check Android Auto itself fails on: it starts this activity when a head unit connects.
+        androidAutoCanRunCar = runCatching {
+            app.packageManager.queryIntentActivities(
+                Intent("com.google.android.gms.carsetup.START_DUPLEX").setPackage(ANDROID_AUTO_PACKAGE), 0).isNotEmpty()
+        }.getOrDefault(false))
 
     fun setAndroidAutoOnScreen(on: Boolean) {
         preferences.androidAutoOnScreen = on
