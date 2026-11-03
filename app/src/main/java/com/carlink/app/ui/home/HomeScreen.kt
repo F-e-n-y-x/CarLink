@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -244,6 +245,23 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     }
     val pendingChoice by vm.pendingChoice.collectAsStateWithLifecycle()
     pendingChoice?.let { phones -> ChoosePhoneDialog(phones, onPick = vm::choosePhone, onDismiss = vm::dismissChoice) }
+}
+
+/** The failure report's QR code, as large as the screen allows. */
+@Composable
+private fun ReportQrDialog(url: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.carlink_report_qr_title)) },
+        text = {
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                com.carlink.app.ui.components.QrCode(url, minOf(maxWidth, 420.dp), stringResource(R.string.carlink_report_qr_a11y),
+                    Modifier.clickable(onClick = onDismiss))
+            }
+        },
+        confirmButton = { GlassButton(stringResource(R.string.carlink_home_cable_ok), onDismiss) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
 }
 
 /** An iPhone and an Android phone could both connect: the driver picks, CarLink does not guess. */
@@ -711,7 +729,11 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
                 // Nothing to tap on the stereo: the report is already a QR code for the driver's phone.
                 ui.reportUrl?.let { url ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // A tap shows the code full size: easier for a phone camera from the passenger seat.
+                    var expanded by rememberSaveable { mutableStateOf(false) }
+                    if (expanded) ReportQrDialog(url) { expanded = false }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.clickable(onClickLabel = stringResource(R.string.carlink_home_report_expand)) { expanded = true }) {
                         com.carlink.app.ui.components.QrCode(url, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))
                         Text(stringResource(R.string.carlink_home_report_scan), style = MaterialTheme.typography.bodyMedium,
                             color = colors.onSurfaceTertiary, modifier = Modifier.widthIn(max = 220.dp))

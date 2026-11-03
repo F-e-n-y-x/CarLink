@@ -54,8 +54,9 @@ class DeviceEnvironment(
             Engine.ANDROID_AUTO -> moduleRoute(stereo, moduleOn) != null
             Engine.CARPLAY -> moduleCarPlay(stereo, moduleOn)
         }
-        // The module carries Bluetooth, so neither check asks for Android's radio.
-        val engine = enginePreflight(request, path).filterNot { viaModule && it == Problem.BLUETOOTH_OFF }
+        // The module carries Bluetooth and the phone pairs with it, so no check asks for Android's
+        // radio or an Android pairing (CarPlay was blocked "not paired" on a module stereo, 2026-11-04).
+        val engine = enginePreflight(request, path).filterNot { viaModule && it in MODULE_IRRELEVANT }
         return (DevicePreflight.check(request, path, facts, settings, wifi, viaModule) + engine).distinct()
     }
 
@@ -150,6 +151,8 @@ class DeviceEnvironment(
     companion object {
         private const val TAG = "CarLink-Session"
         private const val KEY_LAST_PHONE = "address"
+        /** Android-Bluetooth problems that do not apply when the stereo's module carries Bluetooth. */
+        private val MODULE_IRRELEVANT = setOf(Problem.BLUETOOTH_OFF, Problem.PHONE_NOT_PAIRED, Problem.PAIRING_LOST)
         /** DiAuto's ZBT carrier speaks first after 10 s of module silence and the phone then answers. */
         private const val MODULE_AA_WAIT_MILLIS = 20_000L
 
