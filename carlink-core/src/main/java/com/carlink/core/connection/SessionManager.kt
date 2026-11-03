@@ -197,10 +197,10 @@ class SessionManager(
         fun log(message: String)
 
         /**
-         * Work that gives [request] a head start while the previous engine stops (wireless
-         * CarPlay: page the iPhone over Bluetooth, RELIABILITY_AUDIT K3). Calls [done] (any
-         * thread) when finished; returns false when it started nothing. The engine starts only
-         * after [done] or [WARM_UP_MAX_MILLIS], so the two never dial the phone at once.
+         * Work that gives [request] a head start while the previous engine stops and the engine
+         * launches (wireless CarPlay: page the iPhone over Bluetooth, RELIABILITY_AUDIT K3). Calls
+         * [done] (any thread) when finished; returns false when it started nothing. The engine is
+         * not held for it: its own dial waits for the page ([BluetoothWarmup.awaitPage]).
          */
         fun warmUp(request: SessionRequest, done: () -> Unit): Boolean = false
     }
@@ -238,8 +238,6 @@ class SessionManager(
     private var everConnected = false
     /** [AdapterEvent.Stalled] restarts used by the current request ([MAX_QUICK_RETRIES]). */
     private var quickRetries = 0
-    /** A [Environment.warmUp] is running; the engine starts after it. */
-    private var warmingUp = false
 
     /** When the driver last stopped a session (uptime); see [onUsbPhone]. */
     private var driverStoppedAt = -REENUMERATION_WINDOW_MILLIS
@@ -282,13 +280,6 @@ class SessionManager(
     }
 
     private val watchdog = Runnable { onWatchdog() }
-
-    private val warmUpCap = Runnable {
-        if (!warmingUp) return@Runnable
-        note("Bluetooth warm-up still running after $WARM_UP_MAX_MILLIS ms; starting the engine anyway")
-        warmingUp = false
-        drainAfterStop()
-    }
 
     private val usbGoneCheck = Runnable {
         val current = _state.value as? SessionState.Active ?: return@Runnable
@@ -612,10 +603,6 @@ class SessionManager(
         token++
         endAttempt()
         main.removeCallbacks(usbGoneCheck)
-        if (warmingUp) {
-            warmingUp = false
-            main.removeCallbacks(warmUpCap)
-        }
         val engine = running
         _state.value = SessionState.Idle
         if (engine != null) {
@@ -642,7 +629,7 @@ class SessionManager(
             _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
             return
         }
-        if (stopping > 0) warmUp(request)
+        warmUp(request)
         val paths = if (request.transport == Transport.WIRELESS && !request.selfMode) {
             val policy = environment.wirelessPaths(request)
             profiles.rankPaths(request, policy).also {
@@ -652,27 +639,18 @@ class SessionManager(
         begin(request, paths, index = 0, token)
     }
 
-    /** Pages an iPhone over Bluetooth while the previous engine stops (RELIABILITY_AUDIT plan item 7). */
+    /**
+     * Pages an iPhone over Bluetooth from the moment wireless CarPlay is chosen (RELIABILITY_AUDIT
+     * plan item 7), in parallel with the previous engine's stop and the projection's launch.
+     */
     private fun warmUp(request: SessionRequest) {
         if (request.engine != Engine.CARPLAY || request.transport != Transport.WIRELESS || request.phoneAddress == null) return
         val sessionToken = token
         val started = clock()
-        warmingUp = true
         val began = environment.warmUp(request) {
-            main.post {
-                if (sessionToken != token || !warmingUp) return@post
-                warmingUp = false
-                main.removeCallbacks(warmUpCap)
-                note("Bluetooth warm-up finished in ${clock() - started} ms")
-                drainAfterStop()
-            }
+            main.post { if (sessionToken == token) note("Bluetooth warm-up finished in ${clock() - started} ms") }
         }
-        if (!began) {
-            warmingUp = false
-            return
-        }
-        note("paging the iPhone over Bluetooth while the previous engine stops")
-        main.postDelayed(warmUpCap, WARM_UP_MAX_MILLIS)
+        if (began) note("paging the iPhone over Bluetooth while CarPlay starts")
     }
 
     private fun begin(
@@ -987,11 +965,11 @@ class SessionManager(
 
     /** Runs [action] once no engine is stopping and no warm-up runs. */
     private fun whenEnginesStopped(action: () -> Unit) {
-        if (stopping == 0 && !warmingUp) action() else afterStop.addLast(action)
+        if (stopping == 0) action() else afterStop.addLast(action)
     }
 
     private fun drainAfterStop() {
-        while (stopping == 0 && !warmingUp && afterStop.isNotEmpty()) afterStop.removeFirst().invoke()
+        while (stopping == 0 && afterStop.isNotEmpty()) afterStop.removeFirst().invoke()
     }
 
     private fun note(message: String) {
@@ -1023,9 +1001,6 @@ class SessionManager(
          * stuck twice (no StartSession, then no TCP) and the third try connected in 4.0 s.
          */
         const val MAX_QUICK_RETRIES = 2
-
-        /** The longest the engine start waits for [Environment.warmUp] (one Bluetooth page window plus SDP). */
-        const val WARM_UP_MAX_MILLIS = 6_000L
 
         private fun order(stage: ProgressStage) = when (stage) {
             ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> 0

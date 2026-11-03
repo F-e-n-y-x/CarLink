@@ -1677,21 +1677,22 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         credentialsEpoch++
         onNativeGroupInvalidated?.invoke()
         val gen = generation
-        val createFresh = {
+        val createFresh = { settle: Boolean ->
             // The removeGroup below is the teardown a user exit relies on. If stop() ran while it was
             // in flight, recreating here puts a group back up that nothing is managing and that the
             // phone will keep trying to join - the opposite of what the exit asked for.
             if (supersededByStop(gen, "Native AA group recreate")) Unit
             else if (forceStandard) standardCreateGroup(mgr, ch, 0, NATIVE_GROUP_MODE_STANDARD_FALLBACK)
-            else delayedCreateQuietGroup(0)
+            else if (settle) delayedCreateQuietGroup(0)
+            else createQuietGroup(0)
         }
         removeOwnedGroup(mgr, ch, object : WifiP2pManager.ActionListener {
-            override fun onSuccess() { createFresh() }
+            override fun onSuccess() { createFresh(true) }
             override fun onFailure(reason: Int) {
                 AppLog.d("WifiDirectManager: Native AA removeGroup before recreate failed (reason=${getP2pErrorString(reason)}); expected if no group existed")
-                createFresh()
+                createFresh(true)
             }
-        })
+        }, onNoGroup = { createFresh(false) }) // CarLink: nothing removed, nothing to settle (500 ms on every start)
     }
 
     /** Recover a native quiet-host group when the phone never joins: recreate a fresh one, and
@@ -1884,13 +1885,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     @SuppressLint("MissingPermission")
     private fun removeOwnedGroup(
         mgr: WifiP2pManager?, ch: WifiP2pManager.Channel?, listener: WifiP2pManager.ActionListener,
+        onNoGroup: (() -> Unit)? = null, // CarLink
     ) {
         if (mgr == null || ch == null) return
         val gen = generation
         mgr.requestGroupInfo(ch) { group ->
             if (gen != generation) return@requestGroupInfo
             if (group == null) {
-                listener.onSuccess()
+                onNoGroup?.invoke() ?: listener.onSuccess() // CarLink
             } else if (sessionOwnership.owns(group.isGroupOwner, group.networkName)) {
                 mgr.removeGroup(ch, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() { if (gen == generation) listener.onSuccess() }

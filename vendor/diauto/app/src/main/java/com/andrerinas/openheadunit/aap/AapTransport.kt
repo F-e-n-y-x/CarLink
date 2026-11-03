@@ -497,10 +497,10 @@ class AapTransport(
             AapMessage(Channel.ID_CTR, Control.ControlMsgType.MESSAGE_BYEBYE_REQUEST_VALUE, byebye)
         send(msg)
         SystemClock.sleep(150)
-        quit()
+        quit(closeLink = isWireless) // CarLink
     }
 
-    internal fun quit(clean: Boolean = false) {
+    internal fun quit(clean: Boolean = false, closeLink: Boolean = false) {
         val cb = onQuit ?: return
         onQuit = null
 
@@ -535,6 +535,10 @@ class AapTransport(
         videoDecoder.onFrameDropped = null
         videoDecoder.onKeyframeObserved = null
 
+        // CarLink: a stop closes the Wi-Fi socket here (onQuit is already taken, so the poll thread's
+        // own quit() is a no-op), so the join below does not wait 1 s for a read that only ended
+        // when CommManager closed the link afterwards (tablet 2026-11-03: ~1 s of every wireless stop).
+        if (closeLink) connection?.disconnect()
         try {            // Don't join the poll thread from within itself — it would block for the full
             // timeout since the thread can't finish while it's waiting for itself to finish.
             if (Thread.currentThread() != pollThread) pollThread?.join(1000)

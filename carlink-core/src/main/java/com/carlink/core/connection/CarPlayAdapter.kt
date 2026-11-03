@@ -246,6 +246,8 @@ class CarPlayAdapter internal constructor(
             // The default-grant wait counts from the iPhone's attach (UsbAttachTimes).
             com.shilapi.xcertplay.orchestration.CarPlayController.usbAttachAgeMillis =
                 { com.carlink.core.detect.UsbAttachTimes.ageMillis(it.deviceName) }
+            // DiPlay's dial waits for CarLink's own page of the iPhone instead of racing its SDP.
+            WirelessStartupTimeline.beforeBluetoothDial = BluetoothWarmup::awaitPage
             CarPlayWaitingView.install()
             // A BYD restores a journaled cluster/HUD output at app start, as DiPlay's own home does
             // (DiPlayActivity.kt:318; §12 "CarLink never calls onAppOpened").

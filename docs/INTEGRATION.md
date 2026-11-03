@@ -229,7 +229,9 @@ whole attempt, failure kinds with counts and the last 12 problems. It is used fo
   the USB accessory switch, retry, fresh Wi-Fi Direct group, next path, ask for a re-plug, fail).
 
 Adapters take part through `EngineAdapter.recover(action)`; `Environment.warmUp(request, done)`
-pages a wireless iPhone over Bluetooth while the previous engine stops (`BluetoothWarmup`).
+pages a wireless iPhone over Bluetooth as soon as CarPlay is chosen, overlapping the previous
+engine's stop and the projection's launch (`BluetoothWarmup`); only DiPlay's RFCOMM dial waits for
+the page (`WirelessStartupTimeline.beforeBluetoothDial`, at most 6 s from the page's start).
 
 ### `PairingSession`
 

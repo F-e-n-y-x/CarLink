@@ -1427,7 +1427,11 @@ class CarPlayController(
             }
             socket = dialSocket
             logBluetoothConnectionSnapshot(device, "before-connect")
-            dial = BackgroundDial("wireless-rfcomm-connect") { dialSocket.connect() }
+            val dialAddress = device.address
+            dial = BackgroundDial("wireless-rfcomm-connect") {
+                WirelessStartupTimeline.beforeBluetoothDial?.invoke(dialAddress) // CarLink
+                dialSocket.connect()
+            }
             } // CarLink
             wirelessTimeline.mark(WirelessStartupTimeline.Phase.RFCOMM_DIAL)
             val hotspotInfo = startWirelessHotspot(generation)

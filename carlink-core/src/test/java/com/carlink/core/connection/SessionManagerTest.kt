@@ -746,35 +746,26 @@ class SessionManagerTest {
         assertEquals("ANDROID_AUTO start WIRELESS WIFI_DIRECT", starts.last())
     }
 
-    @Test fun theIphoneIsPagedWhileThePreviousEngineStops() {
-        // Plan item 7: the page overlaps the stop; DiPlay dials only after it.
+    @Test fun theIphoneIsPagedWithoutHoldingTheEngine() {
+        // Plan item 7: the page overlaps the stop and the launch; only DiPlay's dial waits for it
+        // (holding the engine cost up to 5.3 s past the stop, tablet 2026-11-04).
         env.warmUpAvailable = true
         androidAuto.stopsAtOnce = false
         val m = manager()
         m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
         m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
         assertEquals(1, env.warmUps)
+        assertEquals("waits for the stop", 1, starts.size)
         androidAuto.completeStop(); idle()
-        assertEquals("waits for the page", 1, starts.size)
-        env.warmUpDone!!(); idle()
         assertEquals("CARPLAY start WIRELESS WIFI_DIRECT", starts.last())
-        // From idle there is nothing to overlap.
+        // From idle the page still overlaps the projection's launch.
         m.stop(); idle()
         m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
-        assertEquals(1, env.warmUps)
-    }
-
-    @Test fun aWarmUpThatNeverAnswersDelaysTheStartByAtMostItsCap() {
-        env.warmUpAvailable = true
-        val m = manager()
-        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
-        androidAuto.stopsAtOnce = false
-        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
-        androidAuto.completeStop(); idle()
-        advance(SessionManager.WARM_UP_MAX_MILLIS - 100)
-        assertEquals(1, starts.size)
-        advance(200)
+        assertEquals(2, env.warmUps)
         assertEquals("CARPLAY start WIRELESS WIFI_DIRECT", starts.last())
+        // Android Auto is never paged here.
+        m.connect("CC:DD", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals(2, env.warmUps)
     }
 
     @Test fun eventsFromAnAttemptTheWatchdogReplacedAreIgnored() {
