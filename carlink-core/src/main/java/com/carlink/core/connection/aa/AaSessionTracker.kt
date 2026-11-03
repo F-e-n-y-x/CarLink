@@ -18,6 +18,8 @@ import com.carlink.core.core.Transport
 internal class AaSessionTracker(
     private val transport: Transport,
     private val limits: Limits = Limits(),
+    /** Android Auto on this screen: no phone to wake, no USB to re-switch, and no reconnect after a drop. */
+    private val selfMode: Boolean = false,
 ) {
     data class Limits(
         /** Phone refusals of the handed network before failing. v1's measured rule: one can be a radio hiccup, a wrong password repeats within seconds. */
@@ -52,7 +54,7 @@ internal class AaSessionTracker(
         val noVideoEndDebounceMillis: Long = 500,
     )
 
-    private val wireless = transport == Transport.WIRELESS
+    private val wireless = transport == Transport.WIRELESS && !selfMode
     private val stepCount = if (wireless) 4 else 3
 
     var terminal = false
@@ -170,6 +172,8 @@ internal class AaSessionTracker(
             EngineEvent.BOOT_LOOP_PAUSE.name -> fail(FailureReason.ENGINE, "wireless is paused by the engine's boot-loop guard")
             EngineEvent.USB_PERMISSION_DENIED.name -> fail(FailureReason.USB, "USB access was not allowed")
             EngineEvent.FIRST_VIDEO_FRAME.name -> if (sessionLive) connect() else emptyList()
+            EngineEvent.HEAD_UNIT_SERVER_CLOSED.name -> fail(FailureReason.HEAD_UNIT_SERVER_OFF,
+                "Android Auto's head unit server is not running (127.0.0.1:5277)")
             EngineEvent.SESSION_ENDED.name -> endSession(d["userExit"] == "true", d["clean"] == "true", now)
             AaProtocol.KIND_START_REFUSED -> fail(FailureReason.ENGINE, "Android did not let the Android Auto service start")
             AaProtocol.KIND_AOA_SWITCH_FAILED -> fail(FailureReason.USB, "the phone did not switch to Android Auto over USB")
@@ -183,13 +187,15 @@ internal class AaSessionTracker(
     fun onTick(now: Long): List<AdapterEvent> {
         if (terminal) return emptyList()
         pendingEndSince?.let { since ->
-            val debounce = if (!wireless && !connected) limits.noVideoEndDebounceMillis else limits.endDebounceMillis
+            // Self Mode: give a refused dial's HEAD_UNIT_SERVER_CLOSED time to arrive and say why.
+            val debounce = if (!wireless && !connected && !selfMode) limits.noVideoEndDebounceMillis else limits.endDebounceMillis
             if (now - since >= debounce) return endSession(userExit = false, clean = false, now = now)
         }
         reswitchDeadline?.let { deadline ->
             if (!sessionLive && now >= deadline) return fail(FailureReason.USB, STALE_REPLUG)
         }
-        if (sessionLive || accepted) return emptyList()
+        // Self Mode: SessionManager's whole-attempt backstop decides (it never tears down sooner).
+        if (sessionLive || accepted || selfMode) return emptyList()
         val waited = now - waitingSince
         if (!wireless) {
             return if (waited >= limits.usbTimeoutMillis)
@@ -265,6 +271,9 @@ internal class AaSessionTracker(
         return when {
             userExit -> ended(byUser = true)
             clean -> ended(byUser = false) // the phone sent ByeBye
+            // Self Mode does not reconnect (AapService.scheduleReconnectIfNeeded), and Android Auto's
+            // head unit server may need a restart by hand after a dropped link.
+            selfMode -> fail(FailureReason.ENGINE, "Android Auto on this screen stopped" + (lastError?.let { " ($it)" } ?: ""))
             // USB, not one frame: the phone did not take the session (stale accessory, K2). Re-switch
             // once, at once; a second time means the phone needs a re-plug.
             !wireless && !hadVideo -> if (staleReswitches++ == 0) {

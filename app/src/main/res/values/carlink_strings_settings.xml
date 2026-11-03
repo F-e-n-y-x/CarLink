@@ -252,4 +252,6 @@
     <string name="carlink_wheel_key_cancel">Cancel</string>
     <string name="carlink_settings_setup_again">Set up again</string>
     <string name="carlink_settings_setup_again_detail">Permissions, car brand and pairing a phone, step by step</string>
+    <string name="carlink_settings_aa_on_screen">Android Auto on this screen (experimental)</string>
+    <string name="carlink_settings_aa_on_screen_detail">Adds a Home button that runs Android Auto on this device itself, with no phone. Needs Android Auto 17.4 or newer with its head unit server started in Android Auto\'s developer settings; Home shows how.</string>
 </resources>

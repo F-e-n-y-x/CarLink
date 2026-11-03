@@ -86,6 +86,8 @@ enum class LinkProblem {
     EXTERNAL_BLUETOOTH,
     /** Wireless through the stereo's Bluetooth module was tried (opt-in) and could not reach it; USB works. */
     EXTERNAL_MODULE,
+    /** Android Auto on this screen: Android Auto's head unit server (its developer settings) is off. */
+    HEAD_UNIT_SERVER_OFF,
 }
 
 /**

@@ -28,6 +28,8 @@ internal object AaProtocol {
 
     const val COMMAND_START_WIRELESS = "start_wireless"
     const val COMMAND_START_USB = "start_usb"
+    /** Android Auto on this screen: DiAuto's Self Mode against Android Auto's head unit server (127.0.0.1:5277). */
+    const val COMMAND_START_SELF = "start_self"
     const val COMMAND_STOP = "stop"
     const val COMMAND_REPORT = "report"
     /** Wake the chosen phone again on an armed, idle engine (DiAuto's manual poke is a single 20 s hold). */

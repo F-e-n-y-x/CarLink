@@ -21,6 +21,12 @@ data class SessionRequest(
     val phoneAddress: String?,
     val phoneName: String?,
     val usbAttach: Intent? = null,
+    /**
+     * Experimental: Android Auto runs on this screen itself (DiAuto's Self Mode against Android
+     * Auto's head unit server, 127.0.0.1:5277); no phone, no Bluetooth, no wireless path.
+     * Carried as [Transport.WIRELESS] with no path, so USB unplug rules never end it.
+     */
+    val selfMode: Boolean = false,
 )
 
 /** Something that must be fixed before a session can start; each has a one-tap fix in the UI. */
@@ -522,6 +528,16 @@ class SessionManager(
     private var lastHomeAutoStart = -HOME_AUTO_START_COOLDOWN_MILLIS
     private var lastSessionEndedAt = -HOME_AUTO_START_COOLDOWN_MILLIS
 
+    /**
+     * The driver asked for Android Auto on this screen ([SessionRequest.selfMode]); experimental.
+     * Needs no phone, Bluetooth or Wi-Fi, so pre-flight is skipped.
+     */
+    fun startSelf() {
+        _pendingChoice.value = null
+        environment.autoConnectPaused = false
+        start(SessionRequest(Engine.ANDROID_AUTO, Transport.WIRELESS, null, null, selfMode = true))
+    }
+
     /** The driver asked for this phone. Clears the pause and replaces any running session. */
     fun connect(address: String?, kind: PhoneKind, phoneName: String?, transport: Transport = Transport.WIRELESS) {
         val engine = kind.engine ?: return
@@ -531,7 +547,7 @@ class SessionManager(
         // The same phone asked again (a second tap, Home's automatic start racing the tap): restarting
         // threw away an attempt 2 s from connected and paid a 6 s Bluetooth warm-up (tablet, 2026-10-20).
         val current = (_state.value as? SessionState.Active)?.request
-        if (current != null && current.engine == engine && current.transport == transport &&
+        if (current != null && !current.selfMode && current.engine == engine && current.transport == transport &&
             current.phoneAddress.equals(address, ignoreCase = true)) {
             return note("$engine already running for this phone; not restarting")
         }
@@ -609,13 +625,13 @@ class SessionManager(
         everConnected = false
         quickRetries = 0
         // Before any engine, warm-up or path: a wireless start cannot work on this stereo.
-        if (request.transport == Transport.WIRELESS && environment.wirelessUnavailable(request.engine)) {
+        if (request.transport == Transport.WIRELESS && !request.selfMode && environment.wirelessUnavailable(request.engine)) {
             note("${request.engine} blocked: wireless is not available on this stereo (external Bluetooth module)")
             _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
             return
         }
         if (stopping > 0) warmUp(request)
-        val paths = if (request.transport == Transport.WIRELESS) {
+        val paths = if (request.transport == Transport.WIRELESS && !request.selfMode) {
             val policy = environment.wirelessPaths(request)
             profiles.rankPaths(request, policy).also {
                 if (it != policy) note("wireless paths $policy re-ordered by this phone's record: $it")
@@ -656,14 +672,14 @@ class SessionManager(
         notice: Notice? = null,
     ) {
         val path = paths[index]
-        val problems = environment.preflight(request, path)
+        val problems = if (request.selfMode) emptyList() else environment.preflight(request, path)
         if (problems.isNotEmpty()) {
             note("${request.engine} blocked on ${path ?: "USB"}: $problems")
             _state.value = SessionState.Blocked(request, problems)
             return
         }
         val plan = SessionPlan(request.engine, request.transport, path, request.phoneAddress, request.phoneName,
-            request.usbAttach, attempt = index + 1)
+            request.usbAttach, attempt = index + 1, selfMode = request.selfMode)
         _state.value = SessionState.Active(request, path, index + 1, phase, notice)
         running = request.engine
         environment.onEngaged(request.engine)
@@ -849,7 +865,7 @@ class SessionManager(
     /** Tells the driver why it waits (the audit's "never a silent wait over ~10 s"). */
     private fun hint(a: Attempt, waited: Long) {
         val current = _state.value as? SessionState.Active ?: return
-        if (a.stage == ProgressStage.WAITING_FOR_PHONE) {
+        if (a.stage == ProgressStage.WAITING_FOR_PHONE && !a.request.selfMode) {
             a.phoneSilent = true
             note("${a.plan.engine}: the phone has not answered for ${waited / 1000} s")
             val phase = (current.phase as? SessionState.Phase.Progress)
@@ -870,6 +886,10 @@ class SessionManager(
     private fun recover(a: Attempt, stage: ProgressStage?, waited: Long, deadline: Long) {
         val plan = a.plan
         val request = a.request
+        // Self Mode: a phase deadline only says it is slow, it never tears down (open-headunit
+        // SelfLaunchTimeoutPolicy: a link dropped before the version exchange leaves Android Auto's
+        // head unit server deaf until restarted by hand). The whole-attempt backstop still gives up.
+        if (request.selfMode && stage != null) return note("stall: Android Auto on this screen, ${StallPlaybook.phaseName(stage).lowercase()} has taken $waited ms; still waiting")
         val key = a.index to stage
         val (action, used) = StallPlaybook.next(StallPlaybook.actions(plan.engine, plan.transport, stage),
             recoveries[key] ?: 0, a.index + 1 < a.paths.size)
@@ -1022,6 +1042,7 @@ fun FailureReason.retryText(engine: Engine): String {
         FailureReason.USB -> "the USB link restarted"
         FailureReason.BLOCKED -> "a permission or switch is missing"
         FailureReason.AUTHENTICATION -> "authentication failed"
+        FailureReason.HEAD_UNIT_SERVER_OFF -> "Android Auto's head unit server is not running"
         FailureReason.ENGINE -> "the engine restarted"
     }
 }

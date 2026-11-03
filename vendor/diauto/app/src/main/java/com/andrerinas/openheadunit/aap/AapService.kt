@@ -1837,6 +1837,7 @@ class AapService : Service(), UsbReceiver.Listener {
         com.andrerinas.openheadunit.hud.BydNavigationOutputs.stop()
         AppLog.i("AapService destroying... (wakeLock held=${bootWakeLock?.isHeld == true})")
         isDestroying = true
+        selfMode = false // CarLink: a later phone session must offer its media and speech sinks again
         mediaMetadataDecodeJob?.cancel()
         cachedAaAlbumArtBitmap = null
         mediaNotification.cancel()
@@ -3115,12 +3116,17 @@ class AapService : Service(), UsbReceiver.Listener {
                 }
                 if (!success && !commManager.isConnected) {
                     AppLog.w("SelfMode: Headunit Server (127.0.0.1:5277) is NOT running.")
+                    // CarLink: a host that listens explains the fix on its own screen instead.
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(this@AapService,
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.HEAD_UNIT_SERVER_CLOSED)
+                    if (com.andrerinas.openheadunit.HostIntegration.onEngineEvent == null) { // CarLink
                     ToastUtils.showToast(
                         this@AapService,
                         "Android Auto 17.4+ detected: Please start 'Headunit Server' in Android Auto Developer Settings!",
                         Toast.LENGTH_LONG
                     )
                     openAaSettings()
+                    } // CarLink
                 }
                 return@launch
             }

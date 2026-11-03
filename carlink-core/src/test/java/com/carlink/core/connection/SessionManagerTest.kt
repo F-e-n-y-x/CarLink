@@ -823,4 +823,44 @@ class SessionManagerTest {
         assertTrue("no instant restart from stale timers", m.state.value is SessionState.Active)
         assertEquals(1, starts.size)
     }
+
+    // --- Android Auto on this screen (Self Mode) -------------------------------------------------
+
+    @Test fun selfModeSkipsPreflightAndWirelessPaths() {
+        problems = { _, _ -> listOf(Problem.BLUETOOTH_OFF) }
+        env.wirelessUnavailable = true
+        val m = manager()
+        m.startSelf(); idle()
+        assertEquals(listOf("ANDROID_AUTO start WIRELESS null"), starts)
+        assertTrue(androidAuto.plan!!.selfMode)
+        assertEquals(null, (m.state.value as SessionState.Active).path)
+        assertEquals("no cable or wireless badge", null, m.state.value.toLinkState().transport)
+        // A USB device leaving is not this session's phone.
+        m.onUsbDetached(); advance(SessionManager.USB_GONE_GRACE_MILLIS + 1)
+        assertTrue(m.state.value is SessionState.Active)
+    }
+
+    @Test fun selfModeNeverTearsDownOnAPhaseDeadline() {
+        val m = manager()
+        m.startSelf(); idle()
+        advance(60_000)
+        assertEquals("no nudge, retry or next path", emptyList<RecoveryAction>(), androidAuto.recovered)
+        assertEquals(1, starts.size)
+        assertTrue(m.state.value is SessionState.Active)
+        // The whole-attempt backstop still ends it, so it never waits forever.
+        advance(AdaptiveDeadlines.bounds(null, Transport.WIRELESS).default)
+        assertTrue(m.state.value is SessionState.Failed)
+    }
+
+    @Test fun selfModeHeadUnitServerOffFailsWithItsOwnProblem() {
+        val m = manager()
+        m.startSelf(); idle()
+        androidAuto.emit(AdapterEvent.Failed(FailureReason.HEAD_UNIT_SERVER_OFF, "closed")); idle()
+        val failed = m.state.value as SessionState.Failed
+        assertEquals(LinkProblem.HEAD_UNIT_SERVER_OFF, failed.toLinkState().problem)
+        // Try again starts Self Mode again, not a phone session.
+        m.retry(); idle()
+        assertEquals(2, starts.size)
+        assertTrue(androidAuto.plan!!.selfMode)
+    }
 }

@@ -325,6 +325,7 @@ class ConnectionProfiles(
 
         /** One phone: its engine and Bluetooth address, or for USB without one its product name. */
         fun keyOf(request: SessionRequest): String {
+            if (request.selfMode) return "${request.engine.name}:self"
             val id = request.phoneAddress?.let { KnownPhones.normalize(it) }
                 ?: ("usb:" + (request.phoneName?.replace(Regex("\\s+"), " ")?.trim()?.lowercase()?.ifBlank { null } ?: "phone"))
             return "${request.engine.name}:$id"
