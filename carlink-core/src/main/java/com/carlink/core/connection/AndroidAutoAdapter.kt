@@ -202,16 +202,17 @@ class AndroidAutoAdapter internal constructor(
         check(!sessionOpen) { "Android Auto start while the previous session has not stopped" }
         check(plan.engine == Engine.ANDROID_AUTO) { "not an Android Auto plan: ${plan.engine}" }
         val now = clock()
-        val tracker = AaSessionTracker(plan.transport, limits)
+        val tracker = AaSessionTracker(plan.transport, limits, plan.selfMode)
         val s = Session(plan, listener, tracker, now)
         session = s
         sessionOpen = true
         orphanCheck = false
         deadPolls = 0
-        Log.i(TAG, "start transport=${plan.transport} path=${plan.path} phone=${plan.phoneAddress != null} attempt=${plan.attempt}")
+        Log.i(TAG, "start transport=${plan.transport} path=${plan.path} phone=${plan.phoneAddress != null} attempt=${plan.attempt} self=${plan.selfMode}")
         deliver(s, tracker.begin(now))
         val profile = vehicleProfile().name
-        when (plan.transport) {
+        if (plan.selfMode) send(AaProtocol.COMMAND_START_SELF) { putExtra(AaProtocol.EXTRA_VEHICLE_PROFILE, profile) }
+        else when (plan.transport) {
             Transport.WIRELESS -> send(AaProtocol.COMMAND_START_WIRELESS) {
                 putExtra(AaProtocol.EXTRA_ADDRESS, plan.phoneAddress)
                 putExtra(AaProtocol.EXTRA_VEHICLE_PROFILE, profile)

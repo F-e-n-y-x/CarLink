@@ -320,4 +320,23 @@ class AaSessionTrackerTest {
         assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.USB)), t.after(limits.endDebounceMillis))
         assertFalse(t.takeReswitchRequest())
     }
+
+    private fun self() = AaSessionTracker(Transport.WIRELESS, limits, selfMode = true).also { it.begin(now) }
+
+    @Test fun selfModeClosedHeadUnitServerFailsAtOnce() {
+        val t = self()
+        assertFalse(t.shouldRepoke(now + limits.acceptHintMillis))
+        assertEquals(FailureReason.HEAD_UNIT_SERVER_OFF, t.event(EngineEvent.HEAD_UNIT_SERVER_CLOSED).failure().reason)
+    }
+
+    @Test fun selfModeWaitsWithoutTimeoutAndFailsOnADrop() {
+        val t = self()
+        assertEquals(emptyList<AdapterEvent>(), t.after(limits.acceptTimeoutMillis + 1))
+        t.state(P.CONNECTION_CONNECTING)
+        t.state(P.CONNECTION_HANDSHAKE_COMPLETE, firstFrame = true)
+        t.state(P.CONNECTION_DISCONNECTED)
+        // Self Mode does not reconnect: a drop ends it with a reason, not a USB re-switch.
+        assertEquals(FailureReason.ENGINE, t.after(limits.endDebounceMillis).failure().reason)
+        assertFalse(t.takeReswitchRequest())
+    }
 }

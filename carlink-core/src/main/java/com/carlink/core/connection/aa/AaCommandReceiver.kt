@@ -40,6 +40,7 @@ class AaCommandReceiver : BroadcastReceiver() {
         when (command) {
             AaProtocol.COMMAND_START_WIRELESS -> handler.startWireless(address, profile)
             AaProtocol.COMMAND_START_USB -> handler.startUsb(usbDevice(intent), address, profile)
+            AaProtocol.COMMAND_START_SELF -> handler.startSelf(profile)
             AaProtocol.COMMAND_POKE -> address?.let { handler.poke(it) }
             AaProtocol.COMMAND_RESWITCH_USB -> handler.reswitchStaleAccessory()
             AaProtocol.COMMAND_STOP -> handler.stop(intent.getLongExtra(AaProtocol.EXTRA_TOKEN, 0L))

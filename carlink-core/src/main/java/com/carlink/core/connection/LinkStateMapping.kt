@@ -15,21 +15,21 @@ import com.carlink.core.settings.WirelessPath
  */
 fun SessionState.toLinkState(directVideoOutput: Boolean = true): LinkState = when (this) {
     SessionState.Idle -> LinkState.Idle
-    is SessionState.Blocked -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
+    is SessionState.Blocked -> LinkState(LinkStage.FAILED, request.engine, request.shownTransport, request.phoneName,
         problem = problems.first().toLinkProblem())
-    is SessionState.Failed -> LinkState(LinkStage.FAILED, request.engine, request.transport, request.phoneName,
+    is SessionState.Failed -> LinkState(LinkStage.FAILED, request.engine, request.shownTransport, request.phoneName,
         detail = detail, problem = reason.toLinkProblem())
     is SessionState.Active -> activeLinkState().copy(notice = linkNotice(directVideoOutput))
 }
 
 private fun SessionState.Active.activeLinkState(): LinkState = when (val p = phase) {
-    SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.transport, request.phoneName, 1, STEPS,
+    SessionState.Phase.Starting -> LinkState(LinkStage.WAITING, request.engine, request.shownTransport, request.phoneName, 1, STEPS,
         detail = notice?.message)
     is SessionState.Phase.Progress -> {
         val silent = p.stage == ProgressStage.PHONE_NOT_ANSWERING
         LinkState(
             if (silent || p.stage == ProgressStage.WAITING_FOR_PHONE) LinkStage.WAITING else LinkStage.CONNECTING,
-            request.engine, request.transport, request.phoneName, stepOf(p.stage), STEPS,
+            request.engine, request.shownTransport, request.phoneName, stepOf(p.stage), STEPS,
             detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message)
     }
     // A retry stays on the step it happened in, with its reason (RELIABILITY_AUDIT K4): a dial
@@ -37,11 +37,11 @@ private fun SessionState.Active.activeLinkState(): LinkState = when (val p = pha
     // retries is still "not answering".
     is SessionState.Phase.Retrying -> {
         val silent = notice?.kind == Notice.Kind.PHONE_NOT_ANSWERING && stepOf(p.stage) == 1
-        LinkState(if (silent) LinkStage.WAITING else LinkStage.CONNECTING, request.engine, request.transport, request.phoneName,
+        LinkState(if (silent) LinkStage.WAITING else LinkStage.CONNECTING, request.engine, request.shownTransport, request.phoneName,
             stepOf(p.stage), STEPS,
             detail = if (silent) DETAIL_PHONE_NOT_ANSWERING else notice?.message ?: p.detail?.let { "Retrying: $it" } ?: "retrying")
     }
-    SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.transport, request.phoneName, STEPS, STEPS)
+    SessionState.Phase.Connected -> LinkState(LinkStage.CONNECTED, request.engine, request.shownTransport, request.phoneName, STEPS, STEPS)
 }
 
 /**
@@ -90,6 +90,9 @@ private fun tryPath(path: WirelessPath?): LinkRecovery = when (path) {
     null -> LinkRecovery.TRY_OTHER_PATH
 }
 
+/** Android Auto on this screen is neither cable nor wireless: Home shows no transport for it. */
+private val SessionRequest.shownTransport get() = if (selfMode) null else transport
+
 /** [LinkState.detail] while a phone has not answered for a while; Home explains what to check. */
 const val DETAIL_PHONE_NOT_ANSWERING = "phone_not_answering"
 
@@ -134,5 +137,6 @@ fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
     FailureReason.USB -> LinkProblem.USB
     FailureReason.BLOCKED -> LinkProblem.PERMISSIONS
     FailureReason.AUTHENTICATION -> LinkProblem.CARPLAY_AUTH_MISSING
+    FailureReason.HEAD_UNIT_SERVER_OFF -> LinkProblem.HEAD_UNIT_SERVER_OFF
     FailureReason.ENGINE -> LinkProblem.ENGINE
 }

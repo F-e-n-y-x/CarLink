@@ -71,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlink.app.R
 import com.carlink.app.ui.CarLinkViewModel
 import com.carlink.app.ui.ConnectionPrefs
+import com.carlink.app.ui.offersAndroidAutoOnScreen
 import com.carlink.app.ui.HomeState
 import com.carlink.app.ui.NetworkPreview
 import com.carlink.app.ui.Route
@@ -188,7 +189,13 @@ internal interface HomeActions {
     fun reportProblem() {}
     /** CarPlay sound but no picture ([LinkNoticeKind.NO_PICTURE]): turn on Direct video output and reconnect. */
     fun turnOnDirectVideo() {}
+    /** "Run Android Auto on this screen" (experimental Self Mode). */
+    fun startSelf() {}
 }
+
+/** Home's idle modes, where "Run Android Auto on this screen" is offered when switched on. */
+internal fun HomeMode.isIdle(): Boolean =
+    this == HomeMode.READY_EMPTY || this == HomeMode.READY_PHONE || this == HomeMode.CABLE_ONLY || this == HomeMode.BLUETOOTH_OFF
 
 @Composable
 fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
@@ -231,6 +238,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun navigate(route: Route) = navigate(route)
             override fun reportProblem() = reportProblem()
             override fun turnOnDirectVideo() = vm.turnOnDirectVideo()
+            override fun startSelf() = vm.startSelf()
         }
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification, failureReport), actions)
@@ -742,6 +750,10 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             }
         }
     }
+    if (ui.connection.offersAndroidAutoOnScreen(mode.isIdle())) {
+        Spacer(Modifier.height(dimens.targetGap))
+        GlassButton(stringResource(R.string.carlink_home_aa_on_screen), actions::startSelf, icon = R.drawable.carlink_ic_android)
+    }
     if (ui.connection.autoConnectPaused && (mode == HomeMode.READY_PHONE || mode == HomeMode.READY_EMPTY)) {
         Spacer(Modifier.height(dimens.targetGap))
         FlowRow(itemVerticalAlignment = Alignment.CenterVertically) {
@@ -779,6 +791,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.USB -> R.string.carlink_home_error_usb_title to R.string.carlink_home_error_usb_body
     LinkProblem.EXTERNAL_BLUETOOTH -> R.string.carlink_home_error_external_bt_title to R.string.carlink_home_error_external_bt_body
     LinkProblem.EXTERNAL_MODULE -> R.string.carlink_home_error_external_module_title to R.string.carlink_home_error_external_module_body
+    LinkProblem.HEAD_UNIT_SERVER_OFF -> R.string.carlink_home_error_hu_server_title to R.string.carlink_home_error_hu_server_body
     LinkProblem.ENGINE, null -> R.string.carlink_home_error_engine_title to R.string.carlink_home_error_engine_body
 }
 
@@ -827,6 +840,11 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
             icon = R.drawable.carlink_ic_bluetooth)
         LinkProblem.PAIRING_LOST -> IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings),
             actions::openBluetoothSettings, icon = R.drawable.carlink_ic_bluetooth)
+        // Coming back from Android Auto's settings tries again by itself (rememberProblemFix).
+        LinkProblem.HEAD_UNIT_SERVER_OFF -> {
+            IonButton(stringResource(R.string.carlink_home_open_aa_settings), { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
+            GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
+        }
         // No Try again: nothing on this stereo changes between attempts. The cable is the way.
         LinkProblem.EXTERNAL_BLUETOOTH, LinkProblem.EXTERNAL_MODULE -> {
             var cableHelp by rememberSaveable { mutableStateOf(false) }

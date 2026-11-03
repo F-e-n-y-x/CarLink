@@ -130,6 +130,8 @@ object HostIntegration {
         FIRST_VIDEO_FRAME,
         /** A session that had connected ended. Detail: `userExit=;clean=`. */
         SESSION_ENDED,
+        /** CarLink: Self Mode found no head unit server on 127.0.0.1:5277 (Android Auto's developer setting is off). */
+        HEAD_UNIT_SERVER_CLOSED,
     }
 
     /**

@@ -70,7 +70,14 @@ data class ConnectionPrefs(
     val wirelessOnExternalBluetooth: Boolean = false,
     /** Settings › Connection › Root mode (advanced). */
     val rootMode: Boolean = false,
+    /** "Android Auto on this screen (experimental)" (Settings › Connection, advanced). */
+    val androidAutoOnScreen: Boolean = false,
+    /** Android Auto (Gearhead) is installed on this device: Self Mode needs it. */
+    val androidAutoInstalled: Boolean = false,
 )
+
+/** Home's "Run Android Auto on this screen": the switch is on, Android Auto is here, and Home is idle. */
+fun ConnectionPrefs.offersAndroidAutoOnScreen(idle: Boolean): Boolean = androidAutoOnScreen && androidAutoInstalled && idle
 
 /** The wireless path the next session would use, for Home's Network chip. */
 data class NetworkPreview(
@@ -164,6 +171,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             "picture ${u.picture}",
             "Direct video output ${on(AirPlayPersistence.loadDirectVideoOutput(app))}",
             "root mode ${on(c.rootMode)}",
+            "Android Auto on this screen ${on(c.androidAutoOnScreen)}",
             "overlay ${if (overlay) "granted" else "not granted"}",
             "VPN consent ${if (vpn) "granted" else "not granted"}",
             "auto-connect USB ${on(c.autoConnectUsb)}, Bluetooth ${on(c.autoConnectBluetooth)}, on boot ${on(c.startOnBoot)}",
@@ -490,6 +498,9 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         com.carlink.core.core.LinkProblem.CAR_HOTSPOT_OFF -> Intent("android.settings.TETHER_SETTINGS")
         com.carlink.core.core.LinkProblem.OVERLAY -> Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
             android.net.Uri.parse("package:${app.packageName}"))
+        // Android Auto's own settings screen (the one DiAuto's Self Mode opens); its version row unlocks developer settings.
+        com.carlink.core.core.LinkProblem.HEAD_UNIT_SERVER_OFF -> Intent().setClassName(ANDROID_AUTO_PACKAGE,
+            "$ANDROID_AUTO_PACKAGE.companion.settings.DefaultSettingsActivity")
         else -> null
     }
 
@@ -509,6 +520,11 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
                     // No hotspot screen on this skin: the wireless settings hold it everywhere.
                     if (problem == com.carlink.core.core.LinkProblem.CAR_HOTSPOT_OFF) runCatching {
                         app.startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                    // An Android Auto without that screen: its app info page still opens it.
+                    if (problem == com.carlink.core.core.LinkProblem.HEAD_UNIT_SERVER_OFF) runCatching {
+                        app.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$ANDROID_AUTO_PACKAGE")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
                 }
             }
@@ -601,5 +617,23 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
         floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth,
-        rootMode = preferences.rootMode)
+        rootMode = preferences.rootMode, androidAutoOnScreen = preferences.androidAutoOnScreen,
+        androidAutoInstalled = runCatching { app.packageManager.getPackageInfo(ANDROID_AUTO_PACKAGE, 0) }.isSuccess)
+
+    fun setAndroidAutoOnScreen(on: Boolean) {
+        preferences.androidAutoOnScreen = on
+        _connection.value = readConnection()
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto on this screen (experimental): ${if (on) "on" else "off"}")
+    }
+
+    /** Home's "Run Android Auto on this screen" (experimental Self Mode). */
+    fun startSelf() {
+        _connection.value = _connection.value.copy(autoConnectPaused = false)
+        _attemptStartedAt.value = SystemClock.elapsedRealtime()
+        session.startSelf()
+    }
+
+    private companion object {
+        const val ANDROID_AUTO_PACKAGE = "com.google.android.projection.gearhead"
+    }
 }

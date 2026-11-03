@@ -82,6 +82,8 @@ data class SessionPlan(
     val usbAttach: Intent? = null,
     /** 1 for the first attempt of a request, 2+ for a retry on another path. */
     val attempt: Int = 1,
+    /** Android Auto on this screen ([SessionRequest.selfMode]). */
+    val selfMode: Boolean = false,
 )
 
 /** What an engine reports during a session. */
@@ -161,6 +163,8 @@ enum class FailureReason(val pathRelated: Boolean) {
     BLOCKED(false),
     /** CarPlay authentication (MFi) failed. */
     AUTHENTICATION(false),
+    /** Android Auto on this screen: Android Auto's head unit server (developer settings) is not running. */
+    HEAD_UNIT_SERVER_OFF(false),
     /** Anything else the engine reported. */
     ENGINE(false),
 }

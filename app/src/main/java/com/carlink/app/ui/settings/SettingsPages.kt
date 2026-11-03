@@ -115,6 +115,12 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
             SwitchRow(stringResource(R.string.carlink_settings_root), c.rootMode, actions::setRootMode,
                 description = stringResource(R.string.carlink_settings_root_detail), icon = R.drawable.carlink_ic_lock)
         }
+        // Advanced, and only where Android Auto itself is installed (Self Mode dials its head unit server).
+        if (ui.unified.showAdvanced && c.androidAutoInstalled) {
+            GroupDivider()
+            SwitchRow(stringResource(R.string.carlink_settings_aa_on_screen), c.androidAutoOnScreen, actions::setAndroidAutoOnScreen,
+                description = stringResource(R.string.carlink_settings_aa_on_screen_detail), icon = R.drawable.carlink_ic_android)
+        }
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_phones)) }) {
         LinkRow(stringResource(R.string.carlink_settings_bluetooth), actions::openBluetoothSettings,

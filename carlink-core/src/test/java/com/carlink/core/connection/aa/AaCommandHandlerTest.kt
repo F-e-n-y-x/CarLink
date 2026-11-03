@@ -199,6 +199,14 @@ class AaCommandHandlerTest {
         assertEquals(0, foreign.removals)
     }
 
+    @Test fun selfModeStartsSelfModeWithNoWirelessRoute() {
+        handler.startSelf(VehicleProfile.GENERIC)
+        assertEquals(listOf(AapService.ACTION_START_SELF_MODE), actions())
+        assertEquals("no Wi-Fi Direct group or pokes", true, engine.usbOnly)
+        assertNull(engine.targets)
+        assertTrue(reports > 0)
+    }
+
     @Test fun aRefusedServiceStartIsReported() {
         engine.refuseStarts = true
         handler.startWireless(phone, VehicleProfile.GENERIC)

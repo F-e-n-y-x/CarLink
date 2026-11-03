@@ -98,6 +98,18 @@ internal class AaCommandHandler(
         report()
     }
 
+    /**
+     * Android Auto on this screen: `ACTION_START_SELF_MODE` dials Android Auto's head unit server on
+     * 127.0.0.1:5277 (Android Auto 17.4+). No wireless route arms (usb-only flag: no Wi-Fi Direct
+     * group, no pokes). A closed port comes back as `HEAD_UNIT_SERVER_CLOSED`.
+     */
+    fun startSelf(profile: VehicleProfile) {
+        engine.setUsbOnlySession(true)
+        engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
+        if (!start(AapService.ACTION_START_SELF_MODE)) emit(AaProtocol.KIND_START_REFUSED, "action=${AapService.ACTION_START_SELF_MODE}")
+        report()
+    }
+
     /** Pokes the chosen phone again, for an armed, idle engine (the manual poke is one 20 s hold). */
     fun poke(address: String) {
         if (!engine.isServiceRunning() || engine.isBusy()) return
