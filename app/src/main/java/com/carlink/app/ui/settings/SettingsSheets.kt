@@ -311,6 +311,13 @@ internal fun CarBrandNote(selected: CarBrand?, detected: CarBrand?, showChoice: 
         Text(stringResource(if (byd) R.string.carlink_settings_car_explain_byd else R.string.carlink_settings_car_explain_other),
             style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
     }
+    // BYD chosen on a screen that is not a BYD DiLink unit (a phone or tablet, issue #18): its
+    // extras need BYD's own services, which this screen does not have.
+    if (selected == com.carlink.core.settings.CarBrand.BYD && detected != com.carlink.core.settings.CarBrand.BYD) {
+        Spacer(Modifier.height(dimens.targetGap))
+        Text(stringResource(R.string.carlink_settings_car_byd_not_dilink), style = MaterialTheme.typography.bodyMedium,
+            color = scheme.error)
+    }
     Spacer(Modifier.height(dimens.targetGap * 1.5f))
     Tag(detectedCarLabel(detected), scheme.onSurfaceVariant, R.drawable.carlink_ic_search)
 }

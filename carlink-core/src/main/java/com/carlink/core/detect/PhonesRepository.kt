@@ -210,6 +210,9 @@ class PhonesRepository(
 
     @SuppressLint("MissingPermission")
     private fun isPhone(device: BluetoothDevice): Boolean {
+        // A Bluetooth Low Energy-only device (a car's "CAR-BT BLE" key, a tag) has no hands-free or
+        // RFCOMM: it was listed and woken as the Android phone (issue #18).
+        if (runCatching { device.type }.getOrNull() == BluetoothDevice.DEVICE_TYPE_LE) return false
         val major = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull()
         return major == null || major == BluetoothClass.Device.Major.PHONE || major == BluetoothClass.Device.Major.UNCATEGORIZED
     }

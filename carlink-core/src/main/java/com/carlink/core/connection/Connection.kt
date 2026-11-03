@@ -125,8 +125,11 @@ object Connection {
             app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.bondedDevices
                 ?.associate { com.carlink.core.detect.KnownPhones.normalize(it.address) to it.name }
         }.getOrNull().orEmpty()
-        // Every phone CarLink knows, with whether its Bluetooth is connected now (PhoneChoice).
-        val options = known.all().map { (address, kind) ->
+        // Every phone CarLink knows, with whether its Bluetooth is connected now (PhoneChoice). On an
+        // ordinary stereo a phone no longer paired with Android cannot start: it failed "not paired"
+        // on every Home (issue #18), so only paired phones are candidates there.
+        val viaModule = DeviceEnvironment.moduleCarriesBluetooth(app)
+        val options = known.all().filterKeys { viaModule || it in bonded }.map { (address, kind) ->
             PhoneOption(address, bonded[address] ?: known.nameOf(address), kind,
                 present = address in bonded && BluetoothWarmup.linked(app, address))
         }

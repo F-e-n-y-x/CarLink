@@ -219,6 +219,7 @@
     <string name="carlink_settings_car_luxury">Luxury</string>
     <string name="carlink_settings_car_motorcycles">Motorcycles</string>
     <string name="carlink_settings_car_byd_extras">DiLink extras</string>
+    <string name="carlink_settings_car_byd_not_dilink">This screen is not a BYD DiLink unit, so the BYD extras cannot work here. Choose your car\'s make, or Other.</string>
     <string name="carlink_settings_car_explain_byd">BYD adds the DiLink extras: directions on the HUD and the instrument cluster, and BYD steering-wheel keys.</string>
     <string name="carlink_settings_car_explain_other">CarPlay and Android Auto work the same as in any car. The brand only labels this car in CarLink.</string>
     <!-- Settings › Car › Steering-wheel buttons (core settings/WheelKeys). -->
