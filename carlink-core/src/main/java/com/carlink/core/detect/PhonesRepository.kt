@@ -45,6 +45,7 @@ class PhonesRepository(
 ) {
     private val app = context.applicationContext
     private val knownPhones = KnownPhones(app)
+    private val paths = com.carlink.core.connection.PathMemory(app)
     private val adapter: BluetoothAdapter? = app.getSystemService(BluetoothManager::class.java)?.adapter
 
     private val _phones = MutableStateFlow<List<PairedPhone>>(emptyList())
@@ -148,18 +149,37 @@ class PhonesRepository(
                     connected = address in connected,
                 )
             }
-        _phones.value = (if (module) listed + modulePhones(listed.map { it.address }.toSet()) else listed)
+        _phones.value = distinguishSameNames(if (module) listed + modulePhones(listed.map { it.address }.toSet()) else listed)
             .sortedWith(compareByDescending<PairedPhone> { it.connected }.thenBy { it.name.lowercase() })
     }
 
-    /** Phones CarLink knows that Android's paired list lacks (they paired with the stereo's module). */
+    /**
+     * Phones CarLink knows that Android's paired list lacks (they paired with the stereo's module):
+     * only those that connected wirelessly here before, or the last phone. Every phone ever seen
+     * listed stale entries with the same name ("iPhone" twice, one that could not connect).
+     */
     private fun modulePhones(listed: Set<String>): List<PairedPhone> = knownPhones.all()
         .filterKeys { it !in listed }
         .filterValues { it != PhoneKind.UNKNOWN }
+        .filter { (address, kind) ->
+            address.equals(com.carlink.core.connection.DeviceEnvironment.lastPhoneAddress(app), ignoreCase = true) ||
+                kind.engine?.let { paths.lastWorking(it, address) } != null
+        }
         .map { (address, kind) ->
             PairedPhone(address, knownPhones.nameOf(address) ?: if (kind == PhoneKind.IPHONE) "iPhone" else "Android phone",
                 kind, connected = false)
         }
+
+    companion object {
+        /** Phones sharing a name ("iPhone") get the end of their address, so the driver can tell them apart. */
+        fun distinguishSameNames(phones: List<PairedPhone>): List<PairedPhone> {
+            val counts = phones.groupingBy { it.name.trim().lowercase() }.eachCount()
+            return phones.map { phone ->
+                if ((counts[phone.name.trim().lowercase()] ?: 0) < 2) phone
+                else phone.copy(name = "${phone.name} · …${phone.address.takeLast(5)}")
+            }
+        }
+    }
 
     @SuppressLint("MissingPermission")
     private fun queryConnected() {

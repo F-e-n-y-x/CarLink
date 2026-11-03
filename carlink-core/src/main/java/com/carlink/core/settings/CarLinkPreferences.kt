@@ -41,8 +41,10 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_AA_ON_SCREEN, false)
         set(value) = prefs.edit().putBoolean(KEY_AA_ON_SCREEN, value).apply()
 
+    // On by default (2026-11-04): a stereo with an external module connects wirelessly through it
+    // out of the box, CarPlay included; the driver can still turn it off (Settings › Connection).
     var wirelessOnExternalBluetooth: Boolean
-        get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, false)
+        get() = prefs.getBoolean(KEY_WIRELESS_EXTERNAL_BT, true)
         set(value) = prefs.edit().putBoolean(KEY_WIRELESS_EXTERNAL_BT, value).apply()
 
     /**
