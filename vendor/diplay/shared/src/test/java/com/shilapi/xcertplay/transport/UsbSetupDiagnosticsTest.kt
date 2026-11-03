@@ -53,7 +53,7 @@ class UsbSetupDiagnosticsTest {
     @Test
     fun configurationSwitchDetachesDriversOnlyAfterAndroidRefusesIt() {
         val detached = mutableListOf<Int>()
-        assertNull(UsbConfigurationSelection.select(6, listOf(0, 1), { true }, { 6 }, { detached += it; true }) { fail("no reopen") })
+        assertNull(UsbConfigurationSelection.select(6, listOf(0, 1), { true }, { 2 }, { detached += it; true }) { fail("no reopen") })
         assertTrue(detached.isEmpty())
 
         // The 8227L kernel's snd-usb-audio held interface 0 of configuration 2 (#518). The switch
@@ -71,6 +71,29 @@ class UsbSetupDiagnosticsTest {
             outcome?.diagnostic(),
         )
         assertFalse(outcome!!.wrongConfiguration)
+    }
+
+    @Test
+    fun alreadyActiveConfigurationDoesNotResetOrDetachInterfaces() {
+        val outcome = UsbConfigurationSelection.select(6, listOf(0, 3),
+            { fail("already active: do not set configuration"); false },
+            { 6 },
+            { fail("already active: do not detach"); false },
+        ) { fail("already active: do not reopen") }
+        assertTrue(outcome!!.alreadyActive)
+        assertTrue(outcome.selected)
+        assertEquals("USB configuration select target=6 ok=true before=6 detached=none after=6 action=already-active", outcome.diagnostic())
+    }
+
+    @Test
+    fun anUnavailableInitialConfigurationReadStillAttemptsTheSwitch() {
+        var switches = 0
+        assertNull(UsbConfigurationSelection.select(6, listOf(0),
+            { switches++; true },
+            { throw IllegalStateException("GET_CONFIGURATION unavailable") },
+            { fail("successful switch must not detach"); false },
+        ) { fail("successful switch must not reopen") })
+        assertEquals(1, switches)
     }
 
     @Test

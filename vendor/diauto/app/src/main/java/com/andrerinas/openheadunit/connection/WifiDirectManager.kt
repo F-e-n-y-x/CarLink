@@ -1182,6 +1182,29 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         }
     }
 
+    /**
+     * CarLink: ported from open-headunit 24e6edaf (fork chea-vuthearith), wake half only. After a
+     * deep sleep the P2P manager and Channel can survive as a non-null shell the framework no longer
+     * answers: every create is accepted and never forms until the process restarts. DiAuto re-inits
+     * them only when null, so a hibernate wake swaps in a fresh pair while nothing is being hosted.
+     * The receiver is left as it is (it does not hold the Channel). Returns whether it rebuilt.
+     */
+    fun rebuildChannelIfIdle(): Boolean {
+        if (isGroupCreatingOrCreated || nativeCreateInFlight()) return false
+        return try {
+            val newManager = context.getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager
+            val newChannel = newManager?.initialize(context, context.mainLooper, null) ?: return false
+            val old = channel
+            manager = newManager
+            channel = newChannel
+            if (Build.VERSION.SDK_INT >= 27) runCatching { old?.close() }
+            true
+        } catch (e: Exception) {
+            AppLog.e("WifiDirectManager: rebuilding the P2P Channel after a wake failed", e)
+            false
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun startNativeAaQuietHost() {
         sessionOwnership.start()

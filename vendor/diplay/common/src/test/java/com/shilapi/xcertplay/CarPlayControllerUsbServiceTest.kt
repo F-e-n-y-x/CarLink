@@ -27,6 +27,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.util.ReflectionHelpers
 import java.time.Duration
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], manifest = Config.NONE)
@@ -38,6 +41,27 @@ class CarPlayControllerUsbServiceTest {
     @After fun tearDown() {
         controllers.forEach { it.close(); assertTrue(it.awaitClosed(2_000)) }
         BydNavigationOutputs.endNow()
+    }
+
+    @Test fun wiredCloseDoesNotReportCompletionWhileUsbWorkerIsStillRunning() {
+        val controller = controller(UsbContext(true), CarPlayTransport.WIRED, MfiTarget.LOCAL)
+        val worker = ReflectionHelpers.getField<ExecutorService>(controller, "executor")
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        worker.execute {
+            entered.countDown()
+            while (true) {
+                try { release.await(); break } catch (_: InterruptedException) { /* emulate a blocking USB call */ }
+            }
+        }
+        try {
+            assertTrue(entered.await(2, TimeUnit.SECONDS))
+            controller.close()
+            assertFalse("close cannot finish while USB work remains", controller.awaitClosed(2_300))
+        } finally {
+            release.countDown()
+        }
+        assertTrue(controller.awaitClosed(3_000))
     }
 
     @Test fun wirelessLocalCanBeCreatedAndReachMfiWithoutAUsbService() {

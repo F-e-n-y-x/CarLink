@@ -6239,14 +6239,23 @@ open class CarPlayHostActivity : ComponentActivity() {
         teardownExecutor.execute {
             val started = System.nanoTime()
             oldController?.close()
-            val completed = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true
+            var completed = oldController?.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS) ?: true // CarLink: upstream PR #1212
             AsyncDiagnosticLog.append(
                 diagnosticLog,
                 "${CarPlayController.CONNECTION_DIAGNOSTIC_PREFIX} generation=$generation " +
                     "restart teardownWaitCompleted=$completed " +
                     "elapsedMs=${((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(0)}",
             )
+            // CarLink: upstream PR #1212
+            // A new wired controller can force-claim the iPhone's NCM interface. Do not start it
+            // while an older controller may still own a USB transfer on that interface.
+            while (!completed && oldController?.isWiredTransport == true &&
+                !shuttingDown.get() && !Thread.currentThread().isInterrupted
+            ) {
+                completed = oldController.awaitClosed(CONTROLLER_CLOSE_TIMEOUT_MILLIS)
+            }
             oldSink?.let(::closeRetiringSink)
+            if (!completed && oldController?.isWiredTransport == true) return@execute // CarLink: upstream PR #1212
             runOnUiThread {
                 if (!shuttingDown.get() && generation == restartGeneration) {
                     handshakeResetInProgress = false

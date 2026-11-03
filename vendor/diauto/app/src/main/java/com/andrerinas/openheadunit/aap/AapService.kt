@@ -632,6 +632,11 @@ class AapService : Service(), UsbReceiver.Listener {
             return
         }
 
+        // CarLink: open-headunit 24e6edaf, a deep sleep can leave a dead P2P Channel behind.
+        if (wifiDirectManager?.rebuildChannelIfIdle() == true) {
+            AppLog.i("WakeDetect: rebuilt the WiFi Direct Channel after a deep sleep ($trigger)")
+        }
+
         val settings = App.provide(this).settings
 
         if (settings.autoStartOnBoot) {

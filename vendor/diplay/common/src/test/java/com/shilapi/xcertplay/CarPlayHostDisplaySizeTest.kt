@@ -437,6 +437,28 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, getField("restartGeneration"))
     }
 
+    @Test @Config(sdk = [30]) fun wiredRestartWaitsPastFirstTeardownTimeout() {
+        allowStartup()
+        startSession()
+        val old = org.mockito.Mockito.mock(CarPlayController::class.java)
+        setField("controller", old)
+        org.mockito.Mockito.`when`(old.isWiredTransport).thenReturn(true)
+        var waits = 0
+        org.mockito.Mockito.`when`(old.awaitClosed(org.mockito.ArgumentMatchers.anyLong())).thenAnswer {
+            waits++
+            if (waits == 1) false else {
+                assertNull("new controller must not start during teardown", getField("controller"))
+                assertTrue(getField("handshakeResetInProgress") as Boolean)
+                true
+            }
+        }
+        activity.javaClass.getDeclaredMethod("restartCarPlay", String::class.java)
+            .apply { isAccessible = true }.invoke(activity, "Test reconnect")
+        finishTeardown()
+        assertEquals(2, waits)
+        assertNotNull(getField("controller"))
+    }
+
     @Test @Config(sdk = [30]) fun teardownRechecksStartupPrerequisites() {
         allowStartup()
         startSession()
