@@ -115,7 +115,7 @@
     <string name="carlink_home_eyebrow_not_answering">No answer</string>
     <string name="carlink_home_not_answering_title">Your phone isn’t answering</string>
     <string name="carlink_home_not_answering_title_iphone">iPhone not reachable over Bluetooth</string>
-    <string name="carlink_home_not_answering_body_iphone">Unlock %1$s and check that its Bluetooth is on, or plug it in with a cable.</string>
+    <string name="carlink_home_not_answering_body_iphone">Unlock %1$s and check that its Bluetooth is on, or plug it in with a cable. If it still refuses: on the iPhone, Settings › General › CarPlay must not have forgotten this car, Screen Time › Content &amp; Privacy › Allowed Apps must allow CarPlay, and Allow CarPlay While Locked must be on.</string>
     <string name="carlink_home_not_answering_body_usb">Unlock %1$s and accept the prompt on its screen. If nothing happens, unplug it and plug it in again.</string>
     <string name="carlink_home_not_answering_body_android">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen. Android Auto starts by itself once it connects.</string>
     <!-- Connection v2: pre-flight problems and precise failures. -->

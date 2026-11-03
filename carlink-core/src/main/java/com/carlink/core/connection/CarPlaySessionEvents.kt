@@ -349,6 +349,7 @@ class CarPlaySessionTracker(
     companion object {
         const val MAX_DIAL_FAILURES = 2
         const val NOT_REACHABLE_OVER_BLUETOOTH =
-            "iPhone not reachable over Bluetooth: unlock it, check that its Bluetooth is on, or plug in a cable"
+            "iPhone not reachable over Bluetooth: unlock it, check that its Bluetooth is on, or plug in a cable; " +
+                "on the iPhone, this car must not be forgotten in Settings › General › CarPlay and Screen Time must allow CarPlay"
     }
 }

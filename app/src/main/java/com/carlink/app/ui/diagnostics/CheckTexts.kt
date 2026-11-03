@@ -82,6 +82,9 @@ fun checkText(result: CheckResult): CheckText {
             else CheckText(s(R.string.carlink_diag_p2p_missing), s(R.string.carlink_diag_p2p_missing_body))
         CheckId.H264_DECODER -> if (ok) CheckText(s(R.string.carlink_diag_avc_ok), decoderDetail(result.decoder))
             else CheckText(s(R.string.carlink_diag_avc_missing), s(R.string.carlink_diag_avc_missing_body))
+        CheckId.PHONE_HOTSPOT -> if (ok) CheckText(s(R.string.carlink_diag_hotspot_ok))
+            else CheckText(s(R.string.carlink_diag_hotspot_on_phone),
+                stringResource(R.string.carlink_diag_hotspot_body, result.apps.firstOrNull() ?: ""))
         CheckId.CLOCK -> if (ok) CheckText(s(R.string.carlink_diag_clock_ok))
             else CheckText(s(R.string.carlink_diag_clock_wrong), s(R.string.carlink_diag_clock_body))
         CheckId.STORAGE -> if (ok) CheckText(s(R.string.carlink_diag_storage_ok))

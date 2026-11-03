@@ -188,6 +188,10 @@ fun DiagnosticsScreen(vm: CarLinkViewModel, onBack: () -> Unit, openSettings: (S
                 CheckFix.OpenOverlaySettings -> SystemScreens.openOverlaySettings(context)
                 CheckFix.OpenBatterySettings -> SystemScreens.openBatterySettings(context)
                 CheckFix.ResumeAutoConnect -> vm.resumeAutoConnect()
+                CheckFix.OpenWifiSettings -> runCatching {
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.let { }
                 CheckFix.OpenStorageSettings -> runCatching {
                     context.startActivity(android.content.Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))

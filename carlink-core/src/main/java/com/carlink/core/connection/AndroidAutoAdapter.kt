@@ -43,6 +43,8 @@ class AndroidAutoAdapter internal constructor(
     private val clock: () -> Long,
     private val limits: AaSessionTracker.Limits,
     private val stopTimeoutMillis: Long,
+    /** Removes a leftover Wi-Fi Direct group, then calls back on the main thread (tests: at once). */
+    private val removeLeftoverGroup: ((done: () -> Unit) -> Unit)? = null,
 ) : EngineAdapter {
 
     /** [vehicleProfile] gates BYD-only engine behaviour per session (DA§12). */
@@ -98,6 +100,7 @@ class AndroidAutoAdapter internal constructor(
         val group = if (intent.hasExtra(AaProtocol.EXTRA_GROUP_RELEASED)) intent.getBooleanExtra(AaProtocol.EXTRA_GROUP_RELEASED, false) else null
         val service = intent.getBooleanExtra(AaProtocol.EXTRA_SERVICE_STOPPED, false)
         if (!service || group == false) Log.w(TAG, "stop finished with serviceStopped=$service groupReleased=$group")
+        if (group == false) return@receiver releaseLeftoverGroup("acknowledged (serviceStopped=$service groupReleased=false)")
         finishStop("acknowledged (serviceStopped=$service groupReleased=$group)")
     }
 
@@ -123,9 +126,24 @@ class AndroidAutoAdapter internal constructor(
         }
     }
 
+    /**
+     * Android Auto's engine stopped without releasing its Wi-Fi Direct group (or never answered):
+     * the next session (CarPlay's included) found the radio held. The group is removed first,
+     * and the log says so for a report (connection audit #8).
+     */
+    private fun releaseLeftoverGroup(how: String) {
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto did not release Wi-Fi Direct ($how); removing the leftover group")
+        (removeLeftoverGroup ?: { done ->
+            Thread({
+                runCatching { com.carlink.core.engine.WifiDirectReset.removeGroup(app) }
+                handler.post(done)
+            }, "carlink-aa-group-release").start()
+        }).invoke { finishStop(how) }
+    }
+
     private val stopTimeout = Runnable {
         Log.w(TAG, "no stop acknowledgement from the Android Auto process in ${stopTimeoutMillis}ms; releasing anyway")
-        finishStop("timed out")
+        releaseLeftoverGroup("timed out")
     }
 
     private val orphanTimeout = Runnable {

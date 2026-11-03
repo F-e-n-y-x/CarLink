@@ -35,8 +35,10 @@ class AndroidAutoAdapterTest {
 
     private fun adapter(profile: VehicleProfile = VehicleProfile.GENERIC) = AndroidAutoAdapter(
         app, { profile }, { commands += it }, { alive }, SystemClock::elapsedRealtime,
-        AaSessionTracker.Limits(), stopTimeoutMillis = 20_000,
+        AaSessionTracker.Limits(), stopTimeoutMillis = 20_000, removeLeftoverGroup = { done -> groupRemovals++; done() },
     ).also { adapters += it }
+
+    private var groupRemovals = 0
 
     @After fun release() = adapters.forEach { it.release() }
 
@@ -138,6 +140,7 @@ class AndroidAutoAdapterTest {
     }
 
     @Test fun anUnansweredStopCompletesAfterItsTimeout() {
+        // It also removes the Wi-Fi Direct group the engine may still hold (connection audit #8); checked below.
         val a = started()
         var done = false
         a.stop { done = true }
@@ -146,6 +149,7 @@ class AndroidAutoAdapterTest {
         advance(1_500)
         assertTrue(done)
         assertFalse(a.hasSession())
+        assertEquals(1, groupRemovals)
     }
 
     @Test fun theEngineProcessDyingFailsTheSessionButKeepsItOpenUntilCleanedUp() {

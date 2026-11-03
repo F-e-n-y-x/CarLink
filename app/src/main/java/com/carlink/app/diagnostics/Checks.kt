@@ -48,6 +48,8 @@ enum class CheckId {
     STORAGE,
     /** Another app's VPN is up: it takes over the VPN wired CarPlay needs. */
     OTHER_VPN,
+    /** The stereo's Wi-Fi is joined to a phone's own hotspot: wireless start turns it off and the session loops. */
+    PHONE_HOTSPOT,
 }
 
 /** The single recovery action a failing check offers (DESIGN_SPEC §6.5). */
@@ -59,6 +61,7 @@ sealed interface CheckFix {
     data object ResumeAutoConnect : CheckFix
 
     data object OpenStorageSettings : CheckFix
+    data object OpenWifiSettings : CheckFix
     data object OpenVpnSettings : CheckFix
 
     /** Android's info screen of [packageName] (disable or force-stop a competing app). */
@@ -177,6 +180,8 @@ object Checks {
         results += clock(System.currentTimeMillis())
         results += storage(runCatching { android.os.StatFs(app.filesDir.path).availableBytes }.getOrDefault(Long.MAX_VALUE))
         results += otherVpn(app)
+        results += phoneHotspot(joinedSsid(app), inputs.phones.map { it.name } +
+            com.carlink.core.detect.KnownPhones(app).let { k -> k.all().keys.mapNotNull(k::nameOf) })
         return results
     }
 
@@ -217,6 +222,22 @@ object Checks {
         return CheckResult(CheckId.OTHER_VPN, if (other) CheckStatus.WARN else CheckStatus.PASS,
             fix = CheckFix.OpenVpnSettings.takeIf { other })
     }
+
+    /**
+     * A phone's hotspot is named after the phone ("Ayush's iPhone"): joined to it, the stereo's Wi-Fi
+     * drops when wireless CarPlay or Android Auto turns that hotspot off, and the session loops.
+     */
+    fun phoneHotspot(joinedSsid: String?, phoneNames: List<String>): CheckResult {
+        val ssid = joinedSsid?.trim()?.removeSurrounding("\"")?.takeIf { it.isNotEmpty() && it != "<unknown ssid>" }
+        val onPhone = ssid != null && phoneNames.any { it.isNotBlank() && it.trim().equals(ssid, ignoreCase = true) }
+        return CheckResult(CheckId.PHONE_HOTSPOT, if (onPhone) CheckStatus.WARN else CheckStatus.PASS,
+            fix = CheckFix.OpenWifiSettings.takeIf { onPhone }, apps = listOfNotNull(ssid.takeIf { onPhone }))
+    }
+
+    @Suppress("DEPRECATION") // connectionInfo: the only pre-API-31 way, and enough for a name match
+    private fun joinedSsid(app: Context): String? = runCatching {
+        app.applicationContext.getSystemService(android.net.wifi.WifiManager::class.java)?.connectionInfo?.ssid
+    }.getOrNull()
 
     /** Known vendor projection apps by package (names seen on stereos and in reports). */
     fun isCompeting(packageName: String): Boolean {

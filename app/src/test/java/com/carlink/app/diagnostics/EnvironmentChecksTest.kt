@@ -14,4 +14,10 @@ class EnvironmentChecksTest {
         assertEquals(CheckFix.OpenStorageSettings, Checks.storage(1).fix)
         assertEquals(CheckStatus.PASS, Checks.storage(2L * 1024 * 1024 * 1024).status)
     }
+
+    @Test fun joiningAPhonesOwnHotspotWarns() {
+        assertEquals(CheckStatus.WARN, Checks.phoneHotspot("\"Ayush's iPhone\"", listOf("Ayush's iPhone")).status)
+        assertEquals(CheckStatus.PASS, Checks.phoneHotspot("HomeWifi", listOf("Ayush's iPhone")).status)
+        assertEquals(CheckStatus.PASS, Checks.phoneHotspot("<unknown ssid>", listOf("<unknown ssid>")).status)
+    }
 }
