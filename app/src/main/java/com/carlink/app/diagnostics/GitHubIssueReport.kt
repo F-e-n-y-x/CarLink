@@ -162,20 +162,25 @@ object GitHubIssueReport {
         shortFields["what_happened"] = clean(whatHappened(facts, short = true), facts.secrets)
         // The quick link: no log and a short error, so the QR code stays coarse enough to scan off a screen.
         val quickFields = LinkedHashMap(shortFields)
-        var quickUrl = url(quickFields)
+        var quickUrl = qrUrl(quickFields)
         while (quickUrl.length > QUICK_URL_BUDGET && quickFields["what_happened"]!!.length > 40) {
             quickFields["what_happened"] = quickFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
-            quickUrl = url(quickFields)
+            quickUrl = qrUrl(quickFields)
         }
-        var shortUrl = url(shortFields)
+        var shortUrl = qrUrl(shortFields)
         while (shortUrl.length > SHORT_URL_BUDGET / 2 && shortFields["what_happened"]!!.length > 40) {
             shortFields["what_happened"] = shortFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
-            shortUrl = url(shortFields)
+            shortUrl = qrUrl(shortFields)
         }
-        val shortRoom = SHORT_URL_BUDGET - shortUrl.length - "&log=".length
+        // The log is encoded twice inside a QR link (return_to), so it gets about half the room.
+        val shortRoom = (SHORT_URL_BUDGET - shortUrl.length) * 2 / 5
         if (shortRoom > 200) {
             shortFields["log"] = logExcerpt(facts, shortRoom).text
-            shortUrl = url(shortFields)
+            shortUrl = qrUrl(shortFields)
+            while (shortUrl.length > SHORT_URL_BUDGET && shortFields["log"]!!.length > 40) {
+                shortFields["log"] = shortFields["log"]!!.let { it.take(it.length * 3 / 4) }
+                shortUrl = qrUrl(shortFields)
+            }
         }
 
         val fields = LinkedHashMap(head)
@@ -516,6 +521,15 @@ object GitHubIssueReport {
     }
 
     // ---- URL -----------------------------------------------------------------------------
+
+    /**
+     * The link a QR code carries: GitHub's sign-in page with the issue form as `return_to`. A phone
+     * scanning the plain issue link opened the GitHub app, which keeps only the title and drops the
+     * form's fields (2026-11-04); the app does not claim /login, so the browser opens it, and GitHub
+     * goes on to the filled-in form (after signing in when needed).
+     */
+    fun qrUrl(fields: Map<String, String>): String =
+        "https://github.com/login?return_to=" + encode(url(fields).removePrefix("https://github.com"))
 
     fun url(fields: Map<String, String>): String = buildString {
         append(NEW_ISSUE).append("?template=").append(encode(TEMPLATE))

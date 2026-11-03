@@ -203,10 +203,13 @@ class GitHubIssueReportTest {
         val report = GitHubIssueReport.build(facts(log = busyLog(),
             session = failedSession.copy(detail = "x".repeat(5_000))))
         assertTrue("${report.shortUrl.length}", report.shortUrl.length <= GitHubIssueReport.SHORT_URL_BUDGET)
-        val p = params(report.shortUrl)
+        val p = params("https://github.com" + java.net.URLDecoder.decode(report.shortUrl.substringAfter("return_to="), "UTF-8"))
         assertNotNull("the scanned report has the error log", p["log"])
         assertTrue("${report.quickUrl.length}", report.quickUrl.length <= GitHubIssueReport.QUICK_URL_BUDGET)
-        assertNull("the quick code has no log", params(report.quickUrl)["log"])
+        assertTrue("QR links open the browser, not the GitHub app", report.quickUrl.startsWith("https://github.com/login?return_to=%2F"))
+        val inner = java.net.URLDecoder.decode(report.quickUrl.substringAfter("return_to="), "UTF-8")
+        assertTrue(inner.startsWith("/F-e-n-y-x/CarLink/issues/new?template="))
+        assertNull("the quick code has no log", params("https://github.com$inner")["log"])
         // It must fit an error-correction-M QR code, as the stereo draws it (a too-long link drew a blank square).
         com.google.zxing.qrcode.QRCodeWriter().encode(report.shortUrl, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
             mapOf(com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M))
