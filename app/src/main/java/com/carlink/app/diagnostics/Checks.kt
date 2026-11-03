@@ -40,6 +40,14 @@ enum class CheckId {
     WIFI_DIRECT,
     H264_DECODER,
     HEVC_DECODER,
+    /** A vendor projection app (ZLink, FYT Car Link, Autokit…) that takes the phone's Bluetooth or USB first. */
+    COMPETING_APPS,
+    /** The stereo's clock is far in the past (1970 after a boot without network time): TLS and timers misbehave. */
+    CLOCK,
+    /** Little free storage: settings, logs and CarPlay's authentication copy can fail to save. */
+    STORAGE,
+    /** Another app's VPN is up: it takes over the VPN wired CarPlay needs. */
+    OTHER_VPN,
 }
 
 /** The single recovery action a failing check offers (DESIGN_SPEC §6.5). */
@@ -49,6 +57,12 @@ sealed interface CheckFix {
     data object OpenOverlaySettings : CheckFix
     data object OpenBatterySettings : CheckFix
     data object ResumeAutoConnect : CheckFix
+
+    data object OpenStorageSettings : CheckFix
+    data object OpenVpnSettings : CheckFix
+
+    /** Android's info screen of [packageName] (disable or force-stop a competing app). */
+    data class OpenAppDetails(val packageName: String) : CheckFix
 
     /** Ask for runtime permissions; when Android no longer shows the prompt, open app settings. */
     data class RequestPermissions(val permissions: List<String>) : CheckFix
@@ -89,6 +103,8 @@ data class CheckResult(
     val stereo: StereoBluetoothReport? = null,
     /** [CheckId.STEREO_BLUETOOTH]: the driver turned on "Wireless through the stereo's Bluetooth module (experimental)". */
     val overridden: Boolean = false,
+    /** [CheckId.COMPETING_APPS]: the enabled competing apps' labels. */
+    val apps: List<String> = emptyList(),
 )
 
 /** What the checks need from CarLink's own state (from CarLinkViewModel.home / .connection). */
@@ -141,7 +157,11 @@ object Checks {
         results += CheckResult(CheckId.OVERLAY,
             if (Settings.canDrawOverlays(app)) CheckStatus.PASS else CheckStatus.WARN,
             fix = CheckFix.OpenOverlaySettings.takeUnless { Settings.canDrawOverlays(app) })
-        val ignoring = app.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(app.packageName) ?: true
+        // Samsung's "Restricted" (background restriction) also stops automatic starts and kills the engines.
+        val restricted = Build.VERSION.SDK_INT >= 28 &&
+            app.getSystemService(android.app.ActivityManager::class.java)?.isBackgroundRestricted == true
+        val ignoring = !restricted &&
+            (app.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(app.packageName) ?: true)
         results += CheckResult(CheckId.BATTERY_OPTIMIZATION, if (ignoring) CheckStatus.PASS else CheckStatus.WARN,
             fix = CheckFix.OpenBatterySettings.takeUnless { ignoring })
         results += CheckResult(CheckId.USB_HOST,
@@ -153,8 +173,59 @@ object Checks {
             decoder = decoders.avc)
         results += CheckResult(CheckId.HEVC_DECODER, if (decoders.hevc != null) CheckStatus.PASS else CheckStatus.INFO,
             decoder = decoders.hevc)
+        results += competingApps(app)
+        results += clock(System.currentTimeMillis())
+        results += storage(runCatching { android.os.StatFs(app.filesDir.path).availableBytes }.getOrDefault(Long.MAX_VALUE))
+        results += otherVpn(app)
         return results
     }
+
+    /**
+     * Vendor projection apps grab the phone before CarLink: ZLink takes the iPhone's CarPlay
+     * Bluetooth link (DiPlay #630), Autokit or Car Link claim the USB phone. Enabled ones only.
+     */
+    fun competingApps(app: Context): CheckResult {
+        val pm = app.packageManager
+        val found = runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList())
+            .filter { it.enabled && it.packageName != app.packageName && isCompeting(it.packageName) }
+        if (found.isEmpty()) return CheckResult(CheckId.COMPETING_APPS, CheckStatus.PASS)
+        return CheckResult(CheckId.COMPETING_APPS, CheckStatus.WARN, CheckFix.OpenAppDetails(found.first().packageName),
+            apps = found.map { runCatching { pm.getApplicationLabel(it).toString() }.getOrDefault(it.packageName) })
+    }
+
+    /** Earlier than this CarLink release can be: the clock was never set (1970 after a boot without network time). */
+    const val EARLIEST_SANE_MILLIS = 1_767_225_600_000L // 2026-01-01T00:00:00Z
+
+    fun clock(nowMillis: Long): CheckResult =
+        CheckResult(CheckId.CLOCK, if (nowMillis < EARLIEST_SANE_MILLIS) CheckStatus.WARN else CheckStatus.PASS)
+
+    const val LOW_STORAGE_BYTES = 100L * 1024 * 1024
+
+    fun storage(freeBytes: Long): CheckResult = if (freeBytes < LOW_STORAGE_BYTES)
+        CheckResult(CheckId.STORAGE, CheckStatus.WARN, CheckFix.OpenStorageSettings) else CheckResult(CheckId.STORAGE, CheckStatus.PASS)
+
+    /** A VPN network that is not CarLink's own (CarPlay's wired link needs the VPN slot). */
+    private fun otherVpn(app: Context): CheckResult {
+        val cm = app.getSystemService(android.net.ConnectivityManager::class.java)
+        val other = runCatching {
+            cm?.allNetworks.orEmpty().any { network ->
+                val caps = cm?.getNetworkCapabilities(network) ?: return@any false
+                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) &&
+                    (Build.VERSION.SDK_INT < 29 || caps.ownerUid != android.os.Process.myUid())
+            }
+        }.getOrDefault(false)
+        return CheckResult(CheckId.OTHER_VPN, if (other) CheckStatus.WARN else CheckStatus.PASS,
+            fix = CheckFix.OpenVpnSettings.takeIf { other })
+    }
+
+    /** Known vendor projection apps by package (names seen on stereos and in reports). */
+    fun isCompeting(packageName: String): Boolean {
+        val name = packageName.lowercase(java.util.Locale.ROOT)
+        return name in COMPETING_PACKAGES || COMPETING_FRAGMENTS.any { it in name }
+    }
+
+    private val COMPETING_PACKAGES = setOf("com.zjinnova.zlink", "com.syu.carlink")
+    private val COMPETING_FRAGMENTS = listOf("zlink", "zjinnova", "autokit", "easyconn", "carbit", "tlink.", "phonelink")
 
     /** Problems first (fail, warn), then notes, then passes; the order inside a group is kept. */
     fun sorted(results: List<CheckResult>): List<CheckResult> = results.sortedBy { it.status.rank() }

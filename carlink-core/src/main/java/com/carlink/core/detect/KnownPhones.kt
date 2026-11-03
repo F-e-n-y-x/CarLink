@@ -41,7 +41,21 @@ class KnownPhones(context: Context) {
 
     fun forget(address: String) {
         prefs.edit().remove(normalize(address)).apply()
+        names.edit().remove(normalize(address)).apply()
     }
+
+    /**
+     * The phone's name as last seen (Android's paired list, a session, or the stereo's Bluetooth
+     * module), so Home can list it where Android's own Bluetooth cannot (an external module).
+     */
+    fun nameOf(address: String): String? = names.getString(normalize(address), null)
+
+    fun rememberName(address: String, name: String?) {
+        val clean = name?.trim()?.takeIf { it.isNotEmpty() && !it.equals(address, ignoreCase = true) } ?: return
+        if (nameOf(address) != clean) names.edit().putString(normalize(address), clean).apply()
+    }
+
+    private val names get() = app.getSharedPreferences(NAMES, Context.MODE_PRIVATE)
 
     /** DiPlay stores the iPhone chosen in its connection setup in its "diplay" preferences. */
     private fun carPlayPhone(): String? =
@@ -57,6 +71,7 @@ class KnownPhones(context: Context) {
 
     companion object {
         private const val PREFS = "carlink_known_phones"
+        private const val NAMES = "carlink_known_phone_names"
         fun normalize(address: String): String = address.trim().uppercase(Locale.ROOT)
     }
 }

@@ -107,13 +107,30 @@ object Connection {
     @android.annotation.SuppressLint("MissingPermission") // The name is read only when the permission allows.
     fun onHomeShown(context: Context) {
         val app = context.applicationContext
-        val address = DeviceEnvironment.lastPhoneAddress(app) ?: return
-        val kind = com.carlink.core.detect.KnownPhones(app).kindOf(address)
-        val name = runCatching {
+        // Before the stereo-Bluetooth probe finishes, a module stereo looks "wireless unavailable"
+        // and the first start of the drive was dropped: decide once the probe is in (≤ ~0.5 s).
+        if (com.carlink.core.detect.ExternalBluetoothProbe.cached() == null) {
+            Thread({
+                runCatching { com.carlink.core.detect.ExternalBluetoothProbe.await(app) }
+                android.os.Handler(android.os.Looper.getMainLooper()).post { homeShown(app) }
+            }, "carlink-home-probe").start()
+            return
+        }
+        homeShown(app)
+    }
+
+    private fun homeShown(app: Context) {
+        val known = com.carlink.core.detect.KnownPhones(app)
+        val bonded = runCatching {
             app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.bondedDevices
-                ?.firstOrNull { it.address.equals(address, ignoreCase = true) }?.name
-        }.getOrNull()
-        get(app).onHomeShown(address, kind, name)
+                ?.associate { com.carlink.core.detect.KnownPhones.normalize(it.address) to it.name }
+        }.getOrNull().orEmpty()
+        // Every phone CarLink knows, with whether its Bluetooth is connected now (PhoneChoice).
+        val options = known.all().map { (address, kind) ->
+            PhoneOption(address, bonded[address] ?: known.nameOf(address), kind,
+                present = address in bonded && BluetoothWarmup.linked(app, address))
+        }
+        get(app).onHomeShown(options, DeviceEnvironment.lastPhoneAddress(app))
     }
 
     /**
@@ -191,6 +208,13 @@ object Connection {
         val picture = automaticPicture(app, settings)
         when (plan.engine) {
             Engine.CARPLAY -> {
+                // CarLink: wireless CarPlay's iAP2 link through the stereo's module (opt-in).
+                com.shilapi.xcertplay.transport.ModuleIap2Route.enabled = plan.transport == com.carlink.core.core.Transport.WIRELESS &&
+                    DeviceEnvironment.moduleCarPlay(com.carlink.core.detect.ExternalBluetoothProbe.current(app).classification,
+                        com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
+                if (com.shilapi.xcertplay.transport.ModuleIap2Route.enabled) {
+                    com.carlink.core.diagnostics.EventLog.add("CarLink", "CarPlay Bluetooth through the stereo's module (experimental)")
+                }
                 val fineLocation = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 CarPlaySettingsPolicy.apply(app, CarPlaySettingsPolicy.map(settings, plan.path, profile, fineLocation,
                     brandName = CarLinkCore.config.accessoryName, picture = picture))

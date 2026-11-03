@@ -67,6 +67,8 @@ import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothLinkCheck
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
+import com.shilapi.xcertplay.transport.ModuleIap2Route // CarLink
+import com.shilapi.xcertplay.transport.ZbtIap2Link // CarLink
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
 import com.shilapi.xcertplay.transport.Ch341DeviceMatcher
 import com.shilapi.xcertplay.transport.Ch341I2cTransport
@@ -301,6 +303,7 @@ class CarPlayController(
     }.apply { removeOnCancelPolicy = true }
     @Volatile private var wirelessDiagnostics: WirelessStartupDiagnostics? = null
     @Volatile private var bluetoothSocket: BluetoothSocket? = null
+    @Volatile private var moduleIap2Link: ZbtIap2Link? = null // CarLink: until the stream owns it
     @Volatile private var bluetoothStream: BluetoothRfcommDuplexStream? = null
     @Volatile private var wirelessTunnelChannel: Iap2Session? = null
     @Volatile private var wirelessRuntimeIdentification: Iap2IdentificationConfig? = null
@@ -1357,13 +1360,18 @@ class CarPlayController(
             firstTcpWatchdog = watchdog
             val mfi = mfiSession?.client
                 ?: throw IOException("MFi coprocessor client is unavailable")
+            // CarLink: on a stereo whose Bluetooth is an external module, the module carries the
+            // iPhone's iAP2 link (ModuleIap2Route); Android's radio is not used.
+            val module = if (ModuleIap2Route.enabled) {
+                ZbtIap2Link.open().also { moduleIap2Link = it }
+            } else null
             // Wireless CarPlay begins over Bluetooth: a radio that is off is found before the Wi-Fi is changed.
             val initialAdapter = currentBluetoothAdapter()
             if (initialAdapter != null && initialAdapter.state == BluetoothAdapter.STATE_TURNING_ON) {
                 awaitBluetoothEnabled(initialAdapter, timeoutMillis = 3_000L)
             }
             val activeAdapter = currentBluetoothAdapter()
-            BluetoothRadioCheck.blockerForState(
+            if (module == null) BluetoothRadioCheck.blockerForState(
                 adapterPresent = activeAdapter != null,
                 state = activeAdapter?.state,
                 pausedByDiPlay = BydBluetoothSuspend.isSuspendedByUs(appContext),
@@ -1371,7 +1379,22 @@ class CarPlayController(
             // CarLink: dial the iPhone first. The RFCOMM dial (6.6 s when the iPhone's Bluetooth
             // was idle) needs nothing from the access point, listener or Bonjour, which now start
             // while it runs; the iAP2 link opens once both are ready, as before.
-            val adapter = currentBluetoothAdapter()
+            val adapter: BluetoothAdapter?
+            val device: BluetoothDevice?
+            val socket: BluetoothSocket?
+            val dial: BackgroundDial
+            if (module != null) { // CarLink
+                adapter = null
+                device = null
+                socket = null
+                debugLog("wireless iAP2 through the stereo's Bluetooth module ${ModuleIap2Route.HOST}:${ModuleIap2Route.PORT}")
+                dial = BackgroundDial("wireless-module-iap2") {
+                    if (!module.awaitPhone(ModuleIap2Route.CONNECT_TIMEOUT_MILLIS)) {
+                        throw IOException("the Bluetooth module did not report the iPhone connected")
+                    }
+                }
+            } else {
+            adapter = currentBluetoothAdapter()
                 ?: throw BluetoothRadioCheck.failure(BluetoothRadioCheck.NO_ADAPTER)
             // CarLink: DiPlay 0.2.16's recovery of its own BYD Bluetooth pause, before the early dial
             // (it returns at once when DiPlay paused nothing).
@@ -1381,18 +1404,20 @@ class CarPlayController(
             }
             if (!adapter.isEnabled) throw IOException(BluetoothRadioCheck.RADIO_OFF)
             if (!bluetoothRecoveryComplete) throw IOException("Bluetooth recovery did not complete before the handshake")
-            val device = selectWirelessBluetoothDevice(adapter)
+            device = selectWirelessBluetoothDevice(adapter)
             debugLog(
                 "wireless RFCOMM connecting address=${device.address} " +
                     "uuid=$IAP2_IPHONE_UUID",
             )
-            val socket = synchronized(wirelessResourceLock) {
+            val dialSocket = synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
                 device.createRfcommSocketToServiceRecord(UUID.fromString(IAP2_IPHONE_UUID))
                     .also { bluetoothSocket = it }
             }
+            socket = dialSocket
             logBluetoothConnectionSnapshot(device, "before-connect")
-            val dial = BackgroundDial("wireless-rfcomm-connect") { socket.connect() }
+            dial = BackgroundDial("wireless-rfcomm-connect") { dialSocket.connect() }
+            } // CarLink
             wirelessTimeline.mark(WirelessStartupTimeline.Phase.RFCOMM_DIAL)
             val hotspotInfo = startWirelessHotspot(generation)
             if (isStaleWirelessRun(generation)) {
@@ -1502,10 +1527,12 @@ class CarPlayController(
             )
             onStatus(CarPlayStatus.WaitingForPairedIphone)
 
-            val hostBluetoothMac = accessoryBluetoothMac(adapter)
+            val hostBluetoothMac = module?.let { m -> // CarLink: the module is the iPhone's Bluetooth peer
+                m.moduleMacWithColons() ?: adapter?.let(::accessoryBluetoothMac) ?: airPlayConfig.btMac
+            } ?: accessoryBluetoothMac(adapter!!)
             debugLog(
-                "wireless selected Bluetooth target name=${device.name ?: "unknown"} " +
-                    "address=${device.address} localBt=$hostBluetoothMac",
+                "wireless selected Bluetooth target name=${device?.name ?: module?.phoneName ?: "unknown"} " +
+                    "address=${device?.address ?: "module"} localBt=$hostBluetoothMac",
             )
             val wirelessAirPlayConfig = airPlayConfig.copy(
                 deviceId = deviceIdentifier,
@@ -1599,17 +1626,18 @@ class CarPlayController(
             val waitStarted = System.nanoTime()
             val bluetoothConnectMillis: Long
             try {
-                awaitBluetoothDial(dial, socket, device.address)
+                awaitBluetoothDial(dial, socket ?: module!!, device?.address ?: "module",
+                    if (module != null) ModuleIap2Route.CONNECT_TIMEOUT_MILLIS else RFCOMM_CONNECT_TIMEOUT_MILLIS)
                 // CarLink: the dial's own duration (it started early), for upstream's link check.
                 bluetoothConnectMillis = ((dial.finishedNanos ?: System.nanoTime()) - bluetoothStarted) / 1_000_000L
                 connectionDiagnostic("Bluetooth connect completed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
-                    "socketReportedConnected=${runCatching { socket.isConnected }.getOrNull() ?: "unknown"}")
+                    "socketReportedConnected=${runCatching { socket?.isConnected }.getOrNull() ?: "unknown"}")
             } catch (error: Throwable) {
                 connectionDiagnostic(
                     "Bluetooth connect failed elapsedMs=${elapsedMillis(bluetoothStarted)} " +
                         "failureClass=${diagnosticFailureClass(error)}",
                 )
-                logBluetoothConnectionSnapshot(device, "after-failure")
+                device?.let { logBluetoothConnectionSnapshot(it, "after-failure") }
                 throw error
             }
             wirelessTimeline.mark( // CarLink
@@ -1617,22 +1645,24 @@ class CarPlayController(
                 "dialMs=${((dial.finishedNanos ?: System.nanoTime()) - bluetoothStarted) / 1_000_000L} " +
                     "waitedMs=${elapsedMillis(waitStarted)}",
             )
-            debugLog("wireless RFCOMM connected address=${device.address}")
-            logBluetoothConnectionSnapshot(device, "after-connect")
+            debugLog("wireless RFCOMM connected address=${device?.address ?: "module phone=${module?.phoneName}"}")
+            device?.let { logBluetoothConnectionSnapshot(it, "after-connect") }
             if (isStaleWirelessRun(generation)) {
                 return
             }
             val stream = synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
                 try {
-                    BluetoothRfcommDuplexStream(socket, ::connectionDiagnostic).also { bluetoothStream = it }
+                    (if (module != null) BluetoothRfcommDuplexStream(module.access, ::connectionDiagnostic) // CarLink
+                    else BluetoothRfcommDuplexStream(socket!!, ::connectionDiagnostic)).also { bluetoothStream = it }
                 } finally {
                     // The stream owns the connected socket and also closes it if stream getters
                     // fail. Do not retain a second socket owner in bootstrap teardown.
                     if (bluetoothSocket === socket) bluetoothSocket = null
+                    if (moduleIap2Link === module) moduleIap2Link = null // CarLink: the stream owns it
                 }
             }
-            if (BluetoothLinkCheck.looksUnreal(bluetoothConnectMillis, 0L)) {
+            if (device != null && BluetoothLinkCheck.looksUnreal(bluetoothConnectMillis, 0L)) { // CarLink: not for the module
                 InstantBluetoothLink(generation, device, stream, bluetoothConnectMillis).also {
                     instantBluetoothLink = it
                     watchForUnrealBluetooth(it)
@@ -2034,6 +2064,10 @@ class CarPlayController(
         val activeSocket = bluetoothSocket
         bluetoothSocket = null
         if (activeSocket != null) closeBestEffort("wireless Bluetooth socket") { activeSocket.close() }
+
+        val activeModule = moduleIap2Link // CarLink
+        moduleIap2Link = null
+        if (activeModule != null) closeBestEffort("wireless module iAP2 link") { activeModule.close() }
     }
 
     private fun startIphone() {
@@ -2918,9 +2952,11 @@ class CarPlayController(
 
     // CarLink: the dial now starts early (BackgroundDial); this waits for it with the same 15 s
     // budget from the dial's start, the same timeout handling and the same exception wrapping.
-    private fun awaitBluetoothDial(dial: BackgroundDial, socket: BluetoothSocket, address: String) {
+    private fun awaitBluetoothDial( // CarLink: or the module link, with its own deadline
+        dial: BackgroundDial, socket: java.io.Closeable, address: String, timeoutMillis: Long = RFCOMM_CONNECT_TIMEOUT_MILLIS,
+    ) {
         val completed = try {
-            dial.await(RFCOMM_CONNECT_TIMEOUT_MILLIS)
+            dial.await(timeoutMillis)
         } catch (error: InterruptedException) {
             Thread.currentThread().interrupt()
             runCatching { socket.close() }
@@ -2936,11 +2972,11 @@ class CarPlayController(
         if (!completed) {
             debugLog(
                 "wireless RFCOMM connect timed out after " +
-                    "${RFCOMM_CONNECT_TIMEOUT_MILLIS}ms address=$address",
+                    "${timeoutMillis}ms address=$address",
             )
             runCatching { socket.close() }
             throw IOException(
-                "Timed out after ${RFCOMM_CONNECT_TIMEOUT_MILLIS}ms connecting RFCOMM to $address",
+                "Timed out after ${timeoutMillis}ms connecting RFCOMM to $address",
             )
         }
     }

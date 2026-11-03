@@ -76,7 +76,10 @@ internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<Sta
         null -> com.carlink.core.core.PhoneKind.UNKNOWN
     }
     return listOf(
-        StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {
+        // On a stereo whose module carries Bluetooth, Android's own switch says nothing about wireless.
+        if (ui.bluetoothViaModule) StatusItem(stringResource(R.string.carlink_home_chip_bluetooth),
+            stringResource(R.string.carlink_home_bt_chip_module), R.drawable.carlink_ic_bluetooth, colors.success, taps.onBluetooth)
+        else StatusItem(stringResource(R.string.carlink_home_chip_bluetooth), stringResource(when (bt) {
             BluetoothAvailability.READY -> R.string.carlink_home_bt_chip_on
             BluetoothAvailability.OFF -> R.string.carlink_home_bt_chip_off
             BluetoothAvailability.NO_PERMISSION -> R.string.carlink_home_bt_no_permission

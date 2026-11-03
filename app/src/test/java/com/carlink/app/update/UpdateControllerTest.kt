@@ -51,6 +51,8 @@ class UpdateControllerTest {
         }
     }
 
+    private var quiet: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
     private fun controller(supported: Boolean = true, prefs: UpdatePrefs = this.prefs): UpdateController {
         downloadDir = File(temp.root, "updates")
         return UpdateController(
@@ -58,8 +60,19 @@ class UpdateControllerTest {
             source = { checks++; outcome }, http = http,
             verifier = UpdateVerifier(JavaSha256, { facts }, Updates.RELEASE_PACKAGE, 10000L),
             installer = installer, prefs = prefs, current = AppVersion(1, 0, 0), supported = supported,
-            downloadDir = downloadDir, clock = { now },
+            downloadDir = downloadDir, clock = { now }, awaitSessionQuiet = { quiet?.await() },
         )
+    }
+
+    @Test fun installWaitsUntilNoSessionRuns() {
+        quiet = kotlinx.coroutines.CompletableDeferred()
+        val c = controller()
+        c.checkNow()
+        c.download()
+        assertTrue("nothing installs over a projection", installer.installed.isEmpty())
+        quiet!!.complete(Unit)
+        assertEquals(UpdateState.Installing(release), c.state.value)
+        assertEquals(apkBytes, installer.installed.single())
     }
 
     @Test fun noAutomaticCheckDuringASession() {

@@ -43,7 +43,12 @@ class SystemEventReceiver : BroadcastReceiver() {
     @SuppressLint("MissingPermission") // Checked in hasBluetoothPermission().
     private fun onPhoneLink(context: Context, intent: Intent, sdpDone: Boolean) {
         val preferences = CarLinkPreferences(context)
-        if (!preferences.autoConnectBluetooth || preferences.autoConnectPaused) return
+        if (!preferences.autoConnectBluetooth) return
+        if (preferences.autoConnectPaused) {
+            // Shown in the report: a phone that connects and nothing happens is otherwise a mystery.
+            com.carlink.core.diagnostics.EventLog.add("CarLink", "phone Bluetooth connected; automatic start paused after the driver stopped")
+            return
+        }
         if (!hasBluetoothPermission(context)) {
             Log.i(TAG, "Bluetooth link ignored: Nearby devices permission not granted")
             return
@@ -79,6 +84,9 @@ class SystemEventReceiver : BroadcastReceiver() {
         val running = Connection.get(context).state.value
         if (running.isActive) {
             Log.i(TAG, "Bluetooth $kind link during a ${running.engine} session; Home stays in the background")
+            // Another phone: SessionManager offers a switch (the floating switcher shows it); the
+            // session's own phone reconnecting its profiles is ignored there.
+            Connection.get(context).onBluetoothPhone(address, kind, runCatching { device.name }.getOrNull())
             return
         }
         if (!debounce(context, address)) {
@@ -134,9 +142,14 @@ class SystemEventReceiver : BroadcastReceiver() {
         val prefs = context.getSharedPreferences("carlink_bluetooth_wake", Context.MODE_PRIVATE)
         val key = KnownPhones.normalize(address)
         val now = SystemClock.elapsedRealtime()
+        // Time since boot repeats every drive: the same phone at a similar uptime after the next
+        // ignition was ignored. Only an event of this boot debounces.
+        val boot = runCatching { android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.BOOT_COUNT) }
+            .getOrDefault(-1)
         val previous = prefs.getLong(key, -1)
-        if (previous in 0..now && now - previous < DEBOUNCE_MILLIS) return false
-        prefs.edit().putLong(key, now).commit()
+        val sameBoot = prefs.getInt("$key.boot", -2) == boot
+        if (sameBoot && previous in 0..now && now - previous < DEBOUNCE_MILLIS) return false
+        prefs.edit().putLong(key, now).putInt("$key.boot", boot).commit()
         return true
     }
 

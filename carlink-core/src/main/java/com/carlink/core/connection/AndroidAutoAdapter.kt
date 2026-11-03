@@ -62,6 +62,7 @@ class AndroidAutoAdapter internal constructor(
     private var sessionOpen = false
     /** A main process that found ":aa" alive at start-up: open until a report says the service is not running. */
     private var orphanCheck = false
+    private var orphanDecision: ((Boolean) -> Unit)? = null
     private var stopToken: Long? = null
     private val stopCallbacks = mutableListOf<() -> Unit>()
     private var deadPolls = 0
@@ -73,6 +74,10 @@ class AndroidAutoAdapter internal constructor(
             orphanCheck = false
             if (!running) sessionOpen = false
             Log.i(TAG, "engine found at start-up: service running=$running connection=$connection")
+            val projecting = running && (connection == AaProtocol.CONNECTION_HANDSHAKE_COMPLETE ||
+                connection == AaProtocol.CONNECTION_TRANSPORT_STARTED)
+            orphanDecision?.invoke(projecting)
+            orphanDecision = null
         }
         val s = session ?: return@receiver
         deliver(s, s.tracker.onState(connection, intent.getStringExtra(AaProtocol.EXTRA_MESSAGE), running,
@@ -128,6 +133,8 @@ class AndroidAutoAdapter internal constructor(
             Log.i(TAG, "no report from the Android Auto process at start-up; nothing runs there")
             orphanCheck = false
             sessionOpen = false
+            orphanDecision?.invoke(false)
+            orphanDecision = null
         }
     }
 
@@ -146,6 +153,10 @@ class AndroidAutoAdapter internal constructor(
     }
 
     override fun hasSession(): Boolean = sessionOpen
+
+    override fun whenOrphanKnown(decide: (projecting: Boolean) -> Unit) {
+        if (orphanCheck) orphanDecision = decide else decide(false)
+    }
 
     override fun recover(action: RecoveryAction): Boolean {
         val s = session ?: return false

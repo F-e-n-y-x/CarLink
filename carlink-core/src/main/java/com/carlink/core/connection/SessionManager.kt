@@ -170,7 +170,13 @@ class SessionManager(
         fun wirelessPaths(request: SessionRequest): List<WirelessPath>
         /** Remembers that [path] connected for [phoneAddress]. */
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
-        fun rememberPhone(phoneAddress: String, kind: PhoneKind)
+        fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String? = null)
+
+        /** Known phones whose Bluetooth is connected to this stereo now (PhoneChoice); none where unknown. */
+        fun connectedPhones(): List<PhoneOption> = emptyList()
+
+        /** The phone the stereo's Bluetooth module reported for [engine]'s last link (address, name), if any. */
+        fun modulePhone(engine: Engine): Pair<String, String?>? = null
         fun usbPhonePresent(engine: Engine): Boolean
         /** The phone of a USB session was unplugged: bring CarLink's Home back in front. */
         fun returnHome()
@@ -287,10 +293,21 @@ class SessionManager(
     init {
         // A session nobody shows (e.g. Android Auto left running in ":aa" after this process
         // restarted) is stopped: the driver must always see what runs (DA§10.6.1).
+        // One still showing a picture is the driver's projection, outliving a main process the
+        // system killed on a small stereo: it is kept, not cut off mid-drive (lifecycle audit #1).
         adapters.values.filter { it.hasSession() }.forEach { adapter ->
-            note("stopping an orphaned ${adapter.engine} session")
             stopping++
-            adapter.stop { stopping--; drainAfterStop() }
+            adapter.whenOrphanKnown { projecting ->
+                main.post {
+                    if (projecting) {
+                        note("kept a running ${adapter.engine} session after a restart of this process")
+                        stopping--; drainAfterStop()
+                    } else {
+                        note("stopping an orphaned ${adapter.engine} session")
+                        adapter.stop { stopping--; drainAfterStop() }
+                    }
+                }
+            }
         }
     }
 
@@ -316,8 +333,12 @@ class SessionManager(
         if (current is SessionState.Active) {
             // Plugging in the phone a wireless attempt of the same engine is still reaching is the
             // driver choosing the cable: no question (RELIABILITY_AUDIT K14: 2.5-3 s and a tap).
+            // Only the same phone, by name where both sides know it: a passenger's phone plugged in to
+            // charge is a different phone and is offered instead (connection audit #6).
+            val sameName = phoneName == null || current.request.phoneName == null ||
+                phoneName.trim().equals(current.request.phoneName.trim(), ignoreCase = true)
             if (current.request.engine == engine && current.request.transport == Transport.WIRELESS &&
-                current.phase != SessionState.Phase.Connected) {
+                current.phase != SessionState.Phase.Connected && sameName) {
                 note("USB $engine phone while the wireless $engine attempt is still connecting; switching to USB")
                 _pendingSwitch.value = null
                 return start(request)
@@ -395,7 +416,15 @@ class SessionManager(
                     _pendingSwitch.value = SessionRequest(engine, Transport.WIRELESS, address, phoneName)
                 }
             }
-            else -> start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
+            else -> {
+                // Another phone of the other kind connected too (both phones in the car): ask, as Home does.
+                val others = environment.connectedPhones().filterNot { it.address.equals(address, ignoreCase = true) }
+                val decision = PhoneChoice.decide(others + PhoneOption(address, phoneName, kind, present = true), address)
+                if (decision is PhoneChoice.Decision.Ask) {
+                    note("Bluetooth $engine phone while a phone of the other kind is connected too; asking the driver")
+                    _pendingChoice.value = decision.phones
+                } else start(SessionRequest(engine, Transport.WIRELESS, address, phoneName))
+            }
         }
     }
 
@@ -449,14 +478,53 @@ class SessionManager(
         }
     }
 
+    private val _pendingChoice = MutableStateFlow<List<PhoneOption>?>(null)
+
+    /** Phones of both kinds could connect: Home asks the driver which one (PhoneChoice). */
+    val pendingChoice: StateFlow<List<PhoneOption>?> = _pendingChoice.asStateFlow()
+
+    /**
+     * Home's automatic start with every phone it could connect: one phone (or the last phone) starts
+     * as in [onHomeShown]; an iPhone and an Android phone both in reach make Home ask instead.
+     */
+    fun onHomeShown(options: List<PhoneOption>, lastPhone: String?) {
+        val now = SystemClock.uptimeMillis()
+        if (!environment.autoConnectBluetooth || environment.autoConnectPaused || _state.value !is SessionState.Idle) return
+        // Phones that cannot start wirelessly here (or are on USB) are no candidates.
+        val usable = options.filter { o -> o.kind.engine?.let { !environment.wirelessUnavailable(it) && !usbHolds(it) } == true }
+        when (val decision = PhoneChoice.decide(usable, lastPhone)) {
+            is PhoneChoice.Decision.Start -> onHomeShown(decision.phone.address, decision.phone.kind, decision.phone.name)
+            is PhoneChoice.Decision.Ask -> {
+                if (now - lastHomeAutoStart < HOME_AUTO_START_COOLDOWN_MILLIS) return
+                if (now - lastSessionEndedAt < HOME_AUTO_START_COOLDOWN_MILLIS) return
+                lastHomeAutoStart = now
+                note("Home shown: ${decision.phones.size} phones of both kinds could connect; asking the driver")
+                _pendingChoice.value = decision.phones
+            }
+            PhoneChoice.Decision.Nothing -> Unit
+        }
+    }
+
+    /** The driver picked [phone] in Home's "Which phone?" question. */
+    fun choosePhone(phone: PhoneOption) {
+        _pendingChoice.value = null
+        connect(phone.address, phone.kind, phone.name)
+    }
+
+    /** The driver closed the question: nothing starts until they pick a phone. */
+    fun dismissChoice() {
+        _pendingChoice.value = null
+    }
+
     private var lastHomeAutoStart = -HOME_AUTO_START_COOLDOWN_MILLIS
     private var lastSessionEndedAt = -HOME_AUTO_START_COOLDOWN_MILLIS
 
     /** The driver asked for this phone. Clears the pause and replaces any running session. */
     fun connect(address: String?, kind: PhoneKind, phoneName: String?, transport: Transport = Transport.WIRELESS) {
         val engine = kind.engine ?: return
+        _pendingChoice.value = null // the driver chose
         environment.autoConnectPaused = false
-        address?.let { environment.rememberPhone(it, kind) }
+        address?.let { environment.rememberPhone(it, kind, phoneName) }
         // The same phone asked again (a second tap, Home's automatic start racing the tap): restarting
         // threw away an attempt 2 s from connected and paid a 6 s Bluetooth warm-up (tablet, 2026-10-20).
         val current = (_state.value as? SessionState.Active)?.request
@@ -506,6 +574,9 @@ class SessionManager(
     /** Stops whatever runs and goes idle. */
     fun stop() {
         if (_state.value.isActive) lastSessionEndedAt = SystemClock.uptimeMillis()
+        // An offer from a Bluetooth phone must not outlive the session (a late tap started a phone that left);
+        // a USB phone still plugged in is offered again on its next attach.
+        if (_pendingSwitch.value?.transport != Transport.USB) _pendingSwitch.value = null
         offeredThisSession.clear()
         token++
         endAttempt()
@@ -527,6 +598,7 @@ class SessionManager(
     // --- Sessions ------------------------------------------------------------------------------
 
     private fun start(request: SessionRequest) {
+        _pendingChoice.value = null // a phone is starting: an open "Which phone?" is answered
         sessionId++
         note("start ${request.engine} ${request.transport} known=${request.phoneAddress != null}")
         stop()
@@ -643,8 +715,11 @@ class SessionManager(
                 if (plan.path != null && request.phoneAddress != null) {
                     environment.rememberWorkingPath(plan.engine, request.phoneAddress, plan.path)
                 }
-                request.phoneAddress?.let {
-                    environment.rememberPhone(it, if (plan.engine == Engine.CARPLAY) PhoneKind.IPHONE else PhoneKind.ANDROID)
+                val kind = if (plan.engine == Engine.CARPLAY) PhoneKind.IPHONE else PhoneKind.ANDROID
+                request.phoneAddress?.let { environment.rememberPhone(it, kind, request.phoneName) }
+                // A phone reached through the stereo's module is remembered with the module's own report.
+                environment.modulePhone(plan.engine)?.let { (address, name) ->
+                    if (address != request.phoneAddress) environment.rememberPhone(address, kind, name)
                 }
                 _state.value = current.copy(phase = SessionState.Phase.Connected, notice = null)
             }
@@ -668,10 +743,10 @@ class SessionManager(
                 if (!event.byUser && (request.transport == Transport.WIRELESS || !environment.usbPhonePresent(plan.engine))) {
                     environment.returnHome()
                 }
-                if (event.byUser) {
-                    environment.autoConnectPaused = true
-                    markDriverStop(current)
-                }
+                if (event.byUser) environment.autoConnectPaused = true
+                // Stopping re-enumerates a phone still on USB; that attach is not a new plug-in, by
+                // the driver's stop or the engine's own end alike (else: restart loop).
+                markDriverStop(current)
                 stop()
             }
             is AdapterEvent.Failed -> {
@@ -832,6 +907,9 @@ class SessionManager(
 
     private fun failSession(a: Attempt, reason: FailureReason, detail: String?) {
         note("${a.plan.engine} failed: $reason${detail?.let { " ($it)" } ?: ""}")
+        // The engine's stop re-enumerates a USB phone; that attach must not restart the failed
+        // session over and over while the failure ("unplug and plug in again") is on screen.
+        markDriverStop(_state.value)
         token++
         endAttempt()
         running = null

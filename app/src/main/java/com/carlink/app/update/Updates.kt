@@ -5,6 +5,7 @@ import android.util.Log
 import com.carlink.app.BuildConfig
 import com.carlink.app.ui.UiPreferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.MainScope
 import java.io.File
 
@@ -45,6 +46,11 @@ object Updates {
             supported = supported,
             downloadDir = File(app.cacheDir, "updates"),
             log = { Log.i(TAG, it) },
+            awaitSessionQuiet = {
+                val connection = com.carlink.core.connection.Connection.get(app)
+                kotlinx.coroutines.flow.combine(connection.state, connection.pendingSwitch) { s, p -> UpdatePolicy.sessionQuiet(s, p) }
+                    .first { quiet -> quiet.also { if (!it) Log.i(TAG, "update ready; installing once the session ends") } }
+            },
         )
     }
 }

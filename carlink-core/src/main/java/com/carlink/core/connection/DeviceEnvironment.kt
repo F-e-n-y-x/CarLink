@@ -48,9 +48,15 @@ class DeviceEnvironment(
         val settings = unified.load()
         val wifi = WifiEnvironmentReader.read(app, settings)
         val facts = DevicePreflight.facts(app, request.phoneAddress)
-        val viaModule = request.engine == Engine.ANDROID_AUTO &&
-            moduleRoute(ExternalBluetoothProbe.current(app).classification, preferences.wirelessOnExternalBluetooth) != null
-        return (DevicePreflight.check(request, path, facts, settings, wifi, viaModule) + enginePreflight(request, path)).distinct()
+        val stereo = ExternalBluetoothProbe.current(app).classification
+        val moduleOn = preferences.wirelessOnExternalBluetooth
+        val viaModule = when (request.engine) {
+            Engine.ANDROID_AUTO -> moduleRoute(stereo, moduleOn) != null
+            Engine.CARPLAY -> moduleCarPlay(stereo, moduleOn)
+        }
+        // The module carries Bluetooth, so neither check asks for Android's radio.
+        val engine = enginePreflight(request, path).filterNot { viaModule && it == Problem.BLUETOOTH_OFF }
+        return (DevicePreflight.check(request, path, facts, settings, wifi, viaModule) + engine).distinct()
     }
 
     override fun wirelessPaths(request: SessionRequest): List<WirelessPath> {
@@ -70,10 +76,19 @@ class DeviceEnvironment(
         com.carlink.core.detect.PairingLoss.clear(app, phoneAddress)
     }
 
-    override fun rememberPhone(phoneAddress: String, kind: PhoneKind) {
+    override fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String?) {
         knownPhones.remember(phoneAddress, kind)
+        knownPhones.rememberName(phoneAddress, name)
         lastPhone(app).edit().putString(KEY_LAST_PHONE, phoneAddress).apply()
     }
+
+    override fun connectedPhones(): List<PhoneOption> = knownPhones.all()
+        .filterKeys { BluetoothWarmup.linked(app, it) }
+        .map { (address, kind) -> PhoneOption(address, knownPhones.nameOf(address), kind, present = true) }
+
+    /** The iPhone the stereo's module reported for the last CarPlay link (address, name). */
+    override fun modulePhone(engine: Engine): Pair<String, String?>? =
+        if (engine == Engine.CARPLAY) com.shilapi.xcertplay.transport.ModuleIap2Route.lastPhone else null
 
     override fun usbPhonePresent(engine: Engine): Boolean =
         app.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty().any { device ->
@@ -99,8 +114,17 @@ class DeviceEnvironment(
         }
     }
 
-    override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean =
-        request.phoneAddress?.let { BluetoothWarmup.start(app, it, done) } ?: false
+    override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean {
+        // The stereo's module reaches the phone itself; paging it on Android's radio only cost 6 s.
+        val stereo = ExternalBluetoothProbe.current(app).classification
+        val moduleOn = preferences.wirelessOnExternalBluetooth
+        val viaModule = when (request.engine) {
+            Engine.ANDROID_AUTO -> moduleRoute(stereo, moduleOn) != null
+            Engine.CARPLAY -> moduleCarPlay(stereo, moduleOn)
+        }
+        if (viaModule && request.transport == com.carlink.core.core.Transport.WIRELESS) return false
+        return request.phoneAddress?.let { BluetoothWarmup.start(app, it, done) } ?: false
+    }
 
     override fun returnHome() = CarLinkCore.config.host.openHome(app, CarLinkHost.OpenReason.UNPLUGGED)
 
@@ -111,20 +135,42 @@ class DeviceEnvironment(
         private const val KEY_LAST_PHONE = "address"
 
         /**
-         * Whether CarLink blocks wireless [engine] on a stereo classified [stereo]; [moduleOn] is the
-         * driver's "Wireless through the stereo's Bluetooth module (experimental)". It unblocks
-         * Android Auto only: neither module route carries CarPlay's iAP2.
+         * Whether the module route is on for [stereo]: by itself where the ZLink daemon answers
+         * ([StereoBluetooth.ZLINK_DAEMON], verified end to end 2026-11-04), otherwise only with the
+         * driver's "Wireless through the stereo's Bluetooth module (experimental)" ([moduleOn]).
          */
-        fun wirelessBlocked(stereo: StereoBluetooth, moduleOn: Boolean, engine: Engine): Boolean =
-            stereo.blocksWireless && !(moduleOn && engine == Engine.ANDROID_AUTO)
+        fun moduleEnabled(stereo: StereoBluetooth, moduleOn: Boolean): Boolean =
+            moduleOn || stereo == StereoBluetooth.ZLINK_DAEMON
+
+        /** This stereo's module carries Bluetooth for at least one engine (probe finished; [moduleEnabled]). */
+        fun moduleCarriesBluetooth(context: Context): Boolean =
+            ExternalBluetoothProbe.cached()?.classification?.let { stereo ->
+                stereo.blocksWireless && moduleEnabled(stereo, CarLinkPreferences(context).wirelessOnExternalBluetooth)
+            } == true
 
         /**
-         * The route wireless Android Auto takes through the stereo's Bluetooth module when the driver
-         * turned it on ([moduleOn]), or null for Android's own Bluetooth (design/EXTERNAL_BLUETOOTH.md):
+         * Whether CarLink blocks wireless [engine] on a stereo classified [stereo]; [moduleOn] is the
+         * driver's opt-in (see [moduleEnabled]). The module unblocks Android Auto only: neither module
+         * route carries CarPlay's iAP2.
+         */
+        fun wirelessBlocked(stereo: StereoBluetooth, moduleOn: Boolean, engine: Engine): Boolean =
+            stereo.blocksWireless && !(moduleEnabled(stereo, moduleOn) && engine == Engine.ANDROID_AUTO) &&
+                !(engine == Engine.CARPLAY && moduleCarPlay(stereo, moduleOn))
+
+        /**
+         * Wireless CarPlay through a ZLink-type module (DiPlay's ModuleIap2Route): only with the
+         * driver's opt-in, since it is verified only against an emulated daemon (2026-11-04).
+         */
+        fun moduleCarPlay(stereo: StereoBluetooth, moduleOn: Boolean): Boolean =
+            moduleOn && moduleRoute(stereo, moduleOn) == ExternalBtTransportPolicy.Route.ZBT
+
+        /**
+         * The route wireless Android Auto takes through the stereo's Bluetooth module when it is on
+         * ([moduleEnabled]), or null for Android's own Bluetooth (design/EXTERNAL_BLUETOOTH.md):
          * a ZLink-type daemon, or ZLink markers with no daemon seen yet, take ZBT; FYT's module takes BLINK.
          */
         fun moduleRoute(stereo: StereoBluetooth, moduleOn: Boolean): ExternalBtTransportPolicy.Route? = when {
-            !moduleOn -> null
+            !moduleEnabled(stereo, moduleOn) -> null
             stereo == StereoBluetooth.ZLINK_DAEMON || stereo == StereoBluetooth.EXTERNAL_UNKNOWN -> ExternalBtTransportPolicy.Route.ZBT
             stereo == StereoBluetooth.FYT_MODULE -> ExternalBtTransportPolicy.Route.BLINK
             else -> null

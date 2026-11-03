@@ -52,7 +52,27 @@ object ConnectionLog {
 
     /** Every source merged, newest first. */
     fun read(context: Context, entries: List<EventLog.Entry> = EventLog.entries.value): List<LogLine> =
-        merge(*(readEngines(context) + listOf(events(entries))).toTypedArray())
+        merge(*(readEngines(context) + listOf(events(withSaved(context, entries)))).toTypedArray())
+
+    /**
+     * The in-memory events start at this process's start; a report filed after a restart (the
+     * ignition was off) needs the earlier ones from `files/logs/carlink*.log` too.
+     */
+    fun withSaved(context: Context, entries: List<EventLog.Entry>): List<EventLog.Entry> {
+        val firstInMemory = entries.firstOrNull()?.timeMillis ?: Long.MAX_VALUE
+        val dir = File(context.filesDir, "logs")
+        val saved = listOf(File(dir, "carlink.previous.log"), File(dir, "carlink.log"))
+            .filter { it.isFile }.flatMap { tail(it) }.mapNotNull(::parseSaved).filter { it.timeMillis < firstInMemory }
+        return saved + entries
+    }
+
+    /** One `carlink.log` line, "epochMillis [tag] message" (EventLog.add), or null. */
+    fun parseSaved(line: String): EventLog.Entry? {
+        val match = SAVED_LINE.matchEntire(line.trimEnd()) ?: return null
+        return EventLog.Entry(match.groupValues[1].toLongOrNull() ?: return null, match.groupValues[2], match.groupValues[3])
+    }
+
+    private val SAVED_LINE = Regex("""^(\d{10,})\s+\[([^\]]*)]\s?(.*)$""")
 
     /** Merges sources given oldest first into one list, newest first; same-millisecond lines keep their order reversed. */
     fun merge(vararg sources: List<LogLine>): List<LogLine> =

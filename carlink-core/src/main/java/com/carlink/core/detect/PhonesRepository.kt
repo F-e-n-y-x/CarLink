@@ -34,8 +34,15 @@ enum class BluetoothAvailability { READY, OFF, NO_PERMISSION, UNSUPPORTED }
 /**
  * Bonded phones with their kind and presence, refreshed on Bluetooth broadcasts while
  * [start]ed. Main process only.
+ *
+ * On a stereo whose Bluetooth is an external module ([viaModule]), phones pair with the module,
+ * not with Android, so the list also holds every phone CarLink knows ([KnownPhones]) and is
+ * available with Android's Bluetooth off.
  */
-class PhonesRepository(context: Context) {
+class PhonesRepository(
+    context: Context,
+    private val viaModule: () -> Boolean = { com.carlink.core.connection.DeviceEnvironment.moduleCarriesBluetooth(context) },
+) {
     private val app = context.applicationContext
     private val knownPhones = KnownPhones(app)
     private val adapter: BluetoothAdapter? = app.getSystemService(BluetoothManager::class.java)?.adapter
@@ -115,12 +122,15 @@ class PhonesRepository(context: Context) {
             !adapter.isEnabled -> BluetoothAvailability.OFF
             else -> BluetoothAvailability.READY
         }
-        if (_availability.value != BluetoothAvailability.READY) {
+        val module = runCatching(viaModule).getOrDefault(false)
+        val androidReady = _availability.value == BluetoothAvailability.READY
+        if (module) _availability.value = BluetoothAvailability.READY
+        if (!androidReady && !module) {
             _phones.value = emptyList()
             return
         }
-        val bonded = runCatching { adapter!!.bondedDevices }.getOrNull().orEmpty()
-        _phones.value = bonded
+        val bonded = if (androidReady) runCatching { adapter!!.bondedDevices }.getOrNull().orEmpty() else emptySet()
+        val listed = bonded
             .filter { device -> isPhone(device) }
             .map { device ->
                 val address = KnownPhones.normalize(device.address)
@@ -130,15 +140,26 @@ class PhonesRepository(context: Context) {
                     uuids = runCatching { device.uuids?.map { it.uuid }?.toSet() }.getOrNull().orEmpty(),
                     majorClass = runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull(),
                 )
+                knownPhones.rememberName(address, info.name)
                 PairedPhone(
                     address = address,
-                    name = info.name?.takeIf { it.isNotBlank() } ?: address,
+                    name = info.name?.takeIf { it.isNotBlank() } ?: knownPhones.nameOf(address) ?: address,
                     kind = PhoneClassifier.classifyBluetooth(info, knownPhones.kindOf(address)),
                     connected = address in connected,
                 )
             }
+        _phones.value = (if (module) listed + modulePhones(listed.map { it.address }.toSet()) else listed)
             .sortedWith(compareByDescending<PairedPhone> { it.connected }.thenBy { it.name.lowercase() })
     }
+
+    /** Phones CarLink knows that Android's paired list lacks (they paired with the stereo's module). */
+    private fun modulePhones(listed: Set<String>): List<PairedPhone> = knownPhones.all()
+        .filterKeys { it !in listed }
+        .filterValues { it != PhoneKind.UNKNOWN }
+        .map { (address, kind) ->
+            PairedPhone(address, knownPhones.nameOf(address) ?: if (kind == PhoneKind.IPHONE) "iPhone" else "Android phone",
+                kind, connected = false)
+        }
 
     @SuppressLint("MissingPermission")
     private fun queryConnected() {

@@ -126,11 +126,24 @@ class CarPlayAdapter internal constructor(
         // The caller asked: no more events for this session, only the completion.
         listener = null
         Log.i(TAG, "stop requested hasSession=${hooks.hasSession()}")
+        // A DiPlay teardown that never calls back held the next start behind it with Home on
+        // "Starting…" for good; like Android Auto's, the stop ends after STOP_TIMEOUT_MILLIS.
+        val finished = java.util.concurrent.atomic.AtomicBoolean(false)
+        fun finish(why: String) {
+            if (!finished.compareAndSet(false, true)) return
+            Log.i(TAG, why)
+            if (listener == null) detach()
+            onStopped()
+        }
+        val timeout = Runnable {
+            com.carlink.core.diagnostics.EventLog.add("CarLink", "CarPlay stop did not finish in ${STOP_TIMEOUT_MILLIS / 1000} s; going on")
+            finish("stop timed out")
+        }
+        main.postDelayed(timeout, STOP_TIMEOUT_MILLIS)
         hooks.stopSession {
             main.post {
-                Log.i(TAG, "stopped")
-                if (listener == null) detach()
-                onStopped()
+                main.removeCallbacks(timeout)
+                finish("stopped")
             }
         }
     }
@@ -207,6 +220,7 @@ class CarPlayAdapter internal constructor(
 
     companion object {
         private const val TAG = "CarLink-CarPlay"
+        private const val STOP_TIMEOUT_MILLIS = 20_000L
 
         /**
          * Installs CarLink's DiPlay hooks; call once from [CarLinkCore.install] in the main
@@ -277,7 +291,17 @@ object HostStates {
 internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks {
     override fun hasSession(): Boolean = CarPlayHostIntegration.hasSession()
 
+    /** A CarPlay screen waiting for CarLink to come to the front; dropped by a newer start or a stop. */
+    @Volatile private var pendingOpen: Application.ActivityLifecycleCallbacks? = null
+
+    private fun cancelPendingOpen() {
+        pendingOpen?.let { (app as Application).unregisterActivityLifecycleCallbacks(it) }
+        pendingOpen = null
+    }
+
     override fun stopSession(completion: () -> Unit) {
+        // A stopped (or switched) session must not open its CarPlay screen later over Home or Android Auto.
+        cancelPendingOpen()
         val main = Handler(Looper.getMainLooper())
         // CarPlayHostIntegration.stopSession works on the main thread.
         if (Looper.myLooper() == Looper.getMainLooper()) CarPlayHostIntegration.stopSession(completion)
@@ -341,12 +365,14 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
         // Android silently drops an activity start from an app with no visible window (background
         // launch rules, Android 10+), e.g. an iPhone already plugged in while CarLink's process is
         // still starting. Open the host once one of CarLink's activities resumes.
+        cancelPendingOpen() // only the newest start may open the screen
         if (!inFront()) {
             Log.i("CarLink-CarPlay", "CarLink not in front yet; opening CarPlay when it resumes")
             val application = app as Application
-            application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            pendingOpen = object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityResumed(activity: Activity) {
                     application.unregisterActivityLifecycleCallbacks(this)
+                    if (pendingOpen === this) pendingOpen = null
                     runCatching { activity.startActivity(host) }
                         .onFailure { Log.w("CarLink-CarPlay", "deferred CarPlay open failed: ${it.javaClass.simpleName}") }
                 }
@@ -356,7 +382,7 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
                 override fun onActivityStopped(activity: Activity) = Unit
                 override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
                 override fun onActivityDestroyed(activity: Activity) = Unit
-            })
+            }.also { application.registerActivityLifecycleCallbacks(it) }
             return null
         }
         return runCatching { app.startActivity(host) }.exceptionOrNull()

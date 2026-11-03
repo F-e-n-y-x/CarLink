@@ -82,6 +82,11 @@ class UpdateController(
     private val downloadDir: File,
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
+    /**
+     * Suspends until no CarPlay or Android Auto session runs: Android's install screen must never
+     * cover a projection while driving, and installing ends both engines (lifecycle audit #7).
+     */
+    private val awaitSessionQuiet: suspend () -> Unit = {},
 ) {
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
@@ -249,6 +254,7 @@ class UpdateController(
             _state.value = UpdateState.NeedsPermission(release)
             return
         }
+        awaitSessionQuiet()
         _state.value = UpdateState.Installing(release)
         try {
             withContext(io) { installer.install(file) }

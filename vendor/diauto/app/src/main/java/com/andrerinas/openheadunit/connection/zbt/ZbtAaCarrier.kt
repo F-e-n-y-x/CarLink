@@ -114,6 +114,7 @@ class ZbtAaCarrier(
         var warnedNoDaemon = false
         var lastQuietReminder = 0L
         var reportedUnavailable = false
+        var quickEnds = 0 // CarLink: channels in a row the daemon dropped within ZbtReopenPolicy.SHORT_LIVED_MS
         while (keepRunning()) {
             val opened = try {
                 openChannel(::onControl, ::onRfcomm).also { channel = it }
@@ -157,6 +158,7 @@ class ZbtAaCarrier(
                 "NativeAA: [ZBT] channel open to the Bluetooth module daemon on " +
                     "${ZbtByteChannel.HOST}:${ZbtByteChannel.PORT} — asking it to carry Android Auto"
             )
+            val openedAt = now() // CarLink
             try {
                 watchAndServe(opened)
             } finally {
@@ -165,6 +167,12 @@ class ZbtAaCarrier(
                 channel = null
                 AppLog.i("NativeAA: [ZBT] channel ended: ${reason ?: "closed"}")
             }
+            // CarLink: a daemon that accepts and drops at once (restarting, or adb reverse with nothing
+            // behind it) was redialled in a tight loop, ~150 times a second; back off as for a refusal.
+            if (now() - openedAt < ZbtReopenPolicy.SHORT_LIVED_MS) {
+                quickEnds++
+                delay(ZbtReopenPolicy.delayAfterRefusalMs(quickEnds))
+            } else quickEnds = 0
         }
         AppLog.i(
             "NativeAA: [ZBT] carrier stopped after $attempts handshake attempt(s), " +

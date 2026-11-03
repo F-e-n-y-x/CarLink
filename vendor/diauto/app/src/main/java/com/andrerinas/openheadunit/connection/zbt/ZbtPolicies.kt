@@ -237,6 +237,9 @@ object ZbtReopenPolicy {
 
     /** CarLink: upstream's ZbtReachabilityPolicy.REFUSAL_WINDOW_MS (that file is not ported). */
     const val REFUSAL_WINDOW_MS = 30_000L
+
+    /** CarLink: a channel that ended sooner than this after it opened counts as a refusal for the reopen delay. */
+    const val SHORT_LIVED_MS = 2_000L
 }
 
 /**

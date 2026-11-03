@@ -124,6 +124,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     /** A second USB phone waiting for the driver's "Switch to …?" answer. */
     val pendingSwitch = session.pendingSwitch
     fun acceptSwitch() = session.acceptSwitch()
+    /** Home asks which phone connects when an iPhone and an Android phone both could (PhoneChoice). */
+    val pendingChoice = session.pendingChoice
+    fun choosePhone(phone: com.carlink.core.connection.PhoneOption) = session.choosePhone(phone)
+    fun dismissChoice() = session.dismissChoice()
     fun declineSwitch() = session.declineSwitch()
 
     val link: StateFlow<LinkState> = session.state.map { it.toLinkState(AirPlayPersistence.loadDirectVideoOutput(app)) }
@@ -265,6 +269,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
             _stereoBluetooth.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 com.carlink.core.detect.ExternalBluetoothProbe.await(app)
             }
+            phonesRepository.refresh() // a module stereo lists the phones CarLink knows
         }
         phonesRepository.start()
         runCatching {
@@ -531,6 +536,7 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun setWirelessOnExternalBluetooth(on: Boolean) {
         preferences.wirelessOnExternalBluetooth = on
         _connection.value = readConnection()
+        phonesRepository.refresh()
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Wireless through the stereo's Bluetooth module (experimental): ${if (on) "on" else "off"}")
     }
     /** Root mode: turning it on asks the root manager once and grants everything setup asks for. */

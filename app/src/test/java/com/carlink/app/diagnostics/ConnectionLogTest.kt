@@ -109,4 +109,12 @@ class ConnectionLogTest {
             assertTrue("missing $part", part in text)
         }
     }
+
+    @Test fun savedCarLinkLinesComeBackForReportsAfterARestart() {
+        val e = ConnectionLog.parseSaved("1793734323164 [CarLink] start CARPLAY WIRELESS known=true #s1")!!
+        org.junit.Assert.assertEquals(1793734323164L, e.timeMillis)
+        org.junit.Assert.assertEquals("CarLink", e.tag)
+        org.junit.Assert.assertEquals("start CARPLAY WIRELESS known=true #s1", e.message)
+        org.junit.Assert.assertNull(ConnectionLog.parseSaved("  signals=none"))
+    }
 }

@@ -14,22 +14,40 @@ import org.junit.Test
 
 /** Issue #6: idle Home on a stereo whose Bluetooth is an external module offers the cable, not a Connect that can only fail. */
 class CableOnlyTest {
-    private fun mode(ui: HomeUi) = homeMode(ui.home, ui.permissionsNeeded, ui.cableOnly)
+    private fun mode(ui: HomeUi) = homeMode(ui.home, ui.permissionsNeeded, ui.cableOnly, ui.bluetoothViaModule)
 
     @Test fun externalModuleWithIphoneIsCableOnly() {
         val ui = HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN)
         assertEquals(HomeMode.CABLE_ONLY, mode(ui))
         // Even with Android's Bluetooth off or no phone known: neither Bluetooth advice nor pairing helps.
         assertEquals(HomeMode.CABLE_ONLY, mode(HomeFakes.ui(stereo = StereoBluetooth.FYT_MODULE, bluetooth = BluetoothAvailability.OFF)))
-        assertEquals(HomeMode.CABLE_ONLY, mode(HomeFakes.ui(stereo = StereoBluetooth.ZLINK_DAEMON, phones = emptyList())))
+        assertEquals(HomeMode.CABLE_ONLY, mode(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN, phones = emptyList())))
+        // An answering ZLink daemon carries wireless Android Auto by itself: an iPhone still gets the cable,
+        // an Android phone gets Connect even with Android's own Bluetooth off.
+        assertEquals(HomeMode.CABLE_ONLY, mode(HomeFakes.ui(stereo = StereoBluetooth.ZLINK_DAEMON)))
+        assertEquals(HomeMode.READY_PHONE, mode(HomeFakes.ui(stereo = StereoBluetooth.ZLINK_DAEMON, phones = listOf(HomeFakes.pixel),
+            bluetooth = BluetoothAvailability.OFF)))
     }
 
     @Test fun moduleSettingUnblocksAndroidAutoOnly() {
         val on = HomeFakes.prefs.copy(wirelessOnExternalBluetooth = true)
-        assertTrue(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN).copy(connection = on).cableOnly)
+        // FYT's module carries Android Auto only, so an iPhone still gets the cable; a ZBT module
+        // with the opt-in also tries wireless CarPlay.
+        assertTrue(HomeFakes.ui(stereo = StereoBluetooth.FYT_MODULE).copy(connection = on).cableOnly)
+        assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN).copy(connection = on).cableOnly)
         assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN, phones = listOf(HomeFakes.pixel)).copy(connection = on).cableOnly)
         // No phone known: wireless Android Auto is possible, so Home does not say "cable only".
         assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN, phones = emptyList()).copy(connection = on).cableOnly)
+    }
+
+    @Test fun moduleCarriesBluetoothSoAndroidsSwitchDoesNotBlockHome() {
+        val on = HomeFakes.prefs.copy(wirelessOnExternalBluetooth = true)
+        val off = BluetoothAvailability.OFF
+        assertEquals(HomeMode.READY_PHONE, mode(HomeFakes.ui(stereo = StereoBluetooth.ZLINK_DAEMON, phones = listOf(HomeFakes.pixel),
+            bluetooth = off).copy(connection = on)))
+        // Without the opt-in, or on an ordinary stereo, Android's Bluetooth being off still matters.
+        assertEquals(HomeMode.BLUETOOTH_OFF, mode(HomeFakes.ui(stereo = StereoBluetooth.NONE, phones = listOf(HomeFakes.pixel),
+            bluetooth = off).copy(connection = on)))
     }
 
     @Test fun ordinaryStereoAndSessionsAreUnchanged() {

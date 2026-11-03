@@ -82,6 +82,15 @@ fun checkText(result: CheckResult): CheckText {
             else CheckText(s(R.string.carlink_diag_p2p_missing), s(R.string.carlink_diag_p2p_missing_body))
         CheckId.H264_DECODER -> if (ok) CheckText(s(R.string.carlink_diag_avc_ok), decoderDetail(result.decoder))
             else CheckText(s(R.string.carlink_diag_avc_missing), s(R.string.carlink_diag_avc_missing_body))
+        CheckId.CLOCK -> if (ok) CheckText(s(R.string.carlink_diag_clock_ok))
+            else CheckText(s(R.string.carlink_diag_clock_wrong), s(R.string.carlink_diag_clock_body))
+        CheckId.STORAGE -> if (ok) CheckText(s(R.string.carlink_diag_storage_ok))
+            else CheckText(s(R.string.carlink_diag_storage_low), s(R.string.carlink_diag_storage_body))
+        CheckId.OTHER_VPN -> if (ok) CheckText(s(R.string.carlink_diag_vpn_ok))
+            else CheckText(s(R.string.carlink_diag_vpn_other), s(R.string.carlink_diag_vpn_body))
+        CheckId.COMPETING_APPS -> if (ok) CheckText(s(R.string.carlink_diag_competing_ok))
+            else CheckText(s(R.string.carlink_diag_competing_found),
+                stringResource(R.string.carlink_diag_competing_body, result.apps.joinToString(", ")))
         CheckId.HEVC_DECODER -> if (ok) CheckText(s(R.string.carlink_diag_hevc_ok), decoderDetail(result.decoder))
             else CheckText(s(R.string.carlink_diag_hevc_missing), s(R.string.carlink_diag_hevc_missing_body))
     }

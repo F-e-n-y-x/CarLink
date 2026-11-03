@@ -18,6 +18,12 @@ interface EngineAdapter {
     val engine: Engine
 
     /**
+     * At main-process start with [hasSession]: [decide] gets whether the engine still shows a
+     * picture the driver is using (then it is kept), once the adapter knows. Default: not projecting.
+     */
+    fun whenOrphanKnown(decide: (projecting: Boolean) -> Unit) = decide(false)
+
+    /**
      * Starts [plan]. Settings for the session were already written by [SessionManager]. Reports
      * through [listener] until [AdapterEvent.Ended] or a terminal [AdapterEvent.Failed].
      * Only called when [hasSession] is false (the previous session's stop completed).

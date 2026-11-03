@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,7 +120,8 @@ internal enum class HomeMode {
     CONNECTED, FAILED,
 }
 
-internal fun homeMode(home: HomeState, permissionsNeeded: Boolean, cableOnly: Boolean = false): HomeMode = when {
+internal fun homeMode(home: HomeState, permissionsNeeded: Boolean, cableOnly: Boolean = false,
+                      bluetoothViaModule: Boolean = false): HomeMode = when {
     home.link.stage == LinkStage.CONNECTED -> HomeMode.CONNECTED
     phoneSilent(home.link) -> HomeMode.NOT_ANSWERING
     home.link.stage == LinkStage.WAITING || home.link.stage == LinkStage.CONNECTING -> HomeMode.CONNECTING
@@ -127,7 +129,8 @@ internal fun homeMode(home: HomeState, permissionsNeeded: Boolean, cableOnly: Bo
     permissionsNeeded -> HomeMode.PERMISSION
     // Before "Bluetooth is off" and "Pair a phone": neither helps when apps cannot use this stereo's Bluetooth.
     cableOnly -> HomeMode.CABLE_ONLY
-    home.bluetooth == BluetoothAvailability.OFF -> HomeMode.BLUETOOTH_OFF
+    // The stereo's module carries wireless Android Auto, so Android's own Bluetooth switch does not matter.
+    home.bluetooth == BluetoothAvailability.OFF && !bluetoothViaModule -> HomeMode.BLUETOOTH_OFF
     home.defaultPhone != null -> HomeMode.READY_PHONE
     else -> HomeMode.READY_EMPTY
 }
@@ -147,6 +150,8 @@ internal data class HomeUi(
     val usual: PhoneUsual? = null,
     /** What this stereo's Bluetooth is (null until the probe finished). */
     val stereo: StereoBluetooth? = null,
+    /** After a failure: the prefilled GitHub report's short address, shown as a QR code to scan with a phone. */
+    val reportUrl: String? = null,
 ) {
     /**
      * Wireless cannot start for the default phone's engine here (for either engine when no phone is
@@ -154,6 +159,10 @@ internal data class HomeUi(
      */
     val cableOnly: Boolean get() = stereo != null && (home.defaultPhone?.kind?.engine?.let(::listOf) ?: Engine.entries)
         .all { DeviceEnvironment.wirelessBlocked(stereo, connection.wirelessOnExternalBluetooth, it) }
+
+    /** Wireless Android Auto goes through the stereo's Bluetooth module (the driver's experimental opt-in). */
+    val bluetoothViaModule: Boolean get() =
+        stereo != null && DeviceEnvironment.moduleRoute(stereo, connection.wirelessOnExternalBluetooth) != null
 }
 
 internal interface HomeActions {
@@ -190,6 +199,18 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     val stereo by vm.stereoBluetooth.collectAsStateWithLifecycle()
     val fixProblem = rememberProblemFix(vm)
     val reportProblem = com.carlink.app.ui.diagnostics.rememberReportProblem(vm)
+    // A failure gets its report ready at once, so the driver only scans the code on Home.
+    val reportContext = androidx.compose.ui.platform.LocalContext.current
+    var failureReport by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(home.link.stage, home.link.problem, home.link.detail) {
+        failureReport = if (home.link.stage != com.carlink.core.core.LinkStage.FAILED) null
+        else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                com.carlink.app.diagnostics.IssueReporter.build(reportContext, com.carlink.app.diagnostics.IssueReporter.Inputs(
+                    vm.lastSessions(), vm.health.value, vm.carBrandName(), vm.savedSecrets(), vm.reportSettings())).shortUrl
+            }.getOrNull()
+        }
+    }
     val actions = remember(vm) {
         object : HomeActions {
             override fun requestPermissions() = fixProblem(LinkProblem.PERMISSIONS)
@@ -211,7 +232,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun turnOnDirectVideo() = vm.turnOnDirectVideo()
         }
     }
-    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification), actions)
+    HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual, stereo?.classification, failureReport), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -221,6 +242,32 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             SwitchPhoneDialog(request.phoneName ?: "", home.link.engine, request.engine, request.transport, onSwitch = vm::acceptSwitch, onKeep = vm::declineSwitch)
         }
     }
+    val pendingChoice by vm.pendingChoice.collectAsStateWithLifecycle()
+    pendingChoice?.let { phones -> ChoosePhoneDialog(phones, onPick = vm::choosePhone, onDismiss = vm::dismissChoice) }
+}
+
+/** An iPhone and an Android phone could both connect: the driver picks, CarLink does not guess. */
+@Composable
+private fun ChoosePhoneDialog(phones: List<com.carlink.core.connection.PhoneOption>,
+                              onPick: (com.carlink.core.connection.PhoneOption) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.carlink_choose_phone_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.carlink_choose_phone_body), style = MaterialTheme.typography.bodyLarge)
+                phones.forEach { phone ->
+                    val engine = phone.kind.engine
+                    val label = (phone.name ?: phone.address) + (engine?.let { " · " + engineName(it) } ?: "")
+                    IonButton(label, { onPick(phone) },
+                        icon = if (phone.kind == PhoneKind.IPHONE) R.drawable.carlink_ic_phone_iphone else R.drawable.carlink_ic_phone_android)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { GlassButton(stringResource(R.string.carlink_choose_phone_later), onDismiss) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
 }
 
 /**
@@ -318,7 +365,7 @@ internal fun HomeContent(ui: HomeUi, actions: HomeActions) {
 
 @Composable
 private fun HomeStageScreen(ui: HomeUi, actions: HomeActions, onPhones: () -> Unit, onNetwork: () -> Unit) {
-    val mode = homeMode(ui.home, ui.permissionsNeeded, ui.cableOnly)
+    val mode = homeMode(ui.home, ui.permissionsNeeded, ui.cableOnly, ui.bluetoothViaModule)
     val layout = CarLinkTokens.layout
     val dimens = CarLinkTokens.dimens
     val car = CarLinkTokens.profile == UiProfile.CAR
@@ -534,7 +581,8 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
     val (title, body) = when (mode) {
         HomeMode.PERMISSION -> stringResource(R.string.carlink_home_permission_title) to stringResource(R.string.carlink_home_permission_body)
         HomeMode.BLUETOOTH_OFF -> stringResource(R.string.carlink_home_bt_off_title) to stringResource(R.string.carlink_home_bt_off_body)
-        HomeMode.READY_EMPTY -> stringResource(R.string.carlink_home_ready_title) to stringResource(R.string.carlink_home_ready_body)
+        HomeMode.READY_EMPTY -> stringResource(R.string.carlink_home_ready_title) to
+            stringResource(if (ui.bluetoothViaModule) R.string.carlink_home_ready_module_body else R.string.carlink_home_ready_body)
         HomeMode.CABLE_ONLY -> stringResource(R.string.carlink_home_cable_only_title) to stringResource(R.string.carlink_home_cable_only_body)
         HomeMode.READY_PHONE -> stringResource(R.string.carlink_home_ready_phone_title, phoneName) to
             stringResource(R.string.carlink_home_ready_phone_body, phone?.kind?.engine?.let { engineName(it) } ?: "",
@@ -625,8 +673,9 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 icon = R.drawable.carlink_ic_check)
             HomeMode.BLUETOOTH_OFF -> IonButton(stringResource(R.string.carlink_home_bt_off_action), actions::openBluetoothSettings,
                 icon = R.drawable.carlink_ic_bluetooth)
-            HomeMode.READY_EMPTY -> GlassButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
-                icon = R.drawable.carlink_ic_bluetooth)
+            // Phones pair with the module (its own settings), not through Android's pairing.
+            HomeMode.READY_EMPTY -> if (!ui.bluetoothViaModule) GlassButton(stringResource(R.string.carlink_home_pair_action),
+                actions::pairPhone, icon = R.drawable.carlink_ic_bluetooth)
             HomeMode.CABLE_ONLY -> {
                 var cableHelp by rememberSaveable { mutableStateOf(false) }
                 IonButton(stringResource(R.string.carlink_home_how_to_connect), { cableHelp = true }, icon = R.drawable.carlink_ic_usb)
@@ -660,6 +709,14 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 FailureActions(link, ui.network, actions)
                 // The log and the error go straight into a GitHub issue (no copying from the stereo).
                 TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
+                // Nothing to tap on the stereo: the report is already a QR code for the driver's phone.
+                ui.reportUrl?.let { url ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        com.carlink.app.ui.components.QrCode(url, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))
+                        Text(stringResource(R.string.carlink_home_report_scan), style = MaterialTheme.typography.bodyMedium,
+                            color = colors.onSurfaceTertiary, modifier = Modifier.widthIn(max = 220.dp))
+                    }
+                }
             }
         }
     }

@@ -120,7 +120,9 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
             }
         }
         Spacer(Modifier.height(dimens.gutter))
-        GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.pairPhone(); onDismiss() },
+        // On a module stereo phones pair in the stereo's own Bluetooth settings, not Android's.
+        if (ui.bluetoothViaModule) Text(stringResource(R.string.carlink_home_ready_module_body), style = MaterialTheme.typography.bodyMedium)
+        else GlassButton(stringResource(R.string.carlink_home_pair_action), { actions.pairPhone(); onDismiss() },
             icon = R.drawable.carlink_ic_bluetooth)
     }
 
