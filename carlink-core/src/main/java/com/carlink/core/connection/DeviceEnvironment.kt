@@ -153,7 +153,7 @@ class DeviceEnvironment(
         private const val KEY_LAST_PHONE = "address"
         /** Android-Bluetooth problems that do not apply when the stereo's module carries Bluetooth. */
         private val MODULE_IRRELEVANT = setOf(Problem.BLUETOOTH_OFF, Problem.PHONE_NOT_PAIRED, Problem.PAIRING_LOST)
-        /** DiAuto's ZBT carrier speaks first after 10 s of module silence and the phone then answers. */
+        /** DiAuto's ZBT carrier repeats the wake while the module reports no phone and speaks first by 20 s. */
         private const val MODULE_AA_WAIT_MILLIS = 20_000L
 
         /**

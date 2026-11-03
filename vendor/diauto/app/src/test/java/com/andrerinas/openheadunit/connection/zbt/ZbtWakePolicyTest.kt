@@ -99,4 +99,34 @@ class ZbtWakePolicyTest {
         )
         assertEquals(ZbtWakePolicy.Pending.EXPIRED, pending(requestedAtMs = at, nowMs = at - 1))
     }
+
+    // CarLink: repeats while the module reports no phone.
+    private fun rewake(
+        reportedDisconnected: Boolean = true,
+        rewakesSent: Int = 0,
+        lastSentAtMs: Long = 1_000L,
+        nowMs: Long = 1_000L + ZbtWakePolicy.REWAKE_INTERVAL_MS,
+        handshakeInFlight: Boolean = false,
+        sessionConnected: Boolean = false
+    ) = ZbtWakePolicy.shouldRewake(reportedDisconnected, rewakesSent, lastSentAtMs, nowMs, handshakeInFlight, sessionConnected)
+
+    @Test
+    fun `a phone the module still reports absent is asked again after the interval`() {
+        assertTrue(rewake())
+        assertFalse(rewake(nowMs = 1_000L + ZbtWakePolicy.REWAKE_INTERVAL_MS - 1))
+    }
+
+    @Test
+    fun `no repeat without a first wake, a known absence, or past the cap`() {
+        assertFalse(rewake(lastSentAtMs = 0L))
+        assertFalse(rewake(reportedDisconnected = false))
+        assertFalse(rewake(rewakesSent = ZbtWakePolicy.MAX_REWAKES))
+        assertTrue(rewake(rewakesSent = ZbtWakePolicy.MAX_REWAKES - 1))
+    }
+
+    @Test
+    fun `no repeat over a running exchange or session`() {
+        assertFalse(rewake(handshakeInFlight = true))
+        assertFalse(rewake(sessionConnected = true))
+    }
 }

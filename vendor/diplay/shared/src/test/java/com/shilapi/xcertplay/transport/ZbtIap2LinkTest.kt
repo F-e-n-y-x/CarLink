@@ -3,8 +3,12 @@ package com.shilapi.xcertplay.transport
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.DataInputStream
+import java.net.ServerSocket
+import java.util.concurrent.atomic.AtomicInteger
 
 class ZbtIap2LinkTest {
     @Test fun headerIsBigEndianMagicVersionIdLength() {
@@ -29,5 +33,35 @@ class ZbtIap2LinkTest {
     @Test fun moduleAddressGetsColons() {
         assertEquals("E8:48:B8:C8:20:00", ZbtIap2Link.withColons("e848b8c82000"))
         assertEquals("E8:48:B8:C8:20:00", ZbtIap2Link.withColons("E8:48:B8:C8:20:00"))
+    }
+
+    @Test fun aSilentPhoneIsAskedAgainAFewTimes() {
+        // 2026-11-04: one RequestReconn per attempt; a phone that ignored it waited for a whole retry.
+        val reconnects = AtomicInteger()
+        ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
+            val daemon = Thread {
+                server.accept().use { client ->
+                    val input = DataInputStream(client.getInputStream())
+                    val header = ByteArray(ZbtIap2Link.HEADER_SIZE)
+                    runCatching {
+                        while (true) {
+                            input.readFully(header)
+                            val id = java.nio.ByteBuffer.wrap(header, 8, 4).int
+                            input.readFully(ByteArray(java.nio.ByteBuffer.wrap(header, 12, 4).int))
+                            if (id == ZbtIap2Link.REQUEST_INIT) {
+                                val body = ZbtIap2Link.varintField(1, ZbtIap2Link.INIT_INFO)
+                                client.getOutputStream().write(ZbtIap2Link.header(ZbtIap2Link.INIT_INFO, body.size) + body)
+                            }
+                            if (id == ZbtIap2Link.REQUEST_RECONN) reconnects.incrementAndGet()
+                        }
+                    }
+                }
+            }.apply { start() }
+            ZbtIap2Link.open("127.0.0.1", server.localPort).use { link ->
+                assertFalse(link.awaitPhone(timeoutMillis = 1_000, rewakeMillis = 100))
+            }
+            daemon.join(2_000)
+        }
+        assertEquals(1 + ZbtIap2Link.MAX_REWAKES, reconnects.get())
     }
 }

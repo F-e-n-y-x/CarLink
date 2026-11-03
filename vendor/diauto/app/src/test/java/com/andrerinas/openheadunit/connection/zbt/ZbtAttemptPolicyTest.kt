@@ -111,10 +111,11 @@ class ZbtAttemptPolicyTest {
         sinceLastAttemptMs: Long? = null,
         minIntervalMs: Long = ZbtAttemptPolicy.MIN_ATTEMPT_INTERVAL_MS,
         channelOpenForMs: Long? = null,
-        everSawPresence: Boolean = false
+        everSawPresence: Boolean = false,
+        reportedDisconnected: Boolean = false
     ) = ZbtAttemptPolicy.shouldAttempt(
         phonePresent, attemptInFlight, sessionConnected, sinceLastAttemptMs, minIntervalMs,
-        channelOpenForMs, everSawPresence
+        channelOpenForMs, everSawPresence, reportedDisconnected
     )
 
     @Test
@@ -212,5 +213,15 @@ class ZbtAttemptPolicyTest {
         assertFalse(ZbtAttemptPolicy.mayAttemptBlind(null, everSawPresence = false))
         assertFalse(ZbtAttemptPolicy.mayAttemptBlind(blind, everSawPresence = true))
         assertTrue(ZbtAttemptPolicy.mayAttemptBlind(blind, everSawPresence = false))
+    }
+
+    // CarLink: the module said no phone is connected (AA right after CarPlay, 2026-11-04).
+    @Test
+    fun `a module that says no phone is connected is spoken to blind only after the longer grace`() {
+        val later = ZbtAttemptPolicy.BLIND_WHEN_DISCONNECTED_AFTER_MS
+        assertFalse(ZbtAttemptPolicy.mayAttemptBlind(blind, everSawPresence = false, reportedDisconnected = true))
+        assertTrue(ZbtAttemptPolicy.mayAttemptBlind(later, everSawPresence = false, reportedDisconnected = true))
+        assertFalse(shouldAttempt(phonePresent = false, channelOpenForMs = blind, reportedDisconnected = true))
+        assertTrue(shouldAttempt(phonePresent = false, channelOpenForMs = later, reportedDisconnected = true))
     }
 }

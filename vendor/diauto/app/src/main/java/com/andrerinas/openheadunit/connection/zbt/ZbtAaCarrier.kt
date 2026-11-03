@@ -66,6 +66,10 @@ class ZbtAaCarrier(
         /** How often to ask the module to re-state the link, so a missed edge is picked up and the
          *  log carries proof the channel is still alive. */
         const val LINK_POLL_EVERY_MS = 30_000L
+
+        /** CarLink: the poll while no usable phone is reported, so an arrival the module only states
+         *  on its ~12 s heartbeat is seen within seconds. */
+        const val LINK_POLL_WAITING_MS = 5_000L
     }
 
     /** The live channel, for [close] to reach from another thread. */
@@ -102,6 +106,7 @@ class ZbtAaCarrier(
     private var rfcommFrames = 0
     private var lastAttemptEndedAt = 0L
     private var attempts = 0
+    private var unansweredReopens = 0 // CarLink: ZbtReopenPolicy.reopensUnanswered, in a row
 
     /**
      * Open, watch, and hand over to a handshake whenever a phone appears. Returns when the manager
@@ -183,14 +188,21 @@ class ZbtAaCarrier(
     /** Pump this channel until a phone appears, then hand it to the handshake. */
     private suspend fun watchAndServe(open: ZbtByteChannel) {
         var nextSummary = now() + SUMMARY_EVERY_MS
-        var nextPoll = now() + LINK_POLL_EVERY_MS
+        var nextPoll = now() + LINK_POLL_WAITING_MS // CarLink
         val openedAt = now()
         everSawPresence = false
         var answered = false
+        var rewakes = 0 // CarLink: ZbtWakePolicy.shouldRewake
 
         while (keepRunning() && !open.isFinished) {
             // A quiet pump returns within the read timeout, so a request waits a few seconds at most.
             sendPendingWake(open)
+            // CarLink: ask again while the module says no phone is connected, instead of waiting for the host's stall.
+            if (ZbtWakePolicy.shouldRewake(presence?.connected == false, rewakes, lastWakeAt, now(),
+                    hooks.isHandshakeInFlight(), hooks.isSessionConnected())) {
+                rewakes++
+                sendWake(open, "zbt RequestReconn repeated ($rewakes/${ZbtWakePolicy.MAX_REWAKES}), the module reports no phone")
+            }
             val wake = minOf(nextSummary, nextPoll)
             val pumped = open.pumpOnce(wake) { keepRunning() }
             if (pumped == ZbtByteChannel.Pump.ENDED) return
@@ -199,7 +211,19 @@ class ZbtAaCarrier(
             // and a daemon busy with another client accepts the socket and answers nothing.
             if (pumped == ZbtByteChannel.Pump.FRAME && !answered) {
                 answered = true // CarLink: the daemon took RequestInit and answered
+                unansweredReopens = 0
                 ExternalBtTransportPolicy.step(WirelessTimeline.Phase.MODULE_READY, "zbt daemon answered")
+            }
+
+            // CarLink: a daemon busy with another client never answers; dial again so a phone switch
+            // gets it once the other client lets go, and send the wake it ignored again.
+            if (ZbtReopenPolicy.reopensUnanswered(answered, now() - openedAt, unansweredReopens)) {
+                unansweredReopens++
+                AppLog.w("NativeAA: [ZBT] the daemon has not answered in ${(now() - openedAt) / 1000}s; another client " +
+                    "may hold it. Dialling again ($unansweredReopens/${ZbtReopenPolicy.MAX_UNANSWERED_REOPENS}).")
+                lastWakeAt = 0L
+                wakeRequestedAt.compareAndSet(0L, now())
+                return
             }
 
             open.moduleMac?.let { moduleMac = it }
@@ -212,7 +236,7 @@ class ZbtAaCarrier(
             }
 
             if (now() >= nextPoll) {
-                nextPoll = now() + LINK_POLL_EVERY_MS
+                nextPoll = now() + if (presence?.usable == true) LINK_POLL_EVERY_MS else LINK_POLL_WAITING_MS // CarLink
                 runCatching { open.requestLinkInfo() }
                     .onFailure { AppLog.d("NativeAA: [ZBT] link poll failed: ${it.message}") }
             }
@@ -268,7 +292,8 @@ class ZbtAaCarrier(
         sessionConnected = hooks.isSessionConnected(),
         sinceLastAttemptMs = lastAttemptEndedAt.takeIf { it != 0L }?.let { now() - it },
         channelOpenForMs = now() - openedAt,
-        everSawPresence = everSawPresence
+        everSawPresence = everSawPresence,
+        reportedDisconnected = presence?.connected == false // CarLink
     ) && hooks.mayServeHandshake()
 
     /**
@@ -312,10 +337,14 @@ class ZbtAaCarrier(
             }
             else -> Unit
         }
+        sendWake(open, "zbt RequestReconn sent")
+    }
+
+    private fun sendWake(open: ZbtByteChannel, detail: String) {
         try {
             open.requestReconnect(ZbtMessages.ENABLE_TYPE_ANDROID_AUTO)
             lastWakeAt = now()
-            ExternalBtTransportPolicy.step(WirelessTimeline.Phase.MODULE_WAKE, "zbt RequestReconn sent")
+            ExternalBtTransportPolicy.step(WirelessTimeline.Phase.MODULE_WAKE, detail)
         } catch (e: Exception) {
             AppLog.w("NativeAA: [ZBT] could not ask the module to connect: ${e.javaClass.simpleName}: ${e.message}")
         }

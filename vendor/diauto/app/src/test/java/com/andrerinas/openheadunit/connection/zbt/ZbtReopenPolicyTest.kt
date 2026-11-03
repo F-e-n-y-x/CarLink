@@ -40,4 +40,15 @@ class ZbtReopenPolicyTest {
         assertFalse(ZbtReopenPolicy.warnsNoDaemon(spent - 1))
         assertTrue(ZbtReopenPolicy.warnsNoDaemon(spent))
     }
+
+    // CarLink: a daemon busy with another client accepts and answers nothing.
+    @Test
+    fun `an unanswered channel is redialled a few times, then kept`() {
+        val after = ZbtReopenPolicy.UNANSWERED_REOPEN_MS
+        assertFalse(ZbtReopenPolicy.reopensUnanswered(answered = false, openForMs = after - 1, reopensSoFar = 0))
+        assertTrue(ZbtReopenPolicy.reopensUnanswered(answered = false, openForMs = after, reopensSoFar = 0))
+        assertFalse(ZbtReopenPolicy.reopensUnanswered(answered = true, openForMs = after * 10, reopensSoFar = 0))
+        assertFalse(ZbtReopenPolicy.reopensUnanswered(answered = false, openForMs = after,
+            reopensSoFar = ZbtReopenPolicy.MAX_UNANSWERED_REOPENS))
+    }
 }
