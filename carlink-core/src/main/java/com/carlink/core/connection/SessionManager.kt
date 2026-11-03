@@ -172,6 +172,9 @@ class SessionManager(
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
         fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String? = null)
 
+        /** How long the stereo's Bluetooth module may take to reach the phone for [request]; null when Android's radio is used. */
+        fun modulePhoneWaitMillis(request: SessionRequest): Long? = null
+
         /** Known phones whose Bluetooth is connected to this stereo now (PhoneChoice); none where unknown. */
         fun connectedPhones(): List<PhoneOption> = emptyList()
 
@@ -794,7 +797,20 @@ class SessionManager(
 
     // --- Stall watchdog ------------------------------------------------------------------------
 
-    private fun stageDeadline(a: Attempt) = profiles.deadline(a.request, a.plan.path, a.stage)
+    private fun stageDeadline(a: Attempt): Long {
+        val usual = profiles.deadline(a.request, a.plan.path, a.stage)
+        return moduleWait(a)?.let { maxOf(usual, it) } ?: usual
+    }
+
+    /**
+     * A stereo's Bluetooth module pages the phone itself and takes up to its own wait (a cold page
+     * took 25 s): saying "not answering" at 10 s made drivers tap again and restart it.
+     */
+    private fun moduleWait(a: Attempt): Long? =
+        if (a.stage == ProgressStage.WAITING_FOR_PHONE || a.stage == ProgressStage.PHONE_NOT_ANSWERING)
+            environment.modulePhoneWaitMillis(a.request) else null
+
+    private fun hintAfter(a: Attempt, deadline: Long) = moduleWait(a) ?: minOf(AdaptiveDeadlines.HINT_MILLIS, deadline)
     private fun totalDeadline(a: Attempt) = profiles.deadline(a.request, a.plan.path, null)
 
     private fun armWatchdog() {
@@ -803,7 +819,7 @@ class SessionManager(
         if ((_state.value as? SessionState.Active)?.phase == SessionState.Phase.Connected) return
         val deadline = stageDeadline(a)
         var due = a.stageSince + deadline * (a.expiries + 1)
-        if (!a.hinted) due = minOf(due, a.stageSince + minOf(AdaptiveDeadlines.HINT_MILLIS, deadline))
+        if (!a.hinted) due = minOf(due, a.stageSince + hintAfter(a, deadline))
         if (!a.totalFired) due = minOf(due, a.startedAt + totalDeadline(a))
         main.postDelayed(watchdog, (due - clock()).coerceAtLeast(0))
     }
@@ -815,7 +831,7 @@ class SessionManager(
         val now = clock()
         val deadline = stageDeadline(a)
         val inStage = now - a.stageSince
-        if (!a.hinted && inStage >= minOf(AdaptiveDeadlines.HINT_MILLIS, deadline)) {
+        if (!a.hinted && inStage >= hintAfter(a, deadline)) {
             a.hinted = true
             hint(a, inStage)
         }

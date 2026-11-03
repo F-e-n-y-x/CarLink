@@ -82,6 +82,16 @@ class DeviceEnvironment(
         lastPhone(app).edit().putString(KEY_LAST_PHONE, phoneAddress).apply()
     }
 
+    override fun modulePhoneWaitMillis(request: SessionRequest): Long? {
+        if (request.transport != com.carlink.core.core.Transport.WIRELESS) return null
+        val stereo = ExternalBluetoothProbe.current(app).classification
+        val moduleOn = preferences.wirelessOnExternalBluetooth
+        return when (request.engine) {
+            Engine.CARPLAY -> com.shilapi.xcertplay.transport.ModuleIap2Route.CONNECT_TIMEOUT_MILLIS.takeIf { moduleCarPlay(stereo, moduleOn) }
+            Engine.ANDROID_AUTO -> MODULE_AA_WAIT_MILLIS.takeIf { moduleRoute(stereo, moduleOn) != null }
+        }
+    }
+
     override fun connectedPhones(): List<PhoneOption> = knownPhones.all()
         .filterKeys { BluetoothWarmup.linked(app, it) }
         .map { (address, kind) -> PhoneOption(address, knownPhones.nameOf(address), kind, present = true) }
@@ -133,6 +143,8 @@ class DeviceEnvironment(
     companion object {
         private const val TAG = "CarLink-Session"
         private const val KEY_LAST_PHONE = "address"
+        /** DiAuto's ZBT carrier speaks first after 10 s of module silence and the phone then answers. */
+        private const val MODULE_AA_WAIT_MILLIS = 20_000L
 
         /**
          * Whether the module route is on for [stereo]: by itself where the ZLink daemon answers

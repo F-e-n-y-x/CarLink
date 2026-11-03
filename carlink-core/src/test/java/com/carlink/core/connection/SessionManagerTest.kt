@@ -83,6 +83,8 @@ class SessionManagerTest {
         override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) { remembered += phoneAddress to path }
         override fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String?) {}
         var connected: List<PhoneOption> = emptyList()
+        var moduleWait: Long? = null
+        override fun modulePhoneWaitMillis(request: SessionRequest) = moduleWait
         override fun connectedPhones() = connected
         override fun usbPhonePresent(engine: Engine) = usbPresent
         override fun onEngaged(engine: Engine?) { engaged += engine }
@@ -557,6 +559,18 @@ class SessionManagerTest {
         assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
         assertEquals(DETAIL_PHONE_NOT_ANSWERING, link(m).detail)
         assertEquals(Notice.Kind.PHONE_NOT_ANSWERING, active(m).notice?.kind)
+    }
+
+    @Test fun aModuleStereoWaitsForTheModulesOwnPageBeforeSayingNotAnswering() {
+        // 2026-11-04: "not answering" at 10 s while the module's cold page took 25 s made the driver tap again.
+        env.moduleWait = 30_000L
+        val m = manager()
+        m.connect("EE:FF", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(1, 6, ProgressStage.WAITING_FOR_PHONE)); idle()
+        advance(SessionManager.NOT_ANSWERING_MILLIS + 5_000)
+        assertEquals(ProgressStage.WAITING_FOR_PHONE, (active(m).phase as SessionState.Phase.Progress).stage)
+        advance(20_000)
+        assertEquals(ProgressStage.PHONE_NOT_ANSWERING, (active(m).phase as SessionState.Phase.Progress).stage)
     }
 
     @Test fun aDialLoopCannotHideThatThePhoneIsNotAnswering() {
