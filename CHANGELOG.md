@@ -4,6 +4,13 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.9] - 2026-11-04
+
+- Fixed: 1.0.8 closed right after opening on Android 7 head units. If CarLink 1.0.8 does not open
+  on your stereo, download and install this version by hand; your settings are kept.
+- Fixed: when CarLink was missing a permission, wireless CarPlay kept retrying several times a
+  second instead of waiting for you to allow it.
+
 ## [1.0.8] - 2026-11-04
 
 - Stereos with an external Bluetooth module: wireless Android Auto and CarPlay can now go through
