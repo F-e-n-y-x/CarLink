@@ -629,14 +629,13 @@ class SessionManager(
             _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
             return
         }
-        warmUp(request)
         val paths = if (request.transport == Transport.WIRELESS && !request.selfMode) {
             val policy = environment.wirelessPaths(request)
             profiles.rankPaths(request, policy).also {
                 if (it != policy) note("wireless paths $policy re-ordered by this phone's record: $it")
             }
         } else listOf(null)
-        begin(request, paths, index = 0, token)
+        begin(request, paths, index = 0, token, warm = true)
     }
 
     /**
@@ -660,6 +659,7 @@ class SessionManager(
         sessionToken: Int,
         phase: SessionState.Phase = SessionState.Phase.Starting,
         notice: Notice? = null,
+        warm: Boolean = false,
     ) {
         val path = paths[index]
         val problems = if (request.selfMode) emptyList() else environment.preflight(request, path)
@@ -668,6 +668,9 @@ class SessionManager(
             _state.value = SessionState.Blocked(request, problems)
             return
         }
+        // Only past the preflight: paging a blocked iPhone brought its Bluetooth link up, which
+        // started the same blocked session again, several times a second (issue #20).
+        if (warm) warmUp(request)
         val plan = SessionPlan(request.engine, request.transport, path, request.phoneAddress, request.phoneName,
             request.usbAttach, attempt = index + 1, selfMode = request.selfMode)
         _state.value = SessionState.Active(request, path, index + 1, phase, notice)

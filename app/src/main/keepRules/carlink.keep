@@ -32,3 +32,8 @@
 -keep,allowshrinking,allowobfuscation,allowaccessmodification class com.shilapi.**
 -keep,allowshrinking,allowobfuscation,allowaccessmodification class com.andrerinas.**
 -keep,allowshrinking,allowobfuscation,allowaccessmodification class com.byd.spi.**
+
+# Android 7.x boot classpath (core-libart.jar) has its own com.android.dex.* (dalvik-dx, via DiAuto's
+# dexmaker), which wins over the app's copy. R8 (AGP 9.5) merged Compose/WorkManager/Kotlin methods
+# into com.android.dex.Leb128, so 1.0.8 crashed at launch on Android 7.1 (NoSuchMethodError, issue #21).
+-keep class com.android.dex.** { *; }

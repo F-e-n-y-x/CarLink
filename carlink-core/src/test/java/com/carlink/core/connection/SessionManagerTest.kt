@@ -762,6 +762,18 @@ class SessionManagerTest {
         assertEquals("ANDROID_AUTO start WIRELESS WIFI_DIRECT", starts.last())
     }
 
+    @Test fun aBlockedIphoneIsNotPaged() {
+        // Issue #20: paging a blocked iPhone woke its Bluetooth, which restarted the blocked session.
+        env.warmUpAvailable = true
+        problems = { _, _ -> listOf(Problem.BLUETOOTH_OFF) }
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals(0, env.warmUps)
+        problems = { _, _ -> emptyList() }
+        m.retry(); idle()
+        assertEquals(1, env.warmUps)
+    }
+
     @Test fun theIphoneIsPagedWithoutHoldingTheEngine() {
         // Plan item 7: the page overlaps the stop and the launch; only DiPlay's dial waits for it
         // (holding the engine cost up to 5.3 s past the stop, tablet 2026-11-04).
