@@ -147,7 +147,7 @@ header, and `docs/VENDOR_CHANGES.md` lists every edit.
 How a session uses it:
 
 1. The driver turns the setting on. `DeviceEnvironment.wirelessBlocked` stops blocking wireless
-   Android Auto (CarPlay stays blocked),
+   Android Auto (and CarPlay, but only on `ZLINK_DAEMON`: on `EXTERNAL_UNKNOWN` nothing answers 3152, #24),
    and `DeviceEnvironment.moduleRoute` names the route: `ZLINK_DAEMON` and `EXTERNAL_UNKNOWN` → ZBT,
    `FYT_MODULE` → BLINK. Pre-flight for wireless Android Auto then skips "Bluetooth is off" and
    "phone not paired" (the phone pairs with the module, not with Android).

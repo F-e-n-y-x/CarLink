@@ -191,10 +191,12 @@ class DeviceEnvironment(
 
         /**
          * Wireless CarPlay through a ZLink-type module (DiPlay's ModuleIap2Route): only with the
-         * driver's opt-in, since it is verified only against an emulated daemon (2026-11-04).
+         * driver's opt-in, since it is verified only against an emulated daemon (2026-11-04), and
+         * only when the daemon answered the probe: on EXTERNAL_UNKNOWN nothing listens on 3152, so
+         * every attempt failed with ECONNREFUSED (#24); Home says wireless isn't available instead.
          */
         fun moduleCarPlay(stereo: StereoBluetooth, moduleOn: Boolean): Boolean =
-            moduleOn && moduleRoute(stereo, moduleOn) == ExternalBtTransportPolicy.Route.ZBT
+            moduleOn && stereo == StereoBluetooth.ZLINK_DAEMON
 
         /**
          * The route wireless Android Auto takes through the stereo's Bluetooth module when it is on

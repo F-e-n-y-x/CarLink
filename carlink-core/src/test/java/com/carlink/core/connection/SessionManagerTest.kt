@@ -374,9 +374,8 @@ class SessionManagerTest {
                 assertEquals("$stereo $engine", expected && !auto, DeviceEnvironment.wirelessBlocked(stereo, moduleOn = false, engine))
             }
             assertEquals(stereo.name, false, DeviceEnvironment.wirelessBlocked(stereo, moduleOn = true, Engine.ANDROID_AUTO))
-            // CarPlay through the module: only ZBT stereos, and only with the opt-in (moduleCarPlay).
-            val zbt = stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON ||
-                stereo == com.carlink.core.detect.StereoBluetooth.EXTERNAL_UNKNOWN
+            // CarPlay through the module: only an answering ZLink daemon, and only with the opt-in (#24).
+            val zbt = stereo == com.carlink.core.detect.StereoBluetooth.ZLINK_DAEMON
             assertEquals(stereo.name, expected && !zbt, DeviceEnvironment.wirelessBlocked(stereo, moduleOn = true, Engine.CARPLAY))
         }
         env.blockedFor = { DeviceEnvironment.wirelessBlocked(com.carlink.core.detect.StereoBluetooth.FYT_MODULE, moduleOn = true, it) }

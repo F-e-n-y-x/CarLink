@@ -21,6 +21,7 @@ import com.carlink.core.detect.PhoneClassifier
 import com.carlink.core.connection.CarLinkCore
 import com.carlink.core.connection.CarLinkHost
 import com.carlink.core.connection.Connection
+import com.carlink.core.diagnostics.EventLog
 import com.carlink.core.settings.CarLinkPreferences
 
 /**
@@ -31,8 +32,12 @@ import com.carlink.core.settings.CarLinkPreferences
 class SystemEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            in BOOT_ACTIONS ->
-                if (CarLinkPreferences(context).startOnBoot) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
+            in BOOT_ACTIONS -> {
+                val on = CarLinkPreferences(context).startOnBoot
+                // #23: a report must show whether this stereo sends any wake broadcast at all.
+                EventLog.add("CarLink", "wake broadcast ${intent.action}; start with the car ${if (on) "on: opening Home" else "off"}")
+                if (on) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
+            }
             BluetoothDevice.ACTION_ACL_CONNECTED -> onPhoneLink(context, intent, sdpDone = false)
             // Only delivered here on Android 7.x: since 8.0 an implicit ACTION_UUID never reaches
             // a manifest receiver, so the SDP answer is awaited at runtime (awaitSdp).
@@ -46,11 +51,11 @@ class SystemEventReceiver : BroadcastReceiver() {
         if (!preferences.autoConnectBluetooth) return
         if (preferences.autoConnectPaused) {
             // Shown in the report: a phone that connects and nothing happens is otherwise a mystery.
-            com.carlink.core.diagnostics.EventLog.add("CarLink", "phone Bluetooth connected; automatic start paused after the driver stopped")
+            EventLog.add("CarLink", "phone Bluetooth connected; automatic start paused after the driver stopped")
             return
         }
         if (!hasBluetoothPermission(context)) {
-            Log.i(TAG, "Bluetooth link ignored: Nearby devices permission not granted")
+            EventLog.add("CarLink", "phone Bluetooth connected; ignored: Nearby devices permission not granted")
             return
         }
         val device = bluetoothDevice(intent) ?: return
@@ -93,6 +98,7 @@ class SystemEventReceiver : BroadcastReceiver() {
             Log.i(TAG, "Bluetooth $kind link debounced")
             return
         }
+        EventLog.add("CarLink", "phone Bluetooth connected ($kind); opening Home")
         CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.PHONE, address, kind, runCatching { device.name }.getOrNull())
     }
 

@@ -31,10 +31,11 @@ class CableOnlyTest {
 
     @Test fun moduleSettingUnblocksAndroidAutoOnly() {
         val on = HomeFakes.prefs.copy(wirelessOnExternalBluetooth = true)
-        // FYT's module carries Android Auto only, so an iPhone still gets the cable; a ZBT module
-        // with the opt-in also tries wireless CarPlay.
+        // FYT's module carries Android Auto only, so an iPhone still gets the cable; an answering
+        // ZLink daemon with the opt-in also tries wireless CarPlay, markers with no daemon do not (#24).
         assertTrue(HomeFakes.ui(stereo = StereoBluetooth.FYT_MODULE).copy(connection = on).cableOnly)
-        assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN).copy(connection = on).cableOnly)
+        assertTrue(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN).copy(connection = on).cableOnly)
+        assertFalse(HomeFakes.ui(stereo = StereoBluetooth.ZLINK_DAEMON).copy(connection = on).cableOnly)
         assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN, phones = listOf(HomeFakes.pixel)).copy(connection = on).cableOnly)
         // No phone known: wireless Android Auto is possible, so Home does not say "cable only".
         assertFalse(HomeFakes.ui(stereo = StereoBluetooth.EXTERNAL_UNKNOWN, phones = emptyList()).copy(connection = on).cableOnly)
