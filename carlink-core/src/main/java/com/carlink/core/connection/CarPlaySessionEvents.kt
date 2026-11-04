@@ -99,6 +99,8 @@ object CarPlayEventMapping {
     private val HARD_SAME_WIFI = listOf(
         "Multiple Wi-Fi networks are active", "Configured Wi-Fi does not match", "Connected Wi-Fi is open",
         "Connected Wi-Fi is secured", "requires an open or WPA2",
+        // #11: no Wi-Fi Direct on this screen; no retry can change it, another path can.
+        WifiDirectSupport.UNSUPPORTED_TEXT,
     )
 
     /**

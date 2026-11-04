@@ -68,11 +68,13 @@ class DeviceEnvironment(
             wifi = WifiEnvironmentReader.read(app, settings),
             headUnit = HeadUnitDetector.looksLikeCarDisplay(app),
             lastWorking = request.phoneAddress?.let { paths.lastWorking(request.engine, it) },
+            wifiDirect = WifiDirectSupport.supported(app),
         ))
     }
 
     override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) {
         paths.remember(engine, phoneAddress, path)
+        if (path == WirelessPath.WIFI_DIRECT) WifiDirectSupport.connected(app)
         // It connected wirelessly, so its pairing works again.
         com.carlink.core.detect.PairingLoss.clear(app, phoneAddress)
     }

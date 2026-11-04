@@ -47,11 +47,13 @@ class CarPlayAdapter internal constructor(
     private val hooks: CarPlayEngineHooks,
     /** Signs of an external Bluetooth module on this stereo (detect/ExternalBluetoothProbe). */
     private val externalBluetooth: () -> Boolean = { false },
+    /** Sees each failure's detail (WifiDirectSupport.noteFailure). */
+    private val onFailure: (String?) -> Unit = {},
 ) : EngineAdapter {
 
     constructor(context: Context) : this(DiPlayEngineHooks(context.applicationContext), {
         com.carlink.core.detect.ExternalBluetoothProbe.current(context.applicationContext).classification.hasSignals
-    })
+    }, { WifiDirectSupport.noteFailure(context.applicationContext, it) })
 
     override val engine: Engine = Engine.CARPLAY
 
@@ -197,6 +199,7 @@ class CarPlayAdapter internal constructor(
     private fun deliver(events: List<AdapterEvent>) {
         for (event in events) {
             Log.i(TAG, "event $event")
+            if (event is AdapterEvent.Failed) onFailure(event.detail)
             listener?.invoke(event)
         }
         if (tracker?.finished == true) {

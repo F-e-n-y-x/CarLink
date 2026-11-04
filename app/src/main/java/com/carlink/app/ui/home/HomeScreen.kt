@@ -822,10 +822,18 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
 
 @Composable
 internal fun failureCopy(link: LinkState): Pair<String, String> {
-    val (title, body) = failureCopyRes(link.problem)
+    val (title, copyBody) = failureCopyRes(link.problem)
+    // A screen with no Wi-Fi Direct (#11): the hotspot is the only wireless way, so don't offer Wi-Fi Direct.
+    val body = if (link.problem == LinkProblem.CAR_HOTSPOT_OFF && !wifiDirectHere()) R.string.carlink_home_error_hotspot_off_body_no_direct else copyBody
     // Only the pairing-lost title takes an argument (the phone); the others ignore it.
     val phone = link.phoneName ?: stringResource(R.string.carlink_home_error_pairing_lost_phone)
     return stringResource(title, phone) to stringResource(body, link.engine?.let { engineName(it) } ?: "")
+}
+
+@Composable
+private fun wifiDirectHere(): Boolean {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return androidx.compose.runtime.remember { com.carlink.core.connection.WifiDirectSupport.supported(context) }
 }
 
 @Composable
@@ -835,7 +843,7 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
     if (problem != null && fix != null) {
         IonButton(stringResource(fix.first), { actions.fix(problem) }, icon = fix.second)
         // Or leave Same Wi-Fi for the default.
-        if (problem == LinkProblem.SAME_WIFI_NOT_JOINED || problem == LinkProblem.CAR_HOTSPOT_OFF) {
+        if ((problem == LinkProblem.SAME_WIFI_NOT_JOINED || problem == LinkProblem.CAR_HOTSPOT_OFF) && wifiDirectHere()) {
             GlassButton(stringResource(R.string.carlink_home_fix_use_direct), { actions.setConnectionMethod(ConnectionMethod.WIFI_DIRECT) },
                 icon = R.drawable.carlink_ic_p2p)
         }

@@ -166,6 +166,9 @@ class CarPlayEventMappingTest {
                 CarPlayStatus.StartingHotspot, FailureReason.WIFI_SETUP_FAILED),
             Triple(CarPlayStatus.Failed("Could not establish EXISTING_WIFI hotspot: Configured Wi-Fi does not match the connected network"),
                 CarPlayStatus.StartingHotspot, FailureReason.WIFI_SETUP_FAILED),
+            // #11: a screen with no Wi-Fi Direct.
+            Triple(CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: Wi-Fi P2P createGroup failed: Wi-Fi P2P is unsupported (code=1)"),
+                CarPlayStatus.StartingHotspot, FailureReason.WIFI_SETUP_FAILED),
         )
         for ((failure, stage, reason) in cases) {
             val tracker = CarPlaySessionTracker(Transport.WIRELESS)

@@ -39,6 +39,17 @@ class WirelessPolicyTest {
         assertEquals(listOf(CAR_HOTSPOT, WIFI_DIRECT), paths(Engine.CARPLAY, UnifiedSettings(), readable, headUnit = true))
     }
 
+    @Test fun noWifiDirectLeavesTheHotspot() {
+        // #11: Automatic skips Wi-Fi Direct; without hotspot details the hotspot is still listed,
+        // so its pre-flight asks for them instead of Wi-Fi Direct failing again.
+        fun noP2p(engine: Engine, s: UnifiedSettings, last: com.carlink.core.settings.WirelessPath? = null) =
+            WirelessPolicy.candidates(WirelessPolicy.Inputs(engine, s, onHome, headUnit = true, lastWorking = last, wifiDirect = false))
+        Engine.entries.forEach { assertEquals(listOf(CAR_HOTSPOT), noP2p(it, UnifiedSettings())) }
+        assertEquals(listOf(CAR_HOTSPOT), noP2p(Engine.CARPLAY, UnifiedSettings(carHotspot = hotspot), last = WIFI_DIRECT))
+        // The driver's explicit choice is still honoured.
+        assertEquals(listOf(WIFI_DIRECT), noP2p(Engine.CARPLAY, UnifiedSettings(connectionMethod = ConnectionMethod.WIFI_DIRECT)))
+    }
+
     @Test fun whatWorkedLastGoesFirst() {
         val s = UnifiedSettings(carHotspot = hotspot)
         assertEquals(listOf(CAR_HOTSPOT, WIFI_DIRECT), paths(Engine.ANDROID_AUTO, s, last = CAR_HOTSPOT))

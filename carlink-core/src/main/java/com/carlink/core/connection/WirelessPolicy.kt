@@ -29,6 +29,8 @@ object WirelessPolicy {
         val headUnit: Boolean,
         /** The path that last connected for this phone, if any. */
         val lastWorking: WirelessPath? = null,
+        /** False when this screen has no Wi-Fi Direct (WifiDirectSupport). */
+        val wifiDirect: Boolean = true,
     )
 
     /** The paths to try in order; never empty. */
@@ -46,8 +48,10 @@ object WirelessPolicy {
         val hotspot = hotspotUsable(inputs.settings, inputs.wifi)
         val order = buildList {
             if (hotspot && inputs.headUnit && inputs.engine == Engine.CARPLAY) add(WirelessPath.CAR_HOTSPOT)
-            add(WirelessPath.WIFI_DIRECT)
-            if (hotspot && WirelessPath.CAR_HOTSPOT !in this) add(WirelessPath.CAR_HOTSPOT)
+            if (inputs.wifiDirect) add(WirelessPath.WIFI_DIRECT)
+            // No Wi-Fi Direct and no hotspot details: the car hotspot is the way left, so its
+            // pre-flight asks for it instead of Wi-Fi Direct failing again (#11).
+            if ((hotspot || !inputs.wifiDirect) && WirelessPath.CAR_HOTSPOT !in this) add(WirelessPath.CAR_HOTSPOT)
         }
         // What worked last time for this phone goes first, as long as Automatic would use it.
         val last = inputs.lastWorking
