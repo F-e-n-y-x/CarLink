@@ -113,6 +113,7 @@ Not built: `:mobile` (replaced by CarLink's `:app`), `:automotive`, `samples/*`.
 | File | Change | Why |
 |---|---|---|
 | `aap/AapTransport.kt` (`handshake`) | No USB pre-handshake sleep (upstream 500 ms) | The drain clears stale bytes, the version request is retried, and CarLink resets a phone left in an old session first; the sleep delayed every USB start. |
+| `aap/AapNavigationHelper.kt` (`sendFullNavigationBroadcast`) | Navigation broadcasts always require `<applicationId>.permission.NAVIGATION_UPDATE` (upstream: Open Headunit's `com.andrerinas.openheadunit.permission.NAVIGATION_UPDATE` in release builds) | #30: CarLink's manifest no longer declares Open Headunit's permission name, which made Android refuse to install CarLink next to Open Headunit ("duplicate permission"). |
 | `aap/AapService.kt` (`observeConnectionState`) | Opens the projection on `Connected` as well as `HandshakeComplete` | Its surface is ready when the phone sets up video (~170 ms sooner on the S25). |
 | `aap/AapControl.kt` (`ID_VID` config) | Sends `VideoFocusEvent(gain, solicited)` with the video config | The phone waited for the first-frame watchdog (~900 ms) before streaming (openauto grants focus with the config). |
 | `connection/NativeAaHandshakeManager.kt` (`SendInfoResponse`) | Credentials (Type 3) after 100 ms instead of 1000 ms | The phone asked for them; the second delayed every wireless start (WirelessAndroidAutoDongle answers at once). |
@@ -190,6 +191,9 @@ gets them; the app manifest adds only `HomeActivity` and CarLink's UI entries.
   auto-start receivers.
 - DiAuto's `MainActivity` no longer handles `geo:`/navigation links: opening it starts `AapService`,
   which must not happen while CarPlay runs.
+- DiAuto's `com.andrerinas.openheadunit.permission.NAVIGATION_UPDATE` is removed and
+  `<applicationId>.permission.NAVIGATION_UPDATE` declared instead (#30: Android refused CarLink
+  when Open Headunit, signed by someone else, was installed).
 - `ACCESS_LOCAL_NETWORK` is declared: CarLink targets SDK 37, where Local Network Protection
   otherwise drops local IPv4 and wireless CarPlay never gets its AirPlay TCP (DiPlay #425,
   DIPLAY.md F4). DiPlay's own `shared` manifest declares it too since upstream 292b2dd (PR #465);

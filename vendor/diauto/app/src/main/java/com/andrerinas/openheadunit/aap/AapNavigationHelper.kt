@@ -81,10 +81,9 @@ class AapNavigationHelper(
             totalTimeSeconds = prepared.totalTimeSeconds,
             estimatedArrival = prepared.estimatedArrival
         )
+        // CarLink: always the host's own permission name (#30; the manifest drops Open Headunit's).
         context.applicationContext.sendBroadcast(intent,
-            if (com.andrerinas.openheadunit.BuildConfig.DEBUG)
-                com.andrerinas.openheadunit.BuildConfig.APPLICATION_ID + ".permission.NAVIGATION_UPDATE"
-            else NavigationUpdateIntent.BROADCAST_PERMISSION)
+            com.andrerinas.openheadunit.BuildConfig.APPLICATION_ID + ".permission.NAVIGATION_UPDATE")
     }
 
     fun showNotificationForSnapshot(snapshot: NavigationSnapshot, distanceMeters: Int?) {

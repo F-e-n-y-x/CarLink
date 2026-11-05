@@ -27,6 +27,10 @@
          is silently dropped, which breaks wireless CarPlay's AirPlay TCP (DiPlay #425,
          docs/dissection/DIPLAY.md F4). Requested at runtime; checked by connection/CarPlayPreflight. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <!-- #30: DiAuto declares Open Headunit's own permission name. With Open Headunit (another
+         signer) installed, Android refuses CarLink ("duplicate permission"). CarLink's is its own. -->
+    <permission android:name="com.andrerinas.openheadunit.permission.NAVIGATION_UPDATE" tools:node="remove" />
+    <permission android:name="${applicationId}.permission.NAVIGATION_UPDATE" android:protectionLevel="signature" />
 
     <!-- detect/ExternalBluetoothProbe names the vendor projection apps a stereo with an external
          Bluetooth module ships (versions only), for the shared log. Android 11+ hides other apps'
