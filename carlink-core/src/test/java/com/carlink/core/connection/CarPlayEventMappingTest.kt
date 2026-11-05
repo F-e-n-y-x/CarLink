@@ -169,6 +169,11 @@ class CarPlayEventMappingTest {
             // #11: a screen with no Wi-Fi Direct.
             Triple(CarPlayStatus.Failed("Could not establish WIFI_P2P hotspot: Wi-Fi P2P createGroup failed: Wi-Fi P2P is unsupported (code=1)"),
                 CarPlayStatus.StartingHotspot, FailureReason.WIFI_SETUP_FAILED),
+            // #11: the FYT module route cannot open its port, or the stock app holds it.
+            Triple(CarPlayStatus.Failed("the stereo's Bluetooth module port /dev/rf_serial cannot be opened: Permission denied"),
+                CarPlayStatus.MfiReady, FailureReason.EXTERNAL_MODULE),
+            Triple(CarPlayStatus.Failed("the stereo's own Car Link app (com.syu.carlink) is enabled and reads the same port; disable it first"),
+                CarPlayStatus.MfiReady, FailureReason.EXTERNAL_MODULE),
         )
         for ((failure, stage, reason) in cases) {
             val tracker = CarPlaySessionTracker(Transport.WIRELESS)

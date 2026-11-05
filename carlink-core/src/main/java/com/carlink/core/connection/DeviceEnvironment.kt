@@ -1,5 +1,6 @@
 package com.carlink.core.connection
 
+import com.shilapi.xcertplay.transport.ModuleIap2Route
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -192,13 +193,19 @@ class DeviceEnvironment(
                 !(engine == Engine.CARPLAY && moduleCarPlay(stereo, moduleOn))
 
         /**
-         * Wireless CarPlay through a ZLink-type module (DiPlay's ModuleIap2Route): only with the
-         * driver's opt-in, since it is verified only against an emulated daemon (2026-11-04), and
-         * only when the daemon answered the probe: on EXTERNAL_UNKNOWN nothing listens on 3152, so
-         * every attempt failed with ECONNREFUSED (#24); Home says wireless isn't available instead.
+         * Wireless CarPlay through the stereo's module (DiPlay's ModuleIap2Route), only with the
+         * driver's opt-in: a ZLink-type daemon that answered the probe (verified only against an
+         * emulated daemon, 2026-11-04; on EXTERNAL_UNKNOWN nothing listens on 3152, #24), or an FYT
+         * module's /dev/rf_serial (protocol read from FYT's own CarPlay, #11; not yet tried on a unit).
          */
-        fun moduleCarPlay(stereo: StereoBluetooth, moduleOn: Boolean): Boolean =
-            moduleOn && stereo == StereoBluetooth.ZLINK_DAEMON
+        fun moduleCarPlay(stereo: StereoBluetooth, moduleOn: Boolean): Boolean = moduleCarPlayKind(stereo, moduleOn) != null
+
+        fun moduleCarPlayKind(stereo: StereoBluetooth, moduleOn: Boolean): ModuleIap2Route.Kind? = when {
+            !moduleOn -> null
+            stereo == StereoBluetooth.ZLINK_DAEMON -> ModuleIap2Route.Kind.ZBT_DAEMON
+            stereo == StereoBluetooth.FYT_MODULE -> ModuleIap2Route.Kind.FYT_RF_SERIAL
+            else -> null
+        }
 
         /**
          * The route wireless Android Auto takes through the stereo's Bluetooth module when it is on

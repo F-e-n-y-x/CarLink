@@ -68,7 +68,7 @@ import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothLinkCheck
 import com.shilapi.xcertplay.transport.BluetoothRadioCheck
 import com.shilapi.xcertplay.transport.ModuleIap2Route // CarLink
-import com.shilapi.xcertplay.transport.ZbtIap2Link // CarLink
+import com.shilapi.xcertplay.transport.ModuleIap2Link // CarLink
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
 import com.shilapi.xcertplay.transport.Ch341DeviceMatcher
 import com.shilapi.xcertplay.transport.Ch341I2cTransport
@@ -307,7 +307,7 @@ class CarPlayController(
     }.apply { removeOnCancelPolicy = true }
     @Volatile private var wirelessDiagnostics: WirelessStartupDiagnostics? = null
     @Volatile private var bluetoothSocket: BluetoothSocket? = null
-    @Volatile private var moduleIap2Link: ZbtIap2Link? = null // CarLink: until the stream owns it
+    @Volatile private var moduleIap2Link: ModuleIap2Link? = null // CarLink: until the stream owns it
     @Volatile private var bluetoothStream: BluetoothRfcommDuplexStream? = null
     @Volatile private var wirelessTunnelChannel: Iap2Session? = null
     @Volatile private var wirelessRuntimeIdentification: Iap2IdentificationConfig? = null
@@ -1374,7 +1374,7 @@ class CarPlayController(
             // CarLink: on a stereo whose Bluetooth is an external module, the module carries the
             // iPhone's iAP2 link (ModuleIap2Route); Android's radio is not used.
             val module = if (ModuleIap2Route.enabled) {
-                ZbtIap2Link.open().also { moduleIap2Link = it }
+                ModuleIap2Route.open().also { moduleIap2Link = it }
             } else null
             // Wireless CarPlay begins over Bluetooth: a radio that is off is found before the Wi-Fi is changed.
             val initialAdapter = currentBluetoothAdapter()
@@ -1398,7 +1398,7 @@ class CarPlayController(
                 adapter = null
                 device = null
                 socket = null
-                debugLog("wireless iAP2 through the stereo's Bluetooth module ${ModuleIap2Route.HOST}:${ModuleIap2Route.PORT}")
+                debugLog("wireless iAP2 through the stereo's Bluetooth module ${ModuleIap2Route.kind}")
                 dial = BackgroundDial("wireless-module-iap2") {
                     if (!module.awaitPhone(ModuleIap2Route.CONNECT_TIMEOUT_MILLIS)) {
                         throw IOException("the Bluetooth module did not report the iPhone connected")

@@ -183,6 +183,33 @@ Every step is logged in DiAuto's journal (`files/diagnostics/current.log`, in **
 The Wi-Fi password is never logged: raw module frames are logged by size only (an upstream log line
 that printed them in hex was changed).
 
+### CarPlay through an FYT module (`/dev/rf_serial`, experimental, 2026-11-06)
+
+Learned from FYT's own wireless CarPlay (`libcps_aio.so` / `libcps_7862.so` in `com.syu.carlink`
+2.26.0710.1536, class `cp_wireless`; `libcps_8581.so` is a stub that loads `libcps_7862.so`). The
+module only carries the iAP2 RFCOMM bytes: iAP2, MFi (the stereo's own chip on `/dev/i2c-N`,
+address 0x10/0x11) and the Wi-Fi hand-off run on the stereo, so DiPlay's own stack runs over it
+(`FytRfSerialIap2Link`). FYT's code opens the node `O_RDWR|O_NONBLOCK` with no terminal settings.
+
+| Direction | Line (each ends `\r\n`) | Meaning |
+|---|---|---|
+| host → module | `AT#VE`, `AT#QN`, `AT#QI` | module address (→ `DB`), name (→ `NA`), current state; sent at open |
+| host → module | `AT#SP<phone 12 hex><00000000DECAFADEDECADEAFDECACAFE>` | open the iPhone's iAP2 channel (FYT sends it once `IB` and the iAP2 UUID were seen) |
+| host → module | `AT#SG<HEX>` | send ≤ 100 bytes, uppercase hex, back to back, no ack |
+| host → module | `AT#SH` / `AT#CD` | close the channel / disconnect the phone |
+| module → host | `DB<12 hex>`, `NA<name>`, `BV<version>` | the module's address, name, version |
+| module → host | `IB` / `IA` | a phone connected / disconnected |
+| module → host | `JH<12 hex>`, `SA<name>`, `P1<mac>` | the phone's address, name; pairing address |
+| module → host | `US`, `UU<32 hex uuid>`…, `UE` | the phone's services; iAP2 = `00000000DECAFADEDECADEAFDECACAFE` |
+| module → host | `SV` / `SS` | channel up / down |
+| module → host | `SI<HEX>` | bytes received (either case, no length prefix) |
+
+FYT's own Wi-Fi is a hostapd SoftAP (5 GHz channel 36 or 2.4 GHz channel 1); CarLink keeps its
+own paths. Open on a unit: whether an ordinary app may open `/dev/rf_serial` (FYT's app runs with
+the platform signature; `/dev/auto_serial` needs root on some units), whether `QI` replays a phone
+that is already connected, and what the module sends when `SP` fails. `com.syu.carlink` must be
+disabled first (CarLink refuses the route while it is enabled).
+
 ### Trying it on a stereo, step by step
 
 1. Install CarLink, open Diagnostics and check **Car stereo Bluetooth**: it should name the module
@@ -207,7 +234,7 @@ that printed them in hex was changed).
 - Seeding this unit's Bluetooth address from the module (upstream uses it to announce the
   Bluetooth service so calls stay on the car): this DiAuto has no such setting.
 - Join-refusal pacing, upstream's UI toggles, toasts and the main screen's Wi-Fi button.
-- **CarPlay**: DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither route carries iAP2.
+- **CarPlay** (superseded for FYT modules 2026-11-06, see above): DiPlay's iAP2 runs over `BluetoothRfcommDuplexStream`; neither route carries iAP2.
   The setting therefore unblocks wireless Android Auto only: wireless CarPlay stays blocked before
   any engine starts ("Wireless isn't available on this stereo yet"), and Home's wireless auto-start
   still skips an iPhone. Idle Home on such a stereo says so up front ("Plug in your phone", with

@@ -96,6 +96,10 @@ object CarPlayEventMapping {
         BluetoothRadioCheck.RADIO_OFF_MARK, // DiPlay 0.2.19's "Bluetooth is not enabled"
         "No unambiguous bonded iPhone", "Multiple connected iPhones", "Multiple bonded iPhones",
     )
+    /** The FYT module route cannot open its port (FytRfSerialIap2Link, ModuleIap2Route.refusal): no retry changes that. */
+    private val HARD_MODULE = listOf(
+        "Bluetooth module port", "Car Link app (com.syu.carlink)",
+    )
     private val HARD_SAME_WIFI = listOf(
         "Multiple Wi-Fi networks are active", "Configured Wi-Fi does not match", "Connected Wi-Fi is open",
         "Connected Wi-Fi is secured", "requires an open or WPA2",
@@ -151,6 +155,7 @@ object CarPlayEventMapping {
                 if (externalBluetooth) FailureReason.EXTERNAL_BLUETOOTH else FailureReason.BLUETOOTH, hard = true)
             null -> Unit
         }
+        if (HARD_MODULE.any { message.contains(it, ignoreCase = true) }) return result(FailureReason.EXTERNAL_MODULE, hard = true)
         if (HARD_BLUETOOTH.any { message.contains(it, ignoreCase = true) }) return result(FailureReason.BLUETOOTH, hard = true)
         if (message.contains("MFi", ignoreCase = true) || message.contains("CH341", ignoreCase = true)) {
             return result(FailureReason.AUTHENTICATION, hard = message.contains("permission", ignoreCase = true))

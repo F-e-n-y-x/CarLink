@@ -203,6 +203,16 @@ object Connection {
         }
     }
 
+    /** Why the FYT module port must stay closed this session, in the words BlinkRefusal uses for Android Auto. */
+    private fun stockCarLinkRefusal(app: Context): String? {
+        val stock = com.andrerinas.openheadunit.connection.blink.StockCarLink
+        return when (stock.state(app.packageManager)) {
+            com.andrerinas.openheadunit.connection.blink.StockCarLink.State.ENABLED -> com.andrerinas.openheadunit.connection.blink.BlinkRefusal.STOCK_CLIENT_ENABLED.message
+            com.andrerinas.openheadunit.connection.blink.StockCarLink.State.DISABLED_PERSISTENT -> com.andrerinas.openheadunit.connection.blink.BlinkRefusal.STOCK_CLIENT_RUNNING.message
+            else -> null
+        }
+    }
+
     private fun writeSession(app: Context, plan: SessionPlan) {
         val stored = UnifiedSettingsStore(app).load()
         val wifi = WifiEnvironmentReader.read(app, stored)
@@ -212,11 +222,19 @@ object Connection {
         when (plan.engine) {
             Engine.CARPLAY -> {
                 // CarLink: wireless CarPlay's iAP2 link through the stereo's module (opt-in).
-                com.shilapi.xcertplay.transport.ModuleIap2Route.enabled = plan.transport == com.carlink.core.core.Transport.WIRELESS &&
-                    DeviceEnvironment.moduleCarPlay(DeviceEnvironment.effectiveStereo(app),
-                        com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
-                if (com.shilapi.xcertplay.transport.ModuleIap2Route.enabled) {
-                    com.carlink.core.diagnostics.EventLog.add("CarLink", "CarPlay Bluetooth through the stereo's module (experimental)")
+                val route = com.shilapi.xcertplay.transport.ModuleIap2Route
+                val kind = DeviceEnvironment.moduleCarPlayKind(DeviceEnvironment.effectiveStereo(app),
+                    com.carlink.core.settings.CarLinkPreferences(app).wirelessOnExternalBluetooth)
+                    .takeIf { plan.transport == com.carlink.core.core.Transport.WIRELESS }
+                route.enabled = kind != null
+                kind?.let { route.kind = it }
+                // FYT's own Car Link app reads the same port; two readers split the iPhone's bytes.
+                route.refusal = if (kind == com.shilapi.xcertplay.transport.ModuleIap2Route.Kind.FYT_RF_SERIAL) {
+                    stockCarLinkRefusal(app)
+                } else null
+                if (kind != null) {
+                    com.carlink.core.diagnostics.EventLog.add("CarLink", "CarPlay Bluetooth through the stereo's module: $kind (experimental)" +
+                        (route.refusal?.let { "; refused: $it" } ?: ""))
                 }
                 val fineLocation = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 CarPlaySettingsPolicy.apply(app, CarPlaySettingsPolicy.map(settings, plan.path, profile, fineLocation,

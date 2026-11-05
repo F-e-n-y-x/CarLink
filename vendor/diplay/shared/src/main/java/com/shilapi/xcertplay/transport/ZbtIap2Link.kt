@@ -1,5 +1,6 @@
 // CarLink: new file (see docs/VENDOR_CHANGES.md). Wireless CarPlay's iAP2 Bluetooth link carried by
-// a stereo's external Bluetooth module, through the ZLink-type daemon DiAuto's ZBT route also uses.
+// a stereo's external Bluetooth module: through the ZLink-type daemon DiAuto's ZBT route also uses,
+// or (FytRfSerialIap2Link) through an FYT module's /dev/rf_serial.
 package com.shilapi.xcertplay.transport
 
 import java.io.ByteArrayOutputStream
@@ -22,6 +23,24 @@ object ModuleIap2Route {
     @Volatile
     var enabled: Boolean = false
 
+    /** Which module carries the link. */
+    enum class Kind { ZBT_DAEMON, FYT_RF_SERIAL }
+
+    @Volatile
+    var kind: Kind = Kind.ZBT_DAEMON
+
+    /** Set by the host when the module must not be opened this session (another app holds it); [open] fails with it. */
+    @Volatile
+    var refusal: String? = null
+
+    internal fun open(): ModuleIap2Link {
+        refusal?.let { throw IOException(it) }
+        return when (kind) {
+            Kind.ZBT_DAEMON -> ZbtIap2Link.open()
+            Kind.FYT_RF_SERIAL -> FytRfSerialIap2Link.open()
+        }
+    }
+
     const val HOST = "127.0.0.1"
     const val PORT = 3152
 
@@ -42,6 +61,21 @@ object ModuleIap2Route {
     var lastPhone: Pair<String, String?>? = null
 }
 
+/** One session's iAP2 link through the stereo's Bluetooth module, whichever module it is. */
+internal interface ModuleIap2Link : Closeable {
+    /** The iPhone's name as the module reported it. */
+    val phoneName: String?
+
+    /** RFCOMM bytes both ways, for [BluetoothRfcommDuplexStream]. */
+    val access: BluetoothRfcommSocketAccess
+
+    /** Blocks until the module has the iPhone's iAP2 channel up; false on timeout. Asks again every [rewakeMillis]. */
+    fun awaitPhone(timeoutMillis: Long, rewakeMillis: Long = ZbtIap2Link.REWAKE_MILLIS): Boolean
+
+    /** The module's Bluetooth address with colons, as iAP2 identification announces it. */
+    fun moduleMacWithColons(): String?
+}
+
 /**
  * One session's link: [open] asks the daemon to carry CarPlay and to reach the phone,
  * [awaitPhone] blocks until the daemon reports it connected, then [access] carries the raw
@@ -50,12 +84,12 @@ object ModuleIap2Route {
  * Framing: a 16-byte big-endian header (magic 0x0000FFFF, version 0x101, id, body length) and a
  * proto2 body of scalar fields, field 1 the id, as DiAuto's ZbtFraming/ZbtMessages describe.
  */
-class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
+internal class ZbtIap2Link private constructor(private val socket: Socket) : ModuleIap2Link {
     @Volatile var moduleMac: String? = null
         private set
     @Volatile var phoneMac: String? = null
         private set
-    @Volatile var phoneName: String? = null
+    @Volatile override var phoneName: String? = null
         private set
 
     private val phonePresent = CountDownLatch(1)
@@ -70,7 +104,7 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
      * Blocks until the module reports the phone connected; false on timeout or a closed channel.
      * Repeats `RequestReconn` every [rewakeMillis] (at most [MAX_REWAKES] times) while it waits.
      */
-    fun awaitPhone(timeoutMillis: Long, rewakeMillis: Long = REWAKE_MILLIS): Boolean {
+    override fun awaitPhone(timeoutMillis: Long, rewakeMillis: Long): Boolean {
         // The daemon serves one client and silently ignores a second (ZLink's own app, or Android
         // Auto's carrier still holding it): no InitInfo soon means busy, not a slow phone.
         if (!answered.await(ANSWER_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
@@ -93,10 +127,9 @@ class ZbtIap2Link private constructor(private val socket: Socket) : Closeable {
         return true
     }
 
-    /** The module's Bluetooth address with colons, as iAP2 identification announces it. */
-    fun moduleMacWithColons(): String? = moduleMac?.let(::withColons)
+    override fun moduleMacWithColons(): String? = moduleMac?.let(::withColons)
 
-    internal val access: BluetoothRfcommSocketAccess = object : BluetoothRfcommSocketAccess {
+    override val access: BluetoothRfcommSocketAccess = object : BluetoothRfcommSocketAccess {
         override fun inputStream(): InputStream = input
         override fun outputStream(): OutputStream = output
         override fun close() = this@ZbtIap2Link.close()
