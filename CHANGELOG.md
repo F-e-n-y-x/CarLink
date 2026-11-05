@@ -4,7 +4,7 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
-## [Unreleased]
+## [1.0.11] - 2026-11-06
 
 - Fixed: Android Auto on a screen that can rotate (a tablet or phone used as the display) was
   stretched and could not be tapped correctly after turning the screen. Now CarLink reconnects
