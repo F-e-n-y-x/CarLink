@@ -4,6 +4,12 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.12] - 2026-11-06
+
+- New (experimental): wireless CarPlay on FYT stereos whose Bluetooth is a separate module. Turn
+  on Settings › "Use the stereo's Bluetooth module" and disable the stereo's own "Car Link" app
+  (com.syu.carlink) first. If it doesn't connect, please share the log from Diagnostics.
+
 ## [1.0.11] - 2026-11-06
 
 - Fixed: Android Auto on a screen that can rotate (a tablet or phone used as the display) was
