@@ -174,6 +174,8 @@ internal class AaSessionTracker(
             EngineEvent.FIRST_VIDEO_FRAME.name -> if (sessionLive) connect() else emptyList()
             EngineEvent.HEAD_UNIT_SERVER_CLOSED.name -> fail(FailureReason.HEAD_UNIT_SERVER_OFF,
                 "Android Auto's head unit server is not running (127.0.0.1:5277)")
+            EngineEvent.ORIENTATION_CHANGED.name ->
+                if (sessionLive) listOf(AdapterEvent.Restart("the screen turned ${d["screen"] ?: ""}".trimEnd())) else emptyList()
             EngineEvent.SESSION_ENDED.name -> endSession(d["userExit"] == "true", d["clean"] == "true", now)
             AaProtocol.KIND_START_REFUSED -> fail(FailureReason.ENGINE, "Android did not let the Android Auto service start")
             AaProtocol.KIND_AOA_SWITCH_FAILED -> fail(FailureReason.USB, "the phone did not switch to Android Auto over USB")

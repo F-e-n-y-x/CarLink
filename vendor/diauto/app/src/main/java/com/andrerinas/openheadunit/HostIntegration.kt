@@ -132,6 +132,11 @@ object HostIntegration {
         SESSION_ENDED,
         /** CarLink: Self Mode found no head unit server on 127.0.0.1:5277 (Android Auto's developer setting is off). */
         HEAD_UNIT_SERVER_CLOSED,
+        /**
+         * CarLink: the projection screen settled in the other orientation from the picture the phone
+         * agreed to send (agreed once per session). Detail: `picture=WxH;screen=landscape|portrait`.
+         */
+        ORIENTATION_CHANGED,
     }
 
     /**

@@ -46,6 +46,16 @@ class AaSessionTrackerTest {
         assertEquals("connected once", emptyList<AdapterEvent>(), t.state(P.CONNECTION_TRANSPORT_STARTED, firstFrame = true))
     }
 
+    @Test fun aTurnedScreenRestartsOnlyALiveSession() { // #31
+        val t = wireless()
+        assertEquals("nothing to restart before the session is up", emptyList<AdapterEvent>(),
+            t.event(EngineEvent.ORIENTATION_CHANGED, "picture=1920x1080;screen=portrait"))
+        t.state(P.CONNECTION_CONNECTING)
+        t.event(EngineEvent.FIRST_VIDEO_FRAME)
+        assertEquals(listOf(AdapterEvent.Restart("the screen turned portrait")),
+            t.event(EngineEvent.ORIENTATION_CHANGED, "picture=1920x1080;screen=portrait"))
+    }
+
     @Test fun aStateReportWithAFrameAlsoConnects() {
         val t = wireless()
         t.state(P.CONNECTION_CONNECTING)

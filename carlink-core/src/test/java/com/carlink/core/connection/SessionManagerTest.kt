@@ -836,6 +836,16 @@ class SessionManagerTest {
         assertEquals(FailureReason.PHONE_NEVER_REACHED_CAR, (m.state.value as SessionState.Failed).reason)
     }
 
+    @Test fun aTurnedScreenRestartsTheSameSessionWithoutAFailure() { // #31
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Connected); idle()
+        androidAuto.emit(AdapterEvent.Restart("the screen turned portrait")); idle()
+        assertEquals(listOf("ANDROID_AUTO start WIRELESS WIFI_DIRECT", "ANDROID_AUTO start WIRELESS WIFI_DIRECT"), starts)
+        assertEquals(SessionState.Phase.Starting, (m.state.value as SessionState.Active).phase)
+        assertEquals(false, env.autoConnectPaused)
+    }
+
     @Test fun aWirelessPhoneThatLeftReturnsHome() {
         val m = manager()
         m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()

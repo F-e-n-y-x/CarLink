@@ -968,6 +968,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         watchdogHandler.removeCallbacks(videoWatchdogRunnable)
         watchdogHandler.removeCallbacks(reconnectingWatchdog)
         watchdogHandler.removeCallbacks(exitRunnable)
+        watchdogHandler.removeCallbacks(orientationSettledCheck) // CarLink
         if (isOrientationReceiverRegistered) {
             unregisterReceiver(orientationReceiver)
             isOrientationReceiverRegistered = false
@@ -1790,6 +1791,28 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private fun onKeyEvent(keyCode: Int, isPress: Boolean) {
         // Broadcasts (e.g. from CarKeyReceiver) still use this path.
         commManager.sendKey(keyCode, isPress, null, "key-broadcast")
+    }
+
+    // CarLink: Android Auto agrees the picture size once per session, so a screen that settles in the
+    // other orientation shows a stretched picture with misplaced touches (CarLink #31). Tell the
+    // host, which reconnects in the new orientation; 1.5 s lets a rotation finish first.
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        watchdogHandler.removeCallbacks(orientationSettledCheck)
+        watchdogHandler.postDelayed(orientationSettledCheck, 1500)
+    }
+
+    private val orientationSettledCheck = Runnable {
+        if (!HeadUnitScreenConfig.isResolutionLocked || isFinishing) return@Runnable
+        val w = HeadUnitScreenConfig.getNegotiatedWidth()
+        val h = HeadUnitScreenConfig.getNegotiatedHeight()
+        val screenLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if ((w > h) != screenLandscape) {
+            AppLog.i("AapProjectionActivity: screen turned ${if (screenLandscape) "landscape" else "portrait"} under a ${w}x$h picture")
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.ORIENTATION_CHANGED,
+                "picture=${w}x$h;screen=${if (screenLandscape) "landscape" else "portrait"}")
+        }
     }
 
     private fun applyStickyOrientation() {

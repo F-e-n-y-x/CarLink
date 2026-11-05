@@ -7,8 +7,8 @@ is what the in-app update popup shows.
 ## [Unreleased]
 
 - Fixed: Android Auto on a screen that can rotate (a tablet or phone used as the display) was
-  stretched and could not be tapped correctly after turning the screen. The picture now keeps
-  the orientation the connection started in; turn the screen before connecting.
+  stretched and could not be tapped correctly after turning the screen. Now CarLink reconnects
+  in the new orientation a moment after the screen turns.
 - Fixed: a crash in Android Auto on head units that report no Bluetooth service.
 
 ## [1.0.10] - 2026-11-05

@@ -86,10 +86,9 @@ object AaSessionSettings {
             // and it is untested beyond DiLink 5.1. A BYD-only setting can turn it on later.
             put("cluster-map-enabled", false)
             putPicture(settings, panelDensityDpi, picture)
-            // Android Auto's picture size is agreed once per session. DiAuto's default (0, follow
-            // rotation) stretches a portrait picture across a screen turned to landscape and
-            // misplaces touches (issue #31); 1 = AUTO keeps the orientation the session began in.
-            put("screen-orientation", 1)
+            // 0 = follow the screen's rotation. The picture size is agreed once per session, so a
+            // turned screen reports ORIENTATION_CHANGED and SessionManager reconnects (issue #31).
+            put("screen-orientation", 0)
             put("night-mode", when (settings.dayNight) {
                 DayNight.AUTOMATIC -> 0 // sunrise/sunset
                 DayNight.DAY -> 1

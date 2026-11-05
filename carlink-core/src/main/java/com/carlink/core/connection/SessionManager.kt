@@ -748,6 +748,10 @@ class SessionManager(
                     recover(a, a.stage, now - a.stageSince, stageDeadline(a))
                 }
             }
+            is AdapterEvent.Restart -> {
+                note("${plan.engine} restarting on ${plan.path ?: "USB"}: ${event.detail}")
+                replaceAttempt(a, a.index, SessionState.Phase.Starting, notice = null)
+            }
             is AdapterEvent.Ended -> {
                 note("${plan.engine} session ended${if (event.byUser) " by the driver" else ""}")
                 // The phone left (unplugged, or gone from the car's Wi-Fi and Bluetooth): Home, not

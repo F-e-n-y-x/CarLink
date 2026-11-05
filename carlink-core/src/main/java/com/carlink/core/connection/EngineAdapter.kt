@@ -110,6 +110,12 @@ sealed interface AdapterEvent {
      */
     data class Stalled(val reason: FailureReason, val detail: String) : AdapterEvent
 
+    /**
+     * The session works but must start again on the same path, e.g. the screen turned and the
+     * picture's orientation is agreed only at the start (#31). Not a failure.
+     */
+    data class Restart(val detail: String) : AdapterEvent
+
     /** Terminal for this session: the engine stopped trying. */
     data class Failed(val reason: FailureReason, val detail: String? = null) : AdapterEvent
 }
