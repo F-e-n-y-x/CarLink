@@ -4,6 +4,17 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.10] - 2026-11-05
+
+- Fixed: CarLink could not be installed ("App not installed", "duplicate permissions") on a
+  screen that also has the Open Headunit app.
+- Stereos without Wi-Fi Direct: CarLink notices it, stops retrying Wi-Fi Direct and uses the
+  screen's hotspot instead. If the hotspot is off, Home says so right away.
+- Stereos with a Bluetooth module that has no service CarLink can reach: Home now says up front
+  that wireless CarPlay isn't available, instead of retrying every 30 seconds.
+- Diagnostics: the log now shows each start-up and phone Bluetooth signal the screen sends, to
+  find out why CarLink doesn't open by itself on some head units.
+
 ## [1.0.9] - 2026-11-04
 
 - Fixed: 1.0.8 closed right after opening on Android 7 head units. If CarLink 1.0.8 does not open
