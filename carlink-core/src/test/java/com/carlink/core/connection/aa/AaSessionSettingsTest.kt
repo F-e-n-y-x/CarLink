@@ -37,6 +37,7 @@ class AaSessionSettingsTest {
             assertEquals(true, v["wifi-direct-stable-identity"])
             assertEquals(setOf("usb", "wifi"), v["connection-modes"])
             assertEquals(false, v["cluster-map-enabled"])
+            assertEquals("the session keeps its starting orientation (#31)", 1, v["screen-orientation"])
         }
         assertEquals(false, values(transport = Transport.USB, path = null).values["auto-connect-last-session"])
     }

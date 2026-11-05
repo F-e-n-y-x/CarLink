@@ -4,6 +4,13 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [Unreleased]
+
+- Fixed: Android Auto on a screen that can rotate (a tablet or phone used as the display) was
+  stretched and could not be tapped correctly after turning the screen. The picture now keeps
+  the orientation the connection started in; turn the screen before connecting.
+- Fixed: a crash in Android Auto on head units that report no Bluetooth service.
+
 ## [1.0.10] - 2026-11-05
 
 - Fixed: CarLink could not be installed ("App not installed", "duplicate permissions") on a

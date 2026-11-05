@@ -42,7 +42,8 @@ object BluetoothHelper {
 
     private fun getDefaultAdapter(context: Context): BluetoothAdapter? {
         return if (Build.VERSION.SDK_INT >= 18) {
-            (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+            // CarLink: open-headunit PR #1236, some head units expose no BluetoothManager
+            (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
         } else {
             @Suppress("DEPRECATION")
             BluetoothAdapter.getDefaultAdapter()
