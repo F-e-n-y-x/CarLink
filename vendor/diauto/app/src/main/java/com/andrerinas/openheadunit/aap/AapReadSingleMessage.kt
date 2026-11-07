@@ -59,6 +59,14 @@ internal class AapReadSingleMessage(
                 return -2
             }
 
+            // CarLink: open-headunit 6e9f89c2, an impossible header means lost bytes
+            if (AapReadRecoveryPolicy.afterHeaderDecoded(recvHeader.flags) !=
+                AapReadRecoveryPolicy.Outcome.CONTINUE
+            ) {
+                AppLog.e(AapReadRecoveryPolicy.headerDesyncMessage(recvHeader.chan, recvHeader.flags))
+                return -1
+            }
+
             // Only a first fragment carries the total size, and only then is this meaningful.
             var declaredTotal = 0
             if (recvHeader.flags == 0x09) {

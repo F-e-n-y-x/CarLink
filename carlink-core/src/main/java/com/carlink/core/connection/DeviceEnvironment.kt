@@ -154,8 +154,12 @@ class DeviceEnvironment(
     companion object {
         private const val TAG = "CarLink-Session"
         private const val KEY_LAST_PHONE = "address"
-        /** Android-Bluetooth problems that do not apply when the stereo's module carries Bluetooth. */
-        private val MODULE_IRRELEVANT = setOf(Problem.BLUETOOTH_OFF, Problem.PHONE_NOT_PAIRED, Problem.PAIRING_LOST)
+        /**
+         * Android-Bluetooth problems that do not apply when the stereo's module carries Bluetooth.
+         * No iPhone chosen too: the iPhone pairs with the module, which names it to the engine (#32).
+         */
+        private val MODULE_IRRELEVANT = setOf(Problem.BLUETOOTH_OFF, Problem.PHONE_NOT_PAIRED, Problem.PAIRING_LOST,
+            Problem.NO_IPHONE_SELECTED)
         /** DiAuto's ZBT carrier repeats the wake while the module reports no phone and speaks first by 20 s. */
         private const val MODULE_AA_WAIT_MILLIS = 20_000L
 

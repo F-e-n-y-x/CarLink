@@ -1548,6 +1548,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     override fun onSurfaceChanged(surface: android.view.Surface, width: Int, height: Int) {
         AppLog.i("[UI_DEBUG] [AapProjectionActivity] onSurfaceChanged. Actual surface dimensions: width=$width, height=$height")
         isSurfaceSet = true
+        postOrientationCheck() // CarLink: a rotation that rebuilt the activity (CarLink #31)
 
         videoDecoder.setSurface(surface)
         // A surface arriving inside a cycle's own gap must not strand the pending gain.
@@ -1795,24 +1796,35 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     // CarLink: Android Auto agrees the picture size once per session, so a screen that settles in the
     // other orientation shows a stretched picture with misplaced touches (CarLink #31). Tell the
-    // host, which reconnects in the new orientation; 1.5 s lets a rotation finish first.
+    // host, which reconnects in the new orientation; 1.5 s lets a rotation finish first. Checked on
+    // a configuration change and on a new surface, as a rotation can also rebuild this activity.
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
+        postOrientationCheck()
+    }
+
+    private fun postOrientationCheck() {
         watchdogHandler.removeCallbacks(orientationSettledCheck)
         watchdogHandler.postDelayed(orientationSettledCheck, 1500)
     }
 
+    // The size the phone really sends: the negotiated one is recalculated (and unlocked) on a turn.
+    // No frame yet means the decoder still holds the previous session's size.
     private val orientationSettledCheck = Runnable {
-        if (!HeadUnitScreenConfig.isResolutionLocked || isFinishing) return@Runnable
-        val w = HeadUnitScreenConfig.getNegotiatedWidth()
-        val h = HeadUnitScreenConfig.getNegotiatedHeight()
+        if (isFinishing || commManager.connectionState.value !is CommManager.ConnectionState.TransportStarted ||
+            videoDecoder.framesRenderedThisSession == 0L) return@Runnable
+        val w = videoDecoder.videoWidth
+        val h = videoDecoder.videoHeight
+        if (w <= 0 || h <= 0 || w == h) return@Runnable
         val screenLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        if ((w > h) != screenLandscape) {
-            AppLog.i("AapProjectionActivity: screen turned ${if (screenLandscape) "landscape" else "portrait"} under a ${w}x$h picture")
-            com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
-                com.andrerinas.openheadunit.HostIntegration.EngineEvent.ORIENTATION_CHANGED,
-                "picture=${w}x$h;screen=${if (screenLandscape) "landscape" else "portrait"}")
-        }
+        val detail = "picture=${w}x$h;screen=${if (screenLandscape) "landscape" else "portrait"}"
+        if ((w > h) == screenLandscape) { lastOrientationReport = null; return@Runnable }
+        // Once per mismatch: a reconnect that comes back in the same shape must not restart in a loop.
+        if (detail == lastOrientationReport) return@Runnable
+        lastOrientationReport = detail
+        AppLog.i("AapProjectionActivity: screen turned ${if (screenLandscape) "landscape" else "portrait"} under a ${w}x$h picture")
+        com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
+            com.andrerinas.openheadunit.HostIntegration.EngineEvent.ORIENTATION_CHANGED, detail)
     }
 
     private fun applyStickyOrientation() {
@@ -1868,6 +1880,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     companion object {
         const val EXTRA_FOCUS = "focus"
         @Volatile var isForeground = false
+        /** CarLink: the last picture/screen mismatch reported, kept across a rebuilt activity (CarLink #31). */
+        private var lastOrientationReport: String? = null
 
         /**
          * Optional one-shot override for the loading-screen status text. Set by

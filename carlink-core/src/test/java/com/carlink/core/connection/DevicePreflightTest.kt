@@ -114,5 +114,7 @@ class DevicePreflightTest {
         assertEquals(emptyList<Problem>(), check(path = WirelessPath.CAR_HOTSPOT, settings = s))
         assertEquals(listOf(Problem.CAR_HOTSPOT_OFF), check(path = WirelessPath.CAR_HOTSPOT, settings = s, wifi = onHome.copy(carHotspotOn = false)))
         assertEquals(listOf(Problem.CAR_HOTSPOT_DETAILS), check(path = WirelessPath.CAR_HOTSPOT))
+        // The stereo turned its Wi-Fi client off for its hotspot (#32): not a problem on this path
+        assertEquals(emptyList<Problem>(), check(ready.copy(wifiOn = false), path = WirelessPath.CAR_HOTSPOT, settings = s))
     }
 }

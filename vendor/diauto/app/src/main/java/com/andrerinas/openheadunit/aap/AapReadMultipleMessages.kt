@@ -65,6 +65,13 @@ internal class AapReadMultipleMessages(
             fifo.mark()
             fifo.get(recvHeader.buf, 0, recvHeader.buf.size)
             recvHeader.decode()
+            // CarLink: open-headunit 6e9f89c2, an impossible header means lost bytes
+            if (AapReadRecoveryPolicy.afterHeaderDecoded(recvHeader.flags) !=
+                AapReadRecoveryPolicy.Outcome.CONTINUE
+            ) {
+                AppLog.e(AapReadRecoveryPolicy.headerDesyncMessage(recvHeader.chan, recvHeader.flags))
+                throw java.io.IOException("Impossible AAP frame flags ${recvHeader.flags}")
+            }
 
             // Only a first fragment carries the total size, and only then is this meaningful.
             var declaredTotal = 0

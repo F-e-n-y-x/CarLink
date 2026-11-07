@@ -160,7 +160,10 @@ object HeadUnitScreenConfig {
         val cachedH = settings.cachedSurfaceHeight
         val cachedHash = settings.cachedSurfaceSettingsHash
 
-        if (cachedW > 0 && cachedH > 0 && cachedHash == currentHash) {
+        // CarLink: the hash holds the previous screen size, so after a turn it still matched the other
+        // orientation's cache and the reconnect asked for the old shape again (CarLink #31).
+        val cacheSameShape = (cachedW > cachedH) == (defaultAnchorW > defaultAnchorH)
+        if (cachedW > 0 && cachedH > 0 && cachedHash == currentHash && cacheSameShape) {
             // Cached surface dimensions are the usable area. The anchor includes insets.
             realScreenWidthPx = cachedW + systemInsetLeft + systemInsetRight
             realScreenHeightPx = cachedH + systemInsetTop + systemInsetBottom
