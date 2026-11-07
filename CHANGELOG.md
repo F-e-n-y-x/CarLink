@@ -4,6 +4,20 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.13] - 2026-11-07
+
+- Fixed: Android Auto on a screen that can rotate still showed a portrait picture after turning
+  the screen to landscape (1.0.11's fix never triggered). CarLink now reconnects in the new
+  orientation.
+- Fixed: wireless CarPlay through a stereo's Bluetooth module was blocked with "choose an iPhone",
+  although the iPhone pairs with the module, not with Android.
+- Fixed: on stereos that turn Wi-Fi off while their hotspot is on, the car hotspot connection
+  was blocked with "Wi-Fi is off".
+- Wired CarPlay no longer stays on "Getting CarPlay ready" on head units that miss the iPhone
+  reconnecting in CarPlay mode (from DiPlay).
+- Android Auto ends a corrupted connection at once instead of after a long freeze (from
+  open-headunit).
+
 ## [1.0.12] - 2026-11-06
 
 - New (experimental): wireless CarPlay on FYT stereos whose Bluetooth is a separate module. Turn
