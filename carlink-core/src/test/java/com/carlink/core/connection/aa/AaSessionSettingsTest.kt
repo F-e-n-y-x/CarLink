@@ -45,7 +45,8 @@ class AaSessionSettingsTest {
     @Test fun theModuleRouteReachesTheEngineOnlyForWirelessSessions() {
         val key = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.HOST_ROUTE_KEY
         val blink = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLINK
-        assertEquals("", values().values[key])
+        assertEquals("NORMAL", values().values[key])
+        assertEquals("", values(transport = Transport.USB, path = null).values[key])
         assertEquals("BLINK", AaSessionSettings.values(base, Transport.WIRELESS, WirelessPath.WIFI_DIRECT, VehicleProfile.GENERIC,
             "My Car", 320, moduleRoute = blink).values[key])
         assertEquals("", AaSessionSettings.values(base, Transport.USB, null, VehicleProfile.GENERIC,

@@ -35,8 +35,10 @@ class ExternalBtTransportPolicyTest {
     @Test fun `the module route wins over the manual override`() =
         assertEquals(Route.BLINK, route("/dev/rf_serial exists", Route.BLINK, overridden = true))
 
-    @Test fun `a host route that is not a module route is ignored`() {
-        assertEquals(Route.BLOCKED, route("/dev/rf_serial exists", Route.NORMAL))
+    @Test fun `the host's NORMAL overrides the engine's markers`() =
+        // CarLink judged rw.zlink.bt.type=extra a false positive (Qualcomm Bengal head unit, 2026-11-08).
+        assertEquals(Route.NORMAL, route("rw.zlink.bt.type=extra", Route.NORMAL))
+
+    @Test fun `a host BLOCKED is ignored`() =
         assertEquals(Route.NORMAL, route(null, Route.BLOCKED))
-    }
 }

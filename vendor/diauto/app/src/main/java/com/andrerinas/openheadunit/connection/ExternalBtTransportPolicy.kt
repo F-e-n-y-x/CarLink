@@ -37,7 +37,7 @@ object ExternalBtTransportPolicy {
 
     /**
      * Key in DiAuto's settings file where the host names the module route for the next session:
-     * "ZBT", "BLINK", "ZJ_SOCKET", or empty for none. Written by CarLink's AaSessionSettings before every start.
+     * "ZBT", "BLINK", "ZJ_SOCKET", "NORMAL" (this unit's own Bluetooth, overriding ExternalBtPolicy), or empty for none. Written by CarLink's AaSessionSettings before every start.
      */
     const val HOST_ROUTE_KEY = "carlink-external-bt-route"
 
@@ -50,6 +50,9 @@ object ExternalBtTransportPolicy {
         // The host's opt-in wins even where this engine's own markers cannot see the module (an
         // FYT unit carries none of the ZLink markers ExternalBtPolicy knows).
         hostRoute == Route.ZBT || hostRoute == Route.BLINK || hostRoute == Route.ZJ_SOCKET -> hostRoute
+        // CarLink: the host's own probe judged the markers a false positive (or the driver chose
+        // this unit's Bluetooth) and already blocks real modules before a session starts.
+        hostRoute == Route.NORMAL -> Route.NORMAL
         externalBtEvidence == null -> Route.NORMAL
         overridden -> Route.NORMAL
         else -> Route.BLOCKED
@@ -61,6 +64,7 @@ object ExternalBtTransportPolicy {
             "ZBT" -> Route.ZBT
             "BLINK" -> Route.BLINK
             "ZJ_SOCKET" -> Route.ZJ_SOCKET
+            "NORMAL" -> Route.NORMAL
             else -> null
         }
 

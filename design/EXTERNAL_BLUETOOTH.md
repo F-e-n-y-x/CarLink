@@ -154,8 +154,10 @@ How a session uses it:
 2. `AaSessionSettings` writes the route into DiAuto's settings (`carlink-external-bt-route` = `ZBT`,
    `BLINK`, or empty for USB sessions and every other stereo); carlink.log says
    `Android Auto Bluetooth through the stereo's module: <ROUTE> (experimental)`.
-3. In `:aa`, mode 3 asks `ExternalBtTransportPolicy.routeFor` (the host's route wins; without one,
-   DiAuto's own ExternalBtPolicy markers still refuse as before). Wi-Fi Direct starts as usual, and
+3. In `:aa`, mode 3 asks `ExternalBtTransportPolicy.routeFor` (the host's route wins). Every other
+   wireless session writes `NORMAL`: CarLink's pre-flight already blocked real modules, so DiAuto's
+   own ExternalBtPolicy markers no longer refuse a stereo CarLink judged `LIKELY_FALSE_POSITIVE`
+   (seen 2026-11-08: `rw.zlink.bt.type=extra` on a Qualcomm Bengal head unit). Wi-Fi Direct starts as usual, and
    `NativeAaHandshakeManager.start` hands over to the module carrier instead of opening RFCOMM
    listeners. The carrier hands each phone to the unchanged handshake (`WppHandshakeSession`) as a
    `HandshakeLink`. CarLink's wake pokes become `RequestReconn` on ZBT and nothing on BLINK (its

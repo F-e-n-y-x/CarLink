@@ -299,7 +299,7 @@ class NativeAaHandshakeManager(
             ExternalBtTransportPolicy.Route.ZJ_SOCKET -> return startOverModule(route)
             ExternalBtTransportPolicy.Route.BLOCKED -> { externalBtDiagnostic()?.let { AppLog.e(it) }; return }
             ExternalBtTransportPolicy.Route.NORMAL -> externalBtDiagnostic()?.let {
-                AppLog.w("$it\nNativeAA: starting anyway — a secondary Bluetooth service is configured manually.")
+                AppLog.w("$it\nNativeAA: starting anyway — the host or a manual secondary Bluetooth service allows this unit's own Bluetooth.") // CarLink
             }
         }
 

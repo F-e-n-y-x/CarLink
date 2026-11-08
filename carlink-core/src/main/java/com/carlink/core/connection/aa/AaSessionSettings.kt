@@ -102,8 +102,12 @@ object AaSessionSettings {
             // The learned steering-wheel buttons, in DiAuto's own keymap (logical-physical), which
             // CommManager.sendKey applies to every key route. CarLink owns the keymap: always written.
             put("key-codes", WheelKeys.diAutoKeyCodes(settings.wheelKeys))
-            // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md); empty = Android's own.
-            put(ExternalBtTransportPolicy.HOST_ROUTE_KEY, if (transport == Transport.WIRELESS) moduleRoute?.name.orEmpty() else "")
+            // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md). A wireless
+            // session runs only where CarLink's pre-flight allowed it, so without a module route it
+            // is NORMAL: DiAuto's own markers must not refuse a stereo CarLink judged usable
+            // (LIKELY_FALSE_POSITIVE, or the driver chose this screen's Bluetooth).
+            put(ExternalBtTransportPolicy.HOST_ROUTE_KEY,
+                if (transport == Transport.WIRELESS) (moduleRoute ?: ExternalBtTransportPolicy.Route.NORMAL).name else "")
 
             // The wireless route. A USB session writes the Wi-Fi Direct route: the engine arms
             // wireless in the background of every service start (DA§2.3), and must not do so with
