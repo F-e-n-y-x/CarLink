@@ -109,8 +109,10 @@ object PhoneClassifier {
      * A phone with no cached SDP record and a custom name stays UNKNOWN until SDP completes.
      */
     fun classifyBluetooth(device: BluetoothDeviceInfo, remembered: PhoneKind?): PhoneKind {
-        if (remembered != null && remembered != PhoneKind.UNKNOWN) return remembered
+        // iAP2 is proof of an Apple device, so it overrides an older weak guess of ANDROID (2026-11-08:
+        // an iPhone guessed ANDROID from an SDP record without iAP2 was sent to Android Auto for good).
         if (IAP2_BLUETOOTH_UUID in device.uuids) return PhoneKind.IPHONE
+        if (remembered != null && remembered != PhoneKind.UNKNOWN) return remembered
         val name = device.name.orEmpty().lowercase(Locale.ROOT)
         if ("iphone" in name || "ipad" in name) return PhoneKind.IPHONE
         if (ANDROID_AUTO_BLUETOOTH_UUID in device.uuids) return PhoneKind.ANDROID

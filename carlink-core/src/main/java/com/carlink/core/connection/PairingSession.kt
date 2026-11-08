@@ -105,7 +105,11 @@ class PairingSession(context: Context) {
                 runCatching { device.bluetoothClass?.majorDeviceClass }.getOrNull()),
             remembered = null,
         )
-        if (kind != PhoneKind.UNKNOWN) knownPhones.remember(device.address, kind)
+        // Keep only proof (an iPhone's iAP2 or name, Android Auto's UUID). "Has SDP records but no
+        // iAP2" is a guess: an iPhone whose iAP2 record was not cached yet looks the same, and a
+        // remembered kind outranks later evidence, so the guess is re-made from fresh records instead.
+        val proof = kind == PhoneKind.IPHONE || PhoneClassifier.ANDROID_AUTO_BLUETOOTH_UUID in uuids
+        if (proof) knownPhones.remember(device.address, kind)
         _state.value = State.Paired(device.address, name, kind)
     }
 

@@ -59,11 +59,14 @@ class PhoneClassifierTest {
             PhoneClassifier.classifyUsb(usb(0x2717, 0xFF48, UsbInterfaceInfo(0xFF, 0xFF, 0x00, hasBulkEndpoint = false))))
     }
 
-    @Test fun rememberedKindWinsOverEverything() {
+    @Test fun rememberedKindWinsOverEverythingButIap2() {
         val renamedIphone = bt("Car phone", setOf(handsFree))
         assertEquals(PhoneKind.IPHONE, PhoneClassifier.classifyBluetooth(renamedIphone, PhoneKind.IPHONE))
         assertEquals(PhoneKind.ANDROID,
             PhoneClassifier.classifyBluetooth(bt("iPhone of Sam", emptySet()), PhoneKind.ANDROID))
+        // An iPhone once guessed ANDROID (SDP without iAP2) is put right once iAP2 shows up.
+        assertEquals(PhoneKind.IPHONE,
+            PhoneClassifier.classifyBluetooth(bt("Car phone", setOf(handsFree, PhoneClassifier.IAP2_BLUETOOTH_UUID)), PhoneKind.ANDROID))
     }
 
     @Test fun unknownMemoryIsIgnored() {
