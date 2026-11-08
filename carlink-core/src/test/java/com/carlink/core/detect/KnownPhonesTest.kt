@@ -32,4 +32,12 @@ class KnownPhonesTest {
         assertEquals(emptyList<String>(), phones.dropUnprovenAndroid { false })
         assertEquals(PhoneKind.ANDROID, phones.kindOf("AA:AA:AA:AA:AA:01"))
     }
+
+    @Test fun androidAutosAutoStartListIsNotProofOfAnAndroidPhone() { // CarLink writes every attempt there
+        val app = RuntimeEnvironment.getApplication()
+        com.andrerinas.openheadunit.utils.Settings.syncAutoStartBtMacsToDeviceStorage(app, setOf("AA:AA:AA:AA:AA:09"))
+        assertEquals(setOf("AA:AA:AA:AA:AA:09"), com.andrerinas.openheadunit.utils.Settings.getAutoStartBtMacs(app))
+        assertNull(phones.kindOf("AA:AA:AA:AA:AA:09"))
+        assertEquals(null, phones.all()["AA:AA:AA:AA:AA:09"])
+    }
 }
