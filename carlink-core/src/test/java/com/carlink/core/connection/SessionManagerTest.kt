@@ -30,6 +30,7 @@ class SessionManagerTest {
     private val log = mutableListOf<String>()
     private val applied = mutableListOf<SessionPlan>()
     private val remembered = mutableListOf<Pair<String, WirelessPath>>()
+    private val rememberedKinds = mutableListOf<Pair<String, PhoneKind?>>()
     private var problems: (SessionRequest, WirelessPath?) -> List<Problem> = { _, _ -> emptyList() }
     private var paths = listOf(WirelessPath.WIFI_DIRECT, WirelessPath.CAR_HOTSPOT)
     private var usbPresent = false
@@ -81,7 +82,7 @@ class SessionManagerTest {
         override fun preflight(request: SessionRequest, path: WirelessPath?) = problems(request, path)
         override fun wirelessPaths(request: SessionRequest) = paths
         override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) { remembered += phoneAddress to path }
-        override fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String?) {}
+        override fun rememberPhone(phoneAddress: String, kind: PhoneKind?, name: String?) { rememberedKinds += phoneAddress to kind }
         var connected: List<PhoneOption> = emptyList()
         var moduleWait: Long? = null
         var serials: (Intent?) -> String? = { null }
@@ -126,6 +127,14 @@ class SessionManagerTest {
         androidAuto.emit(AdapterEvent.Connected); idle()
         assertEquals(SessionState.Phase.Connected, (m.state.value as SessionState.Active).phase)
         assertEquals(listOf("AA:BB" to WirelessPath.WIFI_DIRECT), remembered)
+    }
+
+    @Test fun aTapDoesNotSaveTheListedTypeButAConnectionDoes() { // module stereo, 2026-11-08
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Car phone"); idle()
+        assertEquals(listOf<Pair<String, PhoneKind?>>("AA:BB" to null), rememberedKinds)
+        androidAuto.emit(AdapterEvent.Connected); idle()
+        assertEquals("AA:BB" to PhoneKind.ANDROID, rememberedKinds.last())
     }
 
     @Test fun connectingTheSamePhoneAgainKeepsTheRunningAttempt() {

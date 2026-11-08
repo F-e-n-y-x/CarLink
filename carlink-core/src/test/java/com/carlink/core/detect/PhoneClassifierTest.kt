@@ -85,6 +85,8 @@ class PhoneClassifierTest {
 
     @Test fun phoneWithSdpRecordsButNoIap2IsAndroid() {
         assertEquals(PhoneKind.ANDROID, PhoneClassifier.classifyBluetooth(bt("Pixel 9", setOf(handsFree, a2dpSource)), null))
+        // Only media streaming seen (an iPhone paired through a stereo's module, 2026-11-08): no guess.
+        assertEquals(PhoneKind.UNKNOWN, PhoneClassifier.classifyBluetooth(bt("Car phone", setOf(a2dpSource)), null))
         assertEquals(PhoneKind.ANDROID,
             PhoneClassifier.classifyBluetooth(bt(null, setOf(PhoneClassifier.ANDROID_AUTO_BLUETOOTH_UUID), major = null), null))
     }

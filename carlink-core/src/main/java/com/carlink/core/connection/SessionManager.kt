@@ -176,7 +176,11 @@ class SessionManager(
         fun wirelessPaths(request: SessionRequest): List<WirelessPath>
         /** Remembers that [path] connected for [phoneAddress]. */
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
-        fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String? = null)
+        /**
+         * Remembers [phoneAddress] as the last phone, with its [name] and, when known for certain,
+         * its [kind]. A null [kind] keeps whatever type is stored (a tap is not proof of the type).
+         */
+        fun rememberPhone(phoneAddress: String, kind: PhoneKind?, name: String? = null)
 
         /** The USB serial of the phone in [attach] (readable while CarLink has USB permission for it); null when unknown. */
         fun usbSerial(attach: Intent?): String? = null
@@ -546,7 +550,10 @@ class SessionManager(
         val engine = kind.engine ?: return
         _pendingChoice.value = null // the driver chose
         environment.autoConnectPaused = false
-        address?.let { environment.rememberPhone(it, kind, phoneName) }
+        // The kind came from Home's list, which may be an old guess; saving it made the guess stick
+        // (an iPhone on a module stereo started as Android Auto on every tap, 2026-11-08). The
+        // driver's own type pick is saved by PhonesRepository.setKind; a connection saves proof.
+        address?.let { environment.rememberPhone(it, null, phoneName) }
         // The same phone asked again (a second tap, Home's automatic start racing the tap): restarting
         // threw away an attempt 2 s from connected and paid a 6 s Bluetooth warm-up (tablet, 2026-10-20).
         val current = (_state.value as? SessionState.Active)?.request

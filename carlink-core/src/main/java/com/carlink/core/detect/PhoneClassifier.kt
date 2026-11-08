@@ -105,7 +105,8 @@ object PhoneClassifier {
      * 1. a phone the driver or a previous session already identified ([remembered]);
      * 2. the iAP2 service UUID, which only Apple devices publish;
      * 3. an "iPhone"/"iPad" device name (the default name, and DiPlay's own picker rule);
-     * 4. an SDP record set from a phone that lacks iAP2, or the Android Auto service UUID.
+     * 4. an SDP record set from a phone that lacks iAP2 and holds more than media streaming, or
+     *    the Android Auto service UUID.
      * A phone with no cached SDP record and a custom name stays UNKNOWN until SDP completes.
      */
     fun classifyBluetooth(device: BluetoothDeviceInfo, remembered: PhoneKind?): PhoneKind {
@@ -117,7 +118,14 @@ object PhoneClassifier {
         if ("iphone" in name || "ipad" in name) return PhoneKind.IPHONE
         if (ANDROID_AUTO_BLUETOOTH_UUID in device.uuids) return PhoneKind.ANDROID
         val isPhone = device.majorClass == null || device.majorClass == BLUETOOTH_MAJOR_PHONE
-        if (isPhone && device.uuids.isNotEmpty()) return PhoneKind.ANDROID
+        // Media streaming alone tells nothing: on a stereo whose module carries the iPhone's iAP2
+        // link, Android's SDP saw only A2DP source (0x110A) for an iPhone with a custom name and
+        // started Android Auto (2026-11-08). Such a phone stays UNKNOWN and Home asks the driver.
+        if (isPhone && device.uuids.any { it !in MEDIA_ONLY_UUIDS }) return PhoneKind.ANDROID
         return PhoneKind.UNKNOWN
     }
+
+    /** A2DP source/sink/advanced audio and AVRCP (0x110A-0x110F): every phone has them. */
+    private val MEDIA_ONLY_UUIDS: Set<UUID> = (0x110A..0x110F)
+        .map { UUID.fromString("0000%04x-0000-1000-8000-00805f9b34fb".format(it)) }.toSet()
 }

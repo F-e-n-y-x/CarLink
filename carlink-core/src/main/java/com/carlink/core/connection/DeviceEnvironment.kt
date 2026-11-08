@@ -80,8 +80,8 @@ class DeviceEnvironment(
         com.carlink.core.detect.PairingLoss.clear(app, phoneAddress)
     }
 
-    override fun rememberPhone(phoneAddress: String, kind: PhoneKind, name: String?) {
-        knownPhones.remember(phoneAddress, kind)
+    override fun rememberPhone(phoneAddress: String, kind: PhoneKind?, name: String?) {
+        kind?.let { knownPhones.remember(phoneAddress, it) }
         knownPhones.rememberName(phoneAddress, name)
         lastPhone(app).edit().putString(KEY_LAST_PHONE, phoneAddress).apply()
     }

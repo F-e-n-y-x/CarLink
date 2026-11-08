@@ -45,6 +45,21 @@ class KnownPhones(context: Context) {
     }
 
     /**
+     * Once per install: drops every stored ANDROID type that [connectedAsAndroid] cannot back up.
+     * Up to 1.0.14 a Bluetooth guess (SDP records without iAP2) and every tap on Home saved the
+     * type as fact, so an iPhone could stay "Android" for good; on a stereo whose Bluetooth is an
+     * external module no later evidence ever corrects it (2026-11-08). Returns the addresses dropped.
+     */
+    fun dropUnprovenAndroid(connectedAsAndroid: (String) -> Boolean): List<String> {
+        val done = app.getSharedPreferences(MIGRATIONS, Context.MODE_PRIVATE)
+        if (done.getBoolean(KEY_UNPROVEN_ANDROID, false)) return emptyList()
+        val dropped = prefs.all.filter { (address, kind) -> kind == PhoneKind.ANDROID.name && !connectedAsAndroid(address) }.keys.toList()
+        prefs.edit().apply { dropped.forEach(::remove) }.apply()
+        done.edit().putBoolean(KEY_UNPROVEN_ANDROID, true).apply()
+        return dropped
+    }
+
+    /**
      * The phone's name as last seen (Android's paired list, a session, or the stereo's Bluetooth
      * module), so Home can list it where Android's own Bluetooth cannot (an external module).
      */
@@ -72,6 +87,8 @@ class KnownPhones(context: Context) {
     companion object {
         private const val PREFS = "carlink_known_phones"
         private const val NAMES = "carlink_known_phone_names"
+        private const val MIGRATIONS = "carlink_known_phones_migrations"
+        private const val KEY_UNPROVEN_ANDROID = "unproven_android_dropped"
         fun normalize(address: String): String = address.trim().uppercase(Locale.ROOT)
     }
 }

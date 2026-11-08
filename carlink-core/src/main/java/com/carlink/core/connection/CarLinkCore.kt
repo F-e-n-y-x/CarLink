@@ -97,6 +97,10 @@ object CarLinkCore {
             AaEngineHooks.install(app)
         } else {
             EventLog.attachFile(java.io.File(app.filesDir, "logs"))
+            // Before Home's automatic start reads a phone's type: old guessed types go (KnownPhones).
+            val paths = PathMemory(app)
+            com.carlink.core.detect.KnownPhones(app).dropUnprovenAndroid { paths.lastWorking(com.carlink.core.core.Engine.ANDROID_AUTO, it) != null }
+                .takeIf { it.isNotEmpty() }?.let { EventLog.add("CarLink", "dropped ${it.size} guessed Android phone type(s)") }
             // Once per app start: what this stereo's Bluetooth is (its own thread; ~300 ms at most
             // for the port check). Its block goes into carlink.log; pre-flight reads it.
             com.carlink.core.detect.ExternalBluetoothProbe.start(app)
