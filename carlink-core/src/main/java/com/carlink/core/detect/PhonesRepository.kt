@@ -105,8 +105,11 @@ class PhonesRepository(
         if (!started) return
         started = false
         runCatching { app.unregisterReceiver(receiver) }
-        proxies.forEach { (profile, proxy) -> runCatching { adapter?.closeProfileProxy(profile, proxy) } }
+        // closeProfileProxy can call onServiceDisconnected straight away, which removes from
+        // proxies; closing a copy keeps that from throwing ConcurrentModificationException.
+        val open = proxies.toMap()
         proxies.clear()
+        open.forEach { (profile, proxy) -> runCatching { adapter?.closeProfileProxy(profile, proxy) } }
     }
 
     /**
