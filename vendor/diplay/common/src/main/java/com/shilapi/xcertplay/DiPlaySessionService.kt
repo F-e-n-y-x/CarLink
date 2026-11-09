@@ -6,7 +6,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -52,8 +54,23 @@ class DiPlaySessionService : Service() {
             }
             startForeground(1, notification, types)
         } else startForeground(1, notification)
+        foreground = true
+        // CarLink (from the j0hann3sk/CarLink-ZLINK_fix fork): the session ended before this service
+        // got going; stopping it any earlier crashes Android 8 ("did not then call Service.startForeground()").
+        if (!requested) {
+            stopForegroundCompat()
+            stopSelf()
+        }
         return START_NOT_STICKY
     }
+
+    override fun onDestroy() {
+        foreground = false
+        super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stopForegroundCompat() = stopForeground(true)
     override fun onTaskRemoved(rootIntent: Intent?) {
         // BYD's recents force-stops the package ~10 ms after removing the task: end guidance first.
         com.shilapi.xcertplay.hud.BydNavigationOutputs.endNow()
@@ -61,6 +78,21 @@ class DiPlaySessionService : Service() {
         stopSelf()
     }
     companion object {
+        @Volatile private var requested = false
+        @Volatile private var foreground = false
+
+        /** CarLink: starts the service; pairs with [stop]. */
+        fun start(context: Context) {
+            requested = true
+            ContextCompat.startForegroundService(context, Intent(context, DiPlaySessionService::class.java))
+        }
+
+        /** Stops it, or, when it has not reached startForeground yet, lets it stop itself right after. */
+        fun stop(context: Context) {
+            requested = false
+            if (foreground) context.stopService(Intent(context, DiPlaySessionService::class.java))
+        }
+
         const val ACTION_STOP = "com.shihab.diplay.DISCONNECT"
         private const val CHANNEL = "diplay_connection"
     }

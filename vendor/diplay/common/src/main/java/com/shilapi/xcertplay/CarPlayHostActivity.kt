@@ -5787,7 +5787,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             }
         }
         try {
-            ContextCompat.startForegroundService(this, Intent(this, DiPlaySessionService::class.java))
+            DiPlaySessionService.start(this) // CarLink: Android 8 start/stop race
             next.start()
         } catch (error: RuntimeException) {
             appendLog("Connection could not start: ${error.javaClass.simpleName}")
@@ -6493,7 +6493,7 @@ open class CarPlayHostActivity : ComponentActivity() {
                 applicationContext.stopService(Intent(applicationContext, CarPlayVpnService::class.java))
             }
             Log.i(TAG, "shutdown complete clean=$clean")
-            applicationContext.stopService(Intent(applicationContext, DiPlaySessionService::class.java))
+            DiPlaySessionService.stop(applicationContext) // CarLink: Android 8 start/stop race
             teardownExecutor.shutdown()
             mainHandler.post { HostSessions.teardownFinished(); completion() } // CarLink: teardown accounting
             if (terminateProcess) Process.killProcess(Process.myPid())
