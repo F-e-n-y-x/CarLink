@@ -120,6 +120,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override fun setFloatingSwitcher(on: Boolean) = vm.setFloatingSwitcher(on)
             override fun setWirelessOnExternalBluetooth(on: Boolean) = vm.setWirelessOnExternalBluetooth(on)
             override fun setRootMode(on: Boolean) = vm.setRootMode(on)
+            override fun setAutoCarHotspot(on: Boolean) = vm.setAutoCarHotspot(on)
             override fun setAndroidAutoOnScreen(on: Boolean) = vm.setAndroidAutoOnScreen(on)
             override fun openOverlayPermission() = vm.fix(com.carlink.core.core.LinkProblem.OVERLAY)
             override fun resumeAutoConnect() = vm.resumeAutoConnect()

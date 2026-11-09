@@ -73,6 +73,8 @@ interface SettingsActions {
     fun setWirelessOnExternalBluetooth(on: Boolean) {}
     /** Root mode (CarLinkPreferences.rootMode). */
     fun setRootMode(on: Boolean) {}
+    /** "Switch the car hotspot on" (CarLinkPreferences.autoCarHotspot). */
+    fun setAutoCarHotspot(on: Boolean) {}
     /** "Android Auto on this screen (experimental)" (CarLinkPreferences.androidAutoOnScreen). */
     fun setAndroidAutoOnScreen(on: Boolean) {}
     /** Android's "Display over other apps" screen for CarLink. */

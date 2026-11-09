@@ -147,6 +147,23 @@ class DeviceEnvironment(
         return request.phoneAddress?.let { BluetoothWarmup.start(app, it, done) } ?: false
     }
 
+    // DiPlay's start: Android's own tethering call (needs "Modify system settings"), else the
+    // head unit's shell through the local ADB the driver approved; never prompts.
+    override fun turnOnCarHotspot(done: (Boolean) -> Unit): Boolean {
+        if (!preferences.autoCarHotspot) return false
+        if (!com.shilapi.xcertplay.network.CarHotspotTethering.permitted(app)) {
+            EventLog.add("CarLink", "car hotspot: \"Modify system settings\" is not allowed")
+            return false
+        }
+        kotlin.concurrent.thread(name = "carlink-hotspot") {
+            val result = runCatching {
+                com.shilapi.xcertplay.network.CarHotspotTethering.enable(app, isCancelled = { false }, log = { EventLog.add("CarLink", it) })
+            }.getOrNull()
+            done(result == com.shilapi.xcertplay.network.CarHotspotTethering.Result.READY)
+        }
+        return true
+    }
+
     override fun returnHome() = CarLinkCore.config.host.openHome(app, CarLinkHost.OpenReason.UNPLUGGED)
 
     override fun log(message: String) = EventLog.add("CarLink", message)

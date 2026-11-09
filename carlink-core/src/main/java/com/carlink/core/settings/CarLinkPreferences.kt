@@ -36,6 +36,11 @@ class CarLinkPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_ROOT_MODE, false)
         set(value) = prefs.edit().putBoolean(KEY_ROOT_MODE, value).apply()
 
+    /** Settings › Connection › "Switch the car hotspot on" (advanced, #36): CarLink starts it when a session needs it. */
+    var autoCarHotspot: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_CAR_HOTSPOT, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_CAR_HOTSPOT, value).apply()
+
     /** "Android Auto on this screen (experimental)" (Settings › Connection, advanced): Home offers DiAuto's Self Mode. */
     var androidAutoOnScreen: Boolean
         get() = prefs.getBoolean(KEY_AA_ON_SCREEN, false)
@@ -76,6 +81,7 @@ class CarLinkPreferences(context: Context) {
         private const val KEY_WIRELESS_EXTERNAL_BT = "wireless_on_external_bluetooth"
         private const val KEY_USE_ANDROID_BT = "use_android_bluetooth"
         private const val KEY_ROOT_MODE = "root_mode"
+        private const val KEY_AUTO_CAR_HOTSPOT = "auto_car_hotspot"
         private const val KEY_AA_ON_SCREEN = "android_auto_on_screen"
         private const val KEY_PAUSED_AT = "auto_connect_paused_at"
         const val PAUSE_MILLIS = 10 * 60_000L

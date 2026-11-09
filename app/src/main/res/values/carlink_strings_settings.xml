@@ -48,6 +48,8 @@
     <string name="carlink_settings_root">Root mode</string>
     <string name="carlink_settings_root_detail">For rooted stereos. Allows everything setup asks for without popups, and keeps Wi-Fi in low-latency mode while a phone is connected. Your root manager asks once.</string>
     <string name="carlink_settings_root_unavailable">Root is not available or was refused, so Root mode stays off.</string>
+    <string name="carlink_settings_auto_hotspot">Switch the car hotspot on</string>
+    <string name="carlink_settings_auto_hotspot_detail">When a wireless connection needs the stereo\'s hotspot and it is off, CarLink tries to switch it on. Needs \"Modify system settings\" for CarLink; some stereos only allow it with debugging approved.</string>
     <string name="carlink_settings_external_bt">Wireless through the stereo\'s Bluetooth module (experimental)</string>
     <string name="carlink_settings_external_bt_detail">This stereo\'s Bluetooth is a separate module. Wireless Android Auto and CarPlay reach your phone through it; on by default. Turn off if wireless misbehaves on this stereo; USB still works. Applies from the next connection.</string>
     <string name="carlink_settings_external_bt_fyt_note">First disable the stereo\'s own “Car Link” app (com.syu.carlink) in Android Settings › Apps.</string>

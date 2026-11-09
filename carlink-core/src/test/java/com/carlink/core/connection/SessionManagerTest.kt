@@ -96,6 +96,15 @@ class SessionManagerTest {
         var warmUps = 0
         var warmUpDone: (() -> Unit)? = null
         var warmUpAvailable = false
+        var hotspotTries = 0
+        var hotspotDone: ((Boolean) -> Unit)? = null
+        var hotspotAvailable = false
+        override fun turnOnCarHotspot(done: (Boolean) -> Unit): Boolean {
+            if (!hotspotAvailable) return false
+            hotspotTries++
+            hotspotDone = done
+            return true
+        }
         override fun warmUp(request: SessionRequest, done: () -> Unit): Boolean {
             if (!warmUpAvailable) return false
             warmUps++
@@ -156,6 +165,32 @@ class SessionManagerTest {
         problems = { _, _ -> emptyList() }
         m.retry(); idle()
         assertEquals(1, starts.size)
+    }
+
+    @Test fun anOffCarHotspotIsSwitchedOnOnceAndTheStartTriedAgain() { // #36
+        problems = { _, _ -> listOf(Problem.CAR_HOTSPOT_OFF) }
+        env.hotspotAvailable = true
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals(1, env.hotspotTries)
+        problems = { _, _ -> emptyList() }
+        env.hotspotDone!!(true); idle()
+        assertEquals(1, starts.size)
+    }
+
+    @Test fun aHotspotThatStaysOffIsTriedOnlyOncePerStart() { // #36
+        problems = { _, _ -> listOf(Problem.CAR_HOTSPOT_OFF) }
+        env.hotspotAvailable = true
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        env.hotspotDone!!(false); idle()
+        m.onSettingsChanged(); idle()
+        assertEquals(1, env.hotspotTries)
+        assertTrue(m.state.value is SessionState.Blocked)
+        // Another problem alongside it: no try.
+        problems = { _, _ -> listOf(Problem.CAR_HOTSPOT_OFF, Problem.LOCATION_OFF) }
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        assertEquals(1, env.hotspotTries)
     }
 
     @Test fun aSettingsChangeChecksABlockedRequestAgain() { // tablet 2026-10-20: stuck on "Add your Wi-Fi password"

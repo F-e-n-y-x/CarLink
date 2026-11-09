@@ -114,6 +114,9 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
             GroupDivider()
             SwitchRow(stringResource(R.string.carlink_settings_root), c.rootMode, actions::setRootMode,
                 description = stringResource(R.string.carlink_settings_root_detail), icon = R.drawable.carlink_ic_lock)
+            GroupDivider()
+            SwitchRow(stringResource(R.string.carlink_settings_auto_hotspot), c.autoCarHotspot, actions::setAutoCarHotspot,
+                description = stringResource(R.string.carlink_settings_auto_hotspot_detail), icon = R.drawable.carlink_ic_wifi)
         }
         // Advanced, and only where Android Auto itself is installed (Self Mode dials its head unit server).
         if (ui.unified.showAdvanced && c.androidAutoInstalled) {

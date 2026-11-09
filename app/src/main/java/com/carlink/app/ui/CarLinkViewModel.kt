@@ -72,6 +72,8 @@ data class ConnectionPrefs(
     val useAndroidBluetooth: Boolean = false,
     /** Settings › Connection › Root mode (advanced). */
     val rootMode: Boolean = false,
+    /** Settings › Connection › "Switch the car hotspot on" (advanced, #36). */
+    val autoCarHotspot: Boolean = false,
     /** "Android Auto on this screen (experimental)" (Settings › Connection, advanced). */
     val androidAutoOnScreen: Boolean = false,
     /** Android Auto (Gearhead) is installed on this device: Self Mode needs it. */
@@ -578,6 +580,19 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         phonesRepository.refresh()
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Bluetooth: ${if (on) "this screen's own" else "the stereo's module"}")
     }
+    /**
+     * "Switch the car hotspot on" (#36): Android's tethering call needs "Modify system settings",
+     * so turning it on opens that page when it is not allowed yet.
+     */
+    fun setAutoCarHotspot(on: Boolean) {
+        preferences.autoCarHotspot = on
+        _connection.value = readConnection()
+        if (on && !android.provider.Settings.System.canWrite(app)) runCatching {
+            app.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                android.net.Uri.parse("package:${app.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
     /** Root mode: turning it on asks the root manager once and grants everything setup asks for. */
     fun setRootMode(on: Boolean) {
         preferences.rootMode = on
@@ -640,7 +655,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     private fun readConnection() = ConnectionPrefs(
         preferences.autoConnectUsb, preferences.autoConnectBluetooth, preferences.startOnBoot, autoConnectPaused = false,
         floatingSwitcher = uiPreferences.floatingSwitcher, wirelessOnExternalBluetooth = preferences.wirelessOnExternalBluetooth,
-        useAndroidBluetooth = preferences.useAndroidBluetooth, rootMode = preferences.rootMode, androidAutoOnScreen = preferences.androidAutoOnScreen,
+        useAndroidBluetooth = preferences.useAndroidBluetooth, rootMode = preferences.rootMode, autoCarHotspot = preferences.autoCarHotspot,
+        androidAutoOnScreen = preferences.androidAutoOnScreen,
         androidAutoInstalled = runCatching { app.packageManager.getPackageInfo(ANDROID_AUTO_PACKAGE, 0) }.isSuccess,
         // The check Android Auto itself fails on: it starts this activity when a head unit connects.
         androidAutoCanRunCar = runCatching {
