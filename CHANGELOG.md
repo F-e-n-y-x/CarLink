@@ -4,6 +4,21 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.14] - 2026-11-10
+
+- New: Settings › Connection › Show advanced › "Switch the car hotspot on". When wireless needs
+  the stereo's hotspot and it is off, CarLink switches it on and connects (#36). It needs
+  "Modify system settings" for CarLink; some stereos only allow it with debugging approved.
+- Fixed: an iPhone could be taken for an Android phone and sent to Android Auto every time,
+  for example after pairing with a custom name or on stereos with a Bluetooth module. Home now
+  asks when it isn't sure (thanks pphan93).
+- Fixed: wireless Android Auto said "Wireless isn't available on this stereo yet" on some
+  stereos without a real Bluetooth module (thanks pphan93).
+- Fixed: CarLink closed with an error when the phone disconnected on some Android 15 tablets
+  (thanks MrKeltron).
+- Fixed: a crash on Android 8 when a CarPlay connection ended right as it started (thanks
+  j0hann3sk).
+
 ## [1.0.13] - 2026-11-07
 
 - Fixed: Android Auto on a screen that can rotate still showed a portrait picture after turning
