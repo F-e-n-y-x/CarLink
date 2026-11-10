@@ -138,5 +138,9 @@ class AaSessionSettingsTest {
         // Portrait and an unknown picture keep the device's density.
         assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 720, 1280))
         assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 0, 0))
+        // A phone as the screen: a head unit's density, not the phone's, in both orientations.
+        assertEquals(160, AaSessionSettings.automaticDensityDpi(300, 720, 1560, handheld = true))
+        assertEquals(160, AaSessionSettings.automaticDensityDpi(300, 1560, 720, handheld = true))
+        assertEquals(120, AaSessionSettings.automaticDensityDpi(120, 1560, 720, handheld = true))
     }
 }

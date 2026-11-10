@@ -182,11 +182,17 @@ object AaSessionSettings {
      * minimum 748x450 dp canvas, below which it draws a reduced layout without media controls
      * (open-headunit #1101/#1108). [visibleWidthPx] x [visibleHeightPx] is the codec area less its
      * margins. Portrait is left alone: the floor is a landscape one. A typed DPI never comes here.
+     * A [handheld] screen (phone, tablet) starts from a head unit's 160 dpi instead of its own: at a
+     * phone's 300+ dpi Android Auto drew a phone-sized layout, while CarPlay on the same screen is laid
+     * out for a car-sized display (2026-11-10, Galaxy S25 as the screen).
      */
-    fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int): Int {
-        if (visibleWidthPx <= 0 || visibleHeightPx <= 0 || visibleHeightPx > visibleWidthPx) return deviceDpi
-        return minOf(deviceDpi, visibleWidthPx * 160 / MIN_WIDTH_DP, visibleHeightPx * 160 / MIN_HEIGHT_DP)
+    fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false): Int {
+        val base = if (handheld) minOf(deviceDpi, HANDHELD_DPI) else deviceDpi
+        if (visibleWidthPx <= 0 || visibleHeightPx <= 0 || visibleHeightPx > visibleWidthPx) return base
+        return minOf(base, visibleWidthPx * 160 / MIN_WIDTH_DP, visibleHeightPx * 160 / MIN_HEIGHT_DP)
     }
+
+    private const val HANDHELD_DPI = 160
 
     private const val MIN_WIDTH_DP = 748
     private const val MIN_HEIGHT_DP = 450

@@ -39,9 +39,10 @@ object AaEngineHooks {
         HostIntegration.stickyService = false
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
+        val handheld = com.carlink.core.detect.HeadUnitDetector.handheld(app)
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
-            AaSessionSettings.automaticDensityDpi(dpi, w, h).also {
-                if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture (Android Auto's 748x450 dp minimum)")
+            AaSessionSettings.automaticDensityDpi(dpi, w, h, handheld).also {
+                if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture (car-sized layout, 748x450 dp minimum)")
             }
         }
         HostIntegration.onEngineEvent = { _, kind, detail ->
