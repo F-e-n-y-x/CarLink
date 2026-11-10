@@ -27,6 +27,17 @@ object HeadUnitDetector {
         return !pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) && !hasBattery(context)
     }
 
+    /**
+     * A phone or tablet, whose screen turns: a phone radio or a battery, and not Automotive. Unlike
+     * [looksLikeCarDisplay] it ignores the car UI mode, which a phone enters for a while (seen
+     * 2026-11-10 on a Galaxy S25 while it was plugged in) and leaves again.
+     */
+    fun handheld(context: Context): Boolean {
+        val pm = context.packageManager
+        if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return false
+        return pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) || hasBattery(context)
+    }
+
     private fun hasBattery(context: Context): Boolean {
         val status = runCatching {
             context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))

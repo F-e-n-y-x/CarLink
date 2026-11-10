@@ -137,6 +137,8 @@ object HostIntegration {
          * agreed to send (agreed once per session). Detail: `picture=WxH;screen=landscape|portrait`.
          */
         ORIENTATION_CHANGED,
+        /** CarLink: this unit could not create its Wi-Fi Direct group at all (#40). Detail: `reason=`. */
+        WIFI_DIRECT_GROUP_FAILED,
     }
 
     /**

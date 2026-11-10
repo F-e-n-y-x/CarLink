@@ -834,6 +834,9 @@ internal data class DecoderAttempt(
  * first on its own, so a decoder that refuses it keeps the tuned format it gets without one. A
  * [lowLatencyDecoder] gets its tuned attempts before the default decoder's.
  */
+/** CarLink: #26, hardware H.264 decoders that configure without error but output green frames (Huawei P20 Lite). */
+internal fun greenOnlyAvcDecoder(codecName: String): Boolean = codecName.startsWith("OMX.IMG.MSVDX", ignoreCase = true)
+
 internal fun videoDecoderAttempts(
     operatingRate: Int,
     softwareDecoder: String?,
@@ -1216,12 +1219,13 @@ private class VideoDecoder(
             MtkDecoderTuning.legacyAcodecDecoderName(mime) != null) maximumMtkMode else MtkDecoderMode.NONE
         var configured: ConfiguredVideoDecoder? = null
         var used: DecoderAttempt? = null
-        for (attempt in videoDecoderAttempts(
+        val softwareDecoder = softwareDecoderName(mime)
+        for (attempt in softwareFirstForGreenDecoder(mime, softwareDecoder, videoDecoderAttempts( // CarLink: #26
             requestedRate,
-            softwareDecoderName(mime),
+            softwareDecoder,
             requestedLowLatency,
             requestedMtkMode,
-        )) {
+        ))) {
             configured = tryConfigure(mime, csd, surface, attempt, atOnce)
             if (configured != null) { used = attempt; break }
         }
@@ -1397,10 +1401,23 @@ private class VideoDecoder(
             runCatching { PICTURE_ORDER_PARAMETER in codec.supportedVendorParameters }.getOrDefault(false)
 
     private fun softwareDecoderName(mime: String): String? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        // CarLink: #26, before Android 10 there is no isSoftwareOnly; Android's own decoders are OMX.google.*.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+            .firstOrNull { !it.isEncoder && it.name.startsWith("OMX.google.") && mime in it.supportedTypes }?.name
         return MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.firstOrNull {
             !it.isEncoder && it.isSoftwareOnly && mime in it.supportedTypes
         }?.name
+    }
+
+    // CarLink: #26, a decoder that configures fine but draws only green goes after Android's software one.
+    private fun softwareFirstForGreenDecoder(mime: String, software: String?, attempts: List<DecoderAttempt>): List<DecoderAttempt> {
+        if (software == null || mime != MediaFormat.MIMETYPE_VIDEO_AVC) return attempts
+        val default = runCatching {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).findDecoderForFormat(MediaFormat.createVideoFormat(mime, width, height))
+        }.getOrNull() ?: return attempts
+        if (!greenOnlyAvcDecoder(default)) return attempts
+        report("decoder $default draws only green on this device; using $software")
+        return listOf(DecoderAttempt(software, tuned = false)) + attempts.filterNot { it.codecName == software }
     }
 
     private fun createDecoder(mime: String): MediaCodec {

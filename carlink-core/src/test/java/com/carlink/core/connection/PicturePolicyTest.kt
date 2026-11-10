@@ -41,7 +41,7 @@ class PicturePolicyTest {
         assertEquals(60, choice.aaFps)
         assertNull(choice.aaCodec)
         assertEquals(100, choice.carPlayScalePercent)
-        assertEquals(30, choice.carPlayFps)
+        assertEquals(60, choice.carPlayFps) // the decoder carries 60; 30 cost ~70 ms behind a Qualcomm decoder
         assertNull(choice.carPlayHevc)
     }
 

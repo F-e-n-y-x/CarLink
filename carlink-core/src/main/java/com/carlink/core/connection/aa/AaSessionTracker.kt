@@ -132,6 +132,9 @@ internal class AaSessionTracker(
         return when (kind) {
             EngineEvent.WIFI_OFF.name -> fail(FailureReason.BLOCKED, "Wi-Fi is off")
             EngineEvent.P2P_OWNED_BY_OTHER.name -> fail(FailureReason.WIFI_SETUP_FAILED, "Wi-Fi Direct is in use by another app")
+            // Reported as "phone didn't answer" before: the phone was never given a network (#40).
+            EngineEvent.WIFI_DIRECT_GROUP_FAILED.name -> fail(FailureReason.WIFI_SETUP_FAILED,
+                "this screen could not create its Wi-Fi Direct group" + (d["reason"]?.let { " ($it)" } ?: ""))
             EngineEvent.DFS_CHANNEL.name -> { dfsChannel = d["frequency"]; emptyList() }
             EngineEvent.BSSID_UNRESOLVED.name ->
                 if (d["location"] == "off") fail(FailureReason.BLOCKED, "Location is off, so the Wi-Fi Direct address is hidden")
@@ -344,7 +347,8 @@ internal class AaSessionTracker(
         const val CONNECT_STATUS = 6
         const val STALE_REPLUG = "unplug the phone and plug it in again (it did not start a new Android Auto session over USB)"
         val WIRELESS_ONLY = setOf(
-            EngineEvent.WIFI_OFF.name, EngineEvent.P2P_OWNED_BY_OTHER.name, EngineEvent.DFS_CHANNEL.name,
+            EngineEvent.WIFI_OFF.name, EngineEvent.P2P_OWNED_BY_OTHER.name, EngineEvent.WIFI_DIRECT_GROUP_FAILED.name,
+            EngineEvent.DFS_CHANNEL.name,
             EngineEvent.BSSID_UNRESOLVED.name, EngineEvent.BLUETOOTH_UNAVAILABLE.name,
             EngineEvent.EXTERNAL_BLUETOOTH.name, EngineEvent.EXTERNAL_MODULE_UNAVAILABLE.name, EngineEvent.BT_CHANNEL_ACCEPTED.name,
             EngineEvent.CREDENTIALS_SENT.name, EngineEvent.POKE_ANSWERED_NO_ACCEPT.name,

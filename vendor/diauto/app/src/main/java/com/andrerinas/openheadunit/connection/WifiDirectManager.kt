@@ -1585,6 +1585,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     }
                 } else {
                     AppLog.e("WifiDirectManager: createQuietGroup failed completely! Reason: $reasonStr")
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(context, // CarLink: #40
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.WIFI_DIRECT_GROUP_FAILED, "reason=$reasonStr")
                     // CarLink (open-headunit 30310b93): the shortcut is kept only while it works.
                     if (groupMode == NATIVE_GROUP_MODE_STANDARD_REMEMBERED) {
                         App.provide(context).settings.wifiDirectBandedRefusedOn = null

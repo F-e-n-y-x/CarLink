@@ -48,7 +48,8 @@ data class PictureChoice(
  *    is not low-end ([DeviceSignals.lowEnd]); otherwise 30.
  * 4. CarPlay size: the panel at 100 %, 75 % or 50 %, the first the decoder carries at 30 fps
  *    (a software decoder no more than 1280×720 pixels; slow hardware no more than 1600×900).
- *    CarPlay stays at 30 fps.
+ *    CarPlay frame rate: 60 fps by the Android Auto rule above on hardware that is not slow, else 30. Qualcomm decoders hold
+ *    about two frames, so 30 fps cost ~70 ms of lag on a phone used as the screen (2026-11-10).
  * 5. CarPlay video output: on slow hardware ([DeviceSignals.liteRendering]: ≤ 3 GB, weak GPU, slow
  *    CPU, …) DiPlay's Direct video output, a SurfaceView the compositor shows as it is, instead of
  *    a TextureView the app's GPU draws again for every frame (issue #4: lag on a 2 GB stereo).
@@ -96,15 +97,17 @@ object PicturePolicy {
         val scale = CARPLAY_SCALES.firstOrNull { percent ->
             caps.panel.scaled(percent).let { fits(it) && (!slow || it.pixels <= SLOW_HARDWARE_MAX_PIXELS) }
         } ?: CARPLAY_SCALES.last()
+        val carPlayFps = if (avc.hardware && !slow && !caps.signals.lowEnd && avc.carries(caps.panel.scaled(scale), 60)) 60 else 30
 
         val codec = if (hevcOk) "engine's choice" else H264
         val summary = "Android Auto ${aa.label}${if (aa == panelClass) " (panel)" else ""} $aaFps fps $codec; " +
-            "CarPlay $scale% of ${caps.panel} 30 fps $codec${directNote(slow)}; decoder ${avc.name}" +
+            "CarPlay $scale% of ${caps.panel} $carPlayFps fps $codec${directNote(slow)}; decoder ${avc.name}" +
             (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals)
         return codecRule.copy(
             aaResolutionId = if (aa == panelClass) AA_AUTOMATIC else aa.id,
             aaFps = aaFps,
             carPlayScalePercent = scale,
+            carPlayFps = carPlayFps,
             summary = summary,
         )
     }

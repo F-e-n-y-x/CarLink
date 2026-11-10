@@ -6027,18 +6027,45 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
         val target = areas.indexFor(size.width, size.height, split, portrait) ?: return false
         if (sidePanelShown) resetSidePanel() // a turn or the split screen ends the side panel
+        // CarLink: turned back before a dropped area went out; the iPhone still shows this one, so no rebuild.
+        if (pendingViewArea != null && target == areas.current) {
+            pendingViewArea = null
+            activeDisplaySize = size
+            sessionDisplay = display.copy(rotation = displayRotation())
+            Log.i(TAG, "Window back to view area $target before the dropped turn went out")
+            return true
+        }
         // The same whole-screen area without a turn (a camera window, say) keeps the usual handling.
         if (!turned && target == areas.current && areas.kindOf(target) == CarPlayViewAreas.Kind.FULL_SCREEN) return false
         activeDisplaySize = size
         sessionDisplay = display.copy(rotation = displayRotation())
         val sent = if (target == areas.current) true else controller?.showViewArea(target) == true
         if (sent) areas.use(target)
+        // CarLink: a turn before the session takes view areas was dropped, and the turn back rebuilt the stack.
+        pendingViewArea = if (sent) null else target
+        if (!sent) retryViewArea(target, areas)
         videoView?.let { updateVideoLayout(it.width, it.height) }
         val message = "Window ${previous?.width}x${previous?.height} -> ${size.width}x${size.height} " +
             "split=$split portrait=$portrait turned=$turned: view area $target sent=$sent"
         appendLog(message)
         Log.i(TAG, message)
         return true
+    }
+
+    /** CarLink: the view area a turn could not send yet; [retryViewArea] sends it once the session takes it. */
+    private var pendingViewArea: Int? = null
+
+    /** CarLink: resends [target] every 0.5 s for up to 15 s while it is still the area the window wants. */
+    private fun retryViewArea(target: Int, areas: CarPlayViewAreas, tries: Int = 30) {
+        mainHandler.postDelayed({
+            if (pendingViewArea != target || sessionDisplay?.viewAreas !== areas || shuttingDown.get()) return@postDelayed
+            if (controller?.showViewArea(target) == true) {
+                areas.use(target)
+                pendingViewArea = null
+                videoView?.let { updateVideoLayout(it.width, it.height) }
+                Log.i(TAG, "View area $target sent on retry")
+            } else if (tries > 1) retryViewArea(target, areas, tries - 1)
+        }, 500L)
     }
 
     /** Whether the screen itself is portrait now (DiPlay's own window may be a split-screen part of it). */
@@ -6331,6 +6358,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         oldSink?.let(retiringSinks::add)
         sink = null
         sessionDisplay = null
+        pendingViewArea = null // CarLink
         clearIphoneCornerMask()
         discardLastPicture()
         val diagnosticLog = sessionLog
@@ -6551,6 +6579,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         oldSink?.let(retiringSinks::add)
         sink = null
         sessionDisplay = null
+        pendingViewArea = null // CarLink
         discardLastPicture()
         Log.i(TAG, "shutdown reason=$reason terminateProcess=$terminateProcess")
         teardownExecutor.execute {

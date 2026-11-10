@@ -158,6 +158,13 @@ class AaSessionTrackerTest {
         assertTrue(f.reason.pathRelated)
     }
 
+    @Test fun aGroupThisScreenCannotCreateIsAWifiSetupFailureNotASilentPhone() {
+        val f = wireless().event(EngineEvent.WIFI_DIRECT_GROUP_FAILED, "reason=BUSY (System is busy, retry needed)").failure()
+        assertEquals(FailureReason.WIFI_SETUP_FAILED, f.reason)
+        assertTrue(f.reason.pathRelated)
+        assertTrue(f.detail.orEmpty().contains("BUSY"))
+    }
+
     @Test fun anUnreadableAddressWithLocationOnRetriesThenFailsAsWifiSetup() {
         val t = wireless()
         assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.WIFI_SETUP_FAILED)), t.event(EngineEvent.BSSID_UNRESOLVED, "location=on"))

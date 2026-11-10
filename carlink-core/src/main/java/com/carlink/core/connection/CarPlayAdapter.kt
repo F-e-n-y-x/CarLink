@@ -252,6 +252,10 @@ class CarPlayAdapter internal constructor(
             // DiPlay's dial waits for CarLink's own page of the iPhone instead of racing its SDP.
             WirelessStartupTimeline.beforeBluetoothDial = BluetoothWarmup::awaitPage
             CarPlayWaitingView.install()
+            // A screen that turns (phone, tablet) gets DiPlay's square canvas with a landscape and a
+            // portrait area: turning switches area instead of rebuilding the session (10-50 s, 2026-11-10).
+            // A head unit stays on the plain canvas, which is sharper and never turns.
+            com.shilapi.xcertplay.CarPlayRotation.setEnabled(app, com.carlink.core.detect.HeadUnitDetector.handheld(app))
             // A BYD restores a journaled cluster/HUD output at app start, as DiPlay's own home does
             // (DiPlayActivity.kt:318; §12 "CarLink never calls onAppOpened").
             if (profile == VehicleProfile.BYD_DILINK) runCatching { BydNavigationOutputs.onAppOpened(app) }
