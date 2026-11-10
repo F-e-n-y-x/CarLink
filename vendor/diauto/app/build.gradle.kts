@@ -84,8 +84,9 @@ android {
         buildConfigField("String", "AVAILABLE_LOCALES", "\"${availableLocales.joinToString(",")}\"")
 
         ndk {
-            // Match the CarPlay engine; BYD head units are ARM.
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // Match the CarPlay engine; BYD head units are ARM. CarLink: x86 for Intel head units
+            // (SC9853i), which CarLink's release now carries; FFmpeg is arm-only, so no soft HEVC there.
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
         }
     }
 
