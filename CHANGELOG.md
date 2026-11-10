@@ -9,6 +9,15 @@ is what the in-app update popup shows.
 - Fixed: on Android 17, Home kept saying "Permissions needed" for wireless CarPlay, because its
   Allow button never asked for the new Local network permission (#38). Wireless Android Auto now
   asks for it on Android 17 too.
+- Fixed: on a phone or tablet used as the screen, turning it no longer drops CarPlay to Home
+  for 10-50 s; CarPlay turns with the screen.
+- Fixed: CarPlay could lag behind touches on fast screens; it now runs at 60 fps where the
+  hardware carries it.
+- Fixed: on a phone or tablet used as the screen, Android Auto drew a phone-sized layout with
+  oversized icons; it is now laid out like a car display, as CarPlay is.
+- Fixed: when this screen cannot set up its Wi-Fi Direct link, Android Auto now says so and
+  tries the next connection instead of "your phone didn't answer" (#40).
+- Fixed: a green CarPlay screen on phones such as the Huawei P20 Lite (#26).
 - New: CarLink now runs on Intel (x86) head units such as FYT/SYU SC9853i stereos (thanks
   j0hann3sk).
 - Fixed, from DiPlay: wired CarPlay could stall when the iPhone repeated its first link message;
