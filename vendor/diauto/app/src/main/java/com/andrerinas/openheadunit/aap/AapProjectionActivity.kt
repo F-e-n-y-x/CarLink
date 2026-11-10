@@ -1830,6 +1830,11 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
             commManager.sendUpdateUiConfigRequest(margins[0], margins[1], margins[2], margins[3])
             sentTurnMargins = margins
             AppLog.i("[UI_DEBUG] turning screen: margins L=${margins[0]} T=${margins[1]} R=${margins[2]} B=${margins[3]} sent")
+            // Android Auto re-lays out its own screens for new margins but keeps an open app's display
+            // (Maps) in its old shape, where touches miss it; a focus cycle may make it rebuild them.
+            if (commManager.releaseVideoFocusForKeyframe()) {
+                watchdogHandler.postDelayed({ commManager.retakeVideoFocusForKeyframe() }, 300)
+            }
         } else sentTurnMargins = margins
     }
 
