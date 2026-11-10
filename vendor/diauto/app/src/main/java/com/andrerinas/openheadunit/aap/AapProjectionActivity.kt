@@ -1816,7 +1816,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     /** CarLink: announces the turning-screen margins once the turn has settled, if they changed. */
     private fun postTurnMargins() {
         watchdogHandler.removeCallbacks(turnMarginsCheck)
-        watchdogHandler.postDelayed(turnMarginsCheck, 150)
+        watchdogHandler.postDelayed(turnMarginsCheck, 50)
     }
 
     private val turnMarginsCheck = Runnable {
