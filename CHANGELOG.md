@@ -15,6 +15,12 @@ is what the in-app update popup shows.
   hardware carries it.
 - Fixed: on a phone or tablet used as the screen, Android Auto drew a phone-sized layout with
   oversized icons; it is now laid out like a car display, as CarPlay is.
+- New: on a phone or tablet used as the screen, Android Auto now turns with the screen without
+  reconnecting (it used to reconnect, and sometimes failed to).
+- Faster and lighter on low-end head units: CarPlay uses far less video memory, Android Auto's
+  buffers are smaller, and the app starts a little faster. On units with 1.5 GB of memory or
+  less, CarPlay is capped at 1280x720, Android Auto uses direct video output, its engine is not
+  kept running in the background, and the floating switcher starts off (Settings can turn it on).
 - Fixed: when this screen cannot set up its Wi-Fi Direct link, Android Auto now says so and
   tries the next connection instead of "your phone didn't answer" (#40).
 - Fixed: a green CarPlay screen on phones such as the Huawei P20 Lite (#26).
