@@ -40,6 +40,8 @@ object AaEngineHooks {
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
         val handheld = com.carlink.core.detect.HeadUnitDetector.handheld(app)
+        // A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins.
+        HostIntegration.turningScreen = handheld
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
             AaSessionSettings.automaticDensityDpi(dpi, w, h, handheld).also {
                 if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture (car-sized layout, 748x450 dp minimum)")

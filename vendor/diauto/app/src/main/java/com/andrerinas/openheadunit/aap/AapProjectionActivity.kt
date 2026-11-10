@@ -1805,7 +1805,32 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     private fun postOrientationCheck() {
         watchdogHandler.removeCallbacks(orientationSettledCheck)
+        // CarLink: a turning screen moves Android Auto by margins; a turn is not a new session.
+        if (HeadUnitScreenConfig.turning()) { postTurnMargins(); return }
         watchdogHandler.postDelayed(orientationSettledCheck, 1500)
+    }
+
+    // CarLink: the margins last announced to the phone on a turning screen.
+    private var sentTurnMargins: List<Int>? = null
+
+    /** CarLink: announces the turning-screen margins once the turn has settled, if they changed. */
+    private fun postTurnMargins() {
+        watchdogHandler.removeCallbacks(turnMarginsCheck)
+        watchdogHandler.postDelayed(turnMarginsCheck, 150)
+    }
+
+    private val turnMarginsCheck = Runnable {
+        val view = projectionView as? View ?: return@Runnable
+        HeadUnitScreenConfig.init(this, resources.displayMetrics, settings)
+        val margins = listOf(HeadUnitScreenConfig.getLeftMargin(), HeadUnitScreenConfig.getTopMargin(),
+            HeadUnitScreenConfig.getRightMargin(), HeadUnitScreenConfig.getBottomMargin())
+        ProjectionViewScaler.updateScale(view, HeadUnitScreenConfig.getNegotiatedWidth(), HeadUnitScreenConfig.getNegotiatedHeight())
+        if (margins == sentTurnMargins) return@Runnable
+        if (commManager.connectionState.value is CommManager.ConnectionState.TransportStarted) {
+            commManager.sendUpdateUiConfigRequest(margins[0], margins[1], margins[2], margins[3])
+            sentTurnMargins = margins
+            AppLog.i("[UI_DEBUG] turning screen: margins L=${margins[0]} T=${margins[1]} R=${margins[2]} B=${margins[3]} sent")
+        } else sentTurnMargins = margins
     }
 
     // The size the phone really sends: the negotiated one is recalculated (and unlocked) on a turn.

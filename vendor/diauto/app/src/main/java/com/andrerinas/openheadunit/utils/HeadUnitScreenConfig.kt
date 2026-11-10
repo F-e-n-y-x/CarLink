@@ -18,6 +18,12 @@ object HeadUnitScreenConfig {
     private var isPortraitScaled: Boolean = false
     private var isInitialized: Boolean = false
     private var lastSettingsHash: Int = 0
+
+    // CarLink: the turning-screen region (HostIntegration.turningScreen): Android Auto's area inside a
+    // landscape stream, the screen's shape at one scale for both orientations, so a turn needs margins only.
+    private var turnRegionW: Int = 0
+    private var turnRegionH: Int = 0
+    private var turnScale: Float = 1.0f
     
     // Flag to determine if the projection should stretch and ignore aspect ratio
     private var stretchToFill: Boolean = false 
@@ -269,6 +275,25 @@ object HeadUnitScreenConfig {
         // MediaTek mt8676). A manual 1440p choice still gets H.265 on any hardware HEVC decoder.
         val autoHevcHighResolution = canAutoNegotiateHevcHighResolution()
 
+        // CarLink: a turning screen keeps one landscape stream; only the region inside it turns.
+        if (turning()) {
+            if (!isResolutionLocked) {
+                negotiatedResolutionType = Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1920x1080
+                val ceiling = autoResolutionForPanel(maxOf(realScreenWidthPx, realScreenHeightPx),
+                    minOf(realScreenWidthPx, realScreenHeightPx), false, canNegotiateHevc)
+                if (pixelsOf(negotiatedResolutionType) > pixelsOf(ceiling)) negotiatedResolutionType = ceiling
+            }
+            val longSide = maxOf(screenWidthPx, screenHeightPx).toFloat()
+            turnScale = minOf(getNegotiatedWidth(), getNegotiatedHeight()) / longSide
+            turnRegionW = ((screenWidthPx * turnScale).roundToInt() and 1.inv()).coerceIn(2, getNegotiatedWidth())
+            turnRegionH = ((screenHeightPx * turnScale).roundToInt() and 1.inv()).coerceIn(2, getNegotiatedHeight())
+            isSmallScreen = true
+            scaleFactor = 1.0f
+            AppLog.i("[UI_DEBUG] CarScreen turning: usable ${screenWidthPx}x${screenHeightPx}, stream $negotiatedResolutionType, " +
+                "region ${turnRegionW}x$turnRegionH (scale $turnScale), margins: w=${getWidthMargin()}, h=${getHeightMargin()}")
+            return
+        }
+
         // 1. Determine base negotiated resolution
         if (isResolutionLocked) {
             // Safety Check: If the locked resolution's orientation (Landscape/Portrait) 
@@ -402,12 +427,19 @@ object HeadUnitScreenConfig {
         }
     }
 
+    /** CarLink: the turning-screen mode is on for this session's settings. */
+    fun turning(): Boolean = com.andrerinas.openheadunit.HostIntegration.turningScreen &&
+        this::currentSettings.isInitialized && Settings.Resolution.fromId(currentSettings.resolutionId) == Settings.Resolution.AUTO &&
+        !forcedScale // stretch to fill does not matter: the region has the screen's own shape
+
     fun getHeightMargin(): Int {
+        if (turning() && turnRegionH > 0) return getNegotiatedHeight() - turnRegionH // CarLink
         val margin = ((getAdjustedHeight() - screenHeightPx) / scaleFactor).roundToInt()
         return margin.coerceAtLeast(0)
     }
 
     fun getWidthMargin(): Int {
+        if (turning() && turnRegionW > 0) return getNegotiatedWidth() - turnRegionW // CarLink
         val margin = ((getAdjustedWidth() - screenWidthPx) / scaleFactor).roundToInt()
         return margin.coerceAtLeast(0)
     }
@@ -420,6 +452,7 @@ object HeadUnitScreenConfig {
         if (forcedScale) {
             return 1.0f
         }
+        if (turning() && turnRegionW > 0) return getNegotiatedWidth().toFloat() / turnRegionW // CarLink
 
         if (getNegotiatedWidth() > screenWidthPx) {
             return divideOrOne(getNegotiatedWidth().toFloat(), screenWidthPx.toFloat())
@@ -434,6 +467,7 @@ object HeadUnitScreenConfig {
         if (forcedScale) {
             return 1.0f
         }
+        if (turning() && turnRegionH > 0) return getNegotiatedHeight().toFloat() / turnRegionH // CarLink
 
         if (getNegotiatedHeight() > screenHeightPx) {
             return if (stretchToFill) {
@@ -457,8 +491,11 @@ object HeadUnitScreenConfig {
             currentSettings.dpiPixelDensity
         } else {
             // CarLink: the host may lower Automatic to keep Android Auto's full layout (open-headunit #1108).
-            com.andrerinas.openheadunit.HostIntegration.automaticDensityDpi
-                ?.invoke(densityDpi, getNegotiatedWidth() - getWidthMargin(), getNegotiatedHeight() - getHeightMargin())
+            // A turning screen asks for the screen's own size, then scales to the region.
+            val hook = com.andrerinas.openheadunit.HostIntegration.automaticDensityDpi
+            if (turning() && turnRegionW > 0) {
+                ((hook?.invoke(densityDpi, screenWidthPx, screenHeightPx) ?: densityDpi) * turnScale).roundToInt().coerceAtLeast(1)
+            } else hook?.invoke(densityDpi, getNegotiatedWidth() - getWidthMargin(), getNegotiatedHeight() - getHeightMargin())
                 ?: densityDpi
         }
     }
