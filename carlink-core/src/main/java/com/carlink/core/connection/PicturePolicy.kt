@@ -95,7 +95,10 @@ object PicturePolicy {
 
         val portrait = caps.panel.portrait
         val panelClass = aaPanelClass(caps.panel)
-        val aa = AaResolution.entries.filter { it <= panelClass }.reversed().firstOrNull { fits(it.stream(portrait)) }
+        // A constrained unit with a 1024x600-class panel decodes 480p: 720p there is mostly scaled away,
+        // and 480p is about half the decode work and output buffers (low-end round 5).
+        val aaCeiling = if (caps.signals.constrained && caps.panel.pixels <= 1024L * 600L) AaResolution.P480 else panelClass
+        val aa = AaResolution.entries.filter { it <= aaCeiling }.reversed().firstOrNull { fits(it.stream(portrait)) }
             ?: AaResolution.P480
         val aaFps = if (avc.hardware && !caps.signals.lowEnd && avc.carries(aa.stream(portrait), 60)) 60 else 30
         val scale = CARPLAY_SCALES.firstOrNull { percent ->
@@ -110,7 +113,8 @@ object PicturePolicy {
         val summary = "Android Auto ${aa.label}${if (aa == panelClass) " (panel)" else ""} $aaFps fps $codec; " +
             "CarPlay $scale% of ${caps.panel} $carPlayFps fps $codec${directNote(slow)}; decoder ${avc.name}" +
             (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals) +
-            (if (caps.signals.constrained) "; constrained: CarPlay at most 1280x720, Android Auto SurfaceView" else "")
+            (if (caps.signals.constrained) "; constrained: CarPlay at most 1280x720, Android Auto SurfaceView" +
+                (if (aaCeiling != panelClass) ", 480p" else "") else "")
         return codecRule.copy(
             aaResolutionId = if (aa == panelClass) AA_AUTOMATIC else aa.id,
             aaFps = aaFps,

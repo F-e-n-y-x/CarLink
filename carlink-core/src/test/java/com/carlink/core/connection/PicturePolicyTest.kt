@@ -85,6 +85,24 @@ class PicturePolicyTest {
         assertEquals(50, choice.carPlayScalePercent) // 960x540 is the first CarPlay size within 1280x720 pixels
     }
 
+    /** Low-end round 5: a 1 GB, 4-core 1024x600 unit is constrained: AA 480p on SurfaceView, CarPlay capped, 30 fps. */
+    @Test fun aOneGigabyteUnitGetsTheConstrainedPicture() {
+        val unit = DeviceSignals(totalRamMb = 980, lowRamDevice = false, cpuCores = 4, supportedAbis = listOf("armeabi-v7a"))
+        assertTrue(unit.constrained)
+        val panel = VideoSize(1024, 600)
+        val choice = PicturePolicy.choose(caps(panel, decoder(panel, p1080), signals = unit))
+        assertEquals(AaResolution.P480.id, choice.aaResolutionId)
+        assertEquals(30, choice.aaFps)
+        assertEquals(true, choice.aaSurfaceView)
+        assertEquals(100, choice.carPlayScalePercent) // 1024x600 is inside the 1280x720 cap
+        assertEquals(30, choice.carPlayFps)
+        // A 1920x720 panel on the same unit: CarPlay drops to 75 % (1440x540) under the cap.
+        val wide = VideoSize(1920, 720)
+        assertEquals(75, PicturePolicy.choose(caps(wide, decoder(wide, p1080), signals = unit)).carPlayScalePercent)
+        // 2 GB is not constrained.
+        assertFalse(unit.copy(totalRamMb = 1_870).constrained)
+    }
+
     /**
      * Issue #4: a cheap Android 12 stereo, 2 GB, 8 cores at 1.6 GHz, GPU not probed yet, iPhone over
      * USB. CarPlay: the panel at 30 fps in H.264 (as before) and now Direct video output (SurfaceView).

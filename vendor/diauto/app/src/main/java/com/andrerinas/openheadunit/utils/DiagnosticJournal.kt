@@ -9,6 +9,9 @@ import java.util.concurrent.LinkedBlockingDeque
 internal object DiagnosticJournal {
     private const val MAX_FILE_BYTES = 1024 * 1024L
     private const val MAX_LINES = 6000
+    // CarLink: a 1.5 GB-or-less unit keeps a quarter of the in-memory history (about 1 MB at 6000 lines).
+    private const val CONSTRAINED_MAX_LINES = 1500
+    @Volatile private var maxLines = MAX_LINES
     private val pending = LinkedBlockingDeque<String>(2048)
     private val recent = ArrayDeque<String>()
     private val diskLock = Any()
@@ -18,6 +21,11 @@ internal object DiagnosticJournal {
         if (directory != null) return
         val dir = File(context.filesDir, "diagnostics")
         directory = dir
+        runCatching { // CarLink
+            val am = context.getSystemService(android.app.ActivityManager::class.java)
+            val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+            if (am.isLowRamDevice || info.totalMem in 1..1_536L * 1024 * 1024) maxLines = CONSTRAINED_MAX_LINES
+        }
         Thread({
             while (true) {
                 val line = try { pending.take() } catch (_: InterruptedException) { return@Thread }
@@ -46,7 +54,7 @@ internal object DiagnosticJournal {
             val safe = DiagnosticReportRedactor.redact(raw, "", "") ?: return@forEach
             val line = "$timestamp [$priority] $safe"
             synchronized(recent) {
-                if (recent.size == MAX_LINES) recent.removeFirst()
+                while (recent.size >= maxLines) recent.removeFirst() // CarLink: maxLines
                 recent.addLast(line)
             }
             if (!pending.offer(line)) { pending.poll(); pending.offer(line) }

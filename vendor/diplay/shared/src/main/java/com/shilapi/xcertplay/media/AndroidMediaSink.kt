@@ -1074,7 +1074,9 @@ private class VideoDecoder(
         runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY) }
         try {
             while (running) {
-                val job = queue.poll(5)
+                // CarLink: 5 ms only while a frame is inside the decoder and this loop drains it; otherwise
+                // wake at most every 50 ms (200 wakeups a second on a still screen before, low-end round 5).
+                val job = queue.poll(if (outputThread == null && framesInDecoder > 0) 5L else IDLE_POLL_MILLIS)
                 outputFailure?.let { failure ->
                     outputFailure = null
                     onJobFailure("output", failure)
@@ -1581,6 +1583,7 @@ private class VideoDecoder(
                 queuedSlot = (queuedSlot + 1) % queuedPresentationUs.size
             }
             codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
+            framesInDecoder++ // CarLink
             referenceChain.onQueued()
         } else {
             inputSizeOverflowed = true // CarLink: the recreated decoder asks for the full 8 MB from now on
@@ -1589,6 +1592,9 @@ private class VideoDecoder(
         }
         if (outputThread == null) drainOutput(codec)
     }
+
+    /** CarLink: frames queued to the decoder and not yet out; the video loop polls fast only while some are. */
+    @Volatile private var framesInDecoder = 0
 
     /** CarLink: a frame did not fit the picture-sized input buffer; this sink asks for [MAX_INPUT_SIZE] again. */
     @Volatile private var inputSizeOverflowed = false
@@ -1627,6 +1633,7 @@ private class VideoDecoder(
             index == MediaCodec.INFO_TRY_AGAIN_LATER -> return false
             index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
             index >= 0 -> {
+                if (framesInDecoder > 0) framesInDecoder-- // CarLink
                 val render = outputSurface != null
                 // Parked output goes to the offscreen consumer: it keeps the codec's state, but it is
                 // not shown, so it is neither paced nor counted.
@@ -1702,6 +1709,7 @@ private class VideoDecoder(
     // Worker only; [outputLock] orders it against the output thread.
     private fun releaseDecoder() {
         backlogRecovery.reset()
+        framesInDecoder = 0 // CarLink
         val codec: MediaCodec?
         synchronized(outputLock) {
             codec = decoder
@@ -1753,6 +1761,8 @@ private class VideoDecoder(
     private companion object {
         const val TAG = "xcertplay-usb"
         const val MAX_INPUT_SIZE = 8 * 1024 * 1024
+        /** CarLink: the video loop's wait with nothing in the decoder (stats and keyframe requests still run). */
+        const val IDLE_POLL_MILLIS = 50L
         // The output thread's wait for a decoded frame; a release waits at most this long for it to return.
         const val OUTPUT_TIMEOUT_US = 10_000L
         const val OUTPUT_IDLE_WAIT_MS = 10L
