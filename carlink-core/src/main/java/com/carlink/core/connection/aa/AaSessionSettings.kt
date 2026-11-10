@@ -161,6 +161,7 @@ object AaSessionSettings {
                 put("resolutionId", picture.aaResolutionId)
                 put("fps-limit", picture.aaFps)
                 picture.aaCodec?.let { put("video-codec", it) }
+                if (picture.aaSurfaceView == true) put("view-mode", 0) // SurfaceView: no GPU pass per frame
             }
             Picture.BEST -> { put("resolutionId", 3); put("fps-limit", 60) }
             Picture.BALANCED -> { put("resolutionId", 2); put("fps-limit", 30) }

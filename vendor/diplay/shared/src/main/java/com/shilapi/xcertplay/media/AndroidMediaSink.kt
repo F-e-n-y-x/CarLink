@@ -837,6 +837,17 @@ internal data class DecoderAttempt(
 /** CarLink: #26, hardware H.264 decoders that configure without error but output green frames (Huawei P20 Lite). */
 internal fun greenOnlyAvcDecoder(codecName: String): Boolean = codecName.startsWith("OMX.IMG.MSVDX", ignoreCase = true)
 
+/**
+ * CarLink: the input buffer a decoder is asked for, DiAuto's `CodecInputSizePolicy` (ExoPlayer's rule):
+ * the picture in whole macroblocks, 4:2:0, over the minimum compression ratio 2; 256 KB to 8 MB.
+ * 1280x720 gives 675 KB instead of 8 MB per buffer.
+ */
+internal fun videoInputSize(width: Int, height: Int): Int {
+    val w = (width + 15) / 16 * 16L
+    val h = (height + 15) / 16 * 16L
+    return (w * h * 3 / 2 / 2).coerceIn(256L * 1024, 8L * 1024 * 1024).toInt()
+}
+
 internal fun videoDecoderAttempts(
     operatingRate: Int,
     softwareDecoder: String?,
@@ -1303,7 +1314,8 @@ private class VideoDecoder(
     ): MediaFormat =
         MediaFormat.createVideoFormat(mime, width, height).apply {
             if (attempt.tuned) {
-                setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, MAX_INPUT_SIZE)
+                // CarLink: sized from the picture, not 8 MB for every decoder (each port allocates several).
+                setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, if (inputSizeOverflowed) MAX_INPUT_SIZE else videoInputSize(width, height))
                 setInteger(MediaFormat.KEY_PRIORITY, 0)
                 if (attempt.operatingRate > 0) setInteger(MediaFormat.KEY_OPERATING_RATE, attempt.operatingRate)
             }
@@ -1571,11 +1583,15 @@ private class VideoDecoder(
             codec.queueInputBuffer(index, 0, annexB.size, presentationUs, 0)
             referenceChain.onQueued()
         } else {
+            inputSizeOverflowed = true // CarLink: the recreated decoder asks for the full 8 MB from now on
             recover("video frame exceeded codec input capacity")
             return
         }
         if (outputThread == null) drainOutput(codec)
     }
+
+    /** CarLink: a frame did not fit the picture-sized input buffer; this sink asks for [MAX_INPUT_SIZE] again. */
+    @Volatile private var inputSizeOverflowed = false
 
     private fun recover(reason: String) {
         Log.w(TAG, "Video recovery: $reason; waiting for keyframe")

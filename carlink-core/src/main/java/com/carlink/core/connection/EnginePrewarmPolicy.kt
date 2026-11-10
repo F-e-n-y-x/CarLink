@@ -14,6 +14,7 @@ object EnginePrewarmPolicy {
     fun memoryTight(signals: DeviceSignals): Boolean =
         signals.lowRamDevice || signals.totalRamMb in 1..DeviceSignals.LOW_END_RAM_MB
 
+    /** A constrained unit ([DeviceSignals.constrained]) never holds the second process warm: 18-27 MB for its whole run. */
     fun shouldPrewarm(signals: DeviceSignals, knownPhones: Collection<PhoneKind>): Boolean =
-        !memoryTight(signals) || PhoneKind.ANDROID in knownPhones
+        !signals.constrained && (!memoryTight(signals) || PhoneKind.ANDROID in knownPhones)
 }

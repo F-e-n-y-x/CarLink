@@ -72,6 +72,13 @@ data class DeviceSignals(
     val lowEnd: Boolean get() = lowEndReasons.isNotEmpty()
 
     /**
+     * A unit with too little memory for two warm engine processes and full-size buffers: Android Go,
+     * or [CONSTRAINED_RAM_MB] or less (DiAuto's own line, `DeviceMemoryProfile`). Stricter than [lowEnd],
+     * which covers everything up to 3 GB.
+     */
+    val constrained: Boolean get() = lowRamDevice || totalRamMb in 1..CONSTRAINED_RAM_MB
+
+    /**
      * Why CarLink's own screens should draw lite here: [lowEndReasons], or a GPU or processor too
      * weak for full-screen gradients even with enough memory (an 8-core, 4 GB UIS8581A with a
      * PowerVR GE8322). Rendering only: the picture rules ([PicturePolicy]) keep using [lowEnd].
@@ -90,6 +97,8 @@ data class DeviceSignals(
          * GPU carve-out are not counted) and a 4 GB one about 3.6-3.8 GB, so the line sits between.
          */
         const val LOW_END_RAM_MB = 3_300L
+        /** "1.5 GB or less": 512 MB to 1 GB head units (MT8227L, Allwinner T3, older RK3188). */
+        const val CONSTRAINED_RAM_MB = 1_536L
         /** Quad-core A7/A53 head units (MT8163, MT8227, Allwinner T3); current SoCs have 8 cores. */
         const val LOW_END_CORES = 4
         /**

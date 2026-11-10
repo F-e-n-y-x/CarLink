@@ -37,3 +37,11 @@
 # dexmaker), which wins over the app's copy. R8 (AGP 9.5) merged Compose/WorkManager/Kotlin methods
 # into com.android.dex.Leb128, so 1.0.8 crashed at launch on Android 7.1 (NoSuchMethodError, issue #21).
 -keep class com.android.dex.** { *; }
+
+# Low-end round 5: debug and verbose logcat lines cost string building and a binder-free but
+# locked write per line on every device; release builds drop them. Info and above stay, which is
+# what the diagnostics and the connection log read.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}

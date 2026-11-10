@@ -430,7 +430,8 @@ object HeadUnitScreenConfig {
     /** CarLink: the turning-screen mode is on for this session's settings. */
     fun turning(): Boolean = com.andrerinas.openheadunit.HostIntegration.turningScreen &&
         this::currentSettings.isInitialized && Settings.Resolution.fromId(currentSettings.resolutionId) == Settings.Resolution.AUTO &&
-        !forcedScale // stretch to fill does not matter: the region has the screen's own shape
+        !forcedScale && currentSettings.viewMode != Settings.ViewMode.SURFACE // the turn scales the view
+        // stretch to fill does not matter: the region has the screen's own shape
 
     fun getHeightMargin(): Int {
         if (turning() && turnRegionH > 0) return getNegotiatedHeight() - turnRegionH // CarLink

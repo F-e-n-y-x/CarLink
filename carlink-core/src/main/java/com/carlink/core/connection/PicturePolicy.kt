@@ -32,6 +32,8 @@ data class PictureChoice(
     val carPlayHevc: Boolean?,
     val summary: String,
     val carPlayDirectVideo: Boolean? = null,
+    /** DiAuto `view-mode` SurfaceView on a constrained unit (no GPU pass per frame); null keeps the engine's. */
+    val aaSurfaceView: Boolean? = null,
 )
 
 /**
@@ -61,6 +63,8 @@ object PicturePolicy {
     // ponytail: one pixel cap for every slow unit; keeps 1024x600-1920x720 panels at 100 %, shrinks
     // 1080p and "2K" panels to 75 %. Tune per SoC if reports show a unit that carries more.
     private const val SLOW_HARDWARE_MAX_PIXELS = 1600L * 900L
+    /** A constrained unit's CarPlay picture: decoder output buffers and every copy scale with it. */
+    private const val CONSTRAINED_MAX_PIXELS = 1280L * 720L
 
     /** Automatic as it was before this policy: used when nothing is known about the decoder. */
     val ENGINE_DEFAULTS = PictureChoice(AA_AUTOMATIC, 60, null, 100, 30, null, "engine defaults")
@@ -95,19 +99,24 @@ object PicturePolicy {
             ?: AaResolution.P480
         val aaFps = if (avc.hardware && !caps.signals.lowEnd && avc.carries(aa.stream(portrait), 60)) 60 else 30
         val scale = CARPLAY_SCALES.firstOrNull { percent ->
-            caps.panel.scaled(percent).let { fits(it) && (!slow || it.pixels <= SLOW_HARDWARE_MAX_PIXELS) }
+            caps.panel.scaled(percent).let {
+                fits(it) && (!slow || it.pixels <= SLOW_HARDWARE_MAX_PIXELS) &&
+                    (!caps.signals.constrained || it.pixels <= CONSTRAINED_MAX_PIXELS)
+            }
         } ?: CARPLAY_SCALES.last()
         val carPlayFps = if (avc.hardware && !slow && !caps.signals.lowEnd && avc.carries(caps.panel.scaled(scale), 60)) 60 else 30
 
         val codec = if (hevcOk) "engine's choice" else H264
         val summary = "Android Auto ${aa.label}${if (aa == panelClass) " (panel)" else ""} $aaFps fps $codec; " +
             "CarPlay $scale% of ${caps.panel} $carPlayFps fps $codec${directNote(slow)}; decoder ${avc.name}" +
-            (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals)
+            (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals) +
+            (if (caps.signals.constrained) "; constrained: CarPlay at most 1280x720, Android Auto SurfaceView" else "")
         return codecRule.copy(
             aaResolutionId = if (aa == panelClass) AA_AUTOMATIC else aa.id,
             aaFps = aaFps,
             carPlayScalePercent = scale,
             carPlayFps = carPlayFps,
+            aaSurfaceView = if (caps.signals.constrained) true else null,
             summary = summary,
         )
     }

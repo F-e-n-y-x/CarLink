@@ -15,11 +15,13 @@ internal class AapReadMultipleMessages(
         faultInjector: VideoFaultInjector? = null)
     : AapRead.Base(connection, ssl, handler, onVideoRunHoled, faultInjector) {
 
-    // Increase buffers to 4MB to handle large 1080p/4K/HEVC I-frames
-    private val fifo = ByteBuffer.allocate(4 * 1024 * 1024) 
+    // CarLink: a message's length is 16-bit (EncryptedHeader), so one never exceeds 64 KB; large
+    // I-frames come as fragments. The FIFO holds one receive chunk plus one partial message.
+    // Was 4 MB each: 8 MB of the ':aa' heap on units whose whole heap limit is 64-96 MB.
+    private val fifo = ByteBuffer.allocate(256 * 1024)
     private val recvBuffer = ByteArray(Messages.DEF_BUFFER_LENGTH)
     private val recvHeader = AapMessageIncoming.EncryptedHeader()
-    private val msgBuffer = ByteArray(4 * 1024 * 1024) 
+    private val msgBuffer = ByteArray(64 * 1024)
     private val skipBuffer = ByteArray(4)
 
     override fun doRead(connection: AccessoryConnection): Int {

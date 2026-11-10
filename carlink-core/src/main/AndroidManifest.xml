@@ -145,6 +145,15 @@
         <receiver android:name="com.andrerinas.openheadunit.app.RemoteControlReceiver" android:enabled="false" android:process=":aa" tools:node="merge" />
         <receiver android:name="com.andrerinas.openheadunit.connection.CarKeyReceiver" android:enabled="false" android:process=":aa" tools:node="merge" />
 
+        <!-- Low-end round 5: nothing in CarLink uses WorkManager (only DiPlay's own updater, scheduled
+             from DiPlayActivity, which CarLink never opens, inside runCatching) or EmojiCompat; both
+             initialised on every cold start (database open, font load). -->
+        <provider android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup" tools:node="merge">
+            <meta-data android:name="androidx.work.WorkManagerInitializer" tools:node="remove" />
+            <meta-data android:name="androidx.emoji2.text.EmojiCompatInitializer" tools:node="remove" />
+        </provider>
+
         <!-- Replaced by SystemEventReceiver. -->
         <receiver android:name="com.andrerinas.openheadunit.app.BootCompleteReceiver" tools:node="remove" />
         <receiver android:name="com.andrerinas.openheadunit.app.AutoStartReceiver" tools:node="remove" />

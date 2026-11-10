@@ -12,11 +12,17 @@ import com.carlink.app.update.UpdatePrefs
  * so values stored before the split are kept.
  */
 class UiPreferences(context: Context) : UpdatePrefs {
-    private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val app = context.applicationContext
+    private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** The floating switcher over CarPlay and Android Auto (needs "Display over other apps"). */
+    /**
+     * The floating switcher over CarPlay and Android Auto (needs "Display over other apps"). Off by
+     * default on a constrained unit: a translucent window over the picture can make a 1-2 plane
+     * compositor draw every video frame with the GPU. The driver can still turn it on.
+     */
     var floatingSwitcher: Boolean
-        get() = prefs.getBoolean(KEY_FLOATING_SWITCHER, true)
+        get() = prefs.getBoolean(KEY_FLOATING_SWITCHER,
+            !com.carlink.core.connection.DeviceCapabilities.signals(app).constrained)
         set(value) = prefs.edit().putBoolean(KEY_FLOATING_SWITCHER, value).apply()
 
     /** The first-time setup was finished or skipped (it then runs only when the driver asks). */

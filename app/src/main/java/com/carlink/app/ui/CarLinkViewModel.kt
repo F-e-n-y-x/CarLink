@@ -157,8 +157,10 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     fun carBrandName(): String? = vehicle.value.let { it.brand ?: it.detected }?.displayName
 
     /** The phone's model and OS version from the engines' logs, kept for later issue reports. */
-    private fun rememberPhone(request: com.carlink.core.connection.SessionRequest) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-        kotlinx.coroutines.delay(5_000) // the engines' files are written a moment after the picture
+    private fun rememberPhone(request: com.carlink.core.connection.SessionRequest) = kotlin.concurrent.thread(name = "carlink-remember-phone") {
+        // A full log parse: background priority, so it never competes with the first frames' decode.
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+        Thread.sleep(5_000) // the engines' files are written a moment after the picture
         runCatching {
             val log = com.carlink.app.diagnostics.ConnectionLog.read(app)
             val start = com.carlink.app.diagnostics.GitHubIssueReport.lastStart(log, request.engine) ?: return@runCatching

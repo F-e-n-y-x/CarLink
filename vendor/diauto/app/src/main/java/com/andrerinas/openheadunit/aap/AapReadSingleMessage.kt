@@ -12,8 +12,8 @@ internal class AapReadSingleMessage(
     : AapRead.Base(connection, ssl, handler, onVideoRunHoled, faultInjector) {
 
     private val recvHeader = AapMessageIncoming.EncryptedHeader()
-    // Increase to 4MB to handle large 1080p/4K/HEVC I-frames
-    private val msgBuffer = ByteArray(4 * 1024 * 1024) 
+    // CarLink: a message's length is 16-bit, so 64 KB holds any one (was 4 MB of the ':aa' heap).
+    private val msgBuffer = ByteArray(64 * 1024)
     private val fragmentSizeBuffer = ByteArray(4)
 
     override fun doRead(connection: AccessoryConnection): Int {
