@@ -40,8 +40,8 @@ internal class MicrophoneCaptureStats(
 
     /**
      * The source the recorder is built with: a call in the car's phone state records from VOICE_RECOGNITION,
-     * not the VOICE_COMMUNICATION its audio type suggests (#987). Call before the capture thread starts;
-     * [metadata] is not volatile.
+     * not the VOICE_COMMUNICATION its audio type suggests (#987). Call before the capture thread starts, or on
+     * that thread when it falls back to another source; [metadata] is not volatile.
      */
     fun useSource(source: Int) { metadata = "type=$type source=${sourceName(source)} $format" }
 
@@ -84,10 +84,41 @@ internal class MicrophoneCaptureStats(
 
     fun sendFailed() { sendErrors++ }
 
-    fun restarted(attempt: Int, reason: String, routeType: Int?) {
+    /**
+     * Recording works again. [newRecorder] says whether the failed recorder was replaced; a new one also names
+     * the platform effects now enabled on its session.
+     */
+    fun restarted(
+        attempt: Int,
+        reason: String,
+        routeType: Int?,
+        newRecorder: Boolean = false,
+        platformEffects: String? = null,
+    ) {
         emit("Microphone: recording restarted $metadata attempt=$attempt reason=$reason " +
-            "routedDeviceType=${routeType ?: "unknown"}")
+            "routedDeviceType=${routeType ?: "unknown"} recorder=${recorderKind(newRecorder)}" +
+            (platformEffects?.let { " platformEffects=$it" } ?: ""))
     }
+
+    /** One attempt to record again did not work; [state] is the recorder's recordingState, null when none was built. */
+    fun restartFailed(attempt: Int, reason: String, newRecorder: Boolean, state: Int?) {
+        emit("Microphone: recording restart failed $metadata attempt=$attempt reason=$reason " +
+            "recorder=${recorderKind(newRecorder)} recordingState=${state ?: "none"}")
+    }
+
+    /** Every attempt failed, so capture ends for this stream. */
+    fun recoveryEnded(attempts: Int) {
+        emit("Microphone: capture stopped $metadata reason=recording-failed attempts=$attempts")
+    }
+
+    /** A call's recorder source changed after the first one kept failing; see MicrophoneUplink. */
+    fun sourceFallback(from: Int, to: Int, failedRecorders: Int, diplayEchoCanceller: Boolean) {
+        emit("Microphone: source fallback type=$type from=${sourceName(from)} to=${sourceName(to)} " +
+            "failedRecorders=$failedRecorders defaultPlatformAec=none " +
+            "diplayEchoCanceller=${if (diplayEchoCanceller) "on" else "off"}")
+    }
+
+    private fun recorderKind(newRecorder: Boolean) = if (newRecorder) "new" else "same"
 
     fun failure(stage: MicrophoneFailureStage, error: Throwable? = null, code: Int? = null) {
         emit(failureMessage(metadata, stage, error, code))

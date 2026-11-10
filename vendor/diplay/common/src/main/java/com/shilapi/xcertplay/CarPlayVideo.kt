@@ -48,6 +48,13 @@ internal object CarPlayVideo : CarPlayVideoListener {
     var pendingSeekMillis: Int? = null
     var activity: CarPlayVideoActivity? = null
 
+    /**
+     * From the moment DiPlay opens its player until the player closes. The player hides the system bars, so
+     * the CarPlay screen's window grows behind it; the host keeps its CarPlay canvas meanwhile (#1180).
+     */
+    @Volatile var playerOnScreen = false
+        internal set
+
     fun attach(context: Context, next: CarPlayController) {
         appContext = context.applicationContext
         controller = next
@@ -98,14 +105,34 @@ internal object CarPlayVideo : CarPlayVideoListener {
     }
 
     /**
-     * The car's player cannot play the item, for example protected video: tell the iPhone as Apple's
-     * receiver does, say so on the car screen and go back to CarPlay instead of showing black. Main thread.
+     * The car's player cannot play the item (Media3 [playbackErrorCode]): tell the iPhone as Apple's receiver
+     * does, say why on the car screen and go back to CarPlay instead of showing black. Main thread.
      */
-    fun onPlayerFailed(code: Int) {
-        Log.w(TAG, "item cannot play here code=$code")
-        streamId?.let { reply(it, VideoInCar.errorNotification(itemUuid, code)) }
-        appContext?.let { Toast.makeText(it, R.string.video_cannot_play, Toast.LENGTH_LONG).show() }
+    fun onPlayerFailed(playbackErrorCode: Int) {
+        val failure = failureFor(playbackErrorCode)
+        Log.w(TAG, "item cannot play here error=$playbackErrorCode code=${failure.iphoneCode}")
+        streamId?.let { reply(it, VideoInCar.errorNotification(itemUuid, failure.iphoneCode)) }
+        appContext?.let { Toast.makeText(it, failure.message, Toast.LENGTH_LONG).show() }
         stop()
+    }
+
+    /** What the iPhone is told and the car screen says for a failed item. */
+    internal data class PlayerFailure(val iphoneCode: Int, @androidx.annotation.StringRes val message: Int)
+
+    /**
+     * Only a DRM error names protected video. A lost connection or a decoder the head unit lacks is not a
+     * licence problem, and saying so sent drivers looking for the wrong cause (#1180).
+     */
+    internal fun failureFor(playbackErrorCode: Int): PlayerFailure = when (playbackErrorCode) {
+        in 2000..2999 -> PlayerFailure(VideoInCar.ERROR_NETWORK, R.string.video_cannot_load) // IO
+        in 4000..4999 -> PlayerFailure(VideoInCar.ERROR_DECODER, R.string.video_cannot_play_here) // decoding
+        in 6000..6999 -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play) // DRM
+        else -> PlayerFailure(VideoInCar.ERROR_INCOMPATIBLE_ASSET, R.string.video_cannot_play_here) // parsing, unsupported
+    }
+
+    /** The player activity is going away (Back, the car left P, or the item stopped). */
+    fun onPlayerGone() {
+        playerOnScreen = false
     }
 
     /** The player closed on the car (Back, or the car left P): pause, so the iPhone shows it paused. */
@@ -233,9 +260,13 @@ internal object CarPlayVideo : CarPlayVideoListener {
             url == null -> Log.w(TAG, "video player requested without a playable item")
             !VideoInCar.allowed -> Log.w(TAG, "video player requested while not parked")
             activity != null -> Unit
-            else -> context.startActivity(
-                Intent(context, CarPlayVideoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
+            else -> {
+                // Before the player starts: it hides the bars as it opens, and the host's window grows then.
+                playerOnScreen = true
+                context.startActivity(
+                    Intent(context, CarPlayVideoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
         }
     }
 

@@ -64,6 +64,7 @@ class CarPlayHostDisplaySizeTest {
     }
 
     @After fun tearDown() {
+        CarPlayVideo.playerOnScreen = false
         (getField("shuttingDown") as AtomicBoolean).set(true)
         (getField("mainHandler") as Handler).removeCallbacksAndMessages(null)
         AirPlayPersistence.overlaySettingsListener = null
@@ -101,10 +102,35 @@ class CarPlayHostDisplaySizeTest {
 
     @Test fun aNarrowWindowWithAdaptPipResolutionTriggersReconnect() {
         AirPlayPersistence.saveAdaptPipResolution(activity, true)
-        val display = startSession()
+        startSession()
+        shadowOf(activity).setInMultiWindowMode(true)
         applySize(700, 990)
         assertEquals(1, getField("restartGeneration"))
         assertNull(getField("sessionDisplay"))
+        assertTrue(restartLog(), restartLog().contains("multi-window aspect 1.94 -> 0.71"))
+    }
+
+    // #1219, DiLink 2.0: the system bars come back about 200 ms before DiPlay stops as another app opens
+    // (1920x1080 -> 1920x952). "Adapt multi-window resolution" is for multi-window and picture-in-picture
+    // only, so this full-screen change keeps the session instead of reconnecting twice.
+    @Test fun barsReturningAsAnotherAppOpensKeepTheSessionWithAdaptMultiWindowResolution() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession(windowHeight = 1080)
+        applySize(1920, 952)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(1, keepLogs())
+        applySize(1920, 1080)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    @Test fun aNarrowFullScreenWindowWithAdaptPipResolutionKeepsTheSession() {
+        AirPlayPersistence.saveAdaptPipResolution(activity, true)
+        val display = startSession()
+        applySize(700, 990)
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
     }
 
     @Test fun resumingASquareCanvasInTheSameWindowDoesNotReconnect() {
@@ -128,6 +154,7 @@ class CarPlayHostDisplaySizeTest {
         AirPlayPersistence.saveAdaptPipResolution(activity, true)
         startSession(windowHeight = 1080, canvasHeight = 1920)
 
+        shadowOf(activity).setInMultiWindowMode(true)
         applySize(700, 1080)
 
         assertEquals(1, getField("restartGeneration"))
@@ -172,6 +199,7 @@ class CarPlayHostDisplaySizeTest {
         assertEquals(1, getField("restartGeneration"))
         assertTrue(getField("handshakeResetInProgress") as Boolean)
         assertNull(getField("sessionDisplay"))
+        assertTrue(restartLog(), restartLog().contains("(rotation 1 -> 0)"))
     }
 
     @Test fun rotationIsHandledEvenIfTheViewSizeIsUnchanged() {
@@ -185,6 +213,94 @@ class CarPlayHostDisplaySizeTest {
         startSession()
         setField("hideTopBar", false)
         applySize(1920, 942)
+        assertEquals(1, getField("restartGeneration"))
+        assertTrue(restartLog(), restartLog().contains("(saved bars hideTop=true -> false hideBottom=true -> true)"))
+    }
+
+    @Test fun growingBeyondTheSessionWindowNamesTheReason() {
+        startSession(windowHeight = 942)
+        applySize(1920, 990)
+        assertTrue(restartLog(), restartLog().contains("1920x942 -> 1920x990 (larger than the session window 1920x942)"))
+    }
+
+    // #1176: on a 16:10 screen a side-by-side split window (1270x1500) is taller than wide. Leaving it is
+    // not a turn: CarPlay goes back to the full-screen area instead of drawing the split layout stretched.
+    @Test @Config(qualifiers = "w2560dp-h1600dp-land-mdpi")
+    fun leavingATallSplitWindowOnA16By10ScreenSendsTheFullScreenArea() {
+        val areas = CarPlayViewAreas.build(2560, 1600, CarPlayDock.AUTOMATIC, 1270f / 2560 to 1500f / 1600)!!
+        val full = areas.current
+        val split = areas.index(CarPlayViewAreas.Kind.SPLIT_SCREEN, false, null)!!
+        assertEquals(1270, areas.areas[split].width)
+        assertEquals(1500, areas.areas[split].height)
+        val controller = org.mockito.Mockito.mock(CarPlayController::class.java)
+        org.mockito.Mockito.`when`(controller.showViewArea(org.mockito.ArgumentMatchers.anyInt())).thenReturn(true)
+        setField("controller", controller)
+        val display = CarPlaySessionDisplay(2560, 1600, invoke("displayRotation") as Int, true, true, 2560, 1600, areas)
+        setField("activeDisplaySize", size(2560, 1600))
+        setField("sessionDisplay", display)
+
+        shadowOf(activity).setInMultiWindowMode(true)
+        applySize(1270, 1500)
+        org.mockito.Mockito.verify(controller).showViewArea(split)
+        assertEquals(split, areas.current)
+
+        shadowOf(activity).setInMultiWindowMode(false)
+        applySize(2560, 1600)
+
+        org.mockito.Mockito.verify(controller).showViewArea(full)
+        assertEquals(full, areas.current)
+        assertEquals(size(2560, 1600), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(0, keepLogs())
+    }
+
+    // #1180, DiLink 4.0 with the navigation bar shown: DiPlay's own video player hides the system bars and
+    // the CarPlay window behind it grew from 1920x990 to 1920x1032 just after the video stream's SETUP,
+    // which reconnected CarPlay and stopped the video. The bars come back about 0.5 s after DiPlay does.
+    @Test fun theVideoPlayerHidingTheBarsKeepsTheCanvasUntilDiPlayIsBack() {
+        val display = startSession()
+        val video = hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+
+        applySize(1920, 1032)
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(0, getField("restartGeneration"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(1, ShadowLog.getLogsForTag("xcertplay-usb").count { it.msg.contains("video player is open") })
+
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600))
+        assertEquals(0, getField("restartGeneration"))
+        video.layout(0, 0, 1920, 990)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_500))
+
+        assertSame(display, getField("sessionDisplay"))
+        assertEquals(size(1920, 990), getField("activeDisplaySize"))
+        assertEquals(0, getField("restartGeneration"))
+    }
+
+    @Test fun aWindowThatStaysLargerAfterTheVideoPlayerClosesIsCheckedAgain() {
+        startSession()
+        hostVideoView(1920, 1032)
+        CarPlayVideo.playerOnScreen = true
+        applySize(1920, 1032)
+        assertEquals(0, getField("restartGeneration"))
+
+        CarPlayVideo.onPlayerGone()
+        invoke("onResume")
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2_100))
+
+        assertEquals(1, getField("restartGeneration"))
+        assertNull(getField("sessionDisplay"))
+    }
+
+    @Test fun aStaleVideoPlayerFlagDoesNotHoldAResumedHost() {
+        startSession()
+        CarPlayVideo.playerOnScreen = true
+        setField("hostAppearanceResumed", true)
+        applySize(1920, 1032)
         assertEquals(1, getField("restartGeneration"))
     }
 
@@ -639,6 +755,14 @@ class CarPlayHostDisplaySizeTest {
     private fun keepLogs(): Int = ShadowLog.getLogsForTag("xcertplay-usb").count {
         it.msg.contains("keeping CarPlay session")
     }
+
+    private fun restartLog(): String = ShadowLog.getLogsForTag("xcertplay-usb")
+        .filter { it.msg.contains("rebuilding stack") }.joinToString("\n") { it.msg }
+
+    // The test window is not attached, so the post after a layout runs on the main queue.
+    private fun hostVideoView(width: Int, height: Int): TextureView = object : TextureView(activity) {
+        override fun post(action: Runnable): Boolean = Handler(Looper.getMainLooper()).post(action)
+    }.apply { layout(0, 0, width, height) }.also { setField("videoView", it) }
 
     private fun allowStartup() {
         setField("airPlayIdentity", AirPlayIdentity.generate())

@@ -16,7 +16,6 @@ import com.carlink.core.detect.BluetoothAvailability
 import com.carlink.core.detect.PairedPhone
 import com.carlink.core.detect.PhonesRepository
 import com.carlink.core.connection.Connection
-import com.carlink.core.connection.DevicePreflight
 import com.carlink.core.connection.SessionState
 import com.carlink.core.connection.WirelessPolicy
 import com.carlink.core.connection.toLinkState
@@ -491,7 +490,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /** Runtime permissions CarLink asks for in one go (Bluetooth, Wi-Fi, location, microphone, notifications). */
-    fun missingPermissions(): List<String> = DevicePreflight.requiredPermissions()
+    // The setup's list: it adds the CarPlay host's own, e.g. Local network on Android 17 (#38).
+    fun missingPermissions(): List<String> = com.carlink.app.ui.setup.SetupPermissions.runtimePermissions()
         .filter { app.checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
 
     /**

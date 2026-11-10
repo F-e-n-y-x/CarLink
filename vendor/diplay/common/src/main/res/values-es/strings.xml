@@ -533,6 +533,8 @@
     <string name="video_play">Reproducir</string>
     <string name="video_pause">Pausa</string>
     <string name="video_cannot_play">Este vídeo no se puede reproducir en la pantalla del coche. El vídeo protegido, como Apple TV+, necesita un receptor con licencia.</string>
+    <string name="video_cannot_load">Este vídeo dejó de cargarse en la pantalla del coche. Comprueba la conexión a internet de la unidad principal y vuelve a reproducirlo.</string>
+    <string name="video_cannot_play_here">Este vídeo no se puede reproducir en la pantalla del coche: la unidad principal no puede leer ni decodificar su formato.</string>
     <string name="safe_area_mapping_summary">Zona segura: %1$d x %2$d en (%3$d, %4$d) dentro de %5$d x %6$d</string>
     <string name="navigation_widget_label">Navegación de CarPlay</string>
     <string name="navigation_widget_description">Próximo giro, distancia, llegada y canción de CarPlay</string>

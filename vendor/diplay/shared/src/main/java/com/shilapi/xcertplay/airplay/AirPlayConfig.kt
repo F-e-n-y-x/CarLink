@@ -105,6 +105,8 @@ data class AirPlayConfig(
      * restricted the same way, because the iPhone picks one format for both directions.
      */
     val callAtCallRate: Boolean = false,
+    /** Music rates offered to the phone; null retains [entertainmentSampleRate], including on copy(). */
+    val entertainmentSampleRates: List<Int>? = null,
 )
 
 /** The offer, SETUP and controls must all honor the user's audio-output setting. */

@@ -50,7 +50,7 @@ object AirPlayInfoPlist {
         )
         if (!config.disableAudioOutput) {
             info["audioLatencies"] = audioLatencies()
-            info["audioFormats"] = audioFormats(config.entertainmentSampleRate, config.microphone, config.mainBufferedAudio, config.microphoneOpus,
+            info["audioFormats"] = audioFormats(config.entertainmentSampleRates ?: listOf(config.entertainmentSampleRate), config.microphone, config.mainBufferedAudio, config.microphoneOpus,
                 config.speechWithout8And16Khz, config.callAtCallRate)
         }
         info["extendedFeatures"] = listOf("vocoderInfo", "enhancedRequestCarUI")
@@ -120,7 +120,7 @@ object AirPlayInfoPlist {
     }
 
     private fun audioFormats(
-        entertainmentRate: Int,
+        entertainmentRates: List<Int>,
         microphone: Boolean,
         mainBuffered: Boolean = false,
         microphoneOpus: Boolean = true,
@@ -137,14 +137,19 @@ object AirPlayInfoPlist {
             return entry
         }
 
-        val is48 = entertainmentRate == 48000
+        require(entertainmentRates.isNotEmpty() &&
+            entertainmentRates.all { it in EntertainmentAudioCapabilities.supportedSampleRates }) {
+            "Unsupported entertainment sample rates: $entertainmentRates"
+        }
+        val has44 = 44_100 in entertainmentRates
+        val has48 = 48_000 in entertainmentRates
         val pcmVoice = 0x3fc
-        val pcm = pcmVoice or (if (is48) 0xc000 else 0xc00)
+        val pcm = pcmVoice or (if (has44) 0xc00 else 0) or (if (has48) 0xc000 else 0)
         // PCM 8 kHz and 16 kHz, mono and stereo.
         val speech = if (speechWithout8And16Khz) pcm and 0x3c.inv() else pcm
-        val pcmMono = 0x154 or (if (is48) 0x4000 else 0x400)
+        val pcmMono = 0x154 or (if (has44) 0x400 else 0) or (if (has48) 0x4000 else 0)
         val opus = 0x70000000
-        val aacLc = if (is48) 0x800000 else 0x400000
+        val aacLc = (if (has44) 0x400000 else 0) or (if (has48) 0x800000 else 0)
         // Calls at their own rate: PCM mono at the vocoder rates (8, 16, 24, 32 kHz), no Opus and no 44.1/48 kHz.
         val telephonyOutput = if (callAtCallRate) 0x154 else pcmMono or opus
         val pcmInput = if (microphone) pcmMono else null

@@ -64,7 +64,7 @@ android {
         // Releases: change versionName only. versionCode = major * 10000 + minor * 100 + patch
         // (1.0.0 → 10000, 1.2.3 → 10203), so minor and patch stay below 100. The in-app updater
         // (update/AppVersion.kt) and scripts/release.sh rely on it; docs/RELEASING.md.
-        versionName = "1.0.14"
+        versionName = "1.0.15"
         versionCode = carLinkVersionCode(versionName!!)
         buildConfigField("String", "DIPLAY_VERSION_NAME", "\"$diPlayVersionName\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -93,20 +93,20 @@ android {
         }
     }
 
-    // Car stereos and tablets are ARM: arm64-v8a, and armeabi-v7a for the many 32-bit head units.
-    // x86_64 is only for the emulator: debug builds carry it, release builds only with
-    // -Pcarlink.emulatorAbi=true (measuring a release build on the emulator). It is 3.3 MB of
-    // native code no car stereo runs (docs/LOW_END_PERFORMANCE.md).
-    val armAbis = listOf("arm64-v8a", "armeabi-v7a")
+    // Car stereos and tablets are mostly ARM: arm64-v8a, and armeabi-v7a for the many 32-bit head
+    // units. 32-bit x86 is for the Intel head units (Spreadtrum SC9853i, FYT/SYU; j0hann3sk's fork),
+    // and an x86_64 device runs it too. x86_64 itself is only for the emulator: debug builds carry
+    // it, release builds only with -Pcarlink.emulatorAbi=true (docs/LOW_END_PERFORMANCE.md).
+    val deviceAbis = listOf("arm64-v8a", "armeabi-v7a", "x86")
     val releaseEmulatorAbi = providers.gradleProperty("carlink.emulatorAbi").orNull == "true"
     buildTypes {
         debug {
             applicationIdSuffix = providers.gradleProperty("carlink.debugApplicationIdSuffix").get()
             versionNameSuffix = "-hud-test"
-            ndk { abiFilters += armAbis + "x86_64" }
+            ndk { abiFilters += deviceAbis + "x86_64" }
         }
         release {
-            ndk { abiFilters += if (releaseEmulatorAbi) armAbis + "x86_64" else armAbis }
+            ndk { abiFilters += if (releaseEmulatorAbi) deviceAbis + "x86_64" else deviceAbis }
             // R8 shrinks and optimizes code and resources, without renaming (-dontobfuscate):
             // app rules in src/main/keepRules/carlink.keep, engine rules in the engines'
             // consumer files (design/RESEARCH_2026-10_R8_PLATFORM.md, phase 1).

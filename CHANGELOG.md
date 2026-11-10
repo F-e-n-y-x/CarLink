@@ -4,6 +4,18 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.15] - 2026-11-10
+
+- Fixed: on Android 17, Home kept saying "Permissions needed" for wireless CarPlay, because its
+  Allow button never asked for the new Local network permission (#38). Wireless Android Auto now
+  asks for it on Android 17 too.
+- New: CarLink now runs on Intel (x86) head units such as FYT/SYU SC9853i stereos (thanks
+  j0hann3sk).
+- Fixed, from DiPlay: wired CarPlay could stall when the iPhone repeated its first link message;
+  the call microphone could stay silent after it failed to restart; the CarPlay picture could be
+  lost after leaving split screen or closing a video; music now plays at the car's own sample
+  rate; Bluetooth wake retries; and safer handling of malformed data from the phone.
+
 ## [1.0.14] - 2026-11-10
 
 - New: Settings › Connection › Show advanced › "Switch the car hotspot on". When wireless needs

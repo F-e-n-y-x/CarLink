@@ -116,5 +116,7 @@ object DevicePreflight {
         }
         add(Manifest.permission.ACCESS_FINE_LOCATION)
         add(Manifest.permission.RECORD_AUDIO)
+        // Android 17 drops local-network traffic without it; wireless Android Auto is local traffic too (#38).
+        if (Build.VERSION.SDK_INT >= 37) add(CarPlayPreflight.ACCESS_LOCAL_NETWORK)
     }
 }
