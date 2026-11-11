@@ -320,6 +320,9 @@ class CarPlayController(
     @Volatile private var wiredStartWatchdog: WiredStartWatchdog? = null
     @Volatile private var wiredSessionActive = false
     @Volatile private var wiredStartSentAtNanos: Long? = null
+    // CarLink: WiredStuckReset inputs.
+    @Volatile private var wiredTcpAccepted = false
+    @Volatile private var wiredNewPairing = false
     @Volatile private var wirelessPublishedAddress: InetAddress? = null
     @Volatile private var wirelessAlternateAddress: InetAddress? = null
     @Volatile private var wirelessAddressRecovery: HotspotAddressRecovery? = null
@@ -402,6 +405,7 @@ class CarPlayController(
         override fun onSessionActive(session: AirPlaySession) {
             wiredSessionActive = true
             wiredStartWatchdog?.sessionActive()
+            if (config.transport == CarPlayTransport.WIRED) WiredStuckReset.sessionReached() // CarLink
             if (currentCornerMask?.session !== session) currentCornerMask = null
             val replacement = activeSession !== session
             if (replacement) {
@@ -515,6 +519,7 @@ class CarPlayController(
             debugLog(message)
             // CarLink: CarPlayVpnService reports a wired accept only as this log line.
             if (config.transport == CarPlayTransport.WIRED && message.startsWith("airplay TCP accepted")) {
+                wiredTcpAccepted = true
                 wiredTimeline.mark(WiredStartupTimeline.Milestone.TCP_ACCEPTED)
             }
         }
@@ -2548,6 +2553,7 @@ class CarPlayController(
     private fun openDataPaths(device: UsbDevice) {
         phase = Phase.DATAPATHS
         wiredTimeline.mark(WiredStartupTimeline.Milestone.DATA_PATHS) // CarLink
+        armWiredStuckReset(device) // CarLink
         wiredDeviceName = device.deviceName
         debugLog("wired opening iPhone USB data paths")
         onStatus(CarPlayStatus.SelectingConfiguration)
@@ -2843,14 +2849,39 @@ class CarPlayController(
         }
     }
 
-    private fun pairNewRecord(client: LockdownPairingClient): LockdownPairRecord =
-        client.pair(
+    private fun pairNewRecord(client: LockdownPairingClient): LockdownPairRecord {
+        wiredNewPairing = true // CarLink: the iPhone may be asking its owner (Trust, use CarPlay); see WiredStuckReset.
+        return client.pair(
             label = config.label,
             hostId = hostId,
             systemBuid = systemBuid,
             totalTimeoutMillis = PAIR_TIMEOUT_MILLIS,
             isCancelled = { closed },
         ).pairRecord.also(savePairRecord)
+    }
+
+    // CarLink: a wired start with no CarPlay session 8 s after the data paths gets one USB reset (WiredStuckReset).
+    private fun armWiredStuckReset(device: UsbDevice) {
+        if (resetWiredUsb == null) return
+        wiredTcpAccepted = false
+        wiredNewPairing = false
+        runCatching {
+            startupTimer.schedule({ checkWiredStuck(device) }, WiredStuckReset.STUCK_AFTER_MILLIS, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    private fun checkWiredStuck(device: UsbDevice) {
+        val reset = resetWiredUsb ?: return
+        if (closed ||
+            !WiredStuckReset.shouldReset(System.nanoTime(), wiredSessionActive, wiredTcpAccepted, wiredNewPairing)) return
+        debugLog(
+            "wired start: no CarPlay session ${WiredStuckReset.STUCK_AFTER_MILLIS / 1000} s after the USB data paths " +
+                "opened (phase=$phase startSessionSent=${wiredStartSentAtNanos != null}); resetting the iPhone's USB once",
+        )
+        val done = runCatching { reset(device) }.getOrDefault(false)
+        debugLog("wired USB reset done=$done")
+        if (done && !closed) fail(IphoneUsbException.TimedOut("The iPhone did not start CarPlay over USB; its USB was reset"))
+    }
 
     private fun rejectedPairRecordError(error: Throwable): String? {
         var cause: Throwable? = error
@@ -3649,6 +3680,10 @@ class CarPlayController(
         @Volatile
         @JvmStatic
         var usbAttachAgeMillis: ((UsbDevice) -> Long?)? = null
+        /** CarLink: resets the iPhone's USB (USBDEVFS_RESET), true when done; null = never (upstream). See WiredStuckReset. */
+        @Volatile
+        @JvmStatic
+        var resetWiredUsb: ((UsbDevice) -> Boolean)? = null
         /** CarLink: how long Bonjour waits for the group's IPv6 link-local before starting without it. */
         private const val BONJOUR_LINK_LOCAL_WAIT_MILLIS = 600L
 

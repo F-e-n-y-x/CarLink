@@ -249,6 +249,8 @@ class CarPlayAdapter internal constructor(
             // The default-grant wait counts from the iPhone's attach (UsbAttachTimes).
             com.shilapi.xcertplay.orchestration.CarPlayController.usbAttachAgeMillis =
                 { com.carlink.core.detect.UsbAttachTimes.ageMillis(it.deviceName) }
+            // A wired start with no session 8 s after the data paths gets one USB reset (DiPlay WiredStuckReset).
+            com.shilapi.xcertplay.orchestration.CarPlayController.resetWiredUsb = { UsbReset.reset(app, it) }
             // DiPlay's dial waits for CarLink's own page of the iPhone instead of racing its SDP.
             WirelessStartupTimeline.beforeBluetoothDial = BluetoothWarmup::awaitPage
             CarPlayWaitingView.install()
