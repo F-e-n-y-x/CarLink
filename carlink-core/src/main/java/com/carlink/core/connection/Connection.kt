@@ -258,8 +258,13 @@ object Connection {
     /** Automatic picture from this device's decoders ([PicturePolicy]); probed once, on the session worker. */
     private fun automaticPicture(app: Context, settings: UnifiedSettings): PictureChoice {
         if (settings.picture != com.carlink.core.settings.Picture.AUTOMATIC) return PicturePolicy.ENGINE_DEFAULTS
-        val choice = runCatching { PicturePolicy.choose(DeviceCapabilities.read(app)) }.getOrDefault(PicturePolicy.ENGINE_DEFAULTS)
+        var choice = runCatching { PicturePolicy.choose(DeviceCapabilities.read(app)) }.getOrDefault(PicturePolicy.ENGINE_DEFAULTS)
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Automatic picture: ${choice.summary}")
+        // A known stereo's overrides, only under Automatic: a driver's Picture choice is never overridden.
+        StereoQuirks.current()?.let { quirk ->
+            choice = quirk.apply(choice)
+            com.carlink.core.diagnostics.EventLog.add("CarLink", "Stereo quirk profile ${quirk.id}: ${quirk.describe()} (${quirk.evidence})")
+        }
         return choice
     }
 
