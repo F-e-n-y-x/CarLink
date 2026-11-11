@@ -635,6 +635,19 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** Applies a checked settings backup (Settings › General › Restore) and refreshes every screen's view of it. */
+    fun restoreSettings(backup: com.carlink.app.ui.settings.SettingsBackup.Backup) {
+        com.carlink.app.ui.settings.SettingsBackup.applyPreferences(app, backup)
+        backup.carBrand?.let(::setCarBrand)
+        _unified.value = unifiedStore.load()
+        _display.value = readDisplay()
+        _connection.value = readConnection()
+        com.carlink.app.switcher.SwitcherController.onSettingChanged()
+        refreshNetwork()
+        session.onSettingsChanged()
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "settings restored from a backup (${backup.count} values)")
+    }
+
     fun setFloatingSwitcher(on: Boolean) {
         uiPreferences.floatingSwitcher = on
         _connection.value = readConnection()

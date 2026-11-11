@@ -258,4 +258,28 @@
     <string name="carlink_settings_aa_on_screen">Android Auto on this screen (experimental)</string>
     <string name="carlink_settings_aa_on_screen_unsupported">Not supported by Android Auto on this device: Google switches off its car mode on screens it does not support as phones (for example Samsung tablets). It works where Android Auto is installed as a system app, as on many Android head units.</string>
     <string name="carlink_settings_aa_on_screen_detail">Adds a Home button that runs Android Auto on this device itself, with no phone. Needs Android Auto 17.4 or newer with its head unit server started in Android Auto\'s developer settings; Home shows how.</string>
+    <!-- Settings › General › Back up and Restore (ui/settings/SettingsBackup.kt). -->
+    <string name="carlink_backup_action">Back up settings</string>
+    <string name="carlink_backup_detail">Save CarLink\'s settings to a file, to restore them later or on another screen</string>
+    <string name="carlink_restore_action">Restore settings</string>
+    <string name="carlink_restore_detail">Load settings from a backup file</string>
+    <string name="carlink_backup_passwords_title">Include Wi-Fi passwords?</string>
+    <string name="carlink_backup_passwords_body">Anyone who has the file can read it. The car hotspot and Same Wi-Fi passwords are left out unless you include them.</string>
+    <string name="carlink_backup_without_passwords">Without passwords</string>
+    <string name="carlink_backup_with_passwords">Include passwords</string>
+    <string name="carlink_backup_done">Settings backed up</string>
+    <string name="carlink_backup_failed">Could not save the backup</string>
+    <string name="carlink_restore_title">Restore settings?</string>
+    <string name="carlink_restore_body">CarLink\'s settings are replaced by the %1$s in this backup. Your phones and their pairing stay as they are.</string>
+    <string name="carlink_restore_body_dated">CarLink\'s settings are replaced by the %1$s in the backup from %2$s. Your phones and their pairing stay as they are.</string>
+    <string name="carlink_restore_passwords_kept">The backup has no Wi-Fi passwords: the ones saved here are kept.</string>
+    <plurals name="carlink_restore_count">
+        <item quantity="one">%d setting</item>
+        <item quantity="other">%d settings</item>
+    </plurals>
+    <string name="carlink_restore_confirm">Restore</string>
+    <string name="carlink_restore_done">Settings restored</string>
+    <string name="carlink_restore_error_title">This file can\'t be restored</string>
+    <string name="carlink_restore_error_body">It is not a CarLink settings backup, or it was changed (%1$s). Nothing was changed.</string>
+    <string name="carlink_restore_error_ok">OK</string>
 </resources>

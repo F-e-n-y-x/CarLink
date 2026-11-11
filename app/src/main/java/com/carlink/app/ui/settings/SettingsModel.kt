@@ -103,6 +103,10 @@ interface SettingsActions {
     fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = update { it.copy(carHotspot = details) }
     /** "Forget and re-pair" (asked first): CarLink forgets [phone], then opens Bluetooth settings. */
     fun forgetAndRepair(phone: com.carlink.core.detect.PairedPhone) {}
+    /** Back up: asks about Wi-Fi passwords, then where to save the file. */
+    fun backupSettings() {}
+    /** Restore: picks a file, checks it and asks before anything changes. */
+    fun restoreSettings() {}
 }
 
 /** Rail and grid order. */
