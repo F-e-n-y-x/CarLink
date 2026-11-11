@@ -275,6 +275,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     SessionCard(ui)
                     PhonesHealthCard(ui.health)
                     if (!checksFirst) ChecksCard(ui.checks, actions)
+                    CallAudioTestCard(ui.link.stage != LinkStage.IDLE)
                 }
                 Spacer(Modifier.width(dimens.gutter * 1.5f))
                 LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::copyLog, actions::reportProblem,
@@ -294,6 +295,7 @@ internal fun DiagnosticsContent(ui: DiagnosticsUi, actions: DiagnosticsActions, 
                     } else {
                         SessionCard(ui); PhonesHealthCard(ui.health); ChecksCard(ui.checks, actions)
                     }
+                    CallAudioTestCard(ui.link.stage != LinkStage.IDLE)
                     LogPanel(ui.log, filter, { filter = it }, actions::shareLog, actions::copyLog, actions::reportProblem, Modifier.fillMaxWidth().height(logHeight))
                 }
             }
