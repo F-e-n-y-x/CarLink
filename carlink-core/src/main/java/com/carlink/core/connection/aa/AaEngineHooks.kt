@@ -70,6 +70,9 @@ object AaEngineHooks {
     /** A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins. Per start (#33). */
     fun refreshScreen(context: Context) {
         val app = context.applicationContext
+        val aaPrefs = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
+        com.carlink.core.detect.ScreenType.forcedHandheld =
+            com.carlink.core.detect.ScreenType.decode(aaPrefs.getString(com.carlink.core.detect.ScreenType.KEY, null))
         val turning = com.carlink.core.detect.HeadUnitDetector.handheld(app)
         HostIntegration.turningScreen = turning
         val chosen = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)

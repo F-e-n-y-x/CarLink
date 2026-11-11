@@ -85,6 +85,7 @@ object AaSessionSettings {
             // window on the cluster display). Off everywhere: CarLink has no setting for it yet,
             // and it is untested beyond DiLink 5.1. A BYD-only setting can turn it on later.
             put("cluster-map-enabled", false)
+            put(com.carlink.core.detect.ScreenType.KEY, com.carlink.core.detect.ScreenType.encode())
             putPicture(settings, panelDensityDpi, picture)
             // 0 = follow the screen's rotation. The picture size is agreed once per session, so a
             // turned screen reports ORIENTATION_CHANGED and SessionManager reconnects (issue #31).

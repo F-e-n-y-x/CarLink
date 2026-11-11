@@ -35,6 +35,8 @@ class CarLinkApplication : App() {
             // Tells the main process's floating switcher when the Android Auto picture is in front.
             com.carlink.app.switcher.ProjectionVisibility.installInEngineProcess(this)
         } else {
+            // Settings > Display > Screen type reaches detection before any session (CarPlay's turning canvas).
+            com.carlink.app.ui.applyScreenType(com.carlink.app.ui.UiPreferences(this).uiProfileMode)
             // The floating switcher over CarPlay / Android Auto (and the USB switch prompt).
             com.carlink.app.switcher.SwitcherController.install(this)
         }

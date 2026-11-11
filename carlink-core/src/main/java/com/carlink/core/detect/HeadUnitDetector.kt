@@ -21,6 +21,7 @@ object HeadUnitDetector {
      * path order (`WirelessPolicy`) and CarLink's car-sized layout.
      */
     fun looksLikeCarDisplay(context: Context, trustCarMode: Boolean = true): Boolean {
+        ScreenType.forcedHandheld?.let { return !it } // the driver's Screen type
         val uiModeType = context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
         if (trustCarMode && uiModeType == Configuration.UI_MODE_TYPE_CAR) return true
         val pm = context.packageManager
@@ -37,6 +38,7 @@ object HeadUnitDetector {
      * 2026-11-10 on a Galaxy S25 while it was plugged in) and leaves again.
      */
     fun handheld(context: Context): Boolean {
+        ScreenType.forcedHandheld?.let { return it } // the driver's Screen type
         val pm = context.packageManager
         if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return false
         // Head units with a 4G modem or a reported battery passed the old test and lost their safe

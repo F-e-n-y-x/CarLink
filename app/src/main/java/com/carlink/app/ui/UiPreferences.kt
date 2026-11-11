@@ -38,7 +38,10 @@ class UiPreferences(context: Context) : UpdatePrefs {
     /** Car-grade or phone/tablet sizing; Auto detects the device. */
     var uiProfileMode: UiProfileMode
         get() = enumOr(prefs.getString(KEY_PROFILE, null), UiProfileMode.AUTO)
-        set(value) = prefs.edit().putString(KEY_PROFILE, value.name).apply()
+        set(value) {
+            prefs.edit().putString(KEY_PROFILE, value.name).apply()
+            applyScreenType(value)
+        }
 
     /** "Interface size" of CarLink's own screens: 0.9, 1.0, 1.15 or 1.3. */
     var interfaceScale: Float
@@ -79,5 +82,14 @@ class UiPreferences(context: Context) : UpdatePrefs {
         private const val KEY_AUTO_UPDATES = "update_auto_check"
         private const val KEY_IGNORED_UPDATE = "update_ignored_tag"
         private const val KEY_LAST_UPDATE_CHECK = "update_last_check"
+    }
+}
+
+/** Screen type also decides how CarPlay and Android Auto fit the screen (turning picture, sizes). */
+internal fun applyScreenType(mode: UiProfileMode) {
+    com.carlink.core.detect.ScreenType.forcedHandheld = when (mode) {
+        UiProfileMode.AUTO -> null
+        UiProfileMode.CAR -> false
+        UiProfileMode.HANDHELD -> true
     }
 }
