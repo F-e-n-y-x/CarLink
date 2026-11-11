@@ -42,10 +42,12 @@ object AaEngineHooks {
         refreshScreen(app)
         val prefs = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
-            val percent = prefs.getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
             // Asked once per session (service discovery): the density the phone keeps until it reconnects.
+            // A turning screen connects at the smallest size and shows the chosen one by its region
+            // (refreshScreen), so every later size change is live, smaller ones included.
+            val percent = if (HostIntegration.turningScreen) LIVE_BASE_PERCENT
+                else prefs.getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
             sessionPercent = percent
-            HostIntegration.turnSizeFactor = 1f
             AaSessionSettings.automaticDensityDpi(dpi, w, h, HostIntegration.turningScreen, percent).also {
                 if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture at size $percent% (car-sized layout, 748x450 dp minimum)")
             }
@@ -58,8 +60,6 @@ object AaEngineHooks {
         }
         scope.launch {
             App.provide(app).commManager.connectionState.collectLatest {
-                // A live size change lasts for its session; the next one is sized at connect.
-                if (it is ConnectionState.Disconnected) HostIntegration.turnSizeFactor = 1f
                 report(app, it)
             }
         }
@@ -69,8 +69,16 @@ object AaEngineHooks {
 
     /** A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins. Per start (#33). */
     fun refreshScreen(context: Context) {
-        HostIntegration.turningScreen = com.carlink.core.detect.HeadUnitDetector.handheld(context.applicationContext)
+        val app = context.applicationContext
+        val turning = com.carlink.core.detect.HeadUnitDetector.handheld(app)
+        HostIntegration.turningScreen = turning
+        val chosen = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
+        HostIntegration.turnSizeFactor = if (turning) maxOf(1f, chosen / LIVE_BASE_PERCENT.toFloat()) else 1f
     }
+
+    /** Small: the size a turning screen connects at, so every interface size is reachable live. */
+    private const val LIVE_BASE_PERCENT = 80
 
     /**
      * Interface size during a session. The phone takes the density only at connect, but on a turning
