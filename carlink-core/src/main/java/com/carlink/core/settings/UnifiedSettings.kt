@@ -30,6 +30,16 @@ data class UnifiedSettings(
     val labUnlocked: Boolean = false,
     /** Learned steering-wheel buttons ([WheelKeys]); applies from the next connection. */
     val wheelKeys: Map<WheelAction, Int> = emptyMap(),
+    /** Sound levels in dB against the engines' own ([AudioLevels.PLAYBACK_DB]); from the next connection. */
+    val mediaLevelDb: Int = 0,
+    val navigationLevelDb: Int = 0,
+    val callLevelDb: Int = 0,
+    /** CarPlay calls play as media instead of as a phone call (GitHub #32); opt-in, may bring echo. */
+    val callAudioAsMedia: Boolean = false,
+    /** Press play once a session is back when the phone was playing music as the last one ended. */
+    val resumeMusic: Boolean = false,
+    /** Software gain on the microphone sent to the phone ([AudioLevels.MIC_DB]). */
+    val micGainDb: Int = 0,
 )
 
 data class WifiDetails(val ssid: String = "", val password: String = "")
@@ -70,6 +80,12 @@ class UnifiedSettingsStore(context: Context) {
         showAdvanced = prefs.getBoolean("show_advanced", false),
         labUnlocked = prefs.getBoolean("lab_unlocked", false),
         wheelKeys = WheelKeys.decode(prefs.getString("wheel_keys", null)),
+        mediaLevelDb = prefs.getInt("media_level_db", 0),
+        navigationLevelDb = prefs.getInt("navigation_level_db", 0),
+        callLevelDb = prefs.getInt("call_level_db", 0),
+        callAudioAsMedia = prefs.getBoolean("call_audio_as_media", false),
+        resumeMusic = prefs.getBoolean("resume_music", false),
+        micGainDb = prefs.getInt("mic_gain_db", 0),
     )
 
     fun save(settings: UnifiedSettings) {
@@ -92,6 +108,12 @@ class UnifiedSettingsStore(context: Context) {
             .putBoolean("show_advanced", settings.showAdvanced)
             .putBoolean("lab_unlocked", settings.labUnlocked)
             .putString("wheel_keys", WheelKeys.encode(settings.wheelKeys))
+            .putInt("media_level_db", settings.mediaLevelDb)
+            .putInt("navigation_level_db", settings.navigationLevelDb)
+            .putInt("call_level_db", settings.callLevelDb)
+            .putBoolean("call_audio_as_media", settings.callAudioAsMedia)
+            .putBoolean("resume_music", settings.resumeMusic)
+            .putInt("mic_gain_db", settings.micGainDb)
             .apply()
     }
 

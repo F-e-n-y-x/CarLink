@@ -384,6 +384,7 @@ class AapService : Service(), UsbReceiver.Listener {
         val isPlayingFromStatus = resolveIsPlayingFromStatus(status)
         lastAaPlaybackIsPlaying = isPlayingFromStatus
         mediaSessionIsPlaying = isPlayingFromStatus
+        if (status.hasState()) HostIntegration.onPhonePlaying?.invoke(isPlayingFromStatus) // CarLink
 
         if (!App.provide(this).settings.syncMediaSessionWithAaMetadata) return
         updateMediaSessionState(isPlayingFromStatus)

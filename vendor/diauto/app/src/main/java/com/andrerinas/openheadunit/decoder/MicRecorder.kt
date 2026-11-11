@@ -139,6 +139,7 @@ class MicRecorder(private val micSampleRate: Int, private val context: Context) 
             return len
         }
 
+        com.andrerinas.openheadunit.HostIntegration.microphonePcm?.invoke(aud_buf, len) // CarLink
         currentListener.onMicDataAvailable(aud_buf, len)
         return len
     }

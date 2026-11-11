@@ -251,6 +251,16 @@ class CarPlayAdapter internal constructor(
                 { com.carlink.core.detect.UsbAttachTimes.ageMillis(it.deviceName) }
             // A wired start with no session 8 s after the data paths gets one USB reset (DiPlay WiredStuckReset).
             com.shilapi.xcertplay.orchestration.CarPlayController.resetWiredUsb = { UsbReset.reset(app, it) }
+            // Resume music after reconnecting (opt-in): the iPhone's play state, and play pressed after the first picture.
+            val resume = ResumeMusic(app.getSharedPreferences("carlink_resume_music", Context.MODE_PRIVATE), "carplay_playing")
+            com.shilapi.xcertplay.orchestration.CarPlayController.onPhonePlaying = { playing ->
+                if (playing == null) resume.onSessionEnded() else resume.onPhonePlaying(playing)
+            }
+            HostStates.add { state ->
+                if (state == HostState.FirstFrame) {
+                    resume.scheduleAfterFirstPicture(CarPlaySettingsPolicy.resumeMusic, CarPlayHostIntegration::pressPlay, TAG)
+                }
+            }
             // DiPlay's dial waits for CarLink's own page of the iPhone instead of racing its SDP.
             WirelessStartupTimeline.beforeBluetoothDial = BluetoothWarmup::awaitPage
             CarPlayWaitingView.install()

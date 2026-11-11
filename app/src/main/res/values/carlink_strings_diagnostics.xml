@@ -331,4 +331,15 @@
     <string name="carlink_diag_problem_slow_picture">Slow to start the picture</string>
     <string name="carlink_diag_problem_slow_total">Took too long overall</string>
     <string name="carlink_diag_problem_other">Connection problem</string>
+    <string name="carlink_diag_call_test">Test call audio</string>
+    <string name="carlink_diag_call_test_detail">Records 5 seconds from the microphone calls use, at your microphone level, then plays it back the way calls play.</string>
+    <string name="carlink_diag_call_test_start">Record 5 s</string>
+    <string name="carlink_diag_call_test_recording">Recording… speak now</string>
+    <string name="carlink_diag_call_test_playing">Playing it back</string>
+    <string name="carlink_diag_call_test_result">Done. Loudest moment: %1$d%% of full scale.</string>
+    <string name="carlink_diag_call_test_clipped">Done, but your voice reached full scale and may sound distorted: lower the microphone level.</string>
+    <string name="carlink_diag_call_test_silent">Nothing was heard. The car or another app may be holding the microphone.</string>
+    <string name="carlink_diag_call_test_failed">The microphone could not be opened.</string>
+    <string name="carlink_diag_call_test_permission">CarLink needs the microphone permission (Readiness checks above).</string>
+    <string name="carlink_diag_call_test_busy">Not during a session: the phone is using the microphone.</string>
 </resources>

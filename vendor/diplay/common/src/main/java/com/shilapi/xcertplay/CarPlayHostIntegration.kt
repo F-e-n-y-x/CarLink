@@ -229,6 +229,12 @@ object CarPlayHostIntegration {
      * live host): the caller reconnects. Main thread.
      */
     fun setInterfaceSizeLive(widthMm: Int): Boolean = HostSessions.setInterfaceSizeLive(widthMm)
+    /** CarLink: whether the running session's iPhone reports music playing; null without a session. */
+    fun phonePlaying(): Boolean? = CarPlayBackgroundSession.snapshot()?.controller?.nowPlayingSnapshot()?.playing
+
+    /** CarLink: an explicit play press (not the toggle) on the running session; false without one. */
+    fun pressPlay(): Boolean = CarPlayBackgroundSession.snapshot()?.controller
+        ?.sendMediaButton(com.shilapi.xcertplay.airplay.CarPlayMediaButton.PLAY) == true
 
     internal fun publishHostState(state: HostState) {
         runCatching { onHostState?.invoke(state) }
