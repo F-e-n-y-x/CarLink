@@ -37,6 +37,11 @@ import java.net.Socket
 class WifiDirectManager(private val context: Context) : WifiP2pManager.ConnectionInfoListener, WifiP2pManager.GroupInfoListener {
 
     private companion object {
+        // CarLink: see cancelStuckCreate. The stamp is process-wide: the platform's window outlives a manager.
+        @Volatile var acceptedCreateAtMs = 0L
+        const val STUCK_CREATE_FLOOR_MS = 8_000L
+        const val STUCK_CREATE_WINDOW_MS = 120_000L
+        const val MAX_STUCK_CREATE_CANCELS = 3
         private const val MAX_NATIVE_5GHZ_CREATE_RETRIES = 4
 
         /**
@@ -82,6 +87,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     // CarLink: when a Native AA create was asked for and has not answered (0 = none); see
     // NativeCreateWindow. Unlike isGroupCreatingOrCreated, no P2P broadcast clears it.
     @Volatile private var nativeCreateRequestedAtMs = 0L
+    private var stuckCreateCancels = 0 // CarLink: cancelStuckCreate
     private fun nativeCreateInFlight() =
         NativeCreateWindow.inFlight(nativeCreateRequestedAtMs, SystemClock.elapsedRealtime())
     private val nativeRefreshRecheck = Runnable { refreshNativeAaCredentials() }
@@ -471,6 +477,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     override fun onGroupInfoAvailable(group: android.net.wifi.p2p.WifiP2pGroup?) {
         if (!sessionOwnership.current(generation)) return
         if (group != null && group.isGroupOwner) {
+            acceptedCreateAtMs = 0L // CarLink: the accepted create formed its group
             sessionOwnership.observeCreatedGroup(true, group.networkName)
             if (!sessionOwnership.owns(true, group.networkName)) {
                 foreignGroupDetected()
@@ -1438,6 +1445,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 ownershipPrefs.edit().putString("network_name", networkName).apply()
                 mgr.createGroup(ch, config, object : WifiP2pManager.ActionListener {
                     override fun onSuccess() {
+                        acceptedCreateAtMs = SystemClock.elapsedRealtime() // CarLink (open-headunit P2pCreateWedgePolicy)
                         if (!sessionOwnership.created(gen)) return
                         AppLog.i("WifiDirectManager: $bandLabel createGroup SUCCESS!")
                         com.andrerinas.openheadunit.aap.WirelessTiming.mark(com.andrerinas.openheadunit.aap.WirelessTimeline.Phase.GROUP_CREATED, "band=$bandLabel") // CarLink
@@ -1451,6 +1459,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     }
                     override fun onFailure(reason: Int) {
                         if (supersededByStop(gen, "native create result")) return
+                        if (cancelStuckCreate(mgr, ch, reason) { createQuietGroup(retryCount) }) return // CarLink
                         val reasonStr = getP2pErrorString(reason)
                         if (!NativeGroupBandPolicy.isBandRefusal(reason, crashed = false)) bandedLadderAllRefused = false // CarLink (open-headunit 79c67d57)
                         if (retryCount < MAX_NATIVE_5GHZ_CREATE_RETRIES) {
@@ -1522,6 +1531,37 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         }
     }
 
+    /**
+     * CarLink, after open-headunit's P2pCreateWedgePolicy (97430ddf): a createGroup the platform accepted
+     * puts it in GroupCreatingState, where every later create and remove answers BUSY until its 120 s
+     * timeout; cancelConnect is the one call that state takes. A BUSY 8-120 s after an accepted create of
+     * ours is therefore cancelled and the create asked again, at most [MAX_STUCK_CREATE_CANCELS] times a
+     * bring-up (#40: every create BUSY for two minutes on a MediaTek screen). Returns whether it took over.
+     */
+    private fun cancelStuckCreate(mgr: WifiP2pManager, ch: WifiP2pManager.Channel, reason: Int, retry: () -> Unit): Boolean {
+        val accepted = acceptedCreateAtMs
+        val age = SystemClock.elapsedRealtime() - accepted
+        if (reason != WifiP2pManager.BUSY || accepted == 0L || age < STUCK_CREATE_FLOOR_MS ||
+            age >= STUCK_CREATE_WINDOW_MS || stuckCreateCancels >= MAX_STUCK_CREATE_CANCELS) return false
+        stuckCreateCancels++
+        acceptedCreateAtMs = 0L
+        AppLog.w("WifiDirectManager: createGroup BUSY ${age}ms after an accepted create that formed no group; " +
+            "cancelling it instead of waiting out the platform's 120s (cancel $stuckCreateCancels/$MAX_STUCK_CREATE_CANCELS).")
+        val gen = generation
+        var answered = false
+        val carryOn = Runnable {
+            if (answered) return@Runnable
+            answered = true
+            if (!supersededByStop(gen, "stuck create cancel")) retry()
+        }
+        handler.postDelayed(carryOn, 3_000L) // an unanswered cancel must not hold the bring-up
+        mgr.cancelConnect(ch, object : WifiP2pManager.ActionListener {
+            override fun onSuccess() { AppLog.i("WifiDirectManager: stuck create cancelled."); handler.removeCallbacks(carryOn); handler.post(carryOn) }
+            override fun onFailure(r: Int) { AppLog.w("WifiDirectManager: cancelConnect failed (${getP2pErrorString(r)})."); handler.removeCallbacks(carryOn); handler.post(carryOn) }
+        })
+        return true
+    }
+
     private fun getP2pErrorString(reason: Int): String {
         return when(reason) {
             0 -> "ERROR (Internal Error)"
@@ -1538,6 +1578,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         sessionOwnership.expectSystemName()
         mgr.createGroup(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
+                acceptedCreateAtMs = SystemClock.elapsedRealtime() // CarLink (open-headunit P2pCreateWedgePolicy)
                 if (!sessionOwnership.created(gen)) return
                 mgr.requestGroupInfo(ch, this@WifiDirectManager)
                 AppLog.i("WifiDirectManager: Standard createGroup SUCCESS!")
@@ -1561,6 +1602,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             }
             override fun onFailure(reason: Int) {
                 if (supersededByStop(gen, "create result")) return
+                if (cancelStuckCreate(mgr, ch, reason) { standardCreateGroup(mgr, ch, retryCount, groupMode) }) return // CarLink
                 val reasonStr = getP2pErrorString(reason)
                 if (reason == 2 && retryCount < MAX_NATIVE_STANDARD_CREATE_RETRIES) {
                     AppLog.w("WifiDirectManager: standard createGroup failed ($reasonStr), removing group and retrying standard in 2s...")
@@ -1913,6 +1955,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         credentialsEpoch++
         isGroupCreatingOrCreated = false
         nativeCreateRequestedAtMs = 0L // CarLink
+        stuckCreateCancels = 0 // CarLink: the accepted-create stamp outlives a stop, the platform's window does too
         handler.removeCallbacksAndMessages(null)
         // Both of these guard an operation that is finished the moment we stop, and both used to be
         // cleared only by a posted runnable that the line above just cancelled - so a stop() landing
