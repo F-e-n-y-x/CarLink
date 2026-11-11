@@ -1735,12 +1735,15 @@ class CarPlayController(
                 Iap2WirelessLinkRole.RUNTIME_TUNNEL,
                 wirelessIdentification,
             )
+            val endpointAddresses = (listOf(hostAddress) + hotspotInfo.hostAddresses.filter { it != hostAddress }) // CarLink: upstream PR #1071
+                .map { hostAddressText(it) }
+                .distinct()
             val endpoint = Iap2WirelessCarPlayEndpoint(
                 ssid = hotspotInfo.ssid,
                 passphrase = hotspotInfo.passphrase,
                 channel = hotspotInfo.channel,
                 security = hotspotInfo.security,
-                ipAddresses = listOf(hostAddressText),
+                ipAddresses = endpointAddresses,
                 airPlayPort = listenerPort,
                 deviceIdentifier = deviceIdentifier,
                 publicKey = identity.publicKeyHex,
