@@ -369,6 +369,8 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
     }
 
     override fun openHost(usbAttach: Intent?): Throwable? {
+        // Auto-rotate may have changed since install: the turning canvas follows it at each start (#33).
+        com.shilapi.xcertplay.CarPlayRotation.setEnabled(app, com.carlink.core.detect.HeadUnitDetector.handheld(app))
         val host = Intent(app, CarPlayHostActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         // The host recognises a wired iPhone from the attach action and device extra and forces

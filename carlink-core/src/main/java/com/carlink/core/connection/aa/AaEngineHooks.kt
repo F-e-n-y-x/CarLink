@@ -39,16 +39,14 @@ object AaEngineHooks {
         HostIntegration.stickyService = false
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
-        val handheld = com.carlink.core.detect.HeadUnitDetector.handheld(app)
-        // A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins.
-        HostIntegration.turningScreen = handheld
+        refreshScreen(app)
         val prefs = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
             val percent = prefs.getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
             // Asked once per session (service discovery): the density the phone keeps until it reconnects.
             sessionPercent = percent
             HostIntegration.turnSizeFactor = 1f
-            AaSessionSettings.automaticDensityDpi(dpi, w, h, handheld, percent).also {
+            AaSessionSettings.automaticDensityDpi(dpi, w, h, HostIntegration.turningScreen, percent).also {
                 if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture at size $percent% (car-sized layout, 748x450 dp minimum)")
             }
         }
@@ -68,6 +66,11 @@ object AaEngineHooks {
     }
 
     @Volatile private var sessionPercent = 100
+
+    /** A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins. Per start (#33). */
+    fun refreshScreen(context: Context) {
+        HostIntegration.turningScreen = com.carlink.core.detect.HeadUnitDetector.handheld(context.applicationContext)
+    }
 
     /**
      * Interface size during a session. The phone takes the density only at connect, but on a turning

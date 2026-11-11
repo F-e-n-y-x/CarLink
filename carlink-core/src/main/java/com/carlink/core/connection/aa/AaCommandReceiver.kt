@@ -37,6 +37,7 @@ class AaCommandReceiver : BroadcastReceiver() {
         val profile = intent.getStringExtra(AaProtocol.EXTRA_VEHICLE_PROFILE)
             ?.let { runCatching { VehicleProfile.valueOf(it) }.getOrNull() } ?: VehicleProfile.GENERIC
         val address = intent.getStringExtra(AaProtocol.EXTRA_ADDRESS)
+        if (command.startsWith("start")) AaEngineHooks.refreshScreen(app)
         when (command) {
             AaProtocol.COMMAND_START_WIRELESS -> handler.startWireless(address, profile)
             AaProtocol.COMMAND_START_USB -> handler.startUsb(usbDevice(intent), address, profile)

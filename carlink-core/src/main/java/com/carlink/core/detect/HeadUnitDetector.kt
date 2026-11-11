@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.provider.Settings
 import android.os.BatteryManager
 import android.os.Build
 import java.util.Locale
@@ -28,7 +31,8 @@ object HeadUnitDetector {
     }
 
     /**
-     * A phone or tablet, whose screen turns: an accelerometer, a phone radio or a battery, and not Automotive. Unlike
+     * A phone or tablet whose screen turns: an accelerometer, auto-rotate on, a phone radio or a battery,
+     * and not Automotive. Read at each session start: auto-rotate can change. Unlike
      * [looksLikeCarDisplay] it ignores the car UI mode, which a phone enters for a while (seen
      * 2026-11-10 on a Galaxy S25 while it was plugged in) and leaves again.
      */
@@ -36,8 +40,11 @@ object HeadUnitDetector {
         val pm = context.packageManager
         if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return false
         // Head units with a 4G modem or a reported battery passed the old test and lost their safe
-        // area to the turning canvas (#65); a screen that turns has an accelerometer to turn it.
-        if (!pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER)) return false
+        // area to the turning canvas (#65, #33). A screen that turns has a real accelerometer (the
+        // feature XML is often copied from a tablet build) and auto-rotate on (car firmware pins it).
+        val sensors = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        if (sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null) return false
+        if (Settings.System.getInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) != 1) return false
         return pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) || hasBattery(context)
     }
 

@@ -109,7 +109,9 @@
             <intent-filter tools:node="removeAll" />
         </activity>
         <!-- USB iPhones arrive through UsbRouterActivity. -->
-        <activity android:name="com.shilapi.xcertplay.CarPlayHostActivity" android:exported="false" tools:node="merge" tools:replace="android:exported">
+        <!-- fullUser, not DiPlay's fullSensor: a phone with rotation locked keeps the plain canvas and must not turn. -->
+        <activity android:name="com.shilapi.xcertplay.SameTaskCarPlayHostActivity" android:screenOrientation="fullUser" tools:node="merge" tools:replace="android:screenOrientation" />
+        <activity android:name="com.shilapi.xcertplay.CarPlayHostActivity" android:exported="false" android:screenOrientation="fullUser" tools:node="merge" tools:replace="android:exported,android:screenOrientation">
             <intent-filter tools:node="removeAll" />
             <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" tools:node="remove" />
         </activity>
