@@ -509,6 +509,26 @@ class VideoDecoder(
         synchronized(this) {
             if (mSurface === surface) return
 
+            // CarLink: hand a live hardware codec the new surface and keep its reference frames, so
+            // the picture does not wait for the phone's next keyframe; anything else, or a refused
+            // swap, rebuilds below as before.
+            val live = codec
+            if (live != null && surface != null && SurfaceSwapPolicy.canSwap(
+                    hasHardwareCodec = true, running = running,
+                    softwareHevc = softwareHevcDecoder != null,
+                    permanentlyFailed = decoderPermanentlyFailed,
+                    restartPending = decoderNeedsRestart, newSurfaceValid = surface.isValid)) {
+                try {
+                    live.setOutputSurface(surface)
+                    mSurface = surface
+                    lastFrameRenderedMs = 0L
+                    AppLog.i("New surface set: $surface (swapped on the live codec, decode chain kept)")
+                    return
+                } catch (e: Exception) {
+                    AppLog.w("Live surface swap refused (${e.javaClass.simpleName}: ${e.message}); rebuilding the decoder")
+                }
+            }
+
             AppLog.i("New surface set: $surface")
             // Unconditional, not gated on a live codec: stop() is where the failure state
             // (decoderPermanentlyFailed, the restart counters, the one-time fallback) is reset,
