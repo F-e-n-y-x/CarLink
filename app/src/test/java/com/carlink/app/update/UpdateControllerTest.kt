@@ -237,6 +237,7 @@ class UpdateControllerTest {
 
     private class MemoryPrefs : UpdatePrefs {
         override var autoCheckUpdates = true
+        override var testVersions = false
         override var ignoredUpdateTag: String? = null
         override var lastUpdateCheckMillis = 0L
     }

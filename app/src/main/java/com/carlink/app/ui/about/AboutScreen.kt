@@ -77,11 +77,14 @@ internal data class AboutUpdatesUi(
     val lastCheck: Long,
     /** "Now" for the "last checked" text; fixed in the gallery. */
     val now: Long = System.currentTimeMillis(),
+    /** "Get test versions" (GitHub pre-releases). */
+    val testVersions: Boolean = false,
 )
 
 internal interface AboutUpdateActions {
     fun checkNow() {}
     fun setAutoCheck(enabled: Boolean) {}
+    fun setTestVersions(enabled: Boolean) {}
 }
 
 internal object NoUpdateActions : AboutUpdateActions
@@ -123,10 +126,12 @@ fun AboutScreen(onBack: () -> Unit) {
     val state by updater.state.collectAsStateWithLifecycle()
     val autoCheck by updater.autoCheck.collectAsStateWithLifecycle()
     val lastCheck by updater.lastCheck.collectAsStateWithLifecycle()
+    val testVersions by updater.testVersions.collectAsStateWithLifecycle()
     val actions = remember(updater) {
         object : AboutUpdateActions {
             override fun checkNow() = updater.checkNow()
             override fun setAutoCheck(enabled: Boolean) = updater.setAutoCheck(enabled)
+            override fun setTestVersions(enabled: Boolean) = updater.setTestVersions(enabled)
         }
     }
     // Leaving About clears its "You're up to date" / "Couldn't reach GitHub" answer.
@@ -134,7 +139,7 @@ fun AboutScreen(onBack: () -> Unit) {
         onDispose { if (updater.state.value is UpdateState.UpToDate || updater.state.value is UpdateState.CheckFailed) updater.dismiss() }
     }
     AboutContent(facts, onBack,
-        updates = AboutUpdatesUi(updater.supported, state, autoCheck, lastCheck, System.currentTimeMillis()),
+        updates = AboutUpdatesUi(updater.supported, state, autoCheck, lastCheck, System.currentTimeMillis(), testVersions),
         updateActions = actions)
 }
 
@@ -334,6 +339,10 @@ private fun UpdatesCard(facts: AboutFacts, updates: AboutUpdatesUi, actions: Abo
         GroupDivider()
         SwitchRow(stringResource(R.string.carlink_about_auto_updates), updates.autoCheck && updates.supported, actions::setAutoCheck,
             description = stringResource(R.string.carlink_about_auto_updates_body), icon = R.drawable.carlink_ic_schedule,
+            enabled = updates.supported)
+        GroupDivider()
+        SwitchRow(stringResource(R.string.carlink_about_test_versions), updates.testVersions && updates.supported, actions::setTestVersions,
+            description = stringResource(R.string.carlink_about_test_versions_body), icon = R.drawable.carlink_ic_bug_report,
             enabled = updates.supported)
     }
 }

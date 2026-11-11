@@ -7,6 +7,7 @@
 #   scripts/release.sh 1.0.0 --publish               ... then tag v1.0.0, push the tag and create the
 #                                                    GitHub release (notes from CHANGELOG.md)
 #   scripts/release.sh 1.0.0 --notes-file F --publish   ... with the release notes in F
+#   scripts/release.sh 1.0.0 --prerelease --publish  ... as a GitHub pre-release ("Get test versions" only)
 #
 # Every check stops the script with "release: ERROR: ...". Never run it in CI.
 # Rehearsal on another branch (never publishes): CARLINK_RELEASE_ALLOW_BRANCH=1 scripts/release.sh 1.0.0
@@ -20,10 +21,12 @@ usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 VERSION="$1"; shift
 NOTES_FILE=""
 PUBLISH=0
+PRERELEASE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --notes-file) [ $# -ge 2 ] || die "--notes-file needs a file"; NOTES_FILE="$2"; shift 2 ;;
     --publish) PUBLISH=1; shift ;;
+    --prerelease) PRERELEASE=1; shift ;;
     -h|--help) usage ;;
     *) die "unknown argument: $1" ;;
   esac
@@ -176,7 +179,14 @@ PAGE_FILE="$(mktemp)"
   fi
 } > "$PAGE_FILE"
 grep -q '{{' "$PAGE_FILE" && die "release page still has an unfilled {{placeholder}}"
+# A pre-release reaches only copies with "Get test versions" on (releases/latest skips it);
+# promote it later with: gh release edit "$TAG" --prerelease=false --latest
+if [ "$PRERELEASE" = 1 ]; then
+  KIND=(--prerelease --latest=false); TITLE="CarLink $VERSION (test version)"
+else
+  KIND=(--latest); TITLE="CarLink $VERSION"
+fi
 gh release create "$TAG" "dist/$APK_NAME" "dist/$APK_NAME.sha256" \
-  --verify-tag --title "CarLink $VERSION" --notes-file "$PAGE_FILE" --latest \
+  --verify-tag --title "$TITLE" --notes-file "$PAGE_FILE" "${KIND[@]}" \
   || die "gh release create failed; the tag $TAG is pushed, finish the release on GitHub or delete the tag"
 echo "published: $(gh release view "$TAG" --json url --jq .url)"

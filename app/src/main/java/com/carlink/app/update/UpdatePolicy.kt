@@ -11,6 +11,8 @@ interface UpdatePrefs {
     var ignoredUpdateTag: String?
     /** Wall-clock time of the last check attempt, 0 for never. */
     var lastUpdateCheckMillis: Long
+    /** "Get test versions": GitHub pre-releases are offered too; off by default. */
+    var testVersions: Boolean
 }
 
 /** When the updater may check and when it may interrupt. Pure rules, unit-tested. */

@@ -62,4 +62,6 @@
     <string name="carlink_about_updates_unsupported">This build doesn’t update itself. Install the release from GitHub to get updates.</string>
     <string name="carlink_about_auto_updates">Automatically check for updates</string>
     <string name="carlink_about_auto_updates_body">Every 6 hours while CarLink is open and no phone is connected. Nothing downloads without asking.</string>
+    <string name="carlink_about_test_versions">Get test versions</string>
+    <string name="carlink_about_test_versions_body">Also offer test versions published before a release. They may have new problems; please report them. Each is checked and signed like a release.</string>
 </resources>

@@ -64,6 +64,11 @@ class UiPreferences(context: Context) : UpdatePrefs {
         get() = prefs.getLong(KEY_LAST_UPDATE_CHECK, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_UPDATE_CHECK, value).apply()
 
+    /** Settings › About › "Get test versions": offer GitHub pre-releases too. */
+    override var testVersions: Boolean
+        get() = prefs.getBoolean(KEY_TEST_VERSIONS, false)
+        set(value) = prefs.edit().putBoolean(KEY_TEST_VERSIONS, value).apply()
+
     private inline fun <reified T : Enum<T>> enumOr(name: String?, default: T): T =
         name?.let { runCatching { enumValueOf<T>(it) }.getOrNull() } ?: default
 
@@ -79,5 +84,6 @@ class UiPreferences(context: Context) : UpdatePrefs {
         private const val KEY_AUTO_UPDATES = "update_auto_check"
         private const val KEY_IGNORED_UPDATE = "update_ignored_tag"
         private const val KEY_LAST_UPDATE_CHECK = "update_last_check"
+        private const val KEY_TEST_VERSIONS = "update_test_versions"
     }
 }
