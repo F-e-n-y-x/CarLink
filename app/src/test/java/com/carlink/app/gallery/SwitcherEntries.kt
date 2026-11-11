@@ -58,6 +58,14 @@ internal fun switcherEntries(): List<GalleryEntry> = with(HomeFakes) {
             FakeProjection { SwitcherOverlay(ui(since = since), GallerySwitcherActions) }
         },
         // A wired CarPlay session, with an Android phone plugged in as well.
+        // Quick toggles in use: Night mode forced on, the dimmer on its second step.
+        entry("panel-toggles") {
+            val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+            FakeProjection {
+                SwitcherOverlay(ui(since = since).copy(dayNight = com.carlink.core.settings.DayNight.NIGHT, dimmer = 2),
+                    GallerySwitcherActions)
+            }
+        },
         entry("panel-usb") {
             val since = remember { SystemClock.elapsedRealtime() - 1_394_000 }
             FakeProjection {

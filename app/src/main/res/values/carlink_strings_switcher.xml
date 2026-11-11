@@ -18,4 +18,12 @@
     <string name="carlink_switcher_not_now">Not now</string>
     <!-- Name of a plugged-in phone that did not report one. -->
     <string name="carlink_switcher_phone_fallback">the new phone</string>
+    <!-- Quick toggles in the switcher panel. -->
+    <string name="carlink_switcher_night">Night mode</string>
+    <string name="carlink_switcher_dimmer">Dimmer</string>
+    <string name="carlink_switcher_dimmer_off">Off</string>
+    <string name="carlink_switcher_dimmer_level">Level %1$d</string>
+    <string name="carlink_switcher_stereo_home">Stereo</string>
+    <string name="carlink_switcher_stereo_home_value">Launcher</string>
+    <string name="carlink_switcher_night_next">Night mode applies from the next connection; the dimmer at once.</string>
 </resources>
