@@ -14,6 +14,7 @@ import com.carlink.app.ui.theme.UiProfileMode
 import com.carlink.core.core.Engine
 import com.carlink.core.settings.AdvancedSetting
 import com.carlink.core.settings.AdvancedSettings
+import com.carlink.core.settings.AudioDelay
 import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.Control
 import com.carlink.core.settings.DayNight
@@ -154,7 +155,7 @@ internal val SettingsCategory.selectedIcon: Int
 /** The bottom sheets Settings opens; saved by [key] so a rotation keeps the sheet open. */
 internal enum class EssentialSheet {
     CONNECTION_METHOD, CAR_HOTSPOT, SAME_WIFI, PICTURE, INTERFACE_SIZE, DAY_NIGHT, NIGHT_START, NIGHT_END,
-    DRIVING_SIDE, SOUND, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING, CAR_BRAND, WHEEL_KEYS,
+    DRIVING_SIDE, SOUND, AUDIO_DELAY, APPEARANCE, LAYOUT, CARLINK_SIZE, RENDERING, CAR_BRAND, WHEEL_KEYS,
 }
 
 internal object SheetKey {
@@ -230,6 +231,15 @@ internal fun interfaceSizeLabel(size: InterfaceSize): String = stringResource(
         InterfaceSize.MEDIUM -> R.string.carlink_settings_size_medium
         InterfaceSize.LARGE -> R.string.carlink_settings_size_large
         InterfaceSize.CUSTOM -> R.string.carlink_settings_custom
+    },
+)
+
+@Composable
+internal fun audioDelayLabel(delay: AudioDelay): String = stringResource(
+    when (delay) {
+        AudioDelay.LOW -> R.string.carlink_settings_audio_delay_low
+        AudioDelay.NORMAL -> R.string.carlink_settings_audio_delay_normal
+        AudioDelay.HIGH -> R.string.carlink_settings_audio_delay_high
     },
 )
 

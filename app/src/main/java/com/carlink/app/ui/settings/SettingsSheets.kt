@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.carlink.app.R
 import com.carlink.core.settings.Applies
+import com.carlink.core.settings.AudioDelay
 import com.carlink.core.settings.CarBrand
 import com.carlink.core.settings.VehicleProfile
 import com.carlink.core.settings.ConnectionMethod
@@ -193,6 +194,17 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
                     R.drawable.carlink_ic_bluetooth),
             ),
             u.soundThroughCarBluetooth, onSelect = { b -> select { it.copy(soundThroughCarBluetooth = b) } }, onDismiss = onDismiss,
+        )
+        EssentialSheet.AUDIO_DELAY -> ChoiceSheet(
+            stringResource(R.string.carlink_settings_audio_delay), stringResource(R.string.carlink_settings_audio_delay_detail), true,
+            AudioDelay.entries.map { a ->
+                Preset(a, audioDelayLabel(a), stringResource(when (a) {
+                    AudioDelay.LOW -> R.string.carlink_settings_audio_delay_low_detail
+                    AudioDelay.NORMAL -> R.string.carlink_settings_audio_delay_normal_detail
+                    AudioDelay.HIGH -> R.string.carlink_settings_audio_delay_high_detail
+                }))
+            },
+            u.audioDelay, onSelect = { a -> select { it.copy(audioDelay = a) } }, onDismiss = onDismiss,
         )
         EssentialSheet.APPEARANCE -> ChoiceSheet(
             stringResource(R.string.carlink_settings_appearance), stringResource(R.string.carlink_settings_appearance_detail), false,

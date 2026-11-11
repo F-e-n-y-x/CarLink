@@ -1,6 +1,7 @@
 package com.carlink.core.settings
 
 import android.content.Context
+import com.shilapi.xcertplay.AirPlayPersistence
 
 /**
  * The settings a driver sets once for both CarPlay and Android Auto (design/REBUILD_PLAN.md,
@@ -21,6 +22,8 @@ data class UnifiedSettings(
     val nightEndMinute: Int = 7 * 60,
     val rightHandDrive: Boolean = false,
     val soundThroughCarBluetooth: Boolean = false,
+    /** How far CarPlay music and video sound is buffered behind the picture ([AudioDelay]). */
+    val audioDelay: AudioDelay = AudioDelay.NORMAL,
     val sendCarLocation: Boolean = true,
     val bydDirections: Boolean = true,
     val showAdvanced: Boolean = false,
@@ -40,9 +43,13 @@ enum class InterfaceSize { SMALL, MEDIUM, LARGE, CUSTOM }
 
 enum class DayNight { AUTOMATIC, DAY, NIGHT, SCHEDULE }
 
+/** CarPlay's music buffer: lower keeps sound in step with the picture, higher rides out Wi-Fi gaps. */
+enum class AudioDelay { LOW, NORMAL, HIGH }
+
 /** Main-process storage for [UnifiedSettings]. */
 class UnifiedSettingsStore(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun load() = UnifiedSettings(
         connectionMethod = enumOr(prefs.getString("connection_method", null), ConnectionMethod.AUTOMATIC),
@@ -55,6 +62,9 @@ class UnifiedSettingsStore(context: Context) {
         nightEndMinute = prefs.getInt("night_end", 7 * 60),
         rightHandDrive = prefs.getBoolean("right_hand_drive", false),
         soundThroughCarBluetooth = prefs.getBoolean("sound_car_bluetooth", false),
+        // Until saved once, follow the Music buffer an earlier version set in DiPlay (500 ms or 1 s was High).
+        audioDelay = enumOr(prefs.getString("audio_delay", null),
+            if (AirPlayPersistence.loadMediaBufferMillis(appContext, wireless = true) >= 500) AudioDelay.HIGH else AudioDelay.NORMAL),
         sendCarLocation = prefs.getBoolean("send_location", true),
         bydDirections = prefs.getBoolean("byd_directions", true),
         showAdvanced = prefs.getBoolean("show_advanced", false),
@@ -76,6 +86,7 @@ class UnifiedSettingsStore(context: Context) {
             .putInt("night_end", settings.nightEndMinute)
             .putBoolean("right_hand_drive", settings.rightHandDrive)
             .putBoolean("sound_car_bluetooth", settings.soundThroughCarBluetooth)
+            .putString("audio_delay", settings.audioDelay.name)
             .putBoolean("send_location", settings.sendCarLocation)
             .putBoolean("byd_directions", settings.bydDirections)
             .putBoolean("show_advanced", settings.showAdvanced)
