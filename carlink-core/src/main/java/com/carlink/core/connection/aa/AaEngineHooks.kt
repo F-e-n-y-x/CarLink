@@ -45,6 +45,9 @@ object AaEngineHooks {
         val prefs = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
             val percent = prefs.getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
+            // Asked once per session (service discovery): the density the phone keeps until it reconnects.
+            sessionPercent = percent
+            HostIntegration.turnSizeFactor = 1f
             AaSessionSettings.automaticDensityDpi(dpi, w, h, handheld, percent).also {
                 if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture at size $percent% (car-sized layout, 748x450 dp minimum)")
             }
@@ -56,8 +59,35 @@ object AaEngineHooks {
             if (kind == HostIntegration.EngineEvent.FIRST_VIDEO_FRAME) report(app)
         }
         scope.launch {
-            App.provide(app).commManager.connectionState.collectLatest { report(app, it) }
+            App.provide(app).commManager.connectionState.collectLatest {
+                // A live size change lasts for its session; the next one is sized at connect.
+                if (it is ConnectionState.Disconnected) HostIntegration.turnSizeFactor = 1f
+                report(app, it)
+            }
         }
+    }
+
+    @Volatile private var sessionPercent = 100
+
+    /**
+     * Interface size during a session. The phone takes the density only at connect, but on a turning
+     * screen a smaller region scaled up draws Android Auto larger, live, like a turn. A size smaller
+     * than the session's would need a region larger than the stream: that one reconnects.
+     */
+    fun setSize(context: Context, percent: Int) {
+        val app = context.applicationContext
+        app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit().putInt(AaSessionSettings.SIZE_PERCENT_KEY, percent).commit()
+        val relayout = HostIntegration.relayoutTurningScreen
+        val live = relayout != null && percent >= sessionPercent &&
+            com.andrerinas.openheadunit.utils.HeadUnitScreenConfig.turning() &&
+            App.provide(app).commManager.connectionState.value is ConnectionState.TransportStarted
+        if (live) {
+            HostIntegration.turnSizeFactor = percent / sessionPercent.toFloat()
+            relayout?.invoke()
+        }
+        Log.i(TAG, "size $percent% (session $sessionPercent%): ${if (live) "live" else "needs a reconnect"}")
+        sendEvent(app, AaProtocol.KIND_SIZE, "live=$live")
     }
 
     internal fun sendEvent(context: Context, kind: String, detail: String?) {

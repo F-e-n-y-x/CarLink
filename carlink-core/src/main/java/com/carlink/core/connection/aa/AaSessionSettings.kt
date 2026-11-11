@@ -176,9 +176,9 @@ object AaSessionSettings {
 
     /** Interface size as a percentage of the Automatic density (Custom: Advanced owns the DPI). */
     fun sizePercent(size: InterfaceSize): Int = when (size) {
-        InterfaceSize.SMALL -> 85
+        InterfaceSize.SMALL -> 80
         InterfaceSize.MEDIUM, InterfaceSize.CUSTOM -> 100
-        InterfaceSize.LARGE -> 120
+        InterfaceSize.LARGE -> 135
     }
 
     /**
@@ -190,7 +190,7 @@ object AaSessionSettings {
      * A [handheld] screen (phone, tablet) starts from a head unit's 160 dpi instead of its own: at a
      * phone's 300+ dpi Android Auto drew a phone-sized layout, while CarPlay on the same screen is laid
      * out for a car-sized display (2026-11-10, Galaxy S25 as the screen). [sizePercent] is the
-     * driver's interface size (Small 85, Large 120); the 748x450 dp floor still caps it.
+     * driver's interface size (Small 80, Large 135; 85/120 were too close to tell apart); the 748x450 dp floor still caps it.
      */
     fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false,
                             sizePercent: Int = 100): Int {

@@ -271,6 +271,16 @@ class AaCommandHandlerTest {
         assertEquals(1, engine.switched)
     }
 
+    @Test fun aRestartWithoutTheAttachStillResetsAStaleAccessory() {
+        engine.accessory = true
+        engine.accessoryOnBus = device()
+        engine.phoneAfterReset = device()
+        handler.startUsb(null, null, VehicleProfile.GENERIC)
+        assertEquals(1, engine.resets)
+        assertFalse(AapService.ACTION_CHECK_USB in actions())
+        assertEquals(1, engine.switched)
+    }
+
     @Test fun aResetRefusedRightAfterAStopIsTriedAgain() { // size change, tablet 2026-11-11
         engine.accessory = true
         engine.phoneAfterReset = device()

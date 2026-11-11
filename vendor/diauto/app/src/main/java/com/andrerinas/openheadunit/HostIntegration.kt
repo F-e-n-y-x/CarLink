@@ -100,6 +100,19 @@ object HostIntegration {
     @JvmStatic
     var turningScreen: Boolean = false
 
+    /**
+     * CarLink: the turning-screen region is this many times smaller than the session's (>= 1), so
+     * Android Auto's layout grows live with a margin change instead of a reconnect (interface size).
+     */
+    @Volatile
+    @JvmStatic
+    var turnSizeFactor: Float = 1f
+
+    /** CarLink: set by the projection screen; re-sends the turning-screen margins after [turnSizeFactor] changes. */
+    @Volatile
+    @JvmStatic
+    var relayoutTurningScreen: (() -> Unit)? = null
+
     /** CarLink: what [onEngineEvent] reports. Detail strings are `key=value` pairs joined by `;`. */
     enum class EngineEvent {
         /** The Wi-Fi radio is off, so the Wi-Fi Direct route cannot start (API 29+ cannot turn it on). */

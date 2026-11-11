@@ -383,9 +383,14 @@ object SwitcherController {
         override fun setInterfaceSize(size: InterfaceSize) {
             val store = UnifiedSettingsStore(app)
             store.save(store.load().copy(interfaceSize = size))
+            val engine = panelUi?.engine
             closePanel()
-            // The size is agreed when the session starts: restart it with the same phone and transport.
-            Connection.get(app).retry()
+            // The size is agreed when the session starts: restart it with the same phone and transport,
+            // unless Android Auto on a turning screen can take it live.
+            if (engine != com.carlink.core.core.Engine.ANDROID_AUTO) return Connection.get(app).retry()
+            com.carlink.core.connection.aa.AaLiveSize.request(app, com.carlink.core.connection.aa.AaSessionSettings.sizePercent(size)) { live ->
+                if (!live) Connection.get(app).retry()
+            }
         }
 
         override fun disconnect() {

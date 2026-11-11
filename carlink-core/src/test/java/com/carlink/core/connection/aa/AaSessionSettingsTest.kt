@@ -113,7 +113,7 @@ class AaSessionSettingsTest {
         assertEquals(2, v["resolutionId"])
         assertEquals(30, v["fps-limit"])
         assertEquals(0, v["dpi-pixel-density"])
-        for ((size, percent) in listOf(InterfaceSize.SMALL to 85, InterfaceSize.MEDIUM to 100, InterfaceSize.LARGE to 120)) {
+        for ((size, percent) in listOf(InterfaceSize.SMALL to 80, InterfaceSize.MEDIUM to 100, InterfaceSize.LARGE to 135)) {
             val sized = values(settings = base.copy(interfaceSize = size)).values
             assertEquals(0, sized["dpi-pixel-density"])
             assertEquals(percent, sized[AaSessionSettings.SIZE_PERCENT_KEY])
@@ -149,9 +149,9 @@ class AaSessionSettingsTest {
         assertEquals(160, AaSessionSettings.automaticDensityDpi(300, 1560, 720, handheld = true))
         assertEquals(120, AaSessionSettings.automaticDensityDpi(120, 1560, 720, handheld = true))
         // Small and Large scale the Automatic density, not the panel's own (Large was 384 dpi on a 320 dpi tablet).
-        assertEquals(192, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 120))
-        assertEquals(136, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 85))
+        assertEquals(216, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 135))
+        assertEquals(128, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 80))
         // The 748x450 dp floor still caps Large: 800x480 at 160 dpi allows 170.
-        assertEquals(170, AaSessionSettings.automaticDensityDpi(160, 800, 480, sizePercent = 120))
+        assertEquals(170, AaSessionSettings.automaticDensityDpi(160, 800, 480, sizePercent = 135))
     }
 }

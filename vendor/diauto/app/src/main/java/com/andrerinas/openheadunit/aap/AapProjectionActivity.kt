@@ -757,6 +757,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = { runOnUiThread { postTurnMargins() } } // CarLink
         // [FIX] applyOrientationSettings() must be called AFTER super.onCreate() so that the
         // Activity window is fully initialized before we lock the orientation. Calling it before
         // super.onCreate() caused SCREEN_ORIENTATION_LOCKED to inherit the orientation context
@@ -1874,6 +1875,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private val bydFullscreen = com.andrerinas.openheadunit.utils.BydFullscreen()
 
     override fun onDestroy() {
+        com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = null // CarLink
         bydFullscreen.release()
         super.onDestroy()
         if (isFinishReceiverRegistered) {

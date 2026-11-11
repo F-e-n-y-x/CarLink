@@ -121,7 +121,10 @@ internal class AaCommandHandler(
      * engine's own USB auto-switch off (`auto-connect-last-session=false`). AapService is started
      * first so its USB receiver sees the phone re-enumerate as an accessory and connects it.
      */
-    fun startUsb(device: UsbDevice?, address: String?, profile: VehicleProfile) {
+    fun startUsb(attached: UsbDevice?, address: String?, profile: VehicleProfile) {
+        // A restart (interface size, Try again) can come without the attach: a phone still in accessory
+        // mode is then the one to reset, not left to an 8 s dead handshake (tablet, 2026-11-11).
+        val device = attached ?: engine.accessoryDevice()
         // No P2P group, poke or wireless server while the phone is on the cable (RELIABILITY_AUDIT
         // K10: the engine pulled a plugged-in phone into wireless Android Auto).
         engine.setUsbOnlySession(true)

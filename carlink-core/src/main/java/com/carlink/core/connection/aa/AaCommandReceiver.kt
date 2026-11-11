@@ -45,6 +45,7 @@ class AaCommandReceiver : BroadcastReceiver() {
             AaProtocol.COMMAND_RESWITCH_USB -> handler.reswitchStaleAccessory()
             AaProtocol.COMMAND_STOP -> handler.stop(intent.getLongExtra(AaProtocol.EXTRA_TOKEN, 0L))
             AaProtocol.COMMAND_REPORT -> AaEngineHooks.report(app)
+            AaProtocol.COMMAND_SET_SIZE -> AaEngineHooks.setSize(app, intent.getIntExtra(AaProtocol.EXTRA_SIZE_PERCENT, 100))
             AaProtocol.COMMAND_USB_PERMISSION ->
                 handler.onUsbPermission(usbDevice(intent), intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
         }
