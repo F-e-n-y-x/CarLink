@@ -778,7 +778,8 @@ class SessionManager(
             }
             is AdapterEvent.Restart -> {
                 note("${plan.engine} restarting on ${plan.path ?: "USB"}: ${event.detail}")
-                replaceAttempt(a, a.index, SessionState.Phase.Starting, notice = null)
+                // The session ran, so its Wi-Fi Direct group works: the restart reads it instead of making one.
+                replaceAttempt(a, a.index, SessionState.Phase.Starting, notice = null, networkSuspect = false)
             }
             is AdapterEvent.Ended -> {
                 note("${plan.engine} session ended${if (event.byUser) " by the driver" else ""}")
@@ -950,7 +951,8 @@ class SessionManager(
                 val (reason, _) = StallPlaybook.failure(plan.engine, plan.transport, stage, waited)
                 val index = if (action == RecoveryAction.NEXT_PATH) a.index + 1 else a.index
                 replaceAttempt(a, index, SessionState.Phase.Retrying(index + 1, reason, a.stage, message),
-                    Notice(Notice.Kind.RECOVERING, stage, message, action))
+                    Notice(Notice.Kind.RECOVERING, stage, message, action),
+                    networkSuspect = action != RecoveryAction.RETRY_STEP || !StallPlaybook.beforeNetwork(stage))
             }
             RecoveryAction.ASK_REPLUG -> {
                 profiles.recordFailure(request, plan.path, kind, stage, message)
@@ -965,12 +967,15 @@ class SessionManager(
     }
 
     /** Stops [a]'s engine and starts path [index] (the same one, or the next) once it has stopped. */
-    private fun replaceAttempt(a: Attempt, index: Int, phase: SessionState.Phase, notice: Notice?) {
+    private fun replaceAttempt(a: Attempt, index: Int, phase: SessionState.Phase, notice: Notice?, networkSuspect: Boolean = true) {
         endAttempt()
         val current = _state.value as? SessionState.Active ?: return
         _state.value = current.copy(phase = phase, notice = notice)
         running = null
-        stopEngine(a.plan.engine)
+        // The same Wi-Fi Direct attempt again, with the network not in doubt: Android Auto keeps its
+        // group (open-headunit NativeGroupKeepPolicy), so the phone rejoins the network it just used.
+        stopEngine(a.plan.engine, keepWirelessNetwork = index == a.index && !networkSuspect &&
+            a.plan.path == WirelessPath.WIFI_DIRECT)
         begin(a.request, a.paths, index, token, phase, notice)
     }
 
@@ -994,10 +999,10 @@ class SessionManager(
 
     // --- Engine stops --------------------------------------------------------------------------
 
-    private fun stopEngine(engine: Engine) {
+    private fun stopEngine(engine: Engine, keepWirelessNetwork: Boolean = false) {
         stopping++
         val started = clock()
-        adapters.getValue(engine).stop {
+        adapters.getValue(engine).stop(keepWirelessNetwork) {
             main.post {
                 stopping--
                 note("$engine stopped in ${clock() - started} ms")

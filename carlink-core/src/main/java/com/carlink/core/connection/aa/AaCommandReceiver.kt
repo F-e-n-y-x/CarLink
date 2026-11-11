@@ -37,14 +37,18 @@ class AaCommandReceiver : BroadcastReceiver() {
         val profile = intent.getStringExtra(AaProtocol.EXTRA_VEHICLE_PROFILE)
             ?.let { runCatching { VehicleProfile.valueOf(it) }.getOrNull() } ?: VehicleProfile.GENERIC
         val address = intent.getStringExtra(AaProtocol.EXTRA_ADDRESS)
-        if (command.startsWith("start")) AaEngineHooks.refreshScreen(app)
+        if (command.startsWith("start")) {
+            AaEngineHooks.refreshScreen(app)
+            AaEngineHooks.refreshStream(app)
+        }
         when (command) {
             AaProtocol.COMMAND_START_WIRELESS -> handler.startWireless(address, profile)
             AaProtocol.COMMAND_START_USB -> handler.startUsb(usbDevice(intent), address, profile)
             AaProtocol.COMMAND_START_SELF -> handler.startSelf(profile)
             AaProtocol.COMMAND_POKE -> address?.let { handler.poke(it) }
             AaProtocol.COMMAND_RESWITCH_USB -> handler.reswitchStaleAccessory()
-            AaProtocol.COMMAND_STOP -> handler.stop(intent.getLongExtra(AaProtocol.EXTRA_TOKEN, 0L))
+            AaProtocol.COMMAND_STOP -> handler.stop(intent.getLongExtra(AaProtocol.EXTRA_TOKEN, 0L),
+                intent.getBooleanExtra(AaProtocol.EXTRA_KEEP_GROUP, false))
             AaProtocol.COMMAND_REPORT -> AaEngineHooks.report(app)
             AaProtocol.COMMAND_SET_SIZE -> AaEngineHooks.setSize(app, intent.getIntExtra(AaProtocol.EXTRA_SIZE_PERCENT, 100))
             AaProtocol.COMMAND_USB_PERMISSION ->

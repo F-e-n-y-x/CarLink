@@ -58,6 +58,7 @@ internal class AaCommandHandler(
      * when [WirelessStartPolicy] finds it wedged; a session that is connecting or up is left alone.
      */
     fun startWireless(address: String?, profile: VehicleProfile) {
+        engine.setKeepGroupOnStop(false)
         engine.setUsbOnlySession(false)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         // Exactly the chosen phone (DA§10.5, §10.7): an empty list pokes every bonded device, and a
@@ -104,6 +105,7 @@ internal class AaCommandHandler(
      * group, no pokes). A closed port comes back as `HEAD_UNIT_SERVER_CLOSED`.
      */
     fun startSelf(profile: VehicleProfile) {
+        engine.setKeepGroupOnStop(false)
         engine.setUsbOnlySession(true)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         if (!start(AapService.ACTION_START_SELF_MODE)) emit(AaProtocol.KIND_START_REFUSED, "action=${AapService.ACTION_START_SELF_MODE}")
@@ -127,6 +129,7 @@ internal class AaCommandHandler(
         val device = attached ?: engine.accessoryDevice()
         // No P2P group, poke or wireless server while the phone is on the cable (RELIABILITY_AUDIT
         // K10: the engine pulled a plugged-in phone into wireless Android Auto).
+        engine.setKeepGroupOnStop(false)
         engine.setUsbOnlySession(true)
         engine.setClaimHiddenBottomStrip(profile == VehicleProfile.BYD_DILINK)
         if (address != null) engine.setPokeTargets(address)
@@ -291,18 +294,25 @@ internal class AaCommandHandler(
      * Ends everything and acknowledges only once AapService is gone and Android Auto's Wi-Fi Direct
      * group is released, so the next engine finds the radio free (design/REBUILD_V2.md §4).
      * `static-bssid` goes back to "0" (DA§10.1): it overrides both credential chains.
+     *
+     * [keepGroup]: the same wireless session starts again at once (the screen turned, a Bluetooth-stage
+     * retry), so Android Auto's own group stays up for it to read: no ~0.6 s create, and the phone
+     * finds the network (name, passphrase and BSSID) it just used. The flag holds until the next start,
+     * because the engine's teardown calls WifiDirectManager.stop() more than once, asynchronously.
      */
-    fun stop(token: Long) {
+    fun stop(token: Long, keepGroup: Boolean = false) {
+        engine.setKeepGroupOnStop(keepGroup)
         val wasRunning = engine.isServiceRunning()
         val serviceStopped = !wasRunning || stopService()
         // AapService.onDestroy → WifiDirectManager.stop() removes the group asynchronously; give
-        // it its own time first, then remove a group that is still ours.
-        val groupReleased = releaseAndroidAutoGroup(waitForEngine = wasRunning)
+        // it its own time first, then remove a group that is still ours. A kept group reads as
+        // "could not tell" (null), never as released.
+        val groupReleased = if (keepGroup) null else releaseAndroidAutoGroup(waitForEngine = wasRunning)
         engine.resetStaticBssid()
         engine.setClaimHiddenBottomStrip(false)
         engine.setUsbOnlySession(false)
         monitor.reset()
-        Log.i(TAG, "stop done serviceStopped=$serviceStopped groupReleased=$groupReleased")
+        Log.i(TAG, "stop done serviceStopped=$serviceStopped groupReleased=$groupReleased keepGroup=$keepGroup")
         ack(token, serviceStopped, groupReleased)
         report()
     }

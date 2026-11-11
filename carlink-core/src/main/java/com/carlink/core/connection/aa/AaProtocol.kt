@@ -81,6 +81,8 @@ internal object AaProtocol {
     const val EXTRA_SERVICE_STOPPED = "service_stopped"
     /** True: no group of CarLink's is up; false: one is still up; absent: could not tell. */
     const val EXTRA_GROUP_RELEASED = "group_released"
+    /** On [COMMAND_STOP]: leave Android Auto's own Wi-Fi Direct group up for the restart that follows. */
+    const val EXTRA_KEEP_GROUP = "keep_group"
 
     /** CommManager.ConnectionState names, in session order. */
     const val CONNECTION_DISCONNECTED = "Disconnected"

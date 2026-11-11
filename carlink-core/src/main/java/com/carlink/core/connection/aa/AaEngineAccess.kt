@@ -76,6 +76,8 @@ internal interface AaEngineAccess {
     fun plainAndroidPhone(): UsbDevice?
     /** DiAuto's `HostIntegration.usbOnlySession`: no wireless bring-up while true. */
     fun setUsbOnlySession(usbOnly: Boolean)
+    /** DiAuto's `HostIntegration.keepWifiDirectGroupOnStop`: the engine's stop leaves its group up. */
+    fun setKeepGroupOnStop(keep: Boolean)
     fun sleep(millis: Long)
     fun now(): Long
 }
@@ -243,6 +245,10 @@ internal class DiAutoEngineAccess(context: Context) : AaEngineAccess {
 
     override fun setUsbOnlySession(usbOnly: Boolean) {
         HostIntegration.usbOnlySession = usbOnly
+    }
+
+    override fun setKeepGroupOnStop(keep: Boolean) {
+        HostIntegration.keepWifiDirectGroupOnStop = keep
     }
 
     override fun sleep(millis: Long) = Thread.sleep(millis)

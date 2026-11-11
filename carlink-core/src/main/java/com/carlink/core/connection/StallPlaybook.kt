@@ -124,6 +124,10 @@ object StallPlaybook {
         }
     }
 
+    /** A phase before the phone uses the Wi-Fi link: a stall there does not put the network in doubt. */
+    fun beforeNetwork(stage: ProgressStage?): Boolean = stage == ProgressStage.WAITING_FOR_PHONE ||
+        stage == ProgressStage.PHONE_NOT_ANSWERING || stage == ProgressStage.HANDSHAKE
+
     /** Words for a phase in notices and logs. */
     fun phaseName(stage: ProgressStage?): String = when (stage) {
         ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> "Reaching the phone"

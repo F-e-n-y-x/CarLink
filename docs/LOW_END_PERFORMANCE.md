@@ -356,7 +356,9 @@ compresses a little worse); `baseline.prof` 7.7 → 14.2 KB. The shipping arm-on
   stable (unstable classes in the app 30 → 22). `-Pcarlink.composeReports=true` writes the
   compiler's reports to `app/build/compose_compiler/`.
 - **Memory**: `:aa` is not prewarmed on a memory-tight unit (low-RAM build or ≤ 3.3 GB) unless an
-  Android phone is known (`EnginePrewarmPolicy`; logged once). The main process answers
+  Android phone is known (`EnginePrewarmPolicy`; logged once). A 3 GB-class unit (≥ 2.5 GB
+  reported, not low-RAM) also prewarms while no phone is known yet; only a 3 GB unit that knows
+  nothing but iPhones skips it. The main process answers
   `onTrimMemory` (UI hidden and above, and the running-low levels Android 10-13 still send) by
   dropping the decoder probe.
 

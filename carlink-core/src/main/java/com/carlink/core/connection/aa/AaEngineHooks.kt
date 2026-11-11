@@ -40,6 +40,7 @@ object AaEngineHooks {
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
         refreshScreen(app)
+        if (HostIntegration.turningScreen) Thread({ highResDecoder(app) }, "carlink-aa-decoder-probe").start()
         val prefs = app.getSharedPreferences(com.andrerinas.openheadunit.utils.Settings.PREFS_NAME, Context.MODE_PRIVATE)
         HostIntegration.automaticDensityDpi = { dpi, w, h ->
             // Asked once per session (service discovery): the density the phone keeps until it reconnects.
@@ -79,6 +80,21 @@ object AaEngineHooks {
             .getInt(AaSessionSettings.SIZE_PERCENT_KEY, 100)
         HostIntegration.turnSizeFactor = if (turning) maxOf(1f, chosen / LIVE_BASE_PERCENT.toFloat()) else 1f
     }
+
+    /**
+     * Per start, off the main thread: a turning screen whose HEVC decoder carries 1440p60 asks for the
+     * 1440p stream ([com.carlink.core.connection.PicturePolicy.turningHighRes]). The answer does not
+     * depend on the orientation, so the codec list is scanned once per process (warmed by [install]).
+     */
+    fun refreshStream(context: Context) {
+        HostIntegration.turningHighResStream = HostIntegration.turningScreen && highResDecoder(context.applicationContext)
+    }
+
+    @Volatile private var highResCapable: Boolean? = null
+
+    private fun highResDecoder(app: Context): Boolean = highResCapable ?: runCatching {
+        com.carlink.core.connection.PicturePolicy.turningHighRes(com.carlink.core.connection.DeviceCapabilities.read(app))
+    }.getOrDefault(false).also { highResCapable = it }
 
     /** Small: the size a turning screen connects at, so every interface size is reachable live. */
     private const val LIVE_BASE_PERCENT = 80
