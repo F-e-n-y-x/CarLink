@@ -254,6 +254,8 @@ class CarPlayAdapter internal constructor(
             // DiPlay's dial waits for CarLink's own page of the iPhone instead of racing its SDP.
             WirelessStartupTimeline.beforeBluetoothDial = BluetoothWarmup::awaitPage
             CarPlayWaitingView.install()
+            // Each session also declares the larger interface sizes as smaller areas, so the switcher changes size live.
+            CarPlayHostIntegration.liveSizeWidthsMm = com.carlink.core.settings.InterfaceSize.entries.mapNotNull(CarPlaySettingsPolicy::widthMm)
             // A screen that turns (phone, tablet) gets DiPlay's square canvas with a landscape and a
             // portrait area: turning switches area instead of rebuilding the session (10-50 s, 2026-11-10).
             // A head unit stays on the plain canvas, which is sharper and never turns.

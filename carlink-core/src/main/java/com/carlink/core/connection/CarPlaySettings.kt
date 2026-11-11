@@ -95,6 +95,14 @@ object CarPlaySettingsPolicy {
     /** DiPlay's own default OEM label (AirPlayPersistence.DEFAULT_OEM_LABEL, DIPLAY.md §12 row 15). */
     const val DIPLAY_DEFAULT_OEM_LABEL = "BYD"
 
+    /** The screen width told to the iPhone for [size]; null leaves DiPlay's own (Custom). */
+    fun widthMm(size: InterfaceSize): Int? = when (size) {
+        InterfaceSize.SMALL -> 350
+        InterfaceSize.MEDIUM -> MEDIUM_WIDTH_MM
+        InterfaceSize.LARGE -> 220 // 250 looked too close to Medium on a tablet (2026-11-12)
+        InterfaceSize.CUSTOM -> null
+    }
+
     fun map(
         settings: UnifiedSettings,
         path: WirelessPath?,
@@ -113,12 +121,7 @@ object CarPlaySettingsPolicy {
             Picture.LIGHT -> 75 to 30
             Picture.CUSTOM -> null to null
         }
-        val widthMm = when (settings.interfaceSize) {
-            InterfaceSize.SMALL -> 350
-            InterfaceSize.MEDIUM -> MEDIUM_WIDTH_MM
-            InterfaceSize.LARGE -> 220 // 250 looked too close to Medium on a tablet (2026-11-12)
-            InterfaceSize.CUSTOM -> null
-        }
+        val widthMm = widthMm(settings.interfaceSize)
         val byd = profile == VehicleProfile.BYD_DILINK
         return CarPlayEngineSettings(
             wirelessMode = when (path) {

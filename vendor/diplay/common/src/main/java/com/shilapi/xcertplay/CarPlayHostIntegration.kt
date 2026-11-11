@@ -213,6 +213,23 @@ object CarPlayHostIntegration {
     /** The waiting view's Retry: restarts a session whose startup retries stopped. */
     fun retryNow(): Boolean = HostSessions.retryNow()
 
+    /**
+     * CarLink: the screen widths (mm) the host may switch to live. A session that declares view areas
+     * anyway (a turning screen's square, a fixed dock, split screen, side panel) also declares a smaller
+     * whole-screen area for each width below its own, scaled up to fill the window. Empty: none.
+     */
+    @Volatile
+    @JvmStatic
+    var liveSizeWidthsMm: List<Int> = emptyList()
+
+    /**
+     * CarLink: shows CarPlay as if the screen were [widthMm] wide, without reconnecting, by moving it to
+     * the matching area of [liveSizeWidthsMm] (or back to the session's own). False when the session cannot
+     * (a width above the session's, no such area, CarPlay in split screen or beside the side panel, no
+     * live host): the caller reconnects. Main thread.
+     */
+    fun setInterfaceSizeLive(widthMm: Int): Boolean = HostSessions.setInterfaceSizeLive(widthMm)
+
     internal fun publishHostState(state: HostState) {
         runCatching { onHostState?.invoke(state) }
             .onFailure { android.util.Log.w("CarLink-CarPlayHost", "host state listener failed", it) }
@@ -231,6 +248,7 @@ internal object HostSessions {
         /** Shuts the session down (idempotent) and finishes the window; [done] after teardown. */
         fun end(done: () -> Unit)
         fun retryNow(): Boolean
+        fun setInterfaceSizeLive(widthMm: Int): Boolean = false // CarLink
     }
 
     private const val MAX_ROUNDS = 8
@@ -282,6 +300,8 @@ internal object HostSessions {
     }
 
     fun retryNow(): Boolean = liveHosts().lastOrNull()?.retryNow() == true
+
+    fun setInterfaceSizeLive(widthMm: Int): Boolean = liveHosts().lastOrNull()?.setInterfaceSizeLive(widthMm) == true
 
     /** Guards [step] against a stop action that completes without clearing its session. */
     private var rounds = 0

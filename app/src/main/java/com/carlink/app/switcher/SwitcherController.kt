@@ -386,7 +386,13 @@ object SwitcherController {
             val engine = panelUi?.engine
             closePanel()
             // The size is agreed when the session starts: restart it with the same phone and transport,
-            // unless Android Auto on a turning screen can take it live.
+            // unless the session can take it live (Android Auto on a turning screen; CarPlay with a
+            // size area declared at start). The saved size starts the next session natively (sharp).
+            if (engine == com.carlink.core.core.Engine.CARPLAY) {
+                val mm = com.carlink.core.connection.CarPlaySettingsPolicy.widthMm(size)
+                if (mm == null || !com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(mm)) Connection.get(app).retry()
+                return
+            }
             if (engine != com.carlink.core.core.Engine.ANDROID_AUTO) return Connection.get(app).retry()
             com.carlink.core.connection.aa.AaLiveSize.request(app, com.carlink.core.connection.aa.AaSessionSettings.sizePercent(size)) { live ->
                 if (!live) Connection.get(app).retry()

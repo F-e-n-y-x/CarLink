@@ -768,6 +768,7 @@ open class CarPlayHostActivity : ComponentActivity() {
             finish()
         }
         override fun retryNow(): Boolean = manualRetry()
+        override fun setInterfaceSizeLive(widthMm: Int): Boolean = applyInterfaceSize(widthMm)
     }
     private val airPlayCommandExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val logLines = ArrayDeque<LogEntry>()
@@ -5135,11 +5136,15 @@ open class CarPlayHostActivity : ComponentActivity() {
             display.copy(widthPixels = square, heightPixels = square, widthPhysicalMm = squareMm,
                 heightPhysicalMm = squareMm, viewArea = null, safeArea = null)
         }
+        // CarLink: smaller whole-screen areas for live interface sizes; a custom safe area fits only the whole screen.
+        val sizeWidthsMm = if (AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height) == null)
+            CarPlayHostIntegration.liveSizeWidthsMm else emptyList()
         val viewAreas = if (square == null) {
             CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
                 CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
             ), dock, splitWindow, startPortrait = display.heightPixels > display.widthPixels,
-                sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive)
+                sidePanel = SidePanelSettings.enabled(this), rightHandDrive = rightHandDrive,
+                sizeWidthsMm = sizeWidthsMm, sessionWidthMm = widthPhysicalMm) // CarLink
         } else {
             val (landscape, portrait) = CarPlayRotation.turningAreas(square, size.width, size.height,
                 screen.widthPixels, screen.heightPixels)
@@ -5147,7 +5152,7 @@ open class CarPlayHostActivity : ComponentActivity() {
                 CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
                 CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
             ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
-                rightHandDrive = rightHandDrive)
+                rightHandDrive = rightHandDrive, sizeWidthsMm = sizeWidthsMm, sessionWidthMm = widthPhysicalMm) // CarLink
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
@@ -6052,6 +6057,30 @@ open class CarPlayHostActivity : ComponentActivity() {
         appendLog(message)
         Log.i(TAG, message)
         return true
+    }
+
+    /**
+     * CarLink: CarPlayHostIntegration.setInterfaceSizeLive; moves CarPlay to the whole-screen area that shows it
+     * as on a [widthMm] wide screen. False when this session has none or cannot switch now (the caller reconnects).
+     */
+    private fun applyInterfaceSize(widthMm: Int): Boolean {
+        val areas = sessionDisplay?.viewAreas
+        if (areas == null || controller == null || menuOpen || handshakeResetInProgress || shuttingDown.get() ||
+            pendingViewArea != null) {
+            Log.i(TAG, "Interface size ${widthMm} mm: no live change (areas=${areas != null} controller=${controller != null})")
+            return false
+        }
+        val target = areas.sizeVariant(widthMm)
+        val sent = target != null && (target == areas.current || controller?.showViewArea(target) == true)
+        if (sent && target != null) {
+            areas.use(target)
+            videoView?.let { updateVideoLayout(it.width, it.height) }
+        }
+        val message = "Interface size ${widthMm} mm (session ${areas.sessionWidthMm} mm): view area $target " +
+            "${target?.let { areas.areas[it] }} sent=$sent"
+        appendLog(message)
+        Log.i(TAG, message)
+        return sent
     }
 
     /** CarLink: the view area a turn could not send yet; [retryViewArea] sends it once the session takes it. */
