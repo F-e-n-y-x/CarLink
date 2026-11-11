@@ -2,6 +2,8 @@ package com.carlink.app.ui.settings
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -89,6 +91,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
     val stereoBluetooth by vm.stereoBluetooth.collectAsStateWithLifecycle()
     val link by vm.link.collectAsStateWithLifecycle()
+    val home by vm.home.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val access = remember { EngineAccess(context.applicationContext) }
     val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
@@ -108,6 +111,34 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         overlayAllowed = Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(context)
         onPauseOrDispose { }
+    }
+
+    // Back up and Restore: the passwords question, the file pickers, then a confirm before writing.
+    var askPasswords by remember { mutableStateOf(false) }
+    var withPasswords by remember { mutableStateOf(false) }
+    var pendingRestore by remember { mutableStateOf<SettingsBackup.Backup?>(null) }
+    var restoreError by remember { mutableStateOf<String?>(null) }
+    val toast = { res: Int -> android.widget.Toast.makeText(context, res, android.widget.Toast.LENGTH_SHORT).show() }
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val brand = vehicle.brand
+        vm.viewModelScope.launch {
+            val saved = withContext(Dispatchers.IO) {
+                runCatching {
+                    val text = SettingsBackup.export(context, brand, readEngineValues(access), withPasswords)
+                    context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text.toByteArray()) }
+                }.isSuccess
+            }
+            toast(if (saved) R.string.carlink_backup_done else R.string.carlink_backup_failed)
+        }
+    }
+    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        vm.viewModelScope.launch {
+            withContext(Dispatchers.IO) { runCatching { SettingsBackup.parse(readSmallText(context, uri)) } }
+                .onSuccess { pendingRestore = it }
+                .onFailure { restoreError = it.message }
+        }
     }
 
     val goTo = navigate
@@ -136,6 +167,10 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override suspend fun readCarHotspot() = vm.readCarHotspot()
             override suspend fun readSavedWifiPassword(ssid: String) = vm.readSavedWifiPassword(ssid)
             override fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = vm.saveCarHotspot(details)
+            override fun forgetAndRepair(phone: com.carlink.core.detect.PairedPhone) = vm.forgetAndRepair(phone)
+            override fun backupSettings() { askPasswords = true }
+            override fun restoreSettings() = runCatching { openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                .getOrElse { toast(R.string.carlink_backup_failed) }
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
                 // An exact per-engine value replaces the unified preset: mark it Custom first so
@@ -166,8 +201,42 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         stereoBluetoothFyt = stereoBluetooth?.classification == com.carlink.core.detect.StereoBluetooth.FYT_MODULE,
         liveEngine = link.engine?.takeIf { link.stage == com.carlink.core.core.LinkStage.CONNECTED }
             ?.let { com.carlink.app.ui.components.engineName(it) },
+        phones = home.phones,
     )
     SettingsContent(ui, actions, onBack, startCategory)
+    if (askPasswords) BackupPasswordsDialog(onChoose = { include ->
+        askPasswords = false
+        withPasswords = include
+        runCatching { saveBackup.launch("carlink-settings.json") }.onFailure { toast(R.string.carlink_backup_failed) }
+    }, onDismiss = { askPasswords = false })
+    pendingRestore?.let { backup ->
+        RestoreConfirmDialog(backup, onConfirm = {
+            pendingRestore = null
+            vm.restoreSettings(backup)
+            // Engine values go through the same writer as the Advanced rows (":aa" over IPC: off the main thread).
+            vm.viewModelScope.launch(Dispatchers.IO) {
+                backup.advanced.forEach { (id, value) ->
+                    AdvancedSettings.all.firstOrNull { it.id == id }?.let { runCatching { writeEngineValue(access, it, value) } }
+                }
+                engineValues.value = readEngineValues(access)
+            }
+            toast(R.string.carlink_restore_done)
+        }, onDismiss = { pendingRestore = null })
+    }
+    restoreError?.let { RestoreErrorDialog(it) { restoreError = null } }
+}
+
+/** A backup file's text, refusing anything larger than a backup can be. Blocking. */
+private fun readSmallText(context: android.content.Context, uri: android.net.Uri): String {
+    val limit = 256 * 1024
+    val bytes = context.contentResolver.openInputStream(uri)!!.use { input ->
+        val buffer = ByteArray(limit + 1)
+        var n = 0
+        while (n < buffer.size) { val read = input.read(buffer, n, buffer.size - n); if (read < 0) break; n += read }
+        require(n <= limit) { "file too large" }
+        buffer.copyOf(n)
+    }
+    return String(bytes, Charsets.UTF_8)
 }
 
 private const val ENGINE_REREAD_DELAY_MS = 500L

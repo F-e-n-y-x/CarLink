@@ -277,6 +277,7 @@ object SwitcherController {
             usbKinds = com.carlink.app.ui.premium.usbPhoneKinds(app),
             method = UnifiedSettingsStore(app).load().connectionMethod,
             interfaceSize = UnifiedSettingsStore(app).load().interfaceSize,
+            dayNight = UnifiedSettingsStore(app).load().dayNight, dimmer = ScreenDimmer.level,
             edge = bubble?.let { if (it.params.x + geometry.bubble / 2 < geometry.screenWidth / 2) Edge.LEFT else Edge.RIGHT }
                 ?: Edge.RIGHT,
         )
@@ -405,6 +406,25 @@ object SwitcherController {
         }
 
         override fun close() = closePanel()
+
+        override fun cycleDayNight() {
+            val store = UnifiedSettingsStore(app)
+            val next = com.carlink.app.ui.switcher.nextDayNight(store.load().dayNight)
+            store.save(store.load().copy(dayNight = next))
+            panelUi = panelUi?.copy(dayNight = next)
+        }
+
+        override fun cycleDimmer() {
+            ScreenDimmer.set(app, com.carlink.app.ui.switcher.nextDimLevel(ScreenDimmer.level, ScreenDimmer.ALPHAS.size))
+            panelUi = panelUi?.copy(dimmer = ScreenDimmer.level)
+        }
+
+        override fun openStereoLauncher() {
+            closePanel()
+            runCatching {
+                app.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.onFailure { Log.w(TAG, "cannot open the stereo's launcher", it) }
+        }
     }
 
     // ---- Switch prompt ------------------------------------------------------------------------

@@ -558,6 +558,25 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         if (!phonesRepository.forget(phone.address)) openBluetoothSettings()
     }
 
+    /**
+     * "Forget and re-pair" for wireless that keeps getting stuck: ends [phone]'s session, drops what
+     * CarLink remembers about it (kind, last working path, connection record) and its Bluetooth
+     * pairing, removes a leftover Wi-Fi Direct group when nothing runs, then opens Bluetooth settings.
+     * DiPlay's own selected iPhone is left alone: CarLink sets it again at every start.
+     */
+    fun forgetAndRepair(phone: PairedPhone) {
+        val current = link.value
+        val busy = current.isActive
+        if (busy && current.phoneName == phone.name) session.disconnect()
+        session.forgetPhone(phone.address)
+        phonesRepository.forget(phone.address)
+        if (!busy) kotlin.concurrent.thread(name = "carlink-repair-p2p") {
+            runCatching { com.carlink.core.engine.WifiDirectReset.removeGroup(app) }
+        }
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "forget and re-pair: ${phone.kind} phone forgotten")
+        openBluetoothSettings()
+    }
+
     // ---- Preferences -------------------------------------------------------------------
 
     fun setThemeMode(mode: ThemeMode) { uiPreferences.themeMode = mode; _display.value = readDisplay() }
@@ -614,6 +633,19 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
                 android.widget.Toast.makeText(app, com.carlink.app.R.string.carlink_settings_root_unavailable, android.widget.Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    /** Applies a checked settings backup (Settings › General › Restore) and refreshes every screen's view of it. */
+    fun restoreSettings(backup: com.carlink.app.ui.settings.SettingsBackup.Backup) {
+        com.carlink.app.ui.settings.SettingsBackup.applyPreferences(app, backup)
+        backup.carBrand?.let(::setCarBrand)
+        _unified.value = unifiedStore.load()
+        _display.value = readDisplay()
+        _connection.value = readConnection()
+        com.carlink.app.switcher.SwitcherController.onSettingChanged()
+        refreshNetwork()
+        session.onSettingsChanged()
+        com.carlink.core.diagnostics.EventLog.add("CarLink", "settings restored from a backup (${backup.count} values)")
     }
 
     fun setFloatingSwitcher(on: Boolean) {

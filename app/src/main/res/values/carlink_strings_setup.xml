@@ -58,6 +58,9 @@
     <string name="carlink_setup_car_eyebrow">Your car</string>
     <string name="carlink_setup_car_title">Which car is this screen in?</string>
     <string name="carlink_setup_car_body">Pick its brand. You can change it later in Settings › Car.</string>
+    <string name="carlink_setup_size_eyebrow">Screen size</string>
+    <string name="carlink_setup_size_title">How big should things look?</string>
+    <string name="carlink_setup_size_body">The size of icons and text in CarPlay and Android Auto. Medium suits most screens, so you can skip this. Change it any time in Settings › Display.</string>
 
     <!-- Pair a phone -->
     <string name="carlink_setup_pair_eyebrow">Pair your phone</string>

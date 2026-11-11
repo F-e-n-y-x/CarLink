@@ -183,6 +183,8 @@ internal interface HomeActions {
     fun switchTo(phone: PairedPhone) {}
     fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) {}
     fun forgetPhone(phone: PairedPhone) {}
+    /** "Forget and re-pair": CarLink forgets the phone's pairing and paths, then opens Bluetooth settings. */
+    fun forgetAndRepair(phone: PairedPhone) {}
     /** A phone not known yet (paired with the stereo's module): connect it through the module. */
     fun connectNew(kind: PhoneKind) {}
     fun retry() {}
@@ -241,6 +243,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
             override fun switchTo(phone: PairedPhone) = vm.switchTo(phone)
             override fun setPhoneKind(phone: PairedPhone, kind: PhoneKind) = vm.setPhoneKind(phone, kind)
             override fun forgetPhone(phone: PairedPhone) = vm.forgetPhone(phone)
+            override fun forgetAndRepair(phone: PairedPhone) = vm.forgetAndRepair(phone)
             override fun connectNew(kind: PhoneKind) = vm.connectNew(kind)
             override fun retry() = vm.retry()
             override fun disconnect() = vm.disconnect()
@@ -727,6 +730,13 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         com.carlink.app.ui.premium.TransportInline(R.drawable.carlink_ic_schedule, usualText(usual), colors.onSurfaceTertiary)
     }
 
+    // A failure names the step it stopped on: the timeline with that step in red.
+    val failedAt = if (mode == HomeMode.FAILED) failedStep(link) else null
+    if (failedAt != null) {
+        Spacer(Modifier.height(sectionGap))
+        ProgressLine(failureStepNames(link.transport), failedAt, failed = true, modifier = Modifier.widthIn(max = 720.dp))
+    }
+
     if ((mode == HomeMode.CONNECTING || mode == HomeMode.NOT_ANSWERING) && steps) {
         Spacer(Modifier.height(sectionGap))
         val holding = mode == HomeMode.NOT_ANSWERING
@@ -776,7 +786,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 GlassButton(stringResource(R.string.carlink_home_disconnect), actions::disconnect, icon = R.drawable.carlink_ic_link_off)
             }
             HomeMode.FAILED -> {
-                FailureActions(link, ui.network, actions)
+                FailureActions(link, ui.network, actions, repairPhone = failedPhone(ui).takeIf { offersRepair(link) })
                 // The log and the error go straight into a GitHub issue (no copying from the stereo).
                 TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
                 // Nothing to tap on the stereo: the report is already a QR code for the driver's phone.
@@ -856,8 +866,10 @@ private fun wifiDirectHere(): Boolean {
 }
 
 @Composable
-private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: HomeActions) {
+private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: HomeActions, repairPhone: PairedPhone?) {
     val problem = link.problem
+    // The fix for a stuck Bluetooth or handshake step, next to whatever the problem itself offers.
+    val repair = @Composable { repairPhone?.let { RepairButton(it, actions::forgetAndRepair) } }
     val fix = oneTapFix(problem)
     if (problem != null && fix != null) {
         IonButton(stringResource(fix.first), { actions.fix(problem) }, icon = fix.second)
@@ -890,8 +902,11 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
         }
         LinkProblem.PHONE_NOT_PAIRED -> IonButton(stringResource(R.string.carlink_home_pair_action), actions::pairPhone,
             icon = R.drawable.carlink_ic_bluetooth)
-        LinkProblem.PAIRING_LOST -> IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings),
-            actions::openBluetoothSettings, icon = R.drawable.carlink_ic_bluetooth)
+        LinkProblem.PAIRING_LOST -> {
+            IonButton(stringResource(R.string.carlink_home_open_bluetooth_settings), actions::openBluetoothSettings,
+                icon = R.drawable.carlink_ic_bluetooth)
+            repair()
+        }
         // Coming back from Android Auto's settings tries again by itself (rememberProblemFix).
         LinkProblem.HEAD_UNIT_SERVER_OFF -> {
             IonButton(stringResource(R.string.carlink_home_open_aa_settings), { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
@@ -916,7 +931,8 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
         }
         else -> {
             IonButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
-            GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
+            if (repairPhone != null) repair()
+            else GlassButton(stringResource(R.string.carlink_home_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
                 icon = R.drawable.carlink_ic_monitor_heart)
         }
     }

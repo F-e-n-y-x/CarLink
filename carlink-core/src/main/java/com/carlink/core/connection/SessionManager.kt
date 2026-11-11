@@ -78,6 +78,8 @@ sealed interface SessionState {
         val path: WirelessPath?,
         val reason: FailureReason,
         val detail: String?,
+        /** The step the attempt was on when it failed (Home names it); null when it never started. */
+        val stage: ProgressStage? = null,
     ) : SessionState
 
     sealed interface Phase {
@@ -592,6 +594,9 @@ class SessionManager(
      * The driver changed a setting (a Wi-Fi password, the connection type): a blocked request
      * checks again at once, so the fix shows without a Try again.
      */
+    /** "Forget and re-pair": the phone's connection record goes, so no stale path ranking survives. */
+    fun forgetPhone(phoneAddress: String) = profiles.forget(phoneAddress)
+
     fun onSettingsChanged() {
         if (_state.value !is SessionState.Blocked) return
         note("settings changed; checking the blocked request again")
@@ -989,7 +994,7 @@ class SessionManager(
         running = null
         environment.onEngaged(null)
         stopEngine(a.plan.engine)
-        _state.value = SessionState.Failed(a.request, a.plan.path, reason, detail)
+        _state.value = SessionState.Failed(a.request, a.plan.path, reason, detail, a.stage)
     }
 
     private fun endAttempt() {

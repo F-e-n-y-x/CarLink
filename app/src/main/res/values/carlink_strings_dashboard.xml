@@ -230,4 +230,17 @@
     <string name="carlink_home_open_aa_settings">Open Android Auto settings</string>
     <string name="carlink_home_error_hu_server_title">Start Android Auto\'s head unit server</string>
     <string name="carlink_home_error_hu_server_body">Android Auto on this screen needs Android Auto\'s head unit server, and it is off.\n1. Tap Open Android Auto settings.\n2. Scroll to Version and tap it 10 times, then allow developer settings.\n3. Open the ⋮ menu at the top right and tap Start head unit server.\n4. Come back here: CarLink tries again by itself.</string>
+    <!-- A failure's timeline: the step it stopped on is red. -->
+    <string name="carlink_home_fail_step_bluetooth">Bluetooth</string>
+    <string name="carlink_home_fail_step_cable">Cable</string>
+    <string name="carlink_home_fail_step_handshake">Handshake</string>
+    <string name="carlink_home_fail_step_wifi">Wi-Fi</string>
+    <string name="carlink_home_fail_step_link">Link</string>
+    <string name="carlink_home_fail_step_picture">Picture</string>
+    <!-- Forget and re-pair (Home's failure card, Settings › Connection). -->
+    <string name="carlink_repair_action">Forget and re-pair</string>
+    <string name="carlink_repair_title">Forget %1$s and pair again?</string>
+    <string name="carlink_repair_body">CarLink forgets this phone: its Bluetooth pairing, the connection that worked last and its connection history. Bluetooth settings open next: pair the phone again there. On the phone, forget this car in its Bluetooth list too.</string>
+    <string name="carlink_repair_confirm">Forget and re-pair</string>
+    <string name="carlink_repair_settings_detail">When wireless keeps getting stuck: start over with one phone</string>
 </resources>

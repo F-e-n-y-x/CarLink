@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,6 +137,14 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
         GroupDivider()
         LinkRow(stringResource(R.string.carlink_settings_permissions), actions::openAppSettings,
             stringResource(R.string.carlink_settings_permissions_detail), R.drawable.carlink_ic_lock, external = true)
+        if (ui.phones.isNotEmpty()) {
+            var repairing by rememberSaveable { mutableStateOf(false) }
+            GroupDivider()
+            LinkRow(stringResource(R.string.carlink_repair_action), { repairing = true },
+                stringResource(R.string.carlink_repair_settings_detail), R.drawable.carlink_ic_bluetooth_searching)
+            if (repairing) com.carlink.app.ui.home.ForgetRepairDialog(ui.phones, null,
+                { repairing = false; actions.forgetAndRepair(it) }, { repairing = false })
+        }
     }
 }
 
@@ -309,6 +321,12 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
         GroupDivider()
         LinkRow(stringResource(R.string.carlink_settings_setup_again), { actions.navigate(Route.SETUP) },
             stringResource(R.string.carlink_settings_setup_again_detail), R.drawable.carlink_ic_restart_alt)
+        GroupDivider()
+        LinkRow(stringResource(R.string.carlink_backup_action), actions::backupSettings,
+            stringResource(R.string.carlink_backup_detail), R.drawable.carlink_ic_ios_share)
+        GroupDivider()
+        LinkRow(stringResource(R.string.carlink_restore_action), actions::restoreSettings,
+            stringResource(R.string.carlink_restore_detail), R.drawable.carlink_ic_download)
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_about)) }) {
         val remaining = LAB_TAPS - versionTaps

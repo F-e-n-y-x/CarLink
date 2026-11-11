@@ -122,6 +122,12 @@ class ConnectionProfiles(
 
     fun healthOf(request: SessionRequest): PhoneHealth? = profiles[keyOf(request)]?.let(::healthOf)
 
+    /** "Forget and re-pair": drops [phoneAddress]'s record for both engines, so its paths are ranked afresh. */
+    fun forget(phoneAddress: String) {
+        val id = KnownPhones.normalize(phoneAddress)
+        if (Engine.entries.map { profiles.remove("${it.name}:$id") }.any { it != null }) save()
+    }
+
     // --- Recording ----------------------------------------------------------------------------
 
     /** [stage] took [millis] on [path] (a phase that was left forward, not one cut short). */

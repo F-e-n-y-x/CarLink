@@ -24,6 +24,18 @@ class ConnectionProfilesTest {
         assertEquals("ANDROID_AUTO:usb:phone", ConnectionProfiles.keyOf(s25Usb.copy(phoneName = null)))
     }
 
+    @Test fun forgetDropsThePhonesRecordForBothEnginesAndPersists() {
+        val p = store()
+        p.recordSuccess(iphone, wd, 9_000)
+        p.recordSuccess(iphone.copy(engine = Engine.ANDROID_AUTO), wd, 5_000)
+        p.recordSuccess(s25Usb, null, 4_000)
+        p.forget("AA:BB:CC:DD:EE:FF ")
+        assertNull(p.healthOf(iphone))
+        assertNull(p.healthOf(iphone.copy(engine = Engine.ANDROID_AUTO)))
+        assertEquals("other phones stay", 1, p.health.value.size)
+        assertEquals(1, store().health.value.size)
+    }
+
     @Test fun deadlinesAreTheDefaultUntilThreeSamplesThenTwoAndAHalfTimesTheMedianWithinBounds() {
         val p = store()
         val picture = ProgressStage.STARTING_PROJECTION

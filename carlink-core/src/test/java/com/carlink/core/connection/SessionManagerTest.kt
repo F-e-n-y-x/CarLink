@@ -251,6 +251,7 @@ class SessionManagerTest {
         carPlay.emit(AdapterEvent.Failed(FailureReason.BLUETOOTH)); idle()
         assertEquals(1, starts.size)
         assertEquals(FailureReason.BLUETOOTH, (m.state.value as SessionState.Failed).reason)
+        assertEquals("Home names the step it failed on", ProgressStage.WAITING_FOR_PHONE, (m.state.value as SessionState.Failed).stage)
     }
 
     @Test fun theNextSessionStartsOnlyAfterTheEngineFinishedStopping() {
