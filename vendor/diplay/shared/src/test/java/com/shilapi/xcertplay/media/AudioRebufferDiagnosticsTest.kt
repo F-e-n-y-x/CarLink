@@ -165,12 +165,13 @@ class AudioRebufferDiagnosticsTest {
             val packetInstance = packetConstructor.newInstance(dummyRtp, 0, 0L)
 
             @Suppress("UNCHECKED_CAST")
-            val queue = get("queue") as java.util.concurrent.BlockingQueue<Any>
+            val queue = get("queue") as RtpReorderQueue<Any>
 
             repeat(10) {
                 // Fill queue to capacity (MAX_QUEUED_PACKETS = 192)
+                var sample = 1
                 while (queue.remainingCapacity() > 0) {
-                    queue.offer(packetInstance)
+                    queue.offer(packetConstructor.newInstance(dummyRtp, sample++, 0L))
                 }
 
                 // Submit one packet that fails to offer because queue is full

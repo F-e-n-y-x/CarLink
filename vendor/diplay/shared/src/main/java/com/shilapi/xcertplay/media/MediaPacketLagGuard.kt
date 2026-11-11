@@ -1,6 +1,6 @@
 package com.shilapi.xcertplay.media
 
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.Queue
 
 /**
  * Detects a *sustained* compressed-media backlog using RTP timestamps, independently of
@@ -11,7 +11,7 @@ internal class MediaPacketLagGuard(private val clockRate: Int) {
     private var recovering = false
 
     /** Time between first undelivered RTP packet and the latest packet, respecting 32-bit wrap. */
-    fun <T> pendingFrames(queue: LinkedBlockingQueue<T>, newestSample: Int, timestampOf: (T) -> Int): Long {
+    fun <T> pendingFrames(queue: Queue<T>, newestSample: Int, timestampOf: (T) -> Int): Long {
         if (clockRate <= 0) return 0
         val first = queue.peek() ?: return 0
         val frames = (newestSample.toLong() - timestampOf(first).toLong()) and 0xffff_ffffL
@@ -21,7 +21,7 @@ internal class MediaPacketLagGuard(private val clockRate: Int) {
     }
 
     fun <T> recover(
-        queue: LinkedBlockingQueue<T>,
+        queue: Queue<T>,
         newestSample: Int,
         timestampOf: (T) -> Int,
         nowNs: Long,
