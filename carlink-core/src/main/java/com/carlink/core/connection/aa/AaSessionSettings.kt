@@ -210,8 +210,14 @@ object AaSessionSettings {
     private fun handheldDpi(deviceDpi: Int, w: Int, h: Int): Int {
         val longSide = maxOf(w, h)
         if (longSide <= 0) return minOf(deviceDpi, HANDHELD_DPI)
-        return minOf(deviceDpi, (longSide * MM_PER_INCH / com.carlink.core.connection.CarPlaySettingsPolicy.MEDIUM_WIDTH_MM).roundToInt())
+        return minOf(deviceDpi, (longSide * MM_PER_INCH / HANDHELD_MEDIUM_WIDTH_MM).roundToInt())
     }
+
+    /**
+     * CarPlay's 300 mm Medium measured against Android Auto side by side on the tablet: CarPlay's dock and
+     * labels still came out about 1.2x Android Auto's at 300 mm, so Android Auto is laid out for 250 mm.
+     */
+    private const val HANDHELD_MEDIUM_WIDTH_MM = 250f
 
     private const val MM_PER_INCH = 25.4f
 
