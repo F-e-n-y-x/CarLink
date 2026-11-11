@@ -340,6 +340,19 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             onBack = {}, startCategory = SettingsCategory.CONNECTION)
         com.carlink.app.ui.home.ForgetRepairDialog(listOf(HomeFakes.iphone, HomeFakes.pixel), null, onConfirm = {}, onDismiss = {})
     },
+    // General › Back up settings: Wi-Fi passwords stay out unless included.
+    GalleryEntry("settings", "dialog-backup-passwords", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.GENERAL)
+        com.carlink.app.ui.settings.BackupPasswordsDialog(onChoose = {}, onDismiss = {})
+    },
+    // General › Restore settings: a checked backup without passwords, asked before anything changes.
+    GalleryEntry("settings", "dialog-restore", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.GENERAL)
+        com.carlink.app.ui.settings.RestoreConfirmDialog(com.carlink.app.ui.settings.SettingsBackup.parse(
+            """{"format":"carlink-settings","version":1,"created":1762950000000,"passwords":false,"carBrand":"HYUNDAI",
+            "settings":{"carlink_unified":{"interface_size":"LARGE","day_night":"NIGHT"},"carlink":{"theme_mode":"DARK"}}}"""),
+            onConfirm = {}, onDismiss = {})
+    },
     GalleryEntry("settings", "sheet-car-brand", opensWindow = true) {
         SettingsContent(settingsPreviewUi(byd = false, carBrand = CarBrand.HYUNDAI), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CAR, initialSheet = SheetKey.of(EssentialSheet.CAR_BRAND))
