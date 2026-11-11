@@ -282,13 +282,16 @@ object HeadUnitScreenConfig {
             if (!isResolutionLocked) {
                 // CarLink: 1440p (HEVC only, as the Automatic branch below) where the panel is that large:
                 // the region is upscaled to the screen, and at 1080p it was soft (2.4x on a 2560x1600 tablet).
+                // CarLink: or where the host found the HEVC decoder carries 1440p60 (turningHighResStream):
+                // the region shown is smaller than the stream, so the panel ceiling does not apply to it.
+                val hostHighRes = com.andrerinas.openheadunit.HostIntegration.turningHighResStream
                 negotiatedResolutionType = if (autoHevcHighResolution && Build.VERSION.SDK_INT >= 24 &&
-                    maxOf(realScreenWidthPx, realScreenHeightPx) >= 2560) {
+                    (maxOf(realScreenWidthPx, realScreenHeightPx) >= 2560 || hostHighRes)) {
                     Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._2560x1440
                 } else Control.Service.MediaSinkService.VideoConfiguration.VideoCodecResolutionType._1920x1080
                 val ceiling = autoResolutionForPanel(maxOf(realScreenWidthPx, realScreenHeightPx),
                     minOf(realScreenWidthPx, realScreenHeightPx), false, canNegotiateHevc)
-                if (pixelsOf(negotiatedResolutionType) > pixelsOf(ceiling)) negotiatedResolutionType = ceiling
+                if (!hostHighRes && pixelsOf(negotiatedResolutionType) > pixelsOf(ceiling)) negotiatedResolutionType = ceiling
             }
             val longSide = maxOf(screenWidthPx, screenHeightPx).toFloat()
             turnScale = minOf(getNegotiatedWidth(), getNegotiatedHeight()) / longSide

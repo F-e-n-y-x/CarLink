@@ -216,6 +216,24 @@ object HostIntegration {
     var usbOnlySession: Boolean = false
 
     /**
+     * CarLink: the next stop leaves this engine's own Wi-Fi Direct group up, for a restart of the
+     * same wireless session to read instead of recreating it (after open-headunit's
+     * NativeGroupKeepPolicy). The host sets it per stop and clears it at the next start. Default false.
+     */
+    @Volatile
+    @JvmStatic
+    var keepWifiDirectGroupOnStop: Boolean = false
+
+    /**
+     * CarLink: on a turning screen, ask for the 1440p (H.265) stream below a 2560-pixel panel too.
+     * The host sets it when the hardware HEVC decoder carries 2560x1440 at 60 fps: the zoomed sizes
+     * show a region of the stream scaled up, so a larger stream keeps them sharp. Default false.
+     */
+    @Volatile
+    @JvmStatic
+    var turningHighResStream: Boolean = false
+
+    /**
      * CarLink: the density announced when the DPI setting is Automatic (0), from the device's own
      * density and the visible codec area (codec size less margins, in pixels). Null = the device's
      * density (standalone).

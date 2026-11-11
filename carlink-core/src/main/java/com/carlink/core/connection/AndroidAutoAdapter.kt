@@ -66,6 +66,9 @@ class AndroidAutoAdapter internal constructor(
     private var orphanCheck = false
     private var orphanDecision: ((Boolean) -> Unit)? = null
     private var stopToken: Long? = null
+    /** The last stop left Android Auto's group up for a restart that has not started yet. */
+    private var groupKept = false
+    private var releaseAfterStop = false
     private val stopCallbacks = mutableListOf<() -> Unit>()
     private var deadPolls = 0
 
@@ -101,6 +104,7 @@ class AndroidAutoAdapter internal constructor(
         val service = intent.getBooleanExtra(AaProtocol.EXTRA_SERVICE_STOPPED, false)
         if (!service || group == false) Log.w(TAG, "stop finished with serviceStopped=$service groupReleased=$group")
         if (group == false) return@receiver releaseLeftoverGroup("acknowledged (serviceStopped=$service groupReleased=false)")
+        if (releaseAfterStop) return@receiver releaseLeftoverGroup("kept for a restart the driver stopped")
         finishStop("acknowledged (serviceStopped=$service groupReleased=$group)")
     }
 
@@ -132,6 +136,7 @@ class AndroidAutoAdapter internal constructor(
      * and the log says so for a report (connection audit #8).
      */
     private fun releaseLeftoverGroup(how: String) {
+        groupKept = false
         com.carlink.core.diagnostics.EventLog.add("CarLink", "Android Auto did not release Wi-Fi Direct ($how); removing the leftover group")
         (removeLeftoverGroup ?: { done ->
             Thread({
@@ -206,6 +211,7 @@ class AndroidAutoAdapter internal constructor(
         val s = Session(plan, listener, tracker, now)
         session = s
         sessionOpen = true
+        groupKept = false
         orphanCheck = false
         deadPolls = 0
         Log.i(TAG, "start transport=${plan.transport} path=${plan.path} phone=${plan.phoneAddress != null} attempt=${plan.attempt} self=${plan.selfMode}")
@@ -227,20 +233,33 @@ class AndroidAutoAdapter internal constructor(
         handler.postDelayed(tick, TICK_MILLIS)
     }
 
-    override fun stop(onStopped: () -> Unit) {
-        if (!sessionOpen) {
+    override fun stop(onStopped: () -> Unit) = stop(false, onStopped)
+
+    override fun stop(keepWirelessNetwork: Boolean, onStopped: () -> Unit) {
+        // A group kept for a restart that never started (the driver stopped in between) still needs this stop.
+        if (!sessionOpen && !groupKept) {
             handler.post { onStopped() }
             return
         }
+        val keep = keepWirelessNetwork && sessionOpen && session?.plan?.transport == Transport.WIRELESS
         session?.tracker?.close()
         handler.removeCallbacks(tick)
         stopCallbacks += onStopped
-        if (stopToken != null) return // a stop is already on its way
+        if (stopToken != null) {
+            // A plain stop joining a keeping one: the group goes once the engine has stopped.
+            if (!keep && groupKept) releaseAfterStop = true
+            return
+        }
+        sessionOpen = true
+        groupKept = keep
         val token = nextToken.incrementAndGet()
         stopToken = token
         orphanCheck = false
-        Log.i(TAG, "stop requested")
-        send(AaProtocol.COMMAND_STOP) { putExtra(AaProtocol.EXTRA_TOKEN, token) }
+        Log.i(TAG, "stop requested${if (keep) " (keeping Wi-Fi Direct for the restart)" else ""}")
+        send(AaProtocol.COMMAND_STOP) {
+            putExtra(AaProtocol.EXTRA_TOKEN, token)
+            putExtra(AaProtocol.EXTRA_KEEP_GROUP, keep)
+        }
         handler.postDelayed(stopTimeout, stopTimeoutMillis)
     }
 
@@ -254,6 +273,7 @@ class AndroidAutoAdapter internal constructor(
         handler.removeCallbacks(stopTimeout)
         handler.removeCallbacks(tick)
         stopToken = null
+        releaseAfterStop = false
         session = null
         sessionOpen = false
         Log.i(TAG, "stopped: $how")

@@ -69,9 +69,26 @@ object PicturePolicy {
     /** Automatic as it was before this policy: used when nothing is known about the decoder. */
     val ENGINE_DEFAULTS = PictureChoice(AA_AUTOMATIC, 60, null, 100, 30, null, "engine defaults")
 
-    /** Every size [choose] may ask about, so [DeviceCapabilities.read] probes exactly these. */
+    /** Every size [choose] and [turningHighRes] may ask about, so [DeviceCapabilities.read] probes exactly these. */
     fun probeSizes(panel: VideoSize): Set<VideoSize> =
-        AaResolution.entries.map { it.stream(panel.portrait) }.toSet() + CARPLAY_SCALES.map { panel.scaled(it) }
+        AaResolution.entries.map { it.stream(panel.portrait) }.toSet() + CARPLAY_SCALES.map { panel.scaled(it) } + AA_1440P
+
+    /** Android Auto's 1440p stream, landscape (a turning screen keeps one landscape stream). */
+    val AA_1440P = VideoSize(2560, 1440)
+
+    /**
+     * Whether a turning screen (phone, tablet) asks Android Auto for 1440p below a 2560-pixel panel
+     * (DiAuto `HostIntegration.turningHighResStream`). Medium and Large show a smaller region of the
+     * stream scaled up, so at 1080p they were soft (2.2x on a 2400x1080 phone at Small already).
+     * Android Auto sends 1440p only as H.265 (a 1440p H.264 profile gets no picture, DiAuto #35), so
+     * it needs a hardware HEVC decoder that carries 2560x1440 at 60 fps; DiAuto still also requires
+     * its HEVC reliability list. A panel under 1920 pixels gains little; low-end units never.
+     */
+    fun turningHighRes(caps: DeviceCapabilities): Boolean {
+        val hevc = caps.h265 ?: return false
+        return hevc.hardware && hevc.carries(AA_1440P, 60) && !caps.signals.lowEnd && !caps.signals.constrained &&
+            maxOf(caps.panel.width, caps.panel.height) >= 1920
+    }
 
     /** The resolution DiAuto's own Automatic picks for this panel below 1440p (`HeadUnitScreenConfig.recalculate`). */
     fun aaPanelClass(panel: VideoSize): AaResolution = if (panel.portrait) {

@@ -163,6 +163,20 @@ class PicturePolicyTest {
         assertEquals(AaResolution.P720.id, choice.aaResolutionId)
     }
 
+    @Test fun aTurningScreenAsksFor1440pOnlyWhereTheHevcDecoderCarriesIt() {
+        val phone = VideoSize(2400, 1080)
+        val hevc60 = DecoderInfo("c2.qti.hevc.decoder", true, mapOf(PicturePolicy.AA_1440P to 60))
+        assertTrue(PicturePolicy.turningHighRes(DeviceCapabilities(phone, strong, null, hevc60)))
+        assertTrue("portrait reads the same", PicturePolicy.turningHighRes(DeviceCapabilities(phone.swapped(), strong, null, hevc60)))
+        val hevc30 = hevc60.copy(maxFps = mapOf(PicturePolicy.AA_1440P to 30))
+        assertFalse("30 fps at 1440p is not enough", PicturePolicy.turningHighRes(DeviceCapabilities(phone, strong, null, hevc30)))
+        assertFalse("software HEVC never", PicturePolicy.turningHighRes(DeviceCapabilities(phone, strong, null, hevc60.copy(hardware = false))))
+        assertFalse("no HEVC: Android Auto has no 1440p H.264", PicturePolicy.turningHighRes(DeviceCapabilities(phone, strong, null, null)))
+        assertFalse("low-end stays at 1080p", PicturePolicy.turningHighRes(DeviceCapabilities(phone, weak, null, hevc60)))
+        assertFalse("a 1280x800 panel gains little", PicturePolicy.turningHighRes(DeviceCapabilities(VideoSize(1280, 800), strong, null, hevc60)))
+        assertTrue(PicturePolicy.AA_1440P in PicturePolicy.probeSizes(phone))
+    }
+
     @Test fun panelClassesFollowDiAuto() {
         assertEquals(AaResolution.P480, PicturePolicy.aaPanelClass(VideoSize(800, 480)))
         assertEquals(AaResolution.P720, PicturePolicy.aaPanelClass(VideoSize(1024, 600)))

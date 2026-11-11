@@ -37,6 +37,12 @@ interface EngineAdapter {
      */
     fun stop(onStopped: () -> Unit)
 
+    /**
+     * [stop], but [keepWirelessNetwork] asks the engine to leave its own Wi-Fi Direct group up
+     * because the same wireless session starts again right after. Engines without one ignore it.
+     */
+    fun stop(keepWirelessNetwork: Boolean, onStopped: () -> Unit) = stop(onStopped)
+
     /** True from [start] until the engine's teardown completes, including internal restarts. */
     fun hasSession(): Boolean
 

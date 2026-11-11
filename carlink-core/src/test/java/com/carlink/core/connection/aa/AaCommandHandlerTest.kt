@@ -99,6 +99,8 @@ class AaCommandHandlerTest {
         override fun accessoryDevice(): UsbDevice? = accessoryOnBus?.takeIf { clock >= offBusUntil }
         var usbOnly: Boolean? = null
         override fun setUsbOnlySession(usbOnly: Boolean) { this.usbOnly = usbOnly }
+        var keepGroup = false
+        override fun setKeepGroupOnStop(keep: Boolean) { keepGroup = keep }
         override fun sleep(millis: Long) { clock += millis }
         override fun now() = clock
     }
@@ -246,6 +248,17 @@ class AaCommandHandlerTest {
         val blindAcks = mutableListOf<Boolean?>()
         AaCommandHandler(blind, AaEngineMonitor(), { _, _ -> }, { _, _, g -> blindAcks += g }, {}).stop(2L)
         assertEquals(listOf<Boolean?>(null), blindAcks)
+    }
+
+    @Test fun aStopForARestartLeavesTheEnginesGroupUpUntilTheNextStart() {
+        engine.running = true
+        engine.group = P2pGroupReading(true, "DIRECT-K7-CarLink", true)
+        handler.stop(5L, keepGroup = true)
+        assertTrue("the engine is told to keep its group", engine.keepGroup)
+        assertEquals(0, engine.removals)
+        assertEquals(Triple(5L, true, null as Boolean?), acks.single())
+        handler.startWireless(phone, VehicleProfile.GENERIC)
+        assertFalse("the next start clears it, so a later exit removes the group", engine.keepGroup)
     }
 
     @Test fun aServiceThatWillNotStopIsReported() {

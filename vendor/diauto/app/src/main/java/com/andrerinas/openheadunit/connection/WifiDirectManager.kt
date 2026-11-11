@@ -1981,7 +1981,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         // successfully joined.
         isReceiverRegistered = false
 
-        if (sessionOwnership.networkName != null) {
+        if (com.andrerinas.openheadunit.HostIntegration.keepWifiDirectGroupOnStop) { // CarLink
+            AppLog.i("WifiDirectManager: the host restarts this session; leaving the group up for it.")
+        } else if (sessionOwnership.networkName != null) {
             removeOwnedGroup(manager, channel, object : WifiP2pManager.ActionListener {
                 override fun onSuccess() { AppLog.d("WifiDirectManager: Final group removal success") }
                 override fun onFailure(reason: Int) { AppLog.d("WifiDirectManager: Final group removal failed: $reason") }
