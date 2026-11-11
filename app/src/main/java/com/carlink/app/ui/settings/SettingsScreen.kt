@@ -89,6 +89,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
     val stereoBluetooth by vm.stereoBluetooth.collectAsStateWithLifecycle()
     val link by vm.link.collectAsStateWithLifecycle()
+    val home by vm.home.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val access = remember { EngineAccess(context.applicationContext) }
     val engineValues = remember { mutableStateOf<Map<String, String>?>(null) }
@@ -136,6 +137,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
             override suspend fun readCarHotspot() = vm.readCarHotspot()
             override suspend fun readSavedWifiPassword(ssid: String) = vm.readSavedWifiPassword(ssid)
             override fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = vm.saveCarHotspot(details)
+            override fun forgetAndRepair(phone: com.carlink.core.detect.PairedPhone) = vm.forgetAndRepair(phone)
 
             override fun setAdvanced(setting: AdvancedSetting, value: String) {
                 // An exact per-engine value replaces the unified preset: mark it Custom first so
@@ -166,6 +168,7 @@ fun SettingsScreen(vm: CarLinkViewModel, onBack: () -> Unit, navigate: (Route) -
         stereoBluetoothFyt = stereoBluetooth?.classification == com.carlink.core.detect.StereoBluetooth.FYT_MODULE,
         liveEngine = link.engine?.takeIf { link.stage == com.carlink.core.core.LinkStage.CONNECTED }
             ?.let { com.carlink.app.ui.components.engineName(it) },
+        phones = home.phones,
     )
     SettingsContent(ui, actions, onBack, startCategory)
 }

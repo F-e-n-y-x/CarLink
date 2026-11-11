@@ -59,6 +59,8 @@ data class SettingsUi(
     val stereoBluetoothFyt: Boolean = false,
     /** "CarPlay" / "Android Auto" while a session shows a picture: Settings offers the way back to it. */
     val liveEngine: String? = null,
+    /** Paired phones: Connection › "Forget and re-pair" offers them. */
+    val phones: List<com.carlink.core.detect.PairedPhone> = emptyList(),
 )
 
 /** What Settings can change; the ViewModel implements it, previews fake it. */
@@ -99,6 +101,8 @@ interface SettingsActions {
     suspend fun readSavedWifiPassword(ssid: String): String? = null
     /** Saves the car hotspot, and applies it to the car's own hotspot where Android allows it. */
     fun saveCarHotspot(details: com.carlink.core.settings.WifiDetails) = update { it.copy(carHotspot = details) }
+    /** "Forget and re-pair" (asked first): CarLink forgets [phone], then opens Bluetooth settings. */
+    fun forgetAndRepair(phone: com.carlink.core.detect.PairedPhone) {}
 }
 
 /** Rail and grid order. */

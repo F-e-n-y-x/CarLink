@@ -157,6 +157,13 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-same-wifi-not-joined") {
         HomeContent(ui(link = failed(LinkProblem.SAME_WIFI_NOT_JOINED), network = sameWifi), actions)
     },
+    // The iPhone never answered over Bluetooth: the timeline stops at Bluetooth, and Forget and re-pair is offered.
+    home("failed-no-answer") { HomeContent(ui(link = failed(LinkProblem.PHONE_DID_NOT_ANSWER)), actions) },
+    // Forget and re-pair asks first and says what goes.
+    home("dialog-forget-repair", opensWindow = true) {
+        HomeContent(ui(link = failed(LinkProblem.PHONE_DID_NOT_ANSWER)), actions)
+        com.carlink.app.ui.home.ForgetRepairDialog(listOf(iphone), iphone, onConfirm = {}, onDismiss = {})
+    },
     home("failed-pairing-lost") { HomeContent(ui(link = failed(LinkProblem.PAIRING_LOST)), actions) },
     home("failed-iphone-unreached") {
         HomeContent(ui(link = failed(LinkProblem.PHONE_NEVER_REACHED_CAR), network = sameWifi), actions)
@@ -326,6 +333,12 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
     GalleryEntry("settings", "car-brand") {
         SettingsContent(settingsPreviewUi(byd = false, carBrand = CarBrand.HYUNDAI), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CAR)
+    },
+    // Connection › Forget and re-pair with two phones: pick one, then confirm.
+    GalleryEntry("settings", "dialog-forget-repair", opensWindow = true) {
+        SettingsContent(settingsPreviewUi().copy(phones = listOf(HomeFakes.iphone, HomeFakes.pixel)), SettingsPreviewActions,
+            onBack = {}, startCategory = SettingsCategory.CONNECTION)
+        com.carlink.app.ui.home.ForgetRepairDialog(listOf(HomeFakes.iphone, HomeFakes.pixel), null, onConfirm = {}, onDismiss = {})
     },
     GalleryEntry("settings", "sheet-car-brand", opensWindow = true) {
         SettingsContent(settingsPreviewUi(byd = false, carBrand = CarBrand.HYUNDAI), SettingsPreviewActions, onBack = {},
