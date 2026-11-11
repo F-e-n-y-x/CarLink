@@ -15,7 +15,12 @@ import com.carlink.core.settings.CarBrand
 import com.carlink.core.settings.WirelessPath
 
 /** The setup's steps, in order. */
-enum class SetupStep { WELCOME, PERMISSIONS, CAR, PAIR, DONE }
+enum class SetupStep {
+    WELCOME, PERMISSIONS, CAR,
+    /** Optional: how big CarPlay and Android Auto draw (UnifiedSettings.interfaceSize); Continue keeps Medium. */
+    SIZE,
+    PAIR, DONE,
+}
 
 /** How a [SetupItem] is granted: one runtime dialog for all, or its own system screen. */
 enum class GrantKind { RUNTIME, OVERLAY, BATTERY, VPN }
@@ -119,6 +124,8 @@ data class SetupUi(
     val wirelessUnavailable: Boolean = false,
     /** Opened from Home's "Pair a phone" after setup: only the pairing step, without the wizard's frame. */
     val pairOnly: Boolean = false,
+    /** CarPlay's and Android Auto's interface size, chosen on [SetupStep.SIZE]. */
+    val interfaceSize: com.carlink.core.settings.InterfaceSize = com.carlink.core.settings.InterfaceSize.MEDIUM,
 ) {
     /** Required and recommended items not allowed yet; while any is, "Allow all" is the lit action. */
     val missingNeeded: Int get() = permissions.count { !it.granted && it.item.need != Need.OPTIONAL }
@@ -134,6 +141,7 @@ interface SetupActions {
     fun allowAll() {}
     fun allow(item: SetupItem) {}
     fun setCarBrand(brand: CarBrand) {}
+    fun setInterfaceSize(size: com.carlink.core.settings.InterfaceSize) {}
     fun makeVisible() {}
     fun turnOnBluetooth() {}
     fun setKind(kind: com.carlink.core.core.PhoneKind) {}

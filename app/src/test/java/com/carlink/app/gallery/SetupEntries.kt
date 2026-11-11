@@ -46,6 +46,8 @@ internal fun setupEntries(): List<GalleryEntry> = with(HomeFakes) {
         entry("car") { ui(SetupStep.CAR, perms = allGranted) },
         // A BYD DiLink unit, detected; the BYD tile is in effect and the DiLink extras are explained.
         entry("car-byd-detected") { ui(SetupStep.CAR, perms = allGranted, detected = CarBrand.BYD) },
+        // The optional size step: Large picked.
+        entry("size") { ui(SetupStep.SIZE, perms = allGranted).copy(interfaceSize = com.carlink.core.settings.InterfaceSize.LARGE) },
         entry("pair-waiting") { ui(SetupStep.PAIR, visible = false, perms = allGranted, known = listOf(pixel)) },
         // Paired; the iPhone answered and is linking, slower than usual.
         // A stereo whose Bluetooth is an external module: wireless cannot start yet, the cable can.

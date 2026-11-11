@@ -109,6 +109,11 @@ import com.carlink.app.ui.settings.SettingsRow
 import com.carlink.app.ui.settings.Tag
 import com.carlink.app.ui.settings.isCar
 import com.carlink.app.ui.settings.carBrandLabel
+import com.carlink.app.ui.settings.Preset
+import com.carlink.app.ui.settings.PresetGrid
+import com.carlink.app.ui.settings.ScalePreview
+import com.carlink.app.ui.settings.interfaceSizeLabel
+import com.carlink.core.settings.InterfaceSize
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.app.ui.theme.CarMotion
 import com.carlink.app.ui.theme.LocalReduceMotion
@@ -157,6 +162,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
     var waiting by remember { mutableStateOf(false) }
 
     val vehicle by vm.vehicle.collectAsStateWithLifecycle()
+    val unified by vm.unified.collectAsStateWithLifecycle()
     val wirelessUnavailable by vm.wirelessUnavailable.collectAsStateWithLifecycle()
     val home by vm.home.collectAsStateWithLifecycle()
     val pairing = remember { PairingSession(context) }
@@ -240,6 +246,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
             }
         }
         override fun setCarBrand(brand: CarBrand) = vm.setCarBrand(brand)
+        override fun setInterfaceSize(size: InterfaceSize) = vm.updateSettings { it.copy(interfaceSize = size) }
         override fun makeVisible() = makeVisible()
         override fun turnOnBluetooth() {
             launchOr(system, Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE)) { vm.openBluetoothSettings() }
@@ -300,6 +307,7 @@ fun SetupScreen(vm: CarLinkViewModel, start: SetupStep, onExit: () -> Unit) {
         knownPhones = home.phones.filter { it.kind != PhoneKind.UNKNOWN }.take(3),
         cable = cable,
         wirelessUnavailable = wirelessUnavailable,
+        interfaceSize = unified.interfaceSize,
     )
     SetupContent(ui, actions)
 }
@@ -439,7 +447,7 @@ private fun SetupTopBar(step: SetupStep, pairOnly: Boolean, actions: SetupAction
     }
 }
 
-/** Five short segments, lit up to the current step, like a cluster's segment bar. */
+/** One short segment per step, lit up to the current step, like a cluster's segment bar. */
 @Composable
 private fun StepMeter(step: SetupStep, showLabel: Boolean) {
     val scheme = MaterialTheme.colorScheme
@@ -486,7 +494,8 @@ private fun SetupBottomBar(ui: SetupUi, actions: SetupActions, margin: Dp) {
             } else {
                 IonButton(stringResource(R.string.carlink_setup_continue), actions::next, icon = R.drawable.carlink_ic_arrow_forward)
             }
-            SetupStep.CAR -> IonButton(stringResource(R.string.carlink_setup_continue), actions::next,
+            // The size step is optional: Continue keeps what is set (Medium unless changed).
+            SetupStep.CAR, SetupStep.SIZE -> IonButton(stringResource(R.string.carlink_setup_continue), actions::next,
                 icon = R.drawable.carlink_ic_arrow_forward)
             SetupStep.PAIR -> if (ui.pairOnly) {
                 // Close in the top bar also leaves; this is the one lit way back to Home.
@@ -554,6 +563,8 @@ private fun copyOf(ui: SetupUi): Copy {
             plain(stringResource(R.string.carlink_setup_permissions_title)), stringResource(R.string.carlink_setup_permissions_body))
         SetupStep.CAR -> Copy(stringResource(R.string.carlink_setup_car_eyebrow), scheme.primary,
             plain(stringResource(R.string.carlink_setup_car_title)), stringResource(R.string.carlink_setup_car_body))
+        SetupStep.SIZE -> Copy(stringResource(R.string.carlink_setup_size_eyebrow), scheme.primary,
+            plain(stringResource(R.string.carlink_setup_size_title)), stringResource(R.string.carlink_setup_size_body))
         SetupStep.PAIR -> pairCopy(ui)
         SetupStep.DONE -> Copy(stringResource(R.string.carlink_setup_done_eyebrow), colors.success,
             plain(stringResource(R.string.carlink_setup_done_title)),
@@ -688,9 +699,23 @@ private fun StepPanel(ui: SetupUi, actions: SetupActions) {
         SetupStep.WELCOME -> PlanCard()
         SetupStep.PERMISSIONS -> PermissionList(ui, actions)
         SetupStep.CAR -> Column { CarBrandPicker(ui.carBrand, ui.detectedBrand, actions::setCarBrand, note = false) }
+        SetupStep.SIZE -> SizePicker(ui.interfaceSize, actions::setInterfaceSize)
         SetupStep.PAIR -> PairPanel(ui, actions)
         SetupStep.DONE -> DoneSummary(ui)
     }
+}
+
+/** Small, Medium and Large as the Settings sheet shows them: a sample CarPlay home screen at each size. */
+@Composable
+private fun SizePicker(selected: InterfaceSize, onSelect: (InterfaceSize) -> Unit) {
+    val sizes = listOf(
+        Triple(InterfaceSize.SMALL, 0.8f, R.string.carlink_settings_size_small_detail),
+        Triple(InterfaceSize.MEDIUM, 1f, R.string.carlink_settings_size_medium_detail),
+        Triple(InterfaceSize.LARGE, 1.25f, R.string.carlink_settings_size_large_detail),
+    )
+    PresetGrid(sizes.map { (size, scale, detail) ->
+        Preset(size, interfaceSizeLabel(size), stringResource(detail), preview = { ScalePreview(scale) })
+    }, selected, onSelect)
 }
 
 /** The three things the setup will do, as numbered instrument rows. */
