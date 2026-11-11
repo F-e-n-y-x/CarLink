@@ -40,7 +40,9 @@ import com.carlink.core.detect.PairedPhone
  * Which of the four steps (0 Bluetooth or cable, 1 handshake, 2 Wi-Fi, 3 picture) a failure
  * stopped on: the step its problem belongs to, else the step the attempt was on
  * ([LinkState.step], kept by the session layer). Null when no step fits (a permission, the
- * engine on this screen) or the attempt had no transport.
+ * engine on this screen), the attempt had no transport, or a check before the start blocked a
+ * later step (Wi-Fi off, CarPlay files missing): the timeline would show steps as done that
+ * never ran.
  */
 internal fun failedStep(link: LinkState): Int? {
     if (link.stage != LinkStage.FAILED || link.transport == null) return null
@@ -48,11 +50,10 @@ internal fun failedStep(link: LinkState): Int? {
         LinkProblem.BLUETOOTH_OFF, LinkProblem.PHONE_NOT_PAIRED, LinkProblem.PAIRING_LOST, LinkProblem.NO_IPHONE_SELECTED,
         LinkProblem.BLUETOOTH, LinkProblem.PHONE_DID_NOT_ANSWER, LinkProblem.EXTERNAL_BLUETOOTH, LinkProblem.EXTERNAL_MODULE,
         LinkProblem.USB -> 0
-        LinkProblem.CARPLAY_AUTH_MISSING -> 1
-        LinkProblem.WIFI_OFF, LinkProblem.LOCATION_OFF, LinkProblem.SAME_WIFI_DETAILS_MISSING, LinkProblem.SAME_WIFI_NOT_JOINED,
-        LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.CAR_HOTSPOT_OFF, LinkProblem.PHONE_REFUSED_WIFI,
-        LinkProblem.PHONE_NEVER_REACHED_CAR, LinkProblem.PHONE_WIFI_OFF -> 2
+        LinkProblem.PHONE_REFUSED_WIFI, LinkProblem.PHONE_NEVER_REACHED_CAR, LinkProblem.PHONE_WIFI_OFF -> 2
         LinkProblem.LINK_TOO_WEAK -> 3
+        LinkProblem.CARPLAY_AUTH_MISSING, LinkProblem.WIFI_OFF, LinkProblem.LOCATION_OFF, LinkProblem.SAME_WIFI_DETAILS_MISSING,
+        LinkProblem.SAME_WIFI_NOT_JOINED, LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.CAR_HOTSPOT_OFF,
         LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT, LinkProblem.HEAD_UNIT_SERVER_OFF -> return null
         LinkProblem.ENGINE, null -> null
     }

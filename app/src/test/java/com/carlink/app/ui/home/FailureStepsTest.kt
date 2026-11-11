@@ -18,9 +18,7 @@ class FailureStepsTest {
 
     @Test fun theProblemPicksTheStep() {
         assertEquals(0, failedStep(failed(LinkProblem.PHONE_DID_NOT_ANSWER, step = 3)))
-        assertEquals(1, failedStep(failed(LinkProblem.CARPLAY_AUTH_MISSING)))
         assertEquals(2, failedStep(failed(LinkProblem.PHONE_NEVER_REACHED_CAR, step = 2)))
-        assertEquals(2, failedStep(failed(LinkProblem.WIFI_OFF)))
         assertEquals(3, failedStep(failed(LinkProblem.LINK_TOO_WEAK)))
         assertEquals(0, failedStep(failed(LinkProblem.USB, transport = Transport.USB)))
     }
@@ -34,6 +32,8 @@ class FailureStepsTest {
     @Test fun noTimelineWhereNoStepFits() {
         assertNull(failedStep(failed(LinkProblem.PERMISSIONS, step = 1)))
         assertNull(failedStep(failed(LinkProblem.HEAD_UNIT_SERVER_OFF)))
+        assertNull("blocked before the start: no step ran", failedStep(failed(LinkProblem.WIFI_OFF)))
+        assertNull(failedStep(failed(LinkProblem.CARPLAY_AUTH_MISSING)))
         assertNull("Android Auto on this screen has no transport", failedStep(failed(LinkProblem.ENGINE, step = 2, transport = null)))
         assertNull("not failed", failedStep(failed(LinkProblem.BLUETOOTH).copy(stage = LinkStage.CONNECTING)))
     }
