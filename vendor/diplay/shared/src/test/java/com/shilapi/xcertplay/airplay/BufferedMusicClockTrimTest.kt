@@ -12,8 +12,8 @@ import java.net.InetAddress
 import java.net.Socket
 import java.time.Duration
 import java.util.ArrayDeque
+import java.util.Queue
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.LinkedBlockingQueue
 import kotlin.math.abs
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -116,7 +116,7 @@ class BufferedMusicClockTrimTest {
             .newInstance(format, false, false, 0, 0, AudioFocusCoordinator(null, false), 0, startMs,
                 { line: String -> reports += line }, 0L, false, null, false)
         private val createdMs = SystemClock.uptimeMillis()
-        private val packets: LinkedBlockingQueue<*>
+        private val packets: Queue<*>
         private val track: AudioTrack
         val output: HeadUnitTrack
         private var decodeCredit = 0.0
@@ -124,7 +124,7 @@ class BufferedMusicClockTrimTest {
         init {
             field("started").set(renderer, true)
             method("createTrack").invoke(renderer)
-            packets = field("queue").get(renderer) as LinkedBlockingQueue<*>
+            packets = field("queue").get(renderer) as Queue<*>
             track = field("track").get(renderer) as AudioTrack
             output = Shadow.extract(track)
             output.drift = drift

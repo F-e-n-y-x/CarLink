@@ -7,7 +7,7 @@ import com.shilapi.xcertplay.media.AudioFocusCoordinator
 import com.shilapi.xcertplay.media.MediaAudioBuffer
 import com.shilapi.xcertplay.media.MediaClockTrim
 import java.time.Duration
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.Queue
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -107,7 +107,7 @@ class RealtimeMusicClockTrimTest {
         private var lowestFrames = Long.MAX_VALUE
         private val perSecond = mutableListOf<Second>()
         private lateinit var renderer: Any
-        private lateinit var queue: LinkedBlockingQueue<*>
+        private lateinit var queue: Queue<*>
         private lateinit var track: HeadUnitTrack
         private val submit = method("submit", ByteArray::class.java, Int::class.javaPrimitiveType!!)
 
@@ -120,7 +120,7 @@ class RealtimeMusicClockTrimTest {
                     { line: String -> reports += line }, 0L, false, null, false)
             field("started").set(renderer, true)
             method("createTrack").invoke(renderer)
-            queue = field("queue").get(renderer) as LinkedBlockingQueue<*>
+            queue = field("queue").get(renderer) as Queue<*>
             track = Shadow.extract(field("track").get(renderer) as AudioTrack)
             track.drift = drift
             track.passOneMs = ::passOneMs

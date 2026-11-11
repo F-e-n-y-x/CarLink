@@ -28,7 +28,6 @@ import com.shilapi.xcertplay.hud.BydBluetoothSuspend
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -1831,10 +1830,13 @@ private class AudioRenderer(
     private var mappedChannel: AudioChannel? = null
     private val navigationPlaybackToken = NavigationPlayback.open()
     private var actualLegacyStreamType: Int? = null
-    private val queue = LinkedBlockingQueue<AudioPacket>(MAX_QUEUED_PACKETS)
+    private val queue = RtpReorderQueue<AudioPacket>(MAX_QUEUED_PACKETS,
+        { RtpReorderQueue.rtpSequence(it.rtp) }, AudioPacket::sample)
     /** Music with sustained decoder backpressure must not keep playing minutes-old packets. */
     private val mediaLagGuard = if (format.audioType == "media") MediaPacketLagGuard(format.rtpClockRate) else null
+    // The newest RTP time that arrived; a reordered, late or duplicate packet does not move it back.
     @Volatile private var newestRtpSample = 0
+    private var newestRtpSampleKnown = false
     private var lagRecoveryReports = 0
     // CarLink: upstream PR #1206 (lost music fill)
     private val lostMusicFill = if (format.audioType == "media") LostMusicFill(format.sampleRate) else null
@@ -1865,6 +1867,10 @@ private class AudioRenderer(
     private val packetsReceived = AtomicInteger()
     private val packetsDropped = AtomicInteger()
     private val packetsDroppedTotal = AtomicInteger()
+    private val packetsReordered = AtomicInteger()
+    private val packetsReorderedTotal = AtomicInteger()
+    private val packetsLateDropped = AtomicInteger()
+    private val packetsLateDroppedTotal = AtomicInteger()
     private val lastArrivalNs = AtomicLong()
     private val maxArrivalGapMs = AtomicLong()
     private val frameBytes = if (format.channels >= 2) 4 else 2
@@ -1903,6 +1909,8 @@ private class AudioRenderer(
     private val thread = Thread(::run, "carplay-audio").apply { isDaemon = true }
 
     fun start() {
+        queue.restartSequence()
+        newestRtpSampleKnown = false // CarLink: a restarted stream must not keep the old newest RTP time for the lag guard
         if (started) return
         started = true
         thread.start()
@@ -1914,10 +1922,15 @@ private class AudioRenderer(
             packetsReceived.incrementAndGet()
             val previous = lastArrivalNs.getAndSet(now)
             if (previous != 0L) maxArrivalGapMs.accumulateAndGet((now - previous) / 1_000_000L, ::maxOf)
-            newestRtpSample = sample
+            val ahead = sample - newestRtpSample
+            // A jump further back than reordering explains is a new run of the stream.
+            if (!newestRtpSampleKnown || ahead > 0 || ahead < -NEWEST_RTP_RESTART_FRAMES) {
+                newestRtpSample = sample
+                newestRtpSampleKnown = true
+            }
             // Hold short Wi-Fi bursts intact. If compressed audio remains >1.5s behind for
             // another 1.5s, skip only stale undecoded packets to catch up to the live song.
-            val removed = mediaLagGuard?.recover(queue, sample, AudioPacket::sample, now) ?: 0
+            val removed = mediaLagGuard?.recover(queue, newestRtpSample, AudioPacket::sample, now) ?: 0
             if (removed > 0) {
                 packetsDropped.addAndGet(removed)
                 packetsDroppedTotal.addAndGet(removed)
@@ -1928,17 +1941,27 @@ private class AudioRenderer(
                 }
             }
         }
-        if (!started || !queue.offer(AudioPacket(rtp, sample, now).apply { afterLoss = followsLoss(rtp) })) { // CarLink: #1206
-            if (started) {
+        if (!started) return
+        when (queue.insert(AudioPacket(rtp, sample, now).apply { afterLoss = followsLoss(rtp) })) { // CarLink: #1206
+            RtpReorderQueue.Placement.APPENDED -> Unit
+            RtpReorderQueue.Placement.REORDERED -> {
+                packetsReordered.incrementAndGet()
+                packetsReorderedTotal.incrementAndGet()
+            }
+            RtpReorderQueue.Placement.LATE -> {
+                packetsLateDropped.incrementAndGet()
+                packetsLateDroppedTotal.incrementAndGet()
+            }
+            RtpReorderQueue.Placement.FULL -> {
                 packetsDropped.incrementAndGet()
                 packetsDroppedTotal.incrementAndGet()
-            }
-            if (started && !droppedPacketsLogged) {
-                droppedPacketsLogged = true
-                Log.w(TAG, "audio queue full; dropping newest packets to bound latency")
-                if (queueFullReportCount < MAX_QUEUE_FULL_REPORTS) {
-                    queueFullReportCount++
-                    report("Audio: queue full audioType=${format.audioType} count=$queueFullReportCount")
+                if (!droppedPacketsLogged) {
+                    droppedPacketsLogged = true
+                    Log.w(TAG, "audio queue full; dropping newest packets to bound latency")
+                    if (queueFullReportCount < MAX_QUEUE_FULL_REPORTS) {
+                        queueFullReportCount++
+                        report("Audio: queue full audioType=${format.audioType} count=$queueFullReportCount")
+                    }
                 }
             }
         }
@@ -2583,7 +2606,8 @@ private class AudioRenderer(
             ?: 0L
         val compressedPcmFrames = compressedRtpFrames * format.sampleRate /
             format.rtpClockRate.coerceAtLeast(1)
-        val dropped = packetsDroppedTotal.get() + inputDropped
+        // A late packet dropped by the reorder queue leaves a gap too, which must not read as a fast clock.
+        val dropped = packetsDroppedTotal.get() + packetsLateDroppedTotal.get() + inputDropped
         if (dropped != droppedAtLastTrim) {
             droppedAtLastTrim = dropped
             trim.measureAgain()
@@ -2673,7 +2697,8 @@ private class AudioRenderer(
             "sampleRate=${currentTrack?.sampleRate ?: format.sampleRate} " +
             "trackBufferFrames=${currentTrack?.bufferSizeInFrames ?: -1} " +
             "rx=${packetsReceived.getAndSet(0)} " +
-            "dropped=${packetsDropped.getAndSet(0)} underruns=+${underruns - statsLastUnderruns} queue=${queue.size} " +
+            "dropped=${packetsDropped.getAndSet(0)} reordered=${packetsReordered.getAndSet(0)} " +
+            "lateDropped=${packetsLateDropped.getAndSet(0)} underruns=+${underruns - statsLastUnderruns} queue=${queue.size} " +
             "playing=$playbackStarted maxGapMs=${maxArrivalGapMs.getAndSet(0)} " +
             "sinceRxMs=${if (lastRx == 0L) -1 else (now - lastRx) / 1_000_000L} maxWriteMs=$maxWriteMs " +
             "writtenFrames=$writtenFramesThisWindow totalWrittenFrames=$totalWrittenFrames " +
@@ -2690,7 +2715,8 @@ private class AudioRenderer(
             val decoderLine = "Audio: decoder stats audioType=${format.audioType} codec=${format.codec} " +
                 "inputQueuedTotal=$inputQueued inputDroppedTotal=$inputDropped " +
                 "shortOpusPacketsTotal=$shortOpusPackets decoderUnavailablePacketsTotal=$decoderUnavailablePackets " +
-                "outputBuffersTotal=$outputBuffers " +
+                "outputBuffersTotal=$outputBuffers reorderedTotal=${packetsReorderedTotal.get()} " +
+                "lateDroppedTotal=${packetsLateDroppedTotal.get()} " +
                 (if (lostMusicFill != null) "lostFramesFilledTotal=$lostFramesFilled " else "") + "ended=$force"
             Log.i(STATS_TAG, decoderLine)
             runCatching { report(decoderLine) }
@@ -2786,6 +2812,8 @@ private class AudioRenderer(
         const val BUFFER_TAIL_WAIT_NS = 500_000_000L
         // Holds a burst after a Wi-Fi gap (~4 s of AAC) instead of dropping it.
         const val MAX_QUEUED_PACKETS = 192
+        // RtpReorderQueue.MAX_REORDER_PACKETS packets of 1024-frame AAC.
+        const val NEWEST_RTP_RESTART_FRAMES = RtpReorderQueue.MAX_REORDER_PACKETS * 1024
         const val PREBUFFER_WRITE_CHUNK_BYTES = 2 * 1024
         const val STATS_TAG = "DiPlay-AudioStats"
         const val STATS_WINDOW_NS = 5_000_000_000L
