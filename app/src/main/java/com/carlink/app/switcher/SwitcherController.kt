@@ -32,6 +32,7 @@ import com.carlink.core.detect.PairedPhone
 import com.carlink.core.detect.PhonesRepository
 import com.carlink.app.ui.UiPreferences
 import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.UnifiedSettingsStore
 import com.carlink.app.ui.HomeActivity
 import com.carlink.app.ui.switcher.SwitchPrompt
@@ -275,6 +276,7 @@ object SwitcherController {
             otherPhones = candidates(active),
             usbKinds = com.carlink.app.ui.premium.usbPhoneKinds(app),
             method = UnifiedSettingsStore(app).load().connectionMethod,
+            interfaceSize = UnifiedSettingsStore(app).load().interfaceSize,
             edge = bubble?.let { if (it.params.x + geometry.bubble / 2 < geometry.screenWidth / 2) Edge.LEFT else Edge.RIGHT }
                 ?: Edge.RIGHT,
         )
@@ -376,6 +378,14 @@ object SwitcherController {
             // A start blocked on the old method (e.g. Same Wi-Fi without its password) checks again.
             Connection.get(app).onSettingsChanged()
             panelUi = panelUi?.copy(method = method, page = SwitcherPage.MAIN)
+        }
+
+        override fun setInterfaceSize(size: InterfaceSize) {
+            val store = UnifiedSettingsStore(app)
+            store.save(store.load().copy(interfaceSize = size))
+            closePanel()
+            // The size is agreed when the session starts: restart it with the same phone and transport.
+            Connection.get(app).retry()
         }
 
         override fun disconnect() {

@@ -132,7 +132,7 @@ internal class AaCommandHandler(
         // stream (2 s, tablet 2026-10-20). Reset it before the engine starts, then switch it fresh.
         if (device != null && engine.isAccessory(device) && !switchedHere) {
             Log.i(TAG, "phone already an accessory at start; resetting its USB link first")
-            emit(AaProtocol.KIND_AOA_RESWITCH, "result=reset=${engine.resetUsb(device)};device=${engine.deviceName(device)}")
+            emit(AaProtocol.KIND_AOA_RESWITCH, "result=reset=${resetUsb(device)};device=${engine.deviceName(device)}")
             if (!engine.isServiceRunning()) {
                 if (!start(null)) return emit(AaProtocol.KIND_START_REFUSED, "action=start")
                 waitUntil(SERVICE_START_MILLIS) { engine.isServiceRunning() }
@@ -207,7 +207,7 @@ internal class AaCommandHandler(
         val result = when {
             device == null -> "no-accessory"
             engine.isBusy() -> "busy" // a new session is already under way
-            else -> "reset=" + engine.resetUsb(device)
+            else -> "reset=" + resetUsb(device)
         }
         Log.i(TAG, "stale accessory re-switch result=$result")
         emit(AaProtocol.KIND_AOA_RESWITCH, "result=$result" + (device?.let { ";device=${engine.deviceName(it)}" } ?: ""))
@@ -222,6 +222,18 @@ internal class AaCommandHandler(
      * did, and the session failed 3 s later). Some resets keep the phone in accessory mode with no
      * re-attach at all (03:17:21): the old session is gone either way, so a fresh handshake works.
      */
+    /**
+     * The reset right after a stop can fail while the old session still holds the port (size change
+     * from the switcher, tablet 2026-11-11: reset=false, then an 8 s dead handshake). Try a few times.
+     */
+    private fun resetUsb(device: UsbDevice): Boolean {
+        repeat(RESET_TRIES) { i ->
+            if (engine.resetUsb(engine.currentDevice(device) ?: device)) return true
+            if (i < RESET_TRIES - 1) Thread.sleep(RESET_RETRY_MILLIS)
+        }
+        return false
+    }
+
     private fun switchAfterReset() {
         waitUntil(RESET_RETURN_MILLIS) { engine.plainAndroidPhone() != null }
         // A phone that left the bus is still re-enumerating: wait for it instead of giving up
@@ -370,6 +382,8 @@ internal class AaCommandHandler(
         const val RETRY_SWITCH_MILLIS = 700L
         const val STALE_ACCESSORY_MILLIS = 3_000L
         const val RESET_RETURN_MILLIS = 2_000L
+        const val RESET_TRIES = 4
+        const val RESET_RETRY_MILLIS = 250L
         const val REATTACH_MILLIS = 10_000L
         const val FRONT_MILLIS = 3_000L
     }

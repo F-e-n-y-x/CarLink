@@ -10,6 +10,7 @@
     <string name="carlink_switcher_no_phones_hint">Pair another phone in Bluetooth settings to switch to it here.</string>
     <string name="carlink_switcher_switching">Switching…</string>
     <string name="carlink_switcher_home">CarLink Home</string>
+    <string name="carlink_switcher_size_reconnects">Changing it reconnects for a few seconds</string>
     <string name="carlink_switcher_next_connection">The current session keeps its connection.</string>
     <string name="carlink_switcher_close">Close</string>
     <string name="carlink_switcher_back">Back</string>

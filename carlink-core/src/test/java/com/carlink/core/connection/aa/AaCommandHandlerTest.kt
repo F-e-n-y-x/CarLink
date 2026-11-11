@@ -83,8 +83,10 @@ class AaCommandHandlerTest {
             plainPhone = phoneAfterReset
             if (phoneAfterReset != null) accessory = false // back in its normal USB mode
             offBusUntil = clock + offBusAfterReset
+            if (resetFailures > 0) { resetFailures--; return false }
             return resetWorks
         }
+        var resetFailures = 0
         var resetWorks = true
         var offBusAfterReset = 0L
         private var offBusUntil = 0L
@@ -266,6 +268,16 @@ class AaCommandHandlerTest {
         handler.startUsb(device(), null, VehicleProfile.GENERIC)
         assertEquals(1, engine.resets)
         assertFalse(AapService.ACTION_CHECK_USB in actions()) // no doomed handshake on the old stream
+        assertEquals(1, engine.switched)
+    }
+
+    @Test fun aResetRefusedRightAfterAStopIsTriedAgain() { // size change, tablet 2026-11-11
+        engine.accessory = true
+        engine.phoneAfterReset = device()
+        engine.resetFailures = 1
+        handler.startUsb(device(), null, VehicleProfile.GENERIC)
+        assertEquals(2, engine.resets)
+        assertTrue(events.any { it.second == "result=reset=true;device=Pixel" })
         assertEquals(1, engine.switched)
     }
 

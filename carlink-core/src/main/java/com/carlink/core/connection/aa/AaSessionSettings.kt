@@ -168,13 +168,17 @@ object AaSessionSettings {
             Picture.LIGHT -> { put("resolutionId", 1); put("fps-limit", 30) }
             Picture.CUSTOM -> Unit // Advanced owns the exact values.
         }
-        when (settings.interfaceSize) {
-            // Lower DPI draws Android Auto's controls smaller, matching CarPlay's wider panel.
-            InterfaceSize.SMALL -> put("dpi-pixel-density", (panelDensityDpi * 0.85f).roundToInt())
-            InterfaceSize.MEDIUM -> put("dpi-pixel-density", 0)
-            InterfaceSize.LARGE -> put("dpi-pixel-density", (panelDensityDpi * 1.2f).roundToInt())
-            InterfaceSize.CUSTOM -> Unit
-        }
+        // Small and Large scale the Automatic density, which already fits this screen: scaling the
+        // panel's own density made Large 2.4x Medium on a 320 dpi tablet whose Automatic is 160.
+        put(SIZE_PERCENT_KEY, sizePercent(settings.interfaceSize))
+        if (settings.interfaceSize != InterfaceSize.CUSTOM) put("dpi-pixel-density", 0)
+    }
+
+    /** Interface size as a percentage of the Automatic density (Custom: Advanced owns the DPI). */
+    fun sizePercent(size: InterfaceSize): Int = when (size) {
+        InterfaceSize.SMALL -> 85
+        InterfaceSize.MEDIUM, InterfaceSize.CUSTOM -> 100
+        InterfaceSize.LARGE -> 120
     }
 
     /**
@@ -185,15 +189,20 @@ object AaSessionSettings {
      * margins. Portrait is left alone: the floor is a landscape one. A typed DPI never comes here.
      * A [handheld] screen (phone, tablet) starts from a head unit's 160 dpi instead of its own: at a
      * phone's 300+ dpi Android Auto drew a phone-sized layout, while CarPlay on the same screen is laid
-     * out for a car-sized display (2026-11-10, Galaxy S25 as the screen).
+     * out for a car-sized display (2026-11-10, Galaxy S25 as the screen). [sizePercent] is the
+     * driver's interface size (Small 85, Large 120); the 748x450 dp floor still caps it.
      */
-    fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false): Int {
-        val base = if (handheld) minOf(deviceDpi, HANDHELD_DPI) else deviceDpi
+    fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false,
+                            sizePercent: Int = 100): Int {
+        val base = ((if (handheld) minOf(deviceDpi, HANDHELD_DPI) else deviceDpi) * sizePercent / 100f).roundToInt()
         if (visibleWidthPx <= 0 || visibleHeightPx <= 0 || visibleHeightPx > visibleWidthPx) return base
         return minOf(base, visibleWidthPx * 160 / MIN_WIDTH_DP, visibleHeightPx * 160 / MIN_HEIGHT_DP)
     }
 
     private const val HANDHELD_DPI = 160
+
+    /** DiAuto preference with [sizePercent], read by the Automatic density hook in ":aa". */
+    const val SIZE_PERCENT_KEY = "carlink-interface-percent"
 
     private const val MIN_WIDTH_DP = 748
     private const val MIN_HEIGHT_DP = 450

@@ -78,6 +78,7 @@ import com.carlink.core.core.PhoneKind
 import com.carlink.core.core.Transport
 import com.carlink.core.detect.PairedPhone
 import com.carlink.core.settings.ConnectionMethod
+import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.WirelessPath
 
 enum class SwitcherPage { MAIN, CONNECTION_TYPE }
@@ -100,6 +101,8 @@ data class SwitcherUi(
     val switchingTo: String? = null,
     /** The driver's connection type; used from the next connection. */
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
+    /** Interface size for both engines; changing it reconnects the session. */
+    val interfaceSize: InterfaceSize = InterfaceSize.MEDIUM,
     val page: SwitcherPage = SwitcherPage.MAIN,
     /** The edge the bubble rests on; the panel opens on the same side. */
     val edge: Edge = Edge.RIGHT,
@@ -113,6 +116,7 @@ interface SwitcherActions {
     fun openHome() {}
     fun showPage(page: SwitcherPage) {}
     fun setConnectionMethod(method: ConnectionMethod) {}
+    fun setInterfaceSize(size: InterfaceSize) {}
     fun disconnect() {}
     fun close() {}
 }
@@ -263,6 +267,27 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
                 tint = scheme.onSurfaceVariant)
         }
     }
+
+    Spacer(Modifier.height(dimens.gutter))
+    // A picture too big or too small for this screen: one tap here instead of Settings > Display.
+    Eyebrow(stringResource(R.string.carlink_settings_interface_size))
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.alpha(if (switching) 0.5f else 1f), horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+        listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE).forEach { size ->
+            val selected = size == ui.interfaceSize
+            SelectableGlass(selected, { if (!switching && !selected) actions.setInterfaceSize(size) }, Modifier.weight(1f),
+                role = Role.RadioButton) {
+                Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = dimens.minTouch).padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center) {
+                    Text(com.carlink.app.ui.settings.interfaceSizeLabel(size), style = MaterialTheme.typography.titleSmall,
+                        color = if (selected) scheme.primary else scheme.onSurface, maxLines = 1)
+                }
+            }
+        }
+    }
+    Spacer(Modifier.height(6.dp))
+    Text(stringResource(R.string.carlink_switcher_size_reconnects), style = MaterialTheme.typography.bodySmall,
+        color = scheme.onSurfaceVariant)
 
     Spacer(Modifier.height(dimens.gutter))
     val home = @Composable { m: Modifier ->
