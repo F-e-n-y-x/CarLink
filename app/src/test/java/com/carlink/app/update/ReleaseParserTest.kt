@@ -87,9 +87,43 @@ class ReleaseParserTest {
         assertTrue(GitHubReleaseSource(FakeHttp(null), current).latest() is CheckOutcome.Failed)
     }
 
-    private class FakeHttp(private val answer: HttpText?) : UpdateHttp {
+    /** [fixture] as version [v] (tag, assets), a pre-release or draft when asked. */
+    private fun release(v: String, prerelease: Boolean = false, draft: Boolean = false): String =
+        fixture("release_ok.json").replace("1.1.0", v)
+            .replace("\"prerelease\": false", "\"prerelease\": $prerelease").replace("\"draft\": false", "\"draft\": $draft")
+
+    private fun versionOf(parsed: ParsedRelease) = (parsed as ParsedRelease.Usable).release.version
+
+    @Test fun testVersionsTakeTheHighestUsableReleaseOrPreRelease() {
+        // GitHub lists newest first by date, not by version: the highest version wins.
+        val list = "[" + listOf(release("1.0.16"), release("1.0.17", prerelease = true), release("1.0.18", draft = true),
+            fixture("release_no_apk.json").replace("1.1.0", "1.0.19")).joinToString(",") + "]"
+        assertEquals(AppVersion(1, 0, 17), versionOf(ReleaseParser.newest(list)))
+        // A stable release newer than every pre-release is still offered.
+        assertEquals(AppVersion(1, 1, 0), versionOf(ReleaseParser.newest("[${release("1.0.17", prerelease = true)},${release("1.1.0")}]")))
+        assertTrue(ReleaseParser.newest("[]") is ParsedRelease.Unusable)
+        assertTrue(ReleaseParser.newest("{}") is ParsedRelease.Unusable)
+        assertEquals(ParsedRelease.Reason.DRAFT, (ReleaseParser.newest("[${release("1.2.0", draft = true)}]") as ParsedRelease.Unusable).reason)
+        // Without test versions a pre-release is never usable.
+        assertEquals(ParsedRelease.Reason.PRERELEASE,
+            (ReleaseParser.parse(release("1.0.17", prerelease = true)) as ParsedRelease.Unusable).reason)
+    }
+
+    @Test fun gitHubSourceAsksForTheListOnlyWithTestVersions() {
+        val list = "[${release("1.0.17", prerelease = true)},${release("1.0.16")}]"
+        var beta = true
+        val source = GitHubReleaseSource(FakeHttp(HttpText(200, list), ReleaseRepo.LIST_URL), AppVersion(1, 0, 16)) { beta }
+        assertEquals(AppVersion(1, 0, 17), (source.latest() as CheckOutcome.Newer).release.version)
+        assertEquals(CheckOutcome.UpToDate,
+            GitHubReleaseSource(FakeHttp(HttpText(200, list), ReleaseRepo.LIST_URL), AppVersion(1, 0, 17)) { true }.latest())
+        beta = false
+        assertEquals(CheckOutcome.UpToDate,
+            GitHubReleaseSource(FakeHttp(HttpText(200, release("1.0.16"))), AppVersion(1, 0, 16)) { beta }.latest())
+    }
+
+    private class FakeHttp(private val answer: HttpText?, private val expectedUrl: String = ReleaseRepo.LATEST_URL) : UpdateHttp {
         override fun getText(url: String, accept: String?): HttpText {
-            assertEquals(ReleaseRepo.LATEST_URL, url)
+            assertEquals(expectedUrl, url)
             assertEquals("application/vnd.github+json", accept)
             return answer ?: throw java.io.IOException("offline")
         }

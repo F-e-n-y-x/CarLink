@@ -48,8 +48,18 @@ object GitHubIssueReport {
     /** The plain-text report QR: within an error-correction-M code (2,331 bytes) with room for UTF-8. */
     const val QR_TEXT_BUDGET = 1_800
 
-    /** The quick QR link: about a version-20 code, easy for a phone camera off a glossy screen. */
+    /** The quick QR link: about a version-25 code, easy for a phone camera off a glossy screen. */
     const val QUICK_URL_BUDGET = 900
+
+    /** A middle QR link (fields, error and a short log excerpt) for a code shown large on a 720p screen. */
+    const val MEDIUM_URL_BUDGET = 1_400
+
+    /**
+     * Smallest QR module, in dp, that scans reliably off a stereo screen: the quick code (about 117
+     * modules) in Home's 420 dp dialog, which drivers scanned (82a43548d); the 2,200-character code at
+     * that size (about 2 dp per module) did not. 1 dp is 1/160 inch, so this is about 0.45 mm.
+     */
+    const val MIN_QR_MODULE_DP = 2.8f
 
     /** Engine problem lines are taken from this window before the report. */
     const val ENGINE_PROBLEM_WINDOW_MILLIS = 10 * 60_000L
@@ -127,6 +137,8 @@ object GitHubIssueReport {
         /** One line of the settings that shape a session (connection method, picture, grants, …). */
         val settings: String? = null,
         val hardware: DeviceSignals? = null,
+        /** The stereo quirk profile CarLink applied ([com.carlink.core.connection.StereoQuirks]), when one matched. */
+        val quirkProfile: String? = null,
     ) {
         val session: Session? get() = sessions.firstOrNull()
     }
@@ -138,7 +150,7 @@ object GitHubIssueReport {
         val fields: LinkedHashMap<String, String>,
         val url: String,
         val shortUrl: String,
-        /** The easy-to-scan QR link: the form's fields and the error, no log (a few hundred characters). */
+        /** The easy-to-scan QR link: the form's fields, the error and the [digest], no log lines (at most [QUICK_URL_BUDGET]). */
         val quickUrl: String,
         /**
          * The report as plain text for a QR code (fields, error, log excerpt): a phone shows it with
@@ -148,7 +160,23 @@ object GitHubIssueReport {
         /** The log lines in the excerpt (without its headings), and how many were left for Share log. */
         val logLines: List<String>,
         val omittedLines: Int,
-    )
+        /** The QR link between [quickUrl] and [shortUrl] (at most [MEDIUM_URL_BUDGET]). */
+        val mediumUrl: String = quickUrl,
+    ) {
+        /**
+         * The fullest QR link whose modules are at least [MIN_QR_MODULE_DP] in a code drawn [sizeDp]
+         * wide ([QrCode][com.carlink.app.ui.components.QrCode] keeps a tenth of each side for the quiet
+         * zone), else the quick link. A larger code shows more of the report on the phone.
+         */
+        fun qrUrlFor(sizeDp: Float): String =
+            listOf(shortUrl, mediumUrl).firstOrNull { sizeDp * 0.8f / qrModules(it) >= MIN_QR_MODULE_DP } ?: quickUrl
+    }
+
+    /** Modules per side of [content]'s QR code at error correction M, as the stereo draws it; Int.MAX_VALUE when it does not fit. */
+    fun qrModules(content: String): Int = runCatching {
+        com.google.zxing.qrcode.encoder.Encoder.encode(content, com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M,
+            mapOf(com.google.zxing.EncodeHintType.CHARACTER_SET to "UTF-8")).version.dimensionForVersion
+    }.getOrDefault(Int.MAX_VALUE)
 
     /** How the report is opened: in a browser, or as a QR code when the screen has none. */
     enum class Route { BROWSER, QR_CODE }
@@ -166,30 +194,50 @@ object GitHubIssueReport {
 
         // The short link (QR code): the form's fields, the error and as much of the error log as a QR
         // code holds (drivers found the scanned report empty without it; Home shows the code full size).
-        val shortFields = LinkedHashMap(head)
-        shortFields["what_happened"] = clean(whatHappened(facts, short = true), facts.secrets)
-        // The quick link: no log and a short error, so the QR code stays coarse enough to scan off a screen.
-        val quickFields = LinkedHashMap(shortFields)
-        var quickUrl = qrUrl(quickFields)
-        while (quickUrl.length > QUICK_URL_BUDGET && quickFields["what_happened"]!!.length > 40) {
-            quickFields["what_happened"] = quickFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
-            quickUrl = qrUrl(quickFields)
-        }
-        var shortUrl = qrUrl(shortFields)
-        while (shortUrl.length > SHORT_URL_BUDGET / 2 && shortFields["what_happened"]!!.length > 40) {
-            shortFields["what_happened"] = shortFields["what_happened"]!!.let { it.take(it.length * 3 / 4) + "…" }
-            shortUrl = qrUrl(shortFields)
-        }
-        // The log is encoded twice inside a QR link (return_to), so it gets about half the room.
-        val shortRoom = (SHORT_URL_BUDGET - shortUrl.length) * 2 / 5
-        if (shortRoom > 200) {
-            shortFields["log"] = logExcerpt(facts, shortRoom).text
-            shortUrl = qrUrl(shortFields)
-            while (shortUrl.length > SHORT_URL_BUDGET && shortFields["log"]!!.length > 40) {
-                shortFields["log"] = shortFields["log"]!!.let { it.take(it.length * 3 / 4) }
-                shortUrl = qrUrl(shortFields)
+        // Every QR link starts its error with the one-line digest, which trimming never cuts: most
+        // reports arrive through the quick code, so it must carry the failure and the stop point.
+        val digest = clean(digest(facts), facts.secrets)
+        val qrWhat = digest + "\n\n" + clean(whatHappened(facts, short = true), facts.secrets)
+        fun trimWhat(fields: LinkedHashMap<String, String>, limit: Int): String {
+            var link = qrUrl(fields)
+            while (link.length > limit) {
+                val what = fields.getValue("what_happened")
+                val cut = maxOf(digest.length + 40, what.length * 3 / 4)
+                if (cut >= what.length - 1) break
+                fields["what_happened"] = what.take(cut) + "…"
+                link = qrUrl(fields)
             }
+            return link
         }
+        // The quick link: no log lines and a short error, so the QR code stays coarse enough to scan off a
+        // screen; its log field tells the reporter how to attach the log file.
+        val quickFields = LinkedHashMap(head)
+        quickFields["what_happened"] = qrWhat
+        quickFields["log"] = QUICK_LOG_NOTE
+        var quickUrl = trimWhat(quickFields, QUICK_URL_BUDGET)
+        // The digest matters more than the request for the log, which the form's log field also asks for.
+        if (quickUrl.length > QUICK_URL_BUDGET) {
+            quickFields.remove("log")
+            quickUrl = trimWhat(quickFields, QUICK_URL_BUDGET)
+        }
+        fun shortLink(budget: Int): String {
+            val fields = LinkedHashMap(head)
+            fields["what_happened"] = qrWhat
+            var link = trimWhat(fields, budget / 2)
+            // The log is encoded twice inside a QR link (return_to), so it gets about half the room.
+            val room = (budget - link.length) * 2 / 5
+            if (room > 200) {
+                fields["log"] = logExcerpt(facts, room).text
+                link = qrUrl(fields)
+                while (link.length > budget && fields["log"]!!.length > 40) {
+                    fields["log"] = fields["log"]!!.let { it.take(it.length * 3 / 4) }
+                    link = qrUrl(fields)
+                }
+            }
+            return link
+        }
+        val shortUrl = shortLink(SHORT_URL_BUDGET)
+        val mediumUrl = shortLink(MEDIUM_URL_BUDGET)
 
         val fields = LinkedHashMap(head)
         // What happened may use at most half the budget (its least important blocks go first); the log gets the rest.
@@ -202,11 +250,12 @@ object GitHubIssueReport {
         val textHead = buildString {
             append(title).append('\n')
             head.filterKeys { it != "title" }.forEach { (k, v) -> append(k.replace('_', ' ')).append(": ").append(v).append('\n') }
+            append(digest).append('\n')
             append('\n').append(clean(whatHappened(facts, short = true), facts.secrets).take(600)).append('\n')
         }
         val textLog = logExcerpt(facts, (QR_TEXT_BUDGET - textHead.length).coerceAtLeast(0)).text
         val qrText = (textHead + "\n" + textLog).take(QR_TEXT_BUDGET)
-        return Report(title, fields, url(fields), shortUrl, quickUrl, qrText, excerpt.lines, excerpt.omitted)
+        return Report(title, fields, url(fields), shortUrl, quickUrl, qrText, excerpt.lines, excerpt.omitted, mediumUrl)
     }
 
     // ---- Fields --------------------------------------------------------------------------
@@ -221,6 +270,28 @@ object GitHubIssueReport {
         val what = facts.problemTitle?.trim()?.trimEnd('.')?.takeIf { it.isNotEmpty() }
             ?: s.problem?.name?.lowercase(Locale.ROOT)?.replace('_', ' ') ?: "unknown problem"
         return (parts + "couldn't connect: $what").joinToString(" · ")
+    }
+
+    /**
+     * One line with what a maintainer needs first, for the QR links that carry little or no log:
+     * engine, transport and path, the outcome, LinkProblem and FailureReason (when it differs), the stop
+     * point (the last step of the session's timeline), RAM, the stereo's Bluetooth and the quirk profile.
+     * The chip and Android version are in the screen field next to it.
+     */
+    fun digest(facts: Facts): String {
+        val s = facts.session
+        val h = facts.hardware
+        return "Digest: " + listOfNotNull(
+            s?.let { listOfNotNull(it.engine?.let { e -> if (e == Engine.CARPLAY) "CP" else "AA" }, it.transport?.name, it.path?.name).joinToString("/") }
+                ?.takeIf { it.isNotEmpty() },
+            s?.let { if (it.failed) "failed" else "no-failure" },
+            s?.problem?.let { "problem=$it" },
+            s?.reason?.takeIf { it.name != s.problem?.name }?.let { "reason=$it" },
+            s?.engine?.let { timeline(facts.log, it) }?.substringAfterLast(" · ")?.let { "stop=$it" },
+            h?.let { "ram=${it.totalRamMb}MB" + if (it.lowRamDevice) "(low)" else "" },
+            facts.stereoBluetooth?.let { "bt=${it.classification}" },
+            facts.quirkProfile?.let { "quirks=$it" },
+        ).joinToString(" ")
     }
 
     fun version(facts: Facts) = "${facts.versionName} (${facts.versionCode})"
@@ -471,7 +542,11 @@ object GitHubIssueReport {
 
     private fun footer(omitted: Int): String =
         (if (omitted > 0) "… $omitted more lines in the full log.\n" else "") +
-            "Full log: in CarLink open Settings › General › Diagnostics, tap Copy full log (or Share log), then paste or attach it below.\n"
+            "Full log: in CarLink open Settings › General › Diagnostics, tap Share log and send the file to this phone, " +
+            "then attach the file here (or tap Copy full log and paste it).\n"
+
+    /** The quick QR link's log field: no lines fit, so it asks for the file (every character costs about 1.5 in the code). */
+    const val QUICK_LOG_NOTE = "Please attach the log: CarLink › Diagnostics › Share log."
 
     /** Lines with the same source, level and text (newest first), as one entry each. */
     class Repeated(val lines: List<LogLine>) {

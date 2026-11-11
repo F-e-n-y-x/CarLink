@@ -255,7 +255,7 @@ internal fun IssueQrSheet(report: GitHubIssueReport.Report, onShareLog: () -> Un
                 Text(stringResource(R.string.carlink_report_qr_body), style = MaterialTheme.typography.bodyLarge, color = scheme.onSurface,
                     modifier = Modifier.widthIn(max = 720.dp))
                 Spacer(Modifier.height(if (isCar) 20.dp else 14.dp))
-                QrCode(report.quickUrl, qr, stringResource(R.string.carlink_report_qr_a11y), Modifier.align(Alignment.CenterHorizontally))
+                QrCode(report.qrUrlFor(qr.value), qr, stringResource(R.string.carlink_report_qr_a11y), Modifier.align(Alignment.CenterHorizontally))
                 Spacer(Modifier.height(if (isCar) 20.dp else 14.dp))
                 Text(stringResource(R.string.carlink_report_qr_log), style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant)

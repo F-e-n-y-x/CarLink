@@ -85,6 +85,31 @@ stop, `cmd package compile -m speed-profile -f` (status `speed-profile` in both 
 The host was otherwise idle (no Gradle build) during every run. Baseline numbers come from the
 same script on the APK built from 4bca8130.
 
+### Benchmark script
+
+`scripts/lowend-bench.sh APK` repeats steps 1 and 2 above on `carlink_lowend` booted with **1 GB**
+(`MEM_MB`, default 1024; below 2 GB it adds `-qemu -m <MB>`, which sets the guest RAM where
+`-memory` alone did not), plus the low-memory kills (`lowmemorykiller: Kill`, `killinfo`) logged
+while it ran. It installs the APK, delivers and compiles its baseline profile, runs `RUNS` (10)
+cold starts and appends one dated line to `docs/lowend-bench.csv`:
+
+```
+date,commit,apk,apk_sha256,avd,mem_mb,guest_mb,runs,cold_median_ms,cold_min_ms,cold_max_ms,pss_main_kb,pss_aa_kb,lmk_kills
+```
+
+```sh
+./gradlew :app:assembleRelease -Pcarlink.emulatorAbi=true   # signed with the debug key, see Build
+scripts/lowend-bench.sh app/build/outputs/apk/release/app-release.apk
+MEM_MB=768 RUNS=5 scripts/lowend-bench.sh some.apk          # a tighter unit, fewer runs
+scripts/lowend-bench.sh --self-test                           # the output parsers only
+```
+
+It refuses to start when the host has less than `MEM_MB` + 1.5 GB available (a swapping host
+times everything wrong; `FORCE=1` overrides), when `emulator-5562` already runs, or without the
+AVD. The emulator is killed when the script ends. `guest_mb` is the guest's `MemTotal`: check it
+is close to `MEM_MB` before comparing lines. Compare lines from the same host only; the numbers
+are the emulator's (SwiftShader, x86_64), not a head unit's.
+
 ## Lite rendering
 
 `ui/theme/RenderingMode.kt`. Settings › General › **Visual effects**: Automatic (default), Full,

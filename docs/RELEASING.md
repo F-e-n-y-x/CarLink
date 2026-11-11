@@ -16,8 +16,8 @@ published exactly as `scripts/release.sh` produces it.
 - `versionCode` is computed from it: `major * 10000 + minor * 100 + patch` (1.0.0 → 10000,
   1.2.3 → 10203). Minor and patch must stay below 100; the build fails otherwise.
 - The Git tag and GitHub release are `vX.Y.Z`; the assets are `CarLink-X.Y.Z.apk` and
-  `CarLink-X.Y.Z.apk.sha256`. The app ignores releases with other tags or asset names, drafts
-  and pre-releases.
+  `CarLink-X.Y.Z.apk.sha256`. The app ignores releases with other tags or asset names and drafts,
+  and offers pre-releases only to copies with "Get test versions" on (see "Test versions").
 - `CHANGELOG.md` gets a `## [X.Y.Z] - YYYY-MM-DD` section, written for drivers. Its text becomes
   the release notes that the update popup shows (unless you pass `--notes-file`).
 
@@ -104,6 +104,29 @@ Never commit any of these files. `.gitignore` blocks `*.jks`, `*.keystore`, `*.p
    with the notes followed by `<!-- more -->` and the footer (see "The release page").
    Installed copies see it within six hours.
 
+## Test versions (pre-releases)
+
+A test version is an ordinary release (same `vX.Y.Z` tag, same two assets, same key and checks)
+that GitHub marks as a pre-release. Only copies with Settings › About › **Get test versions** on
+see it: they read `GET /repos/F-e-n-y-x/CarLink/releases?per_page=20` instead of
+`releases/latest` and take the highest usable version, pre-release or not
+(`ReleaseParser.newest`). Every other copy keeps reading `releases/latest`, which GitHub never
+points at a pre-release. The download is verified exactly as for a release.
+
+```sh
+scripts/release.sh 1.0.16                          # build and check, as for a release
+scripts/release.sh 1.0.16 --prerelease --publish   # tag v1.0.16, "CarLink 1.0.16 (test version)"
+```
+
+`--prerelease` changes only the last step: `gh release create … --prerelease --latest=false`.
+All checks (branch `main` equal to `origin/main`, the changelog section, tests, signer) still run.
+
+- The version number is used up: the next build, test or release, needs a higher version.
+- To make a tested pre-release the release for everyone, without rebuilding:
+  `gh release edit v1.0.16 --prerelease=false --latest` (and edit the title).
+- A driver who turns test versions off keeps the installed test version until a higher release
+  appears; Android cannot install a lower versionCode over it.
+
 A rehearsal on another branch: `CARLINK_RELEASE_ALLOW_BRANCH=1 scripts/release.sh 1.0.0`. It runs
 every check except the branch and refuses `--publish`.
 
@@ -119,7 +142,8 @@ The updater lives in `app/src/main/java/com/carlink/app/update/` (logic, no UI) 
 
 - Only the release package `com.carlink.app`, signed with the pinned key, checks for updates.
   Debug builds (`com.carlink.app.hudtest`) and builds signed with any other key never do.
-- `GET https://api.github.com/repos/F-e-n-y-x/CarLink/releases/latest`, at most every 6 hours
+- `GET https://api.github.com/repos/F-e-n-y-x/CarLink/releases/latest` (with "Get test versions"
+  on, `releases?per_page=20`, pre-releases included; turning it on makes a check due), at most every 6 hours
   (Home in front, setup finished, "Automatically check for updates" on, and no projection
   session starting, running or asking to switch), or when the driver taps Check for updates.
   GitHub's rate limits (403/429) are handled quietly.

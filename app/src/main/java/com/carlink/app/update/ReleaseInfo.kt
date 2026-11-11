@@ -1,5 +1,6 @@
 package com.carlink.app.update
 
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -7,6 +8,8 @@ import org.json.JSONObject
 object ReleaseRepo {
     const val OWNER_REPO = "F-e-n-y-x/CarLink"
     const val LATEST_URL = "https://api.github.com/repos/$OWNER_REPO/releases/latest"
+    /** The newest releases, pre-releases included (drafts are visible only when signed in): "Get test versions". */
+    const val LIST_URL = "https://api.github.com/repos/$OWNER_REPO/releases?per_page=20"
     const val DOWNLOAD_PREFIX = "https://github.com/$OWNER_REPO/releases/download/"
     const val ACCEPT = "application/vnd.github+json"
 
@@ -46,8 +49,26 @@ object ReleaseParser {
         val release = try { JSONObject(json) } catch (_: JSONException) {
             return ParsedRelease.Unusable(ParsedRelease.Reason.NOT_JSON)
         }
+        return parse(release, allowPrerelease = false)
+    }
+
+    /**
+     * "Get test versions": the highest usable version in `GET /repos/{owner}/{repo}/releases` (a
+     * JSON array), pre-releases included; drafts never. A pre-release uses the same `vX.Y.Z` tag and
+     * assets as a release, so it is verified exactly the same way. [ParsedRelease.Unusable] when none is.
+     */
+    fun newest(json: String): ParsedRelease {
+        val list = try { JSONArray(json) } catch (_: JSONException) {
+            return ParsedRelease.Unusable(ParsedRelease.Reason.NOT_JSON)
+        }
+        val parsed = (0 until list.length()).mapNotNull { list.optJSONObject(it) }.map { parse(it, allowPrerelease = true) }
+        return parsed.filterIsInstance<ParsedRelease.Usable>().maxByOrNull { it.release.version }
+            ?: parsed.firstOrNull() ?: ParsedRelease.Unusable(ParsedRelease.Reason.NO_APK)
+    }
+
+    private fun parse(release: JSONObject, allowPrerelease: Boolean): ParsedRelease {
         if (release.optBoolean("draft")) return ParsedRelease.Unusable(ParsedRelease.Reason.DRAFT)
-        if (release.optBoolean("prerelease")) return ParsedRelease.Unusable(ParsedRelease.Reason.PRERELEASE)
+        if (!allowPrerelease && release.optBoolean("prerelease")) return ParsedRelease.Unusable(ParsedRelease.Reason.PRERELEASE)
         val tag = release.optString("tag_name")
         val version = AppVersion.parseTag(tag) ?: return ParsedRelease.Unusable(ParsedRelease.Reason.MALFORMED_TAG)
         val assets = release.optJSONArray("assets")

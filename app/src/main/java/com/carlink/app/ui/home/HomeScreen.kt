@@ -111,6 +111,7 @@ import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.WifiDetails
 import com.carlink.core.settings.WirelessPath
 import com.carlink.core.settings.isValid
+import kotlinx.coroutines.launch
 
 /** The modes of Home's stage (design/RESEARCH_PREMIUM_UX.md §7.3). */
 internal enum class HomeMode {
@@ -153,10 +154,11 @@ internal data class HomeUi(
     val usual: PhoneUsual? = null,
     /** What this stereo's Bluetooth is (null until the probe finished). */
     val stereo: StereoBluetooth? = null,
-    /** After a failure: the prefilled GitHub report's quick address, shown as a QR code to scan with a phone. */
-    val reportUrl: String? = null,
-    /** The same report as plain text with a log excerpt (copy it from the phone), offered in the large view. */
-    val reportText: String? = null,
+    /**
+     * After a failure: the prefilled GitHub report, shown as a QR code to scan with a phone (the quick
+     * link small, the fullest link that still scans in the large view, and its plain text with a log excerpt).
+     */
+    val report: com.carlink.app.diagnostics.GitHubIssueReport.Report? = null,
 ) {
     /**
      * Wireless cannot start for the default phone's engine here (for either engine when no phone is
@@ -256,7 +258,7 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
     }
     HomeContent(HomeUi(home, connection, network, permissionsNeeded, usual,
         stereo?.classification?.let { com.carlink.core.connection.DeviceEnvironment.effective(connection.useAndroidBluetooth, it) },
-        failureReport?.quickUrl, failureReport?.qrText), actions)
+        failureReport), actions)
     // A second USB phone: the floating overlay asks over any screen; without the overlay
     // permission Home asks itself.
     val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
@@ -274,26 +276,43 @@ fun HomeScreen(vm: CarLinkViewModel, navigate: (Route) -> Unit) {
 
 /** The failure report's QR code, as large as the screen allows. */
 @Composable
-private fun ReportQrDialog(url: String, text: String?, onDismiss: () -> Unit) {
+private fun ReportQrDialog(report: com.carlink.app.diagnostics.GitHubIssueReport.Report, onDismiss: () -> Unit) {
     // The link opens the issue page; the text code carries the whole report and log to copy, since
     // the GitHub app keeps only a link's title.
     var asText by rememberSaveable { mutableStateOf(false) }
-    val shown = if (asText && text != null) text else url
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.carlink_report_qr_title)) },
         text = {
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                com.carlink.app.ui.components.QrCode(shown, minOf(maxWidth, 420.dp), stringResource(R.string.carlink_report_qr_a11y),
-                    Modifier.clickable(onClick = onDismiss))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f, fill = false),
+                    contentAlignment = Alignment.Center) {
+                    // As large as the dialog allows: a larger code carries more of the report at the same module size.
+                    val size = minOf(maxWidth, maxHeight, 520.dp)
+                    val shown = if (asText) report.qrText else report.qrUrlFor(size.value)
+                    com.carlink.app.ui.components.QrCode(shown, size, stringResource(R.string.carlink_report_qr_a11y),
+                        Modifier.clickable(onClick = onDismiss))
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.carlink_report_qr_log), style = MaterialTheme.typography.bodyMedium)
             }
         },
-        dismissButton = text?.let {
-            { GlassButton(stringResource(if (asText) R.string.carlink_report_qr_simple else R.string.carlink_report_qr_with_log),
-                { asText = !asText }) }
+        dismissButton = {
+            GlassButton(stringResource(if (asText) R.string.carlink_report_qr_simple else R.string.carlink_report_qr_with_log),
+                { asText = !asText })
         },
-        confirmButton = { GlassButton(stringResource(R.string.carlink_home_cable_ok), onDismiss) },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IonButton(stringResource(R.string.carlink_diag_log_share),
+                    { scope.launch { com.carlink.app.ui.diagnostics.shareConnectionLog(context) } }, icon = R.drawable.carlink_ic_ios_share)
+                GlassButton(stringResource(R.string.carlink_home_cable_ok), onDismiss)
+            }
+        },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier.padding(24.dp).widthIn(max = 600.dp),
     )
 }
 
@@ -761,13 +780,13 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
                 // The log and the error go straight into a GitHub issue (no copying from the stereo).
                 TertiaryButton(stringResource(R.string.carlink_report_action), actions::reportProblem, icon = R.drawable.carlink_ic_bug_report)
                 // Nothing to tap on the stereo: the report is already a QR code for the driver's phone.
-                ui.reportUrl?.let { url ->
+                ui.report?.let { report ->
                     // A tap shows the code full size: easier for a phone camera from the passenger seat.
                     var expanded by rememberSaveable { mutableStateOf(false) }
-                    if (expanded) ReportQrDialog(url, ui.reportText) { expanded = false }
+                    if (expanded) ReportQrDialog(report) { expanded = false }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.clickable(onClickLabel = stringResource(R.string.carlink_home_report_expand)) { expanded = true }) {
-                        com.carlink.app.ui.components.QrCode(url, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))
+                        com.carlink.app.ui.components.QrCode(report.quickUrl, if (car) 132.dp else 112.dp, stringResource(R.string.carlink_report_qr_a11y))
                         Text(stringResource(R.string.carlink_home_report_scan), style = MaterialTheme.typography.bodyMedium,
                             color = colors.onSurfaceTertiary, modifier = Modifier.widthIn(max = 220.dp))
                     }

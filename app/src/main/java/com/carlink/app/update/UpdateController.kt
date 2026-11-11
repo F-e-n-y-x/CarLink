@@ -112,6 +112,17 @@ class UpdateController(
         _autoCheck.value = enabled
     }
 
+    private val _testVersions = MutableStateFlow(prefs.testVersions)
+    /** "Get test versions" (GitHub pre-releases). */
+    val testVersions: StateFlow<Boolean> = _testVersions.asStateFlow()
+
+    /** Turning it on makes the next automatic check due at once, so the driver sees a test version soon. */
+    fun setTestVersions(enabled: Boolean) {
+        prefs.testVersions = enabled
+        _testVersions.value = enabled
+        if (enabled) prefs.lastUpdateCheckMillis = 0L
+    }
+
     /**
      * Home is in front: check if one is due and [sessionQuiet]. Also continues an install that
      * waited for "Install unknown apps". Returns true when a check started.
