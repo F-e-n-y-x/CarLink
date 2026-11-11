@@ -431,6 +431,13 @@ class VideoDecoder(
      */
     val hasRenderedThisSession: Boolean get() = renderedThisSession
 
+    /**
+     * Whether a keyframe has produced output since the codec last started or took a surface. A
+     * rebuilt codec renders from the first P-frame it is fed, so frames coming out are not a
+     * picture until this is true: until then they are drawn against no reference.
+     */
+    val keyframeDecodedSinceStart: Boolean get() = keyframeRepair.keyframeDecoded
+
     enum class CodecType(val mimeType: String, val displayName: String, val settingsValue: String) {
         H264("video/avc", "H.264/AVC", "H.264"),
         H265("video/hevc", "H.265/HEVC", "H.265")
@@ -1807,7 +1814,7 @@ class VideoDecoder(
             }
 
             try {
-                val outputIndex = currentCodec.dequeueOutputBuffer(bufferInfo, 10000L)
+                val outputIndex = currentCodec.dequeueOutputBuffer(bufferInfo, 50_000L) // CarLink: open-headunit 931fadf4, ready output still returns at once
                 if (outputIndex >= 0) {
                     // Catch up to the newest ready frame instead of replaying the backlog. A link
                     // that goes quiet for a few hundred milliseconds delivers what it owed in one

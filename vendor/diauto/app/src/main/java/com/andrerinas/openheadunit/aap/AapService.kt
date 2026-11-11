@@ -1936,13 +1936,23 @@ class AapService : Service(), UsbReceiver.Listener {
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             try {
                 startForeground(1, createNotification(), types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+                foregroundWithMicrophone = true
                 return
             } catch (e: SecurityException) {
+                // CarLink (open-headunit 66d22d81): a later start from the background is refused the type;
+                // re-claiming without it would take the microphone from a running call or Assistant.
+                if (foregroundWithMicrophone) {
+                    AppLog.i("AapService: later start refused the microphone type; keeping the running claim")
+                    return
+                }
                 AppLog.w("AapService: started without the microphone type: ${e.message}")
             }
         }
         startForeground(1, createNotification(), types)
     }
+
+    /** CarLink: this service already runs in the foreground with the microphone type. */
+    private var foregroundWithMicrophone = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
