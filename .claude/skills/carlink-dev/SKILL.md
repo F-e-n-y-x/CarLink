@@ -117,6 +117,7 @@ The hooks CarLink sets (where):
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
+| | `liveSizeWidthsMm`; `setInterfaceSizeLive` (call: the size as a smaller view area, false = reconnect) | `CarPlayAdapter.install`; `switcher/SwitcherController` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 | DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |
