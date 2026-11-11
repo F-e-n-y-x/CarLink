@@ -28,13 +28,16 @@ object HeadUnitDetector {
     }
 
     /**
-     * A phone or tablet, whose screen turns: a phone radio or a battery, and not Automotive. Unlike
+     * A phone or tablet, whose screen turns: an accelerometer, a phone radio or a battery, and not Automotive. Unlike
      * [looksLikeCarDisplay] it ignores the car UI mode, which a phone enters for a while (seen
      * 2026-11-10 on a Galaxy S25 while it was plugged in) and leaves again.
      */
     fun handheld(context: Context): Boolean {
         val pm = context.packageManager
         if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return false
+        // Head units with a 4G modem or a reported battery passed the old test and lost their safe
+        // area to the turning canvas (#65); a screen that turns has an accelerometer to turn it.
+        if (!pm.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER)) return false
         return pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) || hasBattery(context)
     }
 

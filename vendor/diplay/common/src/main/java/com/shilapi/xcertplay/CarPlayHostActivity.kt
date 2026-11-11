@@ -5121,7 +5121,9 @@ open class CarPlayHostActivity : ComponentActivity() {
             } else null
         }
         val longPixels = maxOf(display.widthPixels, display.heightPixels)
-        val square = if (CarPlayRotation.enabled(this) && !inSplitScreen) {
+        // CarLink: a saved custom safe area means a fixed screen fitted to its bezel; the square has no room for it (#65).
+        val square = if (CarPlayRotation.enabled(this) && !inSplitScreen &&
+            AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height) == null) {
             CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), sessionHevc, hevcSoftwareDecoderEnabled)
         } else null
         val canvas = if (square == null) display else {
