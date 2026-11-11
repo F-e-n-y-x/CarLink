@@ -2338,7 +2338,11 @@ class CarPlayController(
      * session left wired CarPlay waiting for minutes (#335). Without an attach the iPhone is looked at again,
      * which uses the mode it already offers, as before the request.
      */
-    private fun watchReenumeration(device: UsbDevice) = lookForReenumeratedIphone(device, REENUMERATION_WAIT_MILLIS) // CarLink: upstream PR #1251
+    private fun watchReenumeration(device: UsbDevice) = lookForReenumeratedIphone(device, // CarLink: upstream PR #1251
+        // CarLink: an iPhone asked again on the enumeration of the session that just ended ignores the request
+        // (tablet 2026-11-11, interface-size restart: 10 s unanswered, then the same mode worked in 1.5 s); one
+        // that honours it leaves the bus within about a second. Look again sooner in that case.
+        if (WiredSessionMemory.startedOn(device.deviceName)) SAME_ENUMERATION_WAIT_MILLIS else REENUMERATION_WAIT_MILLIS)
 
     /**
      * Some head units never broadcast the attach of the iPhone back in CarPlay mode, which left wired CarPlay
@@ -2357,7 +2361,7 @@ class CarPlayController(
             when {
                 listed != null -> {
                     connectionDiagnostic(
-                        "USB transition unanswered after ${REENUMERATION_WAIT_MILLIS}ms count=$attempt; checking the iPhone again",
+                        "USB transition unanswered after ${delayMillis}ms count=$attempt; checking the iPhone again",
                     )
                     requestIphonePermission(listed)
                 }
@@ -3539,6 +3543,7 @@ class CarPlayController(
         private const val MAXIMUM_REENUMERATION_ATTEMPTS = 2
         /** An iPhone answers the mode request within about a second; one took six (#335). */
         const val REENUMERATION_WAIT_MILLIS = 10_000L
+        const val SAME_ENUMERATION_WAIT_MILLIS = 2_500L // CarLink
         private const val IPHONE_NOT_LISTED_AFTER_MILLIS = 20_000L
         private const val START_SESSION_PROGRESS = "iap2 tx=0x4301"
         private const val EXECUTOR_CLOSE_TIMEOUT_MILLIS = 2_000L
