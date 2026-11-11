@@ -157,6 +157,18 @@ internal class AaSessionTracker(
                 accepted = true
                 progress(3, ProgressStage.JOINING_WIFI)
             }
+            // The engine re-offers the network on the phone's held Bluetooth channel after a drop:
+            // the phone is answering, so no repoke (its re-arm would close that channel). A
+            // fallback is the ordinary re-arm, which the usual repoke follows.
+            EngineEvent.QUICK_RECONNECT.name -> if (d["result"] == "fallback") {
+                backToWaiting(now)
+                nextRepokeAt = now + limits.repokeAfterLossMillis
+                emptyList()
+            } else {
+                accepted = true
+                nextRepokeAt = null
+                progress(2, ProgressStage.HANDSHAKE)
+            }
             EngineEvent.POKE_ANSWERED_NO_ACCEPT.name -> repeatOrFail(++pokeNoAccept, limits.maxPokeNoAccept,
                 FailureReason.PHONE_DID_NOT_ANSWER, "the phone answers Bluetooth but never starts Android Auto", now, waiting = false)
             EngineEvent.HANDSHAKE_BACKOFF.name ->
@@ -351,7 +363,7 @@ internal class AaSessionTracker(
             EngineEvent.DFS_CHANNEL.name,
             EngineEvent.BSSID_UNRESOLVED.name, EngineEvent.BLUETOOTH_UNAVAILABLE.name,
             EngineEvent.EXTERNAL_BLUETOOTH.name, EngineEvent.EXTERNAL_MODULE_UNAVAILABLE.name, EngineEvent.BT_CHANNEL_ACCEPTED.name,
-            EngineEvent.CREDENTIALS_SENT.name, EngineEvent.POKE_ANSWERED_NO_ACCEPT.name,
+            EngineEvent.CREDENTIALS_SENT.name, EngineEvent.POKE_ANSWERED_NO_ACCEPT.name, EngineEvent.QUICK_RECONNECT.name,
             EngineEvent.HANDSHAKE_BACKOFF.name, EngineEvent.PHONE_WIFI_STATUS.name,
             EngineEvent.SETTLE_TIMEOUT.name, EngineEvent.LINK_READ_TIMEOUT.name,
             EngineEvent.BOOT_LOOP_PAUSE.name,

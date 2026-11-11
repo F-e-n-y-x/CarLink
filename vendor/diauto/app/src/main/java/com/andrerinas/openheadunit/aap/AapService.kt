@@ -1225,14 +1225,12 @@ class AapService : Service(), UsbReceiver.Listener {
                 if (state.isUserExit) {
                     AppLog.i("AapService: Native AA user exit. Stopping handshake manager.")
                     nativeAaHandshakeManager?.stop()
+                } else if (nativeAaHandshakeManager?.beginQuickReconnect(state.isUserExit) == true) {
+                    // CarLink (quick reconnect): the held Bluetooth channel offers the network again;
+                    // it calls rearmNativeAfterDrop() itself if that does not land.
+                    AppLog.i("AapService: Native AA Mode disconnected. Quick reconnect on the held Bluetooth channel.")
                 } else {
-                    // Unexpected disconnect — reset and re-initialize for auto-reconnect.
-                    AppLog.i("AapService: Native AA Mode disconnected. Resetting manager and group in 1.5s...")
-                    nativeAaHandshakeManager?.stop()
-                    serviceScope.launch {
-                        delay(1500) // Give hardware time to settle before re-initializing P2P
-                        initWifiMode(force = true)
-                    }
+                    rearmNativeAfterDrop()
                 }
             }
 
@@ -1321,6 +1319,16 @@ class AapService : Service(), UsbReceiver.Listener {
         }
 
         scheduleReconnectIfNeeded(state)
+    }
+
+    /** Unexpected Native AA disconnect: reset and re-initialize for auto-reconnect. CarLink: a function so a failed quick reconnect can run it too. */
+    fun rearmNativeAfterDrop() {
+        AppLog.i("AapService: Native AA Mode disconnected. Resetting manager and group in 1.5s...")
+        nativeAaHandshakeManager?.stop()
+        serviceScope.launch {
+            delay(1500) // Give hardware time to settle before re-initializing P2P
+            initWifiMode(force = true)
+        }
     }
 
     /**
