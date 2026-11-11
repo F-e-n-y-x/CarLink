@@ -121,6 +121,7 @@ The hooks CarLink sets (where):
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 | DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |
 | | `usbAttachAgeMillis` (default-grant wait counted from the attach, `detect/UsbAttachTimes`) | `CarPlayAdapter.install` |
+| | `resetWiredUsb` (one USB reset of a wired start stuck 8 s after the data paths, `connection/UsbReset`) | `CarPlayAdapter.install` |
 
 ## Build and test loop
 

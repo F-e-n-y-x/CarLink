@@ -173,6 +173,26 @@ class Iap2WirelessControlClientTest {
         assertArrayEquals(byteArrayOf(0), wireless.single { it.id == 4 }.payload)
     }
 
+    @Test fun startSessionEncodesMultipleIpAddresses() {
+        val dualStack = Iap2WirelessCarPlayEndpoint(
+            ssid = "DiPlay-Car",
+            passphrase = "password123",
+            channel = 36,
+            security = Iap2WirelessSecurity.WPA_WPA2,
+            ipAddresses = listOf("192.168.43.1", "fe80::1234"),
+            airPlayPort = 7000,
+            deviceIdentifier = "dev-1",
+            publicKey = "aabbcc",
+            sourceVersion = "1.0",
+        )
+        val start = parameters(Iap2WirelessControlClient.carPlayStartSession(dualStack).payload)
+        val wireless = parameters(start.single { it.id == 1 }.payload)
+        val ipParams = wireless.filter { it.id == 3 }
+        assertEquals(2, ipParams.size)
+        assertEquals("192.168.43.1", ipParams[0].payload.decodeToString().replace(" ", ""))
+        assertEquals("fe80::1234", ipParams[1].payload.decodeToString().replace(" ", ""))
+    }
+
     @Test fun securedSessionStillRejectsAnEmptyCredential() {
         assertThrows(IllegalArgumentException::class.java) {
             Iap2WirelessSessionParameters("Guest", "", 36, listOf("fe80::1234"), 2)
