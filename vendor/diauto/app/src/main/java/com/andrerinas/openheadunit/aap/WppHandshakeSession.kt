@@ -70,6 +70,11 @@ sealed class WppEvent {
     object PeerClosed : WppEvent()
     /** CarLink (PR #1029): the projection session this channel was held for has ended. */
     object SessionEnded : WppEvent()
+    /**
+     * CarLink (quick reconnect): the session this channel was held for dropped and the network is
+     * offered again on the same channel. Only acted on in [WppStage.HOLDING].
+     */
+    object Reoffer : WppEvent()
 }
 
 /**
@@ -172,6 +177,9 @@ class WppHandshakeSession(
     /** Credentials arrived while we were still waiting on the version response. */
     private var credentialsLatched = false
 
+    /** CarLink (quick reconnect): this exchange re-offers the network on a held channel. */
+    private var reoffered = false
+
     /** Total time allowed in [WppStage.SETTLING], grown by [WppAction.ExtendSettle]. */
     private var settleBudgetMs = NativeHandoffPolicy.SETTLE_TIMEOUT_MS
 
@@ -226,6 +234,13 @@ class WppHandshakeSession(
         }
         event is WppEvent.PeerClosed -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = true)) }
         event is WppEvent.SessionEnded -> { stage = WppStage.DONE; listOf(WppAction.Release(peerClosed = false)) }
+        // CarLink (quick reconnect): Type 1 again; the rest of the exchange runs as the first time.
+        event is WppEvent.Reoffer -> {
+            reoffered = true
+            settleBudgetMs = NativeHandoffPolicy.SETTLE_TIMEOUT_MS
+            stage = WppStage.AWAIT_INFO_REQUEST
+            listOf(WppAction.SendStartRequest)
+        }
         else -> emptyList()
     }
 
@@ -282,6 +297,11 @@ class WppHandshakeSession(
             } else {
                 emptyList()
             }
+        // CarLink (quick reconnect): a phone still on our network may dial straight back after Type 1.
+        event is WppEvent.TcpSessionUp && reoffered -> {
+            stage = WppStage.HOLDING
+            listOf(WppAction.CompleteSuccess)
+        }
         event is WppEvent.StageTimeout ->
             fail("phone did not ask for credentials within ${INFO_REQUEST_TIMEOUT_MS / 1000}s of WifiStartRequest")
         event is WppEvent.CredentialsUnavailable -> fail("WiFi credentials went away mid-handshake")

@@ -280,6 +280,29 @@ class AaSessionTrackerTest {
         assertFalse(usb().shouldRepoke(now + 100_000))
     }
 
+    @Test fun aQuickReconnectIsARetryOfTheSameSessionWithNoRepoke() {
+        val t = wireless()
+        t.state(P.CONNECTION_TRANSPORT_STARTED, firstFrame = true)
+        assertEquals(listOf(AdapterEvent.Retrying(1, FailureReason.ENGINE)), t.event(EngineEvent.SESSION_ENDED, "userExit=false;clean=false"))
+        assertEquals(listOf(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)), t.event(EngineEvent.QUICK_RECONNECT, "result=started"))
+        assertFalse("a repoke would re-arm the engine and close the held channel", t.shouldRepoke(now + 3_000))
+        assertEquals(emptyList<AdapterEvent>(), t.after(limits.acceptTimeoutMillis))
+        t.state(P.CONNECTION_CONNECTING)
+        assertEquals(listOf(AdapterEvent.Connected), t.event(EngineEvent.FIRST_VIDEO_FRAME))
+    }
+
+    @Test fun aQuickReconnectFallbackWaitsAndRepokesAsAfterAnyLoss() {
+        val t = wireless()
+        t.state(P.CONNECTION_TRANSPORT_STARTED, firstFrame = true)
+        t.event(EngineEvent.SESSION_ENDED, "userExit=false;clean=false")
+        t.event(EngineEvent.QUICK_RECONNECT, "result=started")
+        now += 20_000
+        assertEquals(emptyList<AdapterEvent>(), t.event(EngineEvent.QUICK_RECONNECT, "result=fallback"))
+        assertTrue(t.shouldRepoke(now + 3_000))
+        assertEquals(listOf(AdapterEvent.Progress(2, 4, ProgressStage.HANDSHAKE)), t.event(EngineEvent.BT_CHANNEL_ACCEPTED))
+        assertEquals(emptyList<AdapterEvent>(), usb().event(EngineEvent.QUICK_RECONNECT, "result=started"))
+    }
+
     // ---- RELIABILITY_AUDIT K2: a stale USB accessory ----
 
     @Test fun aUsbSessionThatEndsBeforeAnyFrameIsReswitchedAtOnce() {

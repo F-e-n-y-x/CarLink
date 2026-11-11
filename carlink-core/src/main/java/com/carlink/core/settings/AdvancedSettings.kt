@@ -2,6 +2,7 @@ package com.carlink.core.settings
 
 import android.content.Context
 import android.os.Bundle
+import com.andrerinas.openheadunit.connection.QuickReconnectPolicy
 import com.carlink.core.core.Engine
 import com.carlink.core.engine.AndroidAutoSettings
 import com.shilapi.xcertplay.AirPlayPersistence
@@ -290,6 +291,9 @@ object AdvancedSettings {
         AdvancedSetting("aa_p2p_24", Engine.ANDROID_AUTO, SettingsCategory.CONNECTION, Tier.LAB,
             "Force Wi-Fi Direct onto 2.4 GHz", "For head units whose 5 GHz Wi-Fi Direct is unreliable.",
             Applies.NEXT_CONNECTION, aaToggle("debug-force-p2p-band-24", false)),
+        AdvancedSetting("aa_quick_reconnect", Engine.ANDROID_AUTO, SettingsCategory.CONNECTION, Tier.LAB,
+            "Quick wireless reconnect", "After a Wi-Fi drop, offer the network again over the phone's open Bluetooth link.",
+            Applies.NEXT_CONNECTION, aaToggle(QuickReconnectPolicy.HOST_KEY, false)),
         AdvancedSetting("aa_fps_counter", Engine.ANDROID_AUTO, SettingsCategory.GENERAL, Tier.LAB,
             "Show frame counter", "Overlay the Android Auto frame rate.", Applies.NOW, aaToggle("show-fps-counter", false)),
         AdvancedSetting("aa_low_latency", Engine.ANDROID_AUTO, SettingsCategory.GENERAL, Tier.LAB,

@@ -421,6 +421,48 @@ class WppHandshakeSessionTest {
         assertTrue(s.isTerminal())
     }
 
+    // --- CarLink: quick reconnect on the held channel ---
+
+    @Test
+    fun `a re-offer sends type 1 again and runs the exchange back into holding`() {
+        val s = heldSession()
+
+        assertEquals(listOf(WppAction.SendStartRequest), s.on(WppEvent.Reoffer))
+        assertEquals(WppStage.AWAIT_INFO_REQUEST, s.stage)
+        assertEquals(listOf(WppAction.SendInfoResponse), s.on(msg(WppMessageType.INFO_REQUEST)))
+        assertEquals(listOf(WppAction.CompleteSuccess), s.on(WppEvent.TcpSessionUp))
+        assertEquals(WppStage.HOLDING, s.stage)
+    }
+
+    @Test
+    fun `a phone still on the network may land before asking for credentials after a re-offer`() {
+        val s = heldSession()
+        s.on(WppEvent.Reoffer)
+
+        assertEquals(listOf(WppAction.CompleteSuccess), s.on(WppEvent.TcpSessionUp))
+        assertEquals(WppStage.HOLDING, s.stage)
+    }
+
+    @Test
+    fun `a re-offer the phone ignores fails, so the caller falls back`() {
+        val s = heldSession()
+        s.on(WppEvent.Reoffer)
+
+        assertTrue(s.on(WppEvent.StageTimeout).single() is WppAction.Fail)
+        assertTrue(s.isTerminal())
+    }
+
+    @Test
+    fun `a re-offer means nothing outside holding, and the first exchange ignores an early landing`() {
+        val s = WppHandshakeSession(versionExchangeEnabled = false, holdsChannel = true)
+        s.on(WppEvent.SocketReady)
+        s.on(WppEvent.CredentialsReady)
+
+        assertEquals(emptyList<WppAction>(), s.on(WppEvent.Reoffer))
+        assertEquals(emptyList<WppAction>(), s.on(WppEvent.TcpSessionUp))
+        assertEquals(WppStage.AWAIT_INFO_REQUEST, s.stage)
+    }
+
     @Test
     fun `release events mean nothing before the session lands`() {
         val s = WppHandshakeSession(versionExchangeEnabled = true, holdsChannel = true)

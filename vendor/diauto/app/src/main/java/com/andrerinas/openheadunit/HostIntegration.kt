@@ -162,6 +162,11 @@ object HostIntegration {
         ORIENTATION_CHANGED,
         /** CarLink: this unit could not create its Wi-Fi Direct group at all (#40). Detail: `reason=`. */
         WIFI_DIRECT_GROUP_FAILED,
+        /**
+         * CarLink: a dropped wireless session is offered the network again on the held Bluetooth
+         * channel (`QuickReconnectPolicy`). Detail: `result=started|fallback` (fallback: the full re-arm runs).
+         */
+        QUICK_RECONNECT,
     }
 
     /**

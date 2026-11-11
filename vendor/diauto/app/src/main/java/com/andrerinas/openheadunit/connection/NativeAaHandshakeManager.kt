@@ -149,6 +149,10 @@ class NativeAaHandshakeManager(
     // hands-free stack of its own. Answered once in start(); the poke needs the same answer the HFP
     // listener acted on, because driving a link from here would compete with a real stack.
     @Volatile private var standingInForHfp = false
+    // CarLink (quick reconnect, QuickReconnectPolicy): the phone's channel is held for a live
+    // session, and AapService asked to offer the network again on it after the session dropped.
+    @Volatile private var holdingChannel = false
+    @Volatile private var quickReconnectRequested = false
 
     /**
      * The credentials to hand the phone, as one value.
@@ -285,6 +289,23 @@ class NativeAaHandshakeManager(
     // ACL_CONNECTED broadcast that re-triggers AapService's BT auto-start re-arm; callers
     // deciding whether it's safe to force-reinit should check this instead of isActive() alone.
     fun isAttemptInFlight(): Boolean = isHandshakeInFlight() || pokeAttemptInFlight || isHandoffSettling()
+
+    /**
+     * CarLink (quick reconnect): called by AapService when a wireless session dropped. True when the
+     * held channel will offer the network again (Type 1 on the same socket), so the caller must not
+     * stop this manager; false means nothing changed and the full re-arm runs as before.
+     */
+    fun beginQuickReconnect(userExit: Boolean): Boolean {
+        if (!QuickReconnectPolicy.shouldTry(QuickReconnectPolicy.enabled(context), userExit,
+                com.andrerinas.openheadunit.HostIntegration.usbOnlySession,
+                holdingChannel && activeHandshakeSocket != null, credentials != null)) return false
+        // Stamped now so the Bluetooth auto-start re-arm and the join watchdog see an exchange.
+        handshakeStartedAt = SystemClock.elapsedRealtime()
+        quickReconnectRequested = true
+        com.andrerinas.openheadunit.HostIntegration.engineEvent(context,
+            com.andrerinas.openheadunit.HostIntegration.EngineEvent.QUICK_RECONNECT, "result=started")
+        return true
+    }
 
     @SuppressLint("MissingPermission")
     fun start() {
@@ -1103,6 +1124,9 @@ class NativeAaHandshakeManager(
         // whether this attempt counts against consecutiveHandshakeFailures.
         var spokeToPhone = false
         var abortedLocally = false
+        // CarLink (quick reconnect): a re-offer on this held channel has not landed yet.
+        var quickPending = false
+        val quickEnabled = QuickReconnectPolicy.enabled(context)
         // Captured once, so a settings change mid-exchange cannot split it across two rulesets.
         val transport = NativeTransport.fromSetting(settings.nativeApTransport)
         // CarLink (PR #1029): hold this Bluetooth channel for the whole session once it lands.
@@ -1179,6 +1203,7 @@ class NativeAaHandshakeManager(
             var holdingSince = 0L
             var pingsWhileHolding = 0
             var lastHoldSummaryAt = 0L
+            var sessionGoneAt = 0L // CarLink (quick reconnect)
             // CarLink (ZbtRetransmitPolicy port): when the opening message last went out.
             var lastOpenerSentAt = 0L
 
@@ -1288,7 +1313,11 @@ class NativeAaHandshakeManager(
                         AppLog.i("NativeAA: WiFi session landed. Holding the Bluetooth channel for the session and answering the phone's pings, as a head unit does.")
                         holdingSince = SystemClock.elapsedRealtime()
                         lastHoldSummaryAt = holdingSince
+                        if (quickPending) AppLog.i("NativeAA: quick reconnect landed on the held Bluetooth channel.") // CarLink
+                        quickPending = false // CarLink (quick reconnect)
+                        sessionGoneAt = 0L
                         ifOwner(socket) {
+                            holdingChannel = true // CarLink (quick reconnect)
                             handshakeStartedAt = 0L
                             handoffSettlingSince = 0L
                             // The held channel is the only one this session needs. See closeAaListeners().
@@ -1296,6 +1325,7 @@ class NativeAaHandshakeManager(
                         }
                     }
                     is WppAction.Release -> { // CarLink (PR #1029)
+                        ifOwner(socket) { holdingChannel = false } // CarLink (quick reconnect)
                         val heldS = (SystemClock.elapsedRealtime() - holdingSince) / 1000
                         if (action.peerClosed) {
                             AppLog.w("NativeAA: the phone closed the held Bluetooth channel after ${heldS}s and $pingsWhileHolding pings; the Android Auto listeners reopen when this session ends.")
@@ -1344,6 +1374,33 @@ class NativeAaHandshakeManager(
                     stageEnteredAt = SystemClock.elapsedRealtime()
                     AppLog.d("NativeAA: Handshake stage $before -> ${session.stage}")
                 }
+            }
+
+            /**
+             * CarLink (quick reconnect): the session dropped; offer this unit's network again on the
+             * held channel. Credentials and port are checked as for the first offer; without them
+             * the channel is released, and the finally block runs the full re-arm.
+             */
+            suspend fun reoffer() {
+                quickPending = true
+                val live = credentials
+                val ready = live != null && NativeCredentialsPolicy.isUsableBssid(live.bssid.uppercase()) &&
+                    (awaitWirelessServerListening(PORT_WAIT_MS) ||
+                        context.ensureWirelessServerListening("the quick reconnect", PORT_ENSURE_MS))
+                if (!ready || live == null) {
+                    AppLog.w("NativeAA: quick reconnect not possible (credentials or port 5288 not ready).")
+                    feed(WppEvent.SessionEnded)
+                    return
+                }
+                credIp = live.ip
+                credSsid = live.ssid
+                credPsk = live.psk
+                credBssid = live.bssid.uppercase()
+                bssidOmitted = false
+                capturedNetwork = CredentialFreshnessPolicy.Network(credSsid, credPsk, credIp, credBssid)
+                AppLog.i("NativeAA: the Wi-Fi session dropped; offering the network again on the held Bluetooth channel (quick reconnect).")
+                ifOwner(socket) { handshakeStartedAt = SystemClock.elapsedRealtime() }
+                feed(WppEvent.Reoffer)
             }
 
             /** Waits up to [budgetMs] for one message, then services timers. */
@@ -1400,8 +1457,15 @@ class NativeAaHandshakeManager(
                     val now = SystemClock.elapsedRealtime()
                     val sessionAlive = commManager.isConnected ||
                         commManager.connectionState.value is CommManager.ConnectionState.Connecting
+                    // CarLink (quick reconnect): a dropped session may be re-offered on this channel.
+                    if (sessionAlive) sessionGoneAt = 0L else if (sessionGoneAt == 0L) sessionGoneAt = now
                     when {
                         readerClosed -> feed(WppEvent.PeerClosed)
+                        !sessionAlive && quickReconnectRequested -> {
+                            quickReconnectRequested = false
+                            reoffer()
+                        }
+                        !sessionAlive && QuickReconnectPolicy.waitsForDecision(quickEnabled, now - sessionGoneAt) -> {}
                         !sessionAlive -> feed(WppEvent.SessionEnded)
                         now - lastHoldSummaryAt >= HOLD_SUMMARY_INTERVAL_MS -> {
                             lastHoldSummaryAt = now
@@ -1410,7 +1474,7 @@ class NativeAaHandshakeManager(
                     }
                     return
                 }
-                if (session.stage == WppStage.SETTLING &&
+                if ((session.stage == WppStage.SETTLING || (quickPending && session.stage == WppStage.AWAIT_INFO_REQUEST)) && // CarLink (quick reconnect)
                     (commManager.isConnected ||
                         commManager.connectionState.value is CommManager.ConnectionState.Connecting)) {
                     feed(WppEvent.TcpSessionUp)
@@ -1577,6 +1641,11 @@ class NativeAaHandshakeManager(
                     resendOpener({ sendWifiStartRequest(output, credIp, 5288) }, "WifiStartRequest (Type 1)")
                 }
                 tick(250)
+                // CarLink (quick reconnect): a closed channel cannot carry the phone's Type 2.
+                if (quickPending && readerClosed && session.stage == WppStage.AWAIT_INFO_REQUEST) {
+                    AppLog.i("NativeAA: the phone closed the held Bluetooth channel during the quick reconnect.")
+                    break
+                }
             }
 
         } catch (e: Exception) {
@@ -1584,7 +1653,14 @@ class NativeAaHandshakeManager(
         } finally {
             // Only clear the stamps if this handshake still owns them — a superseding handshake
             // has already taken over and set its own.
+            // CarLink (quick reconnect): a re-offer that did not land falls back to the full re-arm,
+            // unless the manager was stopped (user exit, service stop) or a session is up after all.
+            var quickFallback = false
             if (activeHandshakeSocket === socket) {
+                holdingChannel = false
+                quickFallback = (quickPending || quickReconnectRequested) && isRunning &&
+                    !(commManager.isConnected || commManager.connectionState.value is CommManager.ConnectionState.Connecting)
+                quickReconnectRequested = false
                 activeHandshakeSocket = null
                 activeHandshakeJob = null
                 handshakeStartedAt = 0L
@@ -1606,6 +1682,12 @@ class NativeAaHandshakeManager(
             inbound.close()
             try { socket.close() } catch (e: Exception) {}
             AppLog.i("NativeAA: BT Handshake socket closed.")
+            if (quickFallback) { // CarLink (quick reconnect)
+                AppLog.i("NativeAA: quick reconnect did not land; falling back to the full Bluetooth reconnect.")
+                com.andrerinas.openheadunit.HostIntegration.engineEvent(context,
+                    com.andrerinas.openheadunit.HostIntegration.EngineEvent.QUICK_RECONNECT, "result=fallback")
+                context.rearmNativeAfterDrop()
+            }
         }
     }
 
