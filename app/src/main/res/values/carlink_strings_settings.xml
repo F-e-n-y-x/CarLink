@@ -137,6 +137,14 @@
     <string name="carlink_settings_sound_bluetooth">Through the car’s Bluetooth</string>
     <string name="carlink_settings_sound_carlink_detail">The head unit plays all sound. Recommended.</string>
     <string name="carlink_settings_sound_bluetooth_detail">Music goes through the car’s own Bluetooth audio instead.</string>
+    <string name="carlink_settings_audio_delay">CarPlay audio delay</string>
+    <string name="carlink_settings_audio_delay_detail">How far music and video sound is buffered behind the picture</string>
+    <string name="carlink_settings_audio_delay_low">Low</string>
+    <string name="carlink_settings_audio_delay_normal">Normal</string>
+    <string name="carlink_settings_audio_delay_high">High</string>
+    <string name="carlink_settings_audio_delay_low_detail">Sound closest to the picture: about 0.1 s over USB. Wireless stays at 0.3 s. Try Normal if music stutters.</string>
+    <string name="carlink_settings_audio_delay_normal_detail">About 0.3 s over USB and wireless. Recommended.</string>
+    <string name="carlink_settings_audio_delay_high_detail">Steadiest music on a weak link: about 0.5 s over USB, 1 s wireless.</string>
 
     <!-- Navigation -->
     <string name="carlink_settings_group_location">Location</string>

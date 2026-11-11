@@ -49,6 +49,14 @@ class SettingsStoresTest {
         Picture.entries.forEach { store.save(UnifiedSettings(picture = it)); assertEquals(it, store.load().picture) }
         InterfaceSize.entries.forEach { store.save(UnifiedSettings(interfaceSize = it)); assertEquals(it, store.load().interfaceSize) }
         DayNight.entries.forEach { store.save(UnifiedSettings(dayNight = it)); assertEquals(it, store.load().dayNight) }
+        AudioDelay.entries.forEach { store.save(UnifiedSettings(audioDelay = it)); assertEquals(it, store.load().audioDelay) }
+    }
+
+    @Test fun audioDelayFollowsTheMusicBufferAnEarlierVersionSetUntilSaved() {
+        com.shilapi.xcertplay.AirPlayPersistence.saveMediaBufferMillis(app, wireless = true, millis = 1000)
+        assertEquals(AudioDelay.HIGH, UnifiedSettingsStore(app).load().audioDelay)
+        UnifiedSettingsStore(app).save(UnifiedSettings(audioDelay = AudioDelay.LOW))
+        assertEquals(AudioDelay.LOW, UnifiedSettingsStore(app).load().audioDelay)
     }
 
     @Test fun savingDefaultsAgainClearsEarlierValues() {

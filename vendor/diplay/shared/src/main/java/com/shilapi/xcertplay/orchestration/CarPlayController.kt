@@ -260,6 +260,7 @@ class CarPlayController(
     private var permissionPollGeneration = 0
     private var reenumerationAttempts = 0
     @Volatile private var wiredDeviceName: String? = null
+    @Volatile private var wiredReuseCandidate: Pair<String, String>? = null // CarLink: serial to device name, WiredReuseMemory
     private val usbAdbGrantAttempts = mutableSetOf<String>()
     private val pendingUsbAdbGrants = mutableSetOf<String>()
     private var lastReportedStatus: CarPlayStatus? = null
@@ -406,6 +407,13 @@ class CarPlayController(
             wiredSessionActive = true
             wiredStartWatchdog?.sessionActive()
             if (config.transport == CarPlayTransport.WIRED) WiredStuckReset.sessionReached() // CarLink
+            wiredReuseCandidate?.let { (serial, node) -> // CarLink: WiredReuseMemory
+                wiredReuseCandidate = null
+                if (config.transport == CarPlayTransport.WIRED && wiredDeviceName == node) {
+                    WiredReuseMemory.remember(appContext, serial)
+                    debugLog("wired: remembered that this iPhone reuses its mode after a session on the same enumeration")
+                }
+            }
             if (currentCornerMask?.session !== session) currentCornerMask = null
             val replacement = activeSession !== session
             if (replacement) {
@@ -2234,6 +2242,7 @@ class CarPlayController(
         pendingUsbAdbGrants.clear()
         phase = Phase.IPHONE
         reenumerationAttempts = 0
+        wiredReuseCandidate = null // CarLink
         iphoneWaitStartedAt = null
         onStatus(CarPlayStatus.DiscoveringIphone)
         checkIphoneAvailability()
@@ -2373,20 +2382,32 @@ class CarPlayController(
                         val configuration = IphoneCarPlayConfiguration.find(result.device)
                         val carPlayMode = configuration?.let(IphoneCarPlayConfiguration::isCarPlayMode) == true
                         val sessionAlreadyStarted = WiredSessionMemory.startedOn(result.device.deviceName)
+                        // CarLink: WiredReuseMemory; the serial needs the permission granted here.
+                        val reuseSerial = if (sessionAlreadyStarted && carPlayMode) {
+                            runCatching { result.device.serialNumber }.getOrNull()?.takeIf { it.isNotBlank() }
+                        } else null
+                        val reuseRemembered = reuseSerial != null && WiredReuseMemory.knows(appContext, reuseSerial)
                         val action = WiredConfigurationAction.choose(
                             found = configuration != null,
                             carPlayMode = carPlayMode,
                             transitionsTried = reenumerationAttempts,
                             maximumTransitions = MAXIMUM_REENUMERATION_ATTEMPTS,
                             sessionAlreadyStarted = sessionAlreadyStarted,
+                            reuseRemembered = reuseRemembered,
                         )
                         connectionDiagnostic(
                             "USB configuration ready=${configuration != null} " +
                                 "configurationId=${configuration?.id ?: "none"} " +
                                 "reenumerationAttempts=$reenumerationAttempts " +
                                 (if (sessionAlreadyStarted && carPlayMode) "previousSessionOnThisEnumeration=true " else "") +
+                                (if (reuseRemembered) "reuseRemembered=true " else "") + // CarLink
                                 "action=${action.diagnostic}",
                         )
+                        // CarLink: a reuse on the same enumeration (remembered, or after an ignored request) is
+                        // remembered when it reaches an AirPlay session; a remembered one is forgotten until then.
+                        wiredReuseCandidate = reuseSerial?.takeIf { action == WiredConfigurationAction.USE }
+                            ?.also { if (reuseRemembered) WiredReuseMemory.forget(appContext, it) }
+                            ?.let { it to result.device.deviceName }
                         when (action) {
                             WiredConfigurationAction.USE,
                             WiredConfigurationAction.USE_WITHOUT_APPLE_ETHERNET -> openDataPaths(result.device)

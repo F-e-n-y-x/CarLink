@@ -314,6 +314,10 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             }
         }
     },
+    GalleryEntry("settings", "sheet-audio-delay", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.SOUND,
+            initialSheet = SheetKey.of(EssentialSheet.AUDIO_DELAY))
+    },
     GalleryEntry("settings", "sound-advanced-lab") {
         SettingsContent(settingsPreviewUi(showAdvanced = true, lab = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.SOUND)

@@ -53,6 +53,20 @@ class WiredConfigurationActionTest {
         assertFalse(WiredConfigurationAction.fallbackAfterRejection(found = true, carPlayMode = true))
     }
 
+    // CarLink: WiredReuseMemory. An iPhone known to ignore the request on the same enumeration reuses its mode at once.
+    @Test fun aRememberedReuseSkipsTheRequestOnTheSameEnumerationOnly() {
+        assertEquals(WiredConfigurationAction.USE, WiredConfigurationAction.choose(true, true, 0, maximumTransitions = 2,
+            sessionAlreadyStarted = true, reuseRemembered = true))
+        // Without the memory the request path stays, so a failed reuse (memory forgotten) asks again.
+        assertEquals(WiredConfigurationAction.REQUEST_TRANSITION, WiredConfigurationAction.choose(true, true, 0,
+            maximumTransitions = 2, sessionAlreadyStarted = true, reuseRemembered = false))
+        // The memory never stands in for a missing CarPlay mode or configuration.
+        assertEquals(WiredConfigurationAction.REQUEST_TRANSITION, WiredConfigurationAction.choose(true, false, 0,
+            maximumTransitions = 2, sessionAlreadyStarted = true, reuseRemembered = true))
+        assertEquals(WiredConfigurationAction.REQUEST_TRANSITION, WiredConfigurationAction.choose(false, false, 0,
+            maximumTransitions = 2, sessionAlreadyStarted = true, reuseRemembered = true))
+    }
+
     @Test fun theMemoryMatchesOnlyTheSameEnumeration() {
         WiredSessionMemory.clear()
         assertFalse(WiredSessionMemory.startedOn("/dev/bus/usb/001/005"))

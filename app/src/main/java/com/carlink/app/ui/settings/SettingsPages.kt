@@ -189,6 +189,10 @@ private fun SoundEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
             stringResource(if (bluetooth) R.string.carlink_settings_sound_bluetooth else R.string.carlink_settings_sound_carlink),
             { openSheet(SheetKey.of(EssentialSheet.SOUND)) }, description = stringResource(R.string.carlink_settings_sound_detail),
             icon = if (bluetooth) R.drawable.carlink_ic_bluetooth else R.drawable.carlink_ic_volume_up)
+        GroupDivider()
+        ChoiceRow(stringResource(R.string.carlink_settings_audio_delay), audioDelayLabel(ui.unified.audioDelay),
+            { openSheet(SheetKey.of(EssentialSheet.AUDIO_DELAY)) }, description = stringResource(R.string.carlink_settings_audio_delay_detail),
+            icon = R.drawable.carlink_ic_graphic_eq, tags = { NextConnectionTag() })
     }
 }
 
