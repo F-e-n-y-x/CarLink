@@ -5127,18 +5127,22 @@ open class CarPlayHostActivity : ComponentActivity() {
             AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height) == null) {
             CarPlayRotation.squareSide(longPixels, CarPlayRotation.picture(this), sessionHevc, hevcSoftwareDecoderEnabled)
         } else null
+        // CarLink: smaller whole-screen areas for live interface sizes; a custom safe area fits only the whole screen.
+        val sizeWidthsMm = if (AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height) == null)
+            CarPlayHostIntegration.liveSizeWidthsMm else emptyList()
+        // CarLink: a turning screen connects at the widest size (Small) and starts on the chosen size's area,
+        // so every later size change is a live area switch, smaller ones included.
+        val liveBaseMm = if (square != null && sizeWidthsMm.isNotEmpty()) maxOf(sizeWidthsMm.max(), widthPhysicalMm) else widthPhysicalMm
         val canvas = if (square == null) display else {
             // The square is drawn across the screen's long side whatever its pixel count, so it reports that
             // side's real length: CarPlay then sizes its UI for the real screen, and a smaller square (the
             // smoother picture) only lowers the resolution, not the scale. It has no room for the custom
             // safe area.
-            val squareMm = if (display.widthPixels >= display.heightPixels) display.widthPhysicalMm else display.heightPhysicalMm
+            val squareMm = if (liveBaseMm != widthPhysicalMm) liveBaseMm // CarLink: see liveBaseMm
+                else if (display.widthPixels >= display.heightPixels) display.widthPhysicalMm else display.heightPhysicalMm
             display.copy(widthPixels = square, heightPixels = square, widthPhysicalMm = squareMm,
                 heightPhysicalMm = squareMm, viewArea = null, safeArea = null)
         }
-        // CarLink: smaller whole-screen areas for live interface sizes; a custom safe area fits only the whole screen.
-        val sizeWidthsMm = if (AirPlayPersistence.loadSafeAreaRect(this, size.width, size.height) == null)
-            CarPlayHostIntegration.liveSizeWidthsMm else emptyList()
         val viewAreas = if (square == null) {
             CarPlayViewAreas.build(display.widthPixels, display.heightPixels, listOf(
                 CarPlayViewAreas.Screen(display.widthPixels, display.heightPixels, portrait = display.heightPixels > display.widthPixels),
@@ -5152,7 +5156,8 @@ open class CarPlayHostActivity : ComponentActivity() {
                 CarPlayViewAreas.Screen(landscape.first, landscape.second, portrait = false),
                 CarPlayViewAreas.Screen(portrait.first, portrait.second, portrait = true),
             ), dock, splitWindow, startPortrait = size.height > size.width, sidePanel = SidePanelSettings.enabled(this),
-                rightHandDrive = rightHandDrive, sizeWidthsMm = sizeWidthsMm, sessionWidthMm = widthPhysicalMm) // CarLink
+                rightHandDrive = rightHandDrive, sizeWidthsMm = sizeWidthsMm, sessionWidthMm = liveBaseMm) // CarLink
+                ?.also { areas -> areas.sizeVariant(widthPhysicalMm)?.let(areas::use) } // CarLink: start at the chosen size
         }
         pendingViewAreas = viewAreas
         val declared = if (viewAreas == null) canvas else canvas.copy(viewAreas = viewAreas.areas, initialViewArea = viewAreas.current)
