@@ -24,5 +24,13 @@ object UiProfileDetector {
         UiProfileMode.AUTO -> if (looksLikeCarDisplay(context)) UiProfile.CAR else UiProfile.HANDHELD
     }
 
-    fun looksLikeCarDisplay(context: Context): Boolean = HeadUnitDetector.looksLikeCarDisplay(context)
+    /**
+     * Decided once per process: Android Auto's engine turns the system's car mode on while it runs
+     * (DiAuto AapService.setupCarMode), which flipped a tablet's switcher panel and Home to the car
+     * layout during Android Auto only, so the two projections looked different (tablet, 2026-11-12).
+     */
+    fun looksLikeCarDisplay(context: Context): Boolean =
+        carDisplay ?: HeadUnitDetector.looksLikeCarDisplay(context).also { carDisplay = it }
+
+    @Volatile private var carDisplay: Boolean? = null
 }

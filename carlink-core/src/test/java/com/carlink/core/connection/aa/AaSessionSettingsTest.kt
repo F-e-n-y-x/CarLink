@@ -144,13 +144,14 @@ class AaSessionSettingsTest {
         // Portrait and an unknown picture keep the device's density.
         assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 720, 1280))
         assertEquals(320, AaSessionSettings.automaticDensityDpi(320, 0, 0))
-        // A phone as the screen: a head unit's density, not the phone's, in both orientations.
-        assertEquals(160, AaSessionSettings.automaticDensityDpi(300, 720, 1560, handheld = true))
-        assertEquals(160, AaSessionSettings.automaticDensityDpi(300, 1560, 720, handheld = true))
+        // A phone or tablet as the screen: CarPlay's rule (long side = 300 mm at Medium), in both orientations.
+        assertEquals(132, AaSessionSettings.automaticDensityDpi(300, 720, 1560, handheld = true))
+        assertEquals(132, AaSessionSettings.automaticDensityDpi(300, 1560, 720, handheld = true))
         assertEquals(120, AaSessionSettings.automaticDensityDpi(120, 1560, 720, handheld = true))
+        assertEquals(217, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true))
         // Small and Large scale the Automatic density, not the panel's own (Large was 384 dpi on a 320 dpi tablet).
-        assertEquals(216, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 135))
-        assertEquals(128, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 80))
+        assertEquals(293, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 135))
+        assertEquals(174, AaSessionSettings.automaticDensityDpi(320, 2560, 1600, handheld = true, sizePercent = 80))
         // The 748x450 dp floor still caps Large: 800x480 at 160 dpi allows 170.
         assertEquals(170, AaSessionSettings.automaticDensityDpi(160, 800, 480, sizePercent = 135))
     }

@@ -194,12 +194,26 @@ object AaSessionSettings {
      */
     fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false,
                             sizePercent: Int = 100): Int {
-        val base = ((if (handheld) minOf(deviceDpi, HANDHELD_DPI) else deviceDpi) * sizePercent / 100f).roundToInt()
+        val base = ((if (handheld) handheldDpi(deviceDpi, visibleWidthPx, visibleHeightPx) else deviceDpi) * sizePercent / 100f).roundToInt()
         if (visibleWidthPx <= 0 || visibleHeightPx <= 0 || visibleHeightPx > visibleWidthPx) return base
         return minOf(base, visibleWidthPx * 160 / MIN_WIDTH_DP, visibleHeightPx * 160 / MIN_HEIGHT_DP)
     }
 
     private const val HANDHELD_DPI = 160
+
+    /**
+     * A phone or tablet as the screen gets CarPlay's own size rule (CarPlaySettings: Medium tells the
+     * iPhone the screen's long side is 300 mm), so both projections draw the same size: a fixed 160 dpi
+     * left Android Auto about 1.4x smaller than CarPlay on a 2560x1600 tablet (2026-11-12). Never above
+     * the screen's own density; 160 when the size is unknown.
+     */
+    private fun handheldDpi(deviceDpi: Int, w: Int, h: Int): Int {
+        val longSide = maxOf(w, h)
+        if (longSide <= 0) return minOf(deviceDpi, HANDHELD_DPI)
+        return minOf(deviceDpi, (longSide * MM_PER_INCH / com.carlink.core.connection.CarPlaySettingsPolicy.MEDIUM_WIDTH_MM).roundToInt())
+    }
+
+    private const val MM_PER_INCH = 25.4f
 
     /** DiAuto preference with [sizePercent], read by the Automatic density hook in ":aa". */
     const val SIZE_PERCENT_KEY = "carlink-interface-percent"
