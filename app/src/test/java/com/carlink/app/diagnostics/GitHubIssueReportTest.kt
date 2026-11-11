@@ -168,7 +168,7 @@ class GitHubIssueReportTest {
         val excerpt = params(report.url).getValue("log")
         assertEquals(log.size - report.logLines.size, report.omittedLines)
         assertTrue(excerpt, excerpt.contains("… ${report.omittedLines} more lines in the full log.\nFull log: in CarLink open Settings"))
-        assertTrue(excerpt, excerpt.endsWith("paste or attach it below.\n```"))
+        assertTrue(excerpt, excerpt.endsWith("paste it).\n```"))
         // The session's lines come first and are printed oldest first.
         assertTrue(excerpt.contains("-- last session #s7, CarLink --"))
         val steps = Regex("step (\\d+) of").findAll(excerpt).map { it.groupValues[1].toInt() }.toList()
@@ -214,12 +214,46 @@ class GitHubIssueReportTest {
         assertTrue("QR links open the browser, not the GitHub app", report.quickUrl.startsWith("https://github.com/login?return_to=%2F"))
         val inner = java.net.URLDecoder.decode(report.quickUrl.substringAfter("return_to="), "UTF-8")
         assertTrue(inner.startsWith("/F-e-n-y-x/CarLink/issues/new?template="))
-        assertNull("the quick code has no log", params("https://github.com$inner")["log"])
+        val quick = params("https://github.com$inner")
+        assertFalse("the quick code has no log lines", quick["log"].orEmpty().contains("```"))
+        quick["log"]?.let { assertTrue("it asks for the log file", it.contains("Share log")) }
+        assertTrue("the digest survives trimming", quick.getValue("what_happened").startsWith(GitHubIssueReport.digest(facts(log = busyLog(),
+            session = failedSession.copy(detail = "x".repeat(5_000))))))
+        assertTrue("${report.mediumUrl.length}", report.mediumUrl.length <= GitHubIssueReport.MEDIUM_URL_BUDGET)
         // It must fit an error-correction-M QR code, as the stereo draws it (a too-long link drew a blank square).
         com.google.zxing.qrcode.QRCodeWriter().encode(report.shortUrl, com.google.zxing.BarcodeFormat.QR_CODE, 0, 0,
             mapOf(com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M))
         assertNotNull(p["title"]); assertNotNull(p["version"]); assertNotNull(p["screen"])
-        assertTrue(p.getValue("what_happened").contains("LinkProblem: PHONE_DID_NOT_ANSWER"))
+        assertTrue(p.getValue("what_happened").contains("problem=PHONE_DID_NOT_ANSWER"))
+    }
+
+    @Test fun digestNamesTheFailureTheStopPointAndTheDevice() {
+        val log = listOf(
+            line(30_000, LogSource.CARLINK, "CarLink: start ANDROID_AUTO WIRELESS known=true #s7"),
+            line(29_000, LogSource.ANDROID_AUTO, "WIRELESS_TIMING begin start+0ms"),
+            line(27_000, LogSource.ANDROID_AUTO, "WIRELESS_TIMING group-created start+1210ms"),
+        ).sortedByDescending { it.timeMillis }
+        val digest = GitHubIssueReport.digest(facts(log = log).copy(
+            hardware = com.carlink.core.connection.DeviceSignals(1_900, true, 4, listOf("armeabi-v7a"), 1_300, null),
+            quirkProfile = "unisoc-sc9863a"))
+        assertEquals("Digest: AA/WIRELESS/WIFI_DIRECT failed problem=PHONE_DID_NOT_ANSWER " +
+            "stop=group-created +3000ms ram=1900MB(low) bt=FYT_MODULE quirks=unisoc-sc9863a", digest)
+        assertEquals("Digest: bt=FYT_MODULE", GitHubIssueReport.digest(facts(session = null)))
+        assertTrue(GitHubIssueReport.digest(facts(session = failedSession.copy(reason = FailureReason.entries.first {
+            it.name != "PHONE_DID_NOT_ANSWER" }))).contains(" reason="))
+    }
+
+    @Test fun qrCodeShowsTheFullestLinkThatStillScans() {
+        val report = GitHubIssueReport.build(facts(log = busyLog()))
+        fun sizeFor(url: String) = GitHubIssueReport.qrModules(url) * GitHubIssueReport.MIN_QR_MODULE_DP / 0.8f + 1f
+        // The sheet's 360 dp code: only the quick link keeps modules of 2.8 dp.
+        assertEquals(report.quickUrl, report.qrUrlFor(360f))
+        // Larger codes take the fullest link that still has big enough modules.
+        assertEquals(report.mediumUrl, report.qrUrlFor(sizeFor(report.mediumUrl)))
+        assertEquals(report.shortUrl, report.qrUrlFor(sizeFor(report.shortUrl)))
+        assertEquals(report.quickUrl, report.qrUrlFor(sizeFor(report.mediumUrl) - 2f))
+        assertTrue(GitHubIssueReport.qrModules(report.quickUrl) <= GitHubIssueReport.qrModules(report.mediumUrl))
+        assertTrue(GitHubIssueReport.qrModules(report.mediumUrl) < GitHubIssueReport.qrModules(report.shortUrl))
     }
 
     @Test fun noBrowserFallsBackToTheQrCode() {

@@ -213,7 +213,7 @@
     <string name="carlink_report_qr_simple">Link to the issue page</string>
     <string name="carlink_home_report_scan">Scan with your phone to report this problem. The details are already filled in.</string>
     <string name="carlink_report_qr_body">This screen has no web browser. Scan the code with your phone: it opens the report on GitHub with the version, this screen and the error filled in.</string>
-    <string name="carlink_report_qr_log">The log does not fit in the code: Copy full log or Share log, then add it to the issue.</string>
+    <string name="carlink_report_qr_log">Please add the log: most problems cannot be fixed without it. After you submit the issue, tap Share log, send the file to your phone, and attach it to the issue.</string>
     <string name="carlink_report_qr_a11y">QR code that opens the problem report on GitHub</string>
     <string name="carlink_report_done">Done</string>
 

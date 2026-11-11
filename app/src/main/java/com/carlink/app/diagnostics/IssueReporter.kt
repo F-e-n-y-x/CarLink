@@ -74,6 +74,7 @@ object IssueReporter {
             nowMillis = System.currentTimeMillis(),
             settings = inputs.settings,
             hardware = runCatching { DeviceCapabilities.signals(context) }.getOrNull(),
+            quirkProfile = com.carlink.core.connection.StereoQuirks.current()?.id,
         )
         return GitHubIssueReport.build(facts)
     }
