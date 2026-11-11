@@ -213,6 +213,13 @@ object CarPlayHostIntegration {
     /** The waiting view's Retry: restarts a session whose startup retries stopped. */
     fun retryNow(): Boolean = HostSessions.retryNow()
 
+    /** CarLink: whether the running session's iPhone reports music playing; null without a session. */
+    fun phonePlaying(): Boolean? = CarPlayBackgroundSession.snapshot()?.controller?.nowPlayingSnapshot()?.playing
+
+    /** CarLink: an explicit play press (not the toggle) on the running session; false without one. */
+    fun pressPlay(): Boolean = CarPlayBackgroundSession.snapshot()?.controller
+        ?.sendMediaButton(com.shilapi.xcertplay.airplay.CarPlayMediaButton.PLAY) == true
+
     internal fun publishHostState(state: HostState) {
         runCatching { onHostState?.invoke(state) }
             .onFailure { android.util.Log.w("CarLink-CarPlayHost", "host state listener failed", it) }

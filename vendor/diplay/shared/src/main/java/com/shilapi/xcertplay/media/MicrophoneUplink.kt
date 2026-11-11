@@ -388,6 +388,7 @@ internal class MicrophoneUplink(
                                 canceller = null
                             }
                         }
+                        HostAudio.microphonePcm?.invoke(frame, 0, frame.size) // CarLink: after echo cancelling
                         stats.level(frame)
                         sendFrame(socket, counters, frame)
                         filled = 0

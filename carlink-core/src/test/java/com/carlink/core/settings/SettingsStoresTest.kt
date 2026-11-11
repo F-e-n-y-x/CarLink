@@ -37,6 +37,12 @@ class SettingsStoresTest {
             showAdvanced = true,
             labUnlocked = true,
             wheelKeys = mapOf(WheelAction.VOICE to 84, WheelAction.HANG_UP to 3002),
+            mediaLevelDb = -3,
+            navigationLevelDb = 6,
+            callLevelDb = -12,
+            callAudioAsMedia = true,
+            resumeMusic = true,
+            micGainDb = 9,
         )
         UnifiedSettingsStore(app).save(settings)
         // A new instance reads what the old one wrote.

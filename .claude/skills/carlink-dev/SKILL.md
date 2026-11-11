@@ -114,10 +114,13 @@ The hooks CarLink sets (where):
 | DiAuto `HostIntegration` | `homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler`, `openCarScreen` (car tile → Settings) | `CarLinkApplication.brandEngines` |
 | | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession`, `automaticDensityDpi` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
+| | `microphonePcm` (microphone level), `onPhonePlaying` (resume music) | `connection/aa/AaEngineHooks` |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
+| DiPlay `HostAudio` | `playbackPcm` (Sound levels), `microphonePcm`, `callsAsMedia` | `CarPlaySettingsPolicy.apply` |
+| DiPlay `CarPlayController` / `CarPlayHostIntegration` | `onPhonePlaying` / `pressPlay` (resume music, `connection/ResumeMusic`) | `CarPlayAdapter.install` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 | DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |
 | | `usbAttachAgeMillis` (default-grant wait counted from the attach, `detect/UsbAttachTimes`) | `CarPlayAdapter.install` |

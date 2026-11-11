@@ -223,4 +223,14 @@ object HostIntegration {
     @Volatile
     @JvmStatic
     var automaticDensityDpi: ((deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int) -> Int)? = null
+
+    /** CarLink: scales each microphone read (16-bit PCM, in place) before it is sent to the phone. */
+    @Volatile
+    @JvmStatic
+    var microphonePcm: ((data: ByteArray, length: Int) -> Unit)? = null
+
+    /** CarLink: the phone's play state from each media playback status it sends. */
+    @Volatile
+    @JvmStatic
+    var onPhonePlaying: ((Boolean) -> Unit)? = null
 }

@@ -12,12 +12,14 @@ import com.shilapi.xcertplay.AirPlayPersistence
 import com.shilapi.xcertplay.AppAppearance
 import com.shilapi.xcertplay.CarPlayHostIntegration
 import com.shilapi.xcertplay.hud.BydOutputSettings
+import com.shilapi.xcertplay.media.HostAudio
 import com.shilapi.xcertplay.orchestration.ManualHotspotBand
 import com.shilapi.xcertplay.orchestration.ManualHotspotSecurity
 import com.shilapi.xcertplay.orchestration.WirelessHotspotMode
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -55,6 +57,21 @@ class CarPlaySettingsTest {
         assertNull(custom.displayScalePercent); assertNull(custom.fps); assertNull(custom.widthPhysicalMm)
         assertEquals(75, map(UnifiedSettings(picture = Picture.LIGHT)).displayScalePercent)
         assertEquals("system", map().nightModeKey)
+    }
+
+    @Test fun soundSettingsReachDiPlaysAudioHooks() {
+        val values = map(UnifiedSettings(mediaLevelDb = 3, callAudioAsMedia = true, micGainDb = 6, resumeMusic = true))
+        CarPlaySettingsPolicy.apply(app, values)
+        assertNotNull(HostAudio.playbackPcm)
+        assertNotNull(HostAudio.microphonePcm)
+        assertTrue(HostAudio.callsAsMedia)
+        assertTrue(CarPlaySettingsPolicy.resumeMusic)
+        // Back to Normal: DiPlay's own audio path, untouched.
+        CarPlaySettingsPolicy.apply(app, map())
+        assertNull(HostAudio.playbackPcm)
+        assertNull(HostAudio.microphonePcm)
+        assertFalse(HostAudio.callsAsMedia)
+        assertFalse(CarPlaySettingsPolicy.resumeMusic)
     }
 
     @Test fun locationOnlyWithThePermission() {

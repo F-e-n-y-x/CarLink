@@ -7,6 +7,7 @@ import com.carlink.core.connection.PictureChoice
 import com.carlink.core.connection.PicturePolicy
 import com.carlink.core.core.Transport
 import com.carlink.core.engine.AndroidAutoSettings
+import com.carlink.core.settings.AudioLevels
 import com.carlink.core.settings.DayNight
 import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.Picture
@@ -102,6 +103,15 @@ object AaSessionSettings {
             // The learned steering-wheel buttons, in DiAuto's own keymap (logical-physical), which
             // CommManager.sendKey applies to every key route. CarLink owns the keymap: always written.
             put("key-codes", WheelKeys.diAutoKeyCodes(settings.wheelKeys))
+            // Sound levels as DiAuto's own offsets. Android Auto's speech channel (DiAuto's "assistant")
+            // carries the spoken directions as well as the Assistant, and its system channel (DiAuto's
+            // "navigation") the prompts' chimes, so both follow the navigation level. Calls are not
+            // Android Auto audio (they go over Bluetooth hands-free), so the call level has nothing here.
+            put("media-volume-offset", AudioLevels.aaOffsetPercent(settings.mediaLevelDb))
+            put("assistant-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb))
+            put("navigation-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb))
+            put(MIC_GAIN_KEY, settings.micGainDb)
+            put(RESUME_MUSIC_KEY, settings.resumeMusic)
             // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md). A wireless
             // session runs only where CarLink's pre-flight allowed it, so without a module route it
             // is NORMAL: DiAuto's own markers must not refuse a stereo CarLink judged usable
@@ -220,6 +230,10 @@ object AaSessionSettings {
     private const val HANDHELD_MEDIUM_WIDTH_MM = 250f
 
     private const val MM_PER_INCH = 25.4f
+
+    /** DiAuto preferences read by CarLink's hooks in ":aa" (AaEngineHooks): microphone gain in dB, resume music. */
+    const val MIC_GAIN_KEY = "carlink-mic-gain-db"
+    const val RESUME_MUSIC_KEY = "carlink-resume-music"
 
     /** DiAuto preference with [sizePercent], read by the Automatic density hook in ":aa". */
     const val SIZE_PERCENT_KEY = "carlink-interface-percent"

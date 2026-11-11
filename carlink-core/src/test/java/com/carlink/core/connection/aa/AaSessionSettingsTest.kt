@@ -155,4 +155,20 @@ class AaSessionSettingsTest {
         // The 748x450 dp floor still caps Large: 800x480 at 160 dpi allows 170.
         assertEquals(170, AaSessionSettings.automaticDensityDpi(160, 800, 480, sizePercent = 135))
     }
+
+    @Test fun soundLevelsBecomeDiAutosOffsetsAndTheMicrophoneHook() {
+        val v = values(UnifiedSettings(mediaLevelDb = -6, navigationLevelDb = 6, callLevelDb = 3, micGainDb = 9,
+            resumeMusic = true)).values
+        assertEquals(-50, v["media-volume-offset"])
+        // Android Auto's speech channel carries the directions (and the Assistant); its system channel the chimes.
+        assertEquals(100, v["assistant-volume-offset"])
+        assertEquals(100, v["navigation-volume-offset"])
+        assertEquals(9, v[AaSessionSettings.MIC_GAIN_KEY])
+        assertEquals(true, v[AaSessionSettings.RESUME_MUSIC_KEY])
+        val normal = values().values
+        for (key in listOf("media-volume-offset", "assistant-volume-offset", "navigation-volume-offset", AaSessionSettings.MIC_GAIN_KEY)) {
+            assertEquals("every session writes $key", 0, normal[key])
+        }
+        assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])
+    }
 }

@@ -453,6 +453,7 @@ class CarPlayController(
                     nowPlayingListener?.invoke(cleared)
                     if (wasPlaying) playbackListener?.invoke(false)
                 }
+                onPhonePlaying?.invoke(null) // CarLink
             }
             debugLog("AirPlay session ended peer=${session.host}")
             uiListener?.onSessionEnded(session)
@@ -939,6 +940,7 @@ class CarPlayController(
         }?.let { (update, playingChanged) ->
             nowPlayingListener?.invoke(update)
             if (playingChanged) playbackListener?.invoke(update.playing)
+            if (playingChanged) onPhonePlaying?.invoke(update.playing) // CarLink
         }
     }
 
@@ -3684,6 +3686,10 @@ class CarPlayController(
         @Volatile
         @JvmStatic
         var resetWiredUsb: ((UsbDevice) -> Boolean)? = null
+        /** CarLink: the iPhone's play state at each change it reports; null when the AirPlay session ended. */
+        @Volatile
+        @JvmStatic
+        var onPhonePlaying: ((Boolean?) -> Unit)? = null
         /** CarLink: how long Bonjour waits for the group's IPv6 link-local before starting without it. */
         private const val BONJOUR_LINK_LOCAL_WAIT_MILLIS = 600L
 

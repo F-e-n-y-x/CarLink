@@ -1849,6 +1849,7 @@ private class AudioRenderer(
     private var track: AudioTrack? = null
     @Volatile private var navigationAttenuationDb = 0
     private var appliedNavigationAttenuationDb: Int? = null
+    private var levelChannel = "" // CarLink: HostAudio.playbackPcm
     private var pcm = ByteArray(64 * 1024)
     private var playbackStarted = false
     private var prebufferBytes = 0
@@ -2235,7 +2236,8 @@ private class AudioRenderer(
             payloadType = format.payloadType,
             mode = mode,
         )
-        return if (speakerphoneCall) AudioChannelMapper.playCallOnSpeaker(selection) else selection
+        levelChannel = selection.channel.name // CarLink: the level follows the stream's own kind
+        return if (speakerphoneCall || HostAudio.callsAsMedia) AudioChannelMapper.playCallOnSpeaker(selection) else selection // CarLink: callsAsMedia
     }
 
     private fun audioAttributesFor(selection: AudioChannelSelection): AudioAttributes =
@@ -2512,6 +2514,7 @@ private class AudioRenderer(
         voiceFilter?.process(data, offset, length)
         applyNavigationAttenuation()
         attenuateNavigation(data, offset, length)
+        HostAudio.playbackPcm?.invoke(levelChannel, data, offset, length) // CarLink
         if (!fadeApplied) {
             applyFadeIn(data, offset, length)
             fadeApplied = true

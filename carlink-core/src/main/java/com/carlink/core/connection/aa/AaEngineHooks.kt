@@ -3,9 +3,12 @@ package com.carlink.core.connection.aa
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.view.KeyEvent
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
 import com.andrerinas.openheadunit.connection.CommManager.ConnectionState
+import com.carlink.core.connection.ResumeMusic
+import com.carlink.core.settings.AudioLevels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,7 +55,17 @@ object AaEngineHooks {
                 if (it != dpi) Log.i(TAG, "automatic DPI $dpi -> $it for a ${w}x$h px picture at size $percent% (car-sized layout, 748x450 dp minimum)")
             }
         }
+        // The microphone gain chosen in CarLink (AudioLevels.MIC_DB), read at each microphone read.
+        HostIntegration.microphonePcm = { data, length ->
+            val db = prefs.getInt(AaSessionSettings.MIC_GAIN_KEY, 0)
+            if (db != 0) AudioLevels.scalePcm16(data, 0, length, AudioLevels.linear(db))
+        }
+        val resume = ResumeMusic(app.getSharedPreferences("carlink_resume_music_aa", Context.MODE_PRIVATE), "aa_playing")
+        HostIntegration.onPhonePlaying = resume::onPhonePlaying
         HostIntegration.onEngineEvent = { _, kind, detail ->
+            if (kind == HostIntegration.EngineEvent.FIRST_VIDEO_FRAME) {
+                resume.scheduleAfterFirstPicture(prefs.getBoolean(AaSessionSettings.RESUME_MUSIC_KEY, false), { pressPlay(app) }, TAG)
+            }
             AaEngineMonitor.shared.onEngineEvent(kind.name)
             sendEvent(app, kind.name, detail)
             // The first frame also flips the state report's flag; send it so the two agree.
@@ -60,12 +73,23 @@ object AaEngineHooks {
         }
         scope.launch {
             App.provide(app).commManager.connectionState.collectLatest {
+                if (it is ConnectionState.Disconnected) resume.onSessionEnded()
                 report(app, it)
             }
         }
     }
 
     @Volatile private var sessionPercent = 100
+
+    /** An explicit play key (not play/pause) to the phone, only while Android Auto runs. */
+    private fun pressPlay(app: Context): Boolean {
+        val comm = App.provide(app).commManager
+        if (comm.connectionState.value !is ConnectionState.TransportStarted) return false
+        // Straight to the transport: not a wheel key, so no keymap, Bluetooth routing or debounce.
+        comm.send(KeyEvent.KEYCODE_MEDIA_PLAY, true)
+        comm.send(KeyEvent.KEYCODE_MEDIA_PLAY, false)
+        return true
+    }
 
     /** A phone or tablet turns: one landscape stream, and a turn moves Android Auto by margins. Per start (#33). */
     fun refreshScreen(context: Context) {
