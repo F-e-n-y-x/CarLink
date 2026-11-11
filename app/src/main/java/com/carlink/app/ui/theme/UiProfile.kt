@@ -25,12 +25,9 @@ object UiProfileDetector {
     }
 
     /**
-     * Decided once per process: Android Auto's engine turns the system's car mode on while it runs
-     * (DiAuto AapService.setupCarMode), which flipped a tablet's switcher panel and Home to the car
-     * layout during Android Auto only, so the two projections looked different (tablet, 2026-11-12).
+     * By the hardware, not the system's car mode: Android Auto's engine turns car mode on (DiAuto
+     * AapService.setupCarMode) and leaves it on, which gave a tablet's switcher panel and Home the car
+     * layout, too big and cut off, from the first Android Auto session on (tablet, 2026-11-12).
      */
-    fun looksLikeCarDisplay(context: Context): Boolean =
-        carDisplay ?: HeadUnitDetector.looksLikeCarDisplay(context).also { carDisplay = it }
-
-    @Volatile private var carDisplay: Boolean? = null
+    fun looksLikeCarDisplay(context: Context): Boolean = HeadUnitDetector.looksLikeCarDisplay(context, trustCarMode = false)
 }

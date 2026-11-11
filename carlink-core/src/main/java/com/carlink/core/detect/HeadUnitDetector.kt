@@ -20,9 +20,9 @@ object HeadUnitDetector {
      * car, while phones and tablets (Wi-Fi tablets included) have a battery. Decides the wireless
      * path order (`WirelessPolicy`) and CarLink's car-sized layout.
      */
-    fun looksLikeCarDisplay(context: Context): Boolean {
+    fun looksLikeCarDisplay(context: Context, trustCarMode: Boolean = true): Boolean {
         val uiModeType = context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
-        if (uiModeType == Configuration.UI_MODE_TYPE_CAR) return true
+        if (trustCarMode && uiModeType == Configuration.UI_MODE_TYPE_CAR) return true
         val pm = context.packageManager
         if (pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return true
         val vendor = "${Build.MANUFACTURER} ${Build.BRAND}".lowercase(Locale.ROOT)
