@@ -4,6 +4,34 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [1.0.16] - 2026-11-12
+
+- New: change the interface size (Small, Medium, Large) from the floating switcher, live, in
+  both CarPlay and Android Auto on a phone or tablet: no reconnect.
+- New: Settings › Screen type (Automatic, Car stereo, Phone or tablet). Choose by hand if CarPlay
+  shows black bars or the picture turns when it shouldn't.
+- Fixed: head units with a 4G modem or a battery reading were taken for a phone, so CarPlay got a
+  square picture with black bars and ignored the safe area (#33, #65). The turning layout is now
+  used only with a real motion sensor and auto-rotate on.
+- Fixed: CarPlay and Android Auto now look the same size side by side on a phone or tablet, and
+  the floating switcher is no longer oversized while Android Auto runs. Large is a little larger.
+- New: sharper Android Auto on tablets whose decoder carries it (2560x1440 HEVC).
+- New Sound settings: CarPlay audio delay, sound and microphone levels, "Call audio plays as"
+  Media for head units that play calls too quietly, resume music after connecting, and a call
+  audio test in Diagnostics.
+- New: setup asks how big CarPlay and Android Auto should look; Home names the step a
+  connection failed on and offers Forget and re-pair; settings can be backed up and restored.
+- New: the floating switcher has quick toggles for night mode, a screen dimmer and the stereo's
+  launcher.
+- Faster: CarPlay and Android Auto restart sooner over USB, and a wired CarPlay start that is
+  stuck for 8 s resets the iPhone's USB once.
+- Fixed: Android Auto over Wi-Fi Direct no longer waits up to 2 minutes when the screen reports
+  "busy" (#40); its Wi-Fi Direct group is kept across a restart.
+- Fixed: wireless CarPlay offers every hotspot address (#42), keeps its Wi-Fi link when the
+  iPhone closes Bluetooth, and plays out-of-order audio packets in order.
+- Better bug reports: the scanned report carries a failure summary.
+- Settings › About can offer test versions (off by default).
+
 ## [1.0.15] - 2026-11-10
 
 - Fixed: on Android 17, Home kept saying "Permissions needed" for wireless CarPlay, because its
