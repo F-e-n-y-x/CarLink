@@ -172,6 +172,9 @@ class CarPlayHostClusterStartupTest {
         shadowOf(Looper.getMainLooper()).idle()
         verify(sink).clearSurface(111, surface)
         verify(sink, times(1)).setSurface(111, surface)
+        // CarLink: onSessionActive sends night mode to the replacement on a background thread; a mock
+        // call there during the stubbing below steals the stub (Mockito is not thread-safe), so wait for it.
+        (get("airPlayCommandExecutor") as ExecutorService).submit { }.get(5, java.util.concurrent.TimeUnit.SECONDS)
         `when`(replacement.hasRenderedMainFrame).thenReturn(true)
         listener().onVideoFrameRendered(replacement)
         shadowOf(Looper.getMainLooper()).idle()
