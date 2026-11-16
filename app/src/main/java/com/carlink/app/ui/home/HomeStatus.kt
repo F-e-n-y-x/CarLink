@@ -91,11 +91,13 @@ internal fun statusItems(mode: HomeMode, ui: HomeUi, taps: StatusTaps): List<Sta
                 ?: stringResource(R.string.carlink_home_net_same_wifi)
             WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
             WirelessPath.WIFI_DIRECT -> stringResource(R.string.carlink_home_net_direct)
+            WirelessPath.HEADUNIT_SERVER -> stringResource(R.string.carlink_home_net_server)
             null -> stringResource(R.string.carlink_transport_usb_cable)
         }, when (path) {
             WirelessPath.SAME_WIFI -> R.drawable.carlink_ic_wifi
             WirelessPath.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
             WirelessPath.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
+            WirelessPath.HEADUNIT_SERVER -> R.drawable.carlink_ic_phone_android
             null -> R.drawable.carlink_ic_usb
         }, if (path == WirelessPath.SAME_WIFI) colors.success else null, taps.onNetwork),
         if (sessionPhone != null) {

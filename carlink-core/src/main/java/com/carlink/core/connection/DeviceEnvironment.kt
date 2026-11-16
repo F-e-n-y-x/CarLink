@@ -17,6 +17,7 @@ import com.carlink.core.detect.PhoneClassifier
 import com.carlink.core.diagnostics.EventLog
 import com.carlink.core.entry.UsbRouterActivity
 import com.carlink.core.settings.CarLinkPreferences
+import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.WifiEnvironmentReader
 import com.carlink.core.settings.UnifiedSettingsStore
 import com.carlink.core.settings.WirelessPath
@@ -42,8 +43,10 @@ class DeviceEnvironment(
         get() = preferences.autoConnectPaused
         set(value) { preferences.autoConnectPaused = value }
 
+    // The head unit server needs no Bluetooth, so a stereo whose Bluetooth CarLink cannot use still has it (#70).
     override fun wirelessUnavailable(engine: Engine): Boolean =
-        wirelessBlocked(effectiveStereo(app), preferences.wirelessOnExternalBluetooth, engine)
+        !(engine == Engine.ANDROID_AUTO && unified.load().connectionMethod == ConnectionMethod.HEADUNIT_SERVER) &&
+            wirelessBlocked(effectiveStereo(app), preferences.wirelessOnExternalBluetooth, engine)
 
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()

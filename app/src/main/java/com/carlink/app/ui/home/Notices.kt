@@ -134,6 +134,7 @@ internal fun usualText(usual: PhoneUsual): String = stringResource(R.string.carl
             WirelessPath.WIFI_DIRECT -> R.string.carlink_home_path_direct
             WirelessPath.CAR_HOTSPOT -> R.string.carlink_home_path_hotspot
             WirelessPath.SAME_WIFI -> R.string.carlink_home_path_same_wifi
+            WirelessPath.HEADUNIT_SERVER -> R.string.carlink_home_path_server
         }))
     }
         ?: stringResource(R.string.carlink_home_usual_by_cable))

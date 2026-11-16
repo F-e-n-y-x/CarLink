@@ -4,6 +4,14 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [Unreleased]
+
+- New: Connection method › Head unit server, a backup for wireless Android Auto when Bluetooth or
+  Wi-Fi Direct fails (#70). This screen joins the phone's hotspot and connects to Android Auto's
+  head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
+  developer settings first (again after every phone restart). CarPlay keeps Automatic.
+- New: Ford in the car brand list (#33).
+
 ## [1.0.16] - 2026-11-12
 
 - New: change the interface size (Small, Medium, Large) from the floating switcher, live, in

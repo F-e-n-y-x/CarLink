@@ -63,7 +63,9 @@
     <string name="carlink_settings_method_same_wifi_detail">Phone and car on one router, the fastest path. Needs the Wi-Fi password once.</string>
     <string name="carlink_settings_method_hotspot_detail">The phone joins the Wi-Fi hotspot the car creates. Works with every phone.</string>
     <string name="carlink_settings_method_direct_detail">A direct link between phone and car. No network needed.</string>
-    <string name="carlink_settings_method_sheet_body">Bluetooth always starts the connection; the picture and sound then travel over Wi-Fi.</string>
+    <string name="carlink_settings_method_server">Head unit server</string>
+    <string name="carlink_settings_method_server_detail">Android Auto backup: this screen joins the phone\'s hotspot. Turn on Start head unit server on the phone.</string>
+    <string name="carlink_settings_method_sheet_body">Bluetooth starts the connection (not with Head unit server); the picture and sound then travel over Wi-Fi.</string>
 
     <string name="carlink_settings_hotspot">Car hotspot</string>
     <string name="carlink_settings_hotspot_detail">Name and password of the car’s own hotspot</string>

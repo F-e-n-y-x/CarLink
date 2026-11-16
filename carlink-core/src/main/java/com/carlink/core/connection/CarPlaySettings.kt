@@ -148,7 +148,7 @@ object CarPlaySettingsPolicy {
                 WirelessPath.SAME_WIFI -> WirelessHotspotMode.EXISTING_WIFI
                 WirelessPath.CAR_HOTSPOT -> WirelessHotspotMode.MANUAL
                 WirelessPath.WIFI_DIRECT -> WirelessHotspotMode.WIFI_P2P
-                null -> null
+                WirelessPath.HEADUNIT_SERVER, null -> null // Android Auto only
             },
             displayScalePercent = scale,
             fps = fps,

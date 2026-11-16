@@ -19,6 +19,7 @@ internal fun NetworkSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Uni
     val now = when (ui.network?.path) {
         WirelessPath.SAME_WIFI -> stringResource(R.string.carlink_home_net_same_wifi)
         WirelessPath.CAR_HOTSPOT -> stringResource(R.string.carlink_home_net_hotspot)
+        WirelessPath.HEADUNIT_SERVER -> stringResource(R.string.carlink_home_net_server)
         WirelessPath.WIFI_DIRECT, null -> stringResource(R.string.carlink_home_net_direct)
     }
     ChoiceSheet(
@@ -31,6 +32,7 @@ internal fun NetworkSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Uni
                 ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi_detail
                 ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot_detail
                 ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct_detail
+                ConnectionMethod.HEADUNIT_SERVER -> R.string.carlink_settings_method_server_detail
             }), methodIcon(m))
         },
         selected = ui.network?.method ?: ConnectionMethod.AUTOMATIC,

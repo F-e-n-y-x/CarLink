@@ -11,7 +11,16 @@ import com.carlink.core.core.Engine
 import com.shilapi.xcertplay.network.CarHotspotStatus
 
 /** The wireless network a session will use, chosen by [com.carlink.core.connection.WirelessPolicy]. */
-enum class WirelessPath { SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT }
+enum class WirelessPath {
+    SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT,
+    /**
+     * Android Auto only (#70): this screen joins the phone's hotspot (or a shared network) and dials
+     * Android Auto's "head unit server" on port 5277, found by DiAuto's NetworkDiscovery (gateway
+     * first, then the subnet). No Bluetooth and no Wi-Fi Direct; the phone's developer setting
+     * "Start head unit server" must be on.
+     */
+    HEADUNIT_SERVER,
+}
 
 /** What CarLink knows about the car's Wi-Fi right before a wireless session. */
 data class WifiEnvironment(

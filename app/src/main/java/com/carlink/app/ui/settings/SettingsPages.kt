@@ -396,6 +396,7 @@ internal fun methodIcon(method: ConnectionMethod): Int = when (method) {
     ConnectionMethod.SAME_WIFI -> R.drawable.carlink_ic_wifi
     ConnectionMethod.CAR_HOTSPOT -> R.drawable.carlink_ic_wifi_tethering
     ConnectionMethod.WIFI_DIRECT -> R.drawable.carlink_ic_p2p
+    ConnectionMethod.HEADUNIT_SERVER -> R.drawable.carlink_ic_phone_android
 }
 
 internal fun dayNightIcon(mode: DayNight): Int = when (mode) {

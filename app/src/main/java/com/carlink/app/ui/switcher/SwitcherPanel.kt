@@ -468,6 +468,7 @@ private fun methodDetail(method: ConnectionMethod): Int = when (method) {
     ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi_detail
     ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot_detail
     ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct_detail
+    ConnectionMethod.HEADUNIT_SERVER -> R.string.carlink_settings_method_server_detail
 }
 
 /** The phones the panel offers: paired, of a known kind, and not the one projecting. */

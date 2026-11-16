@@ -117,4 +117,11 @@ class DevicePreflightTest {
         // The stereo turned its Wi-Fi client off for its hotspot (#32): not a problem on this path
         assertEquals(emptyList<Problem>(), check(ready.copy(wifiOn = false), path = WirelessPath.CAR_HOTSPOT, settings = s))
     }
+
+    @Test fun headUnitServerNeedsOnlyWifi() { // #70: no Bluetooth, pairing or Location
+        val server = WirelessPath.HEADUNIT_SERVER
+        val noRadios = ready.copy(bluetoothOn = false, phoneBonded = false, locationOn = false)
+        assertEquals(emptyList<Problem>(), check(noRadios, path = server))
+        assertEquals(listOf(Problem.WIFI_OFF), check(noRadios.copy(wifiOn = false), path = server))
+    }
 }

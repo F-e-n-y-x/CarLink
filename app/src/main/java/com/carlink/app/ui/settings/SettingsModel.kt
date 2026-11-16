@@ -198,6 +198,7 @@ internal fun connectionMethodLabel(method: ConnectionMethod): String = stringRes
         ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi
         ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot
         ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct
+        ConnectionMethod.HEADUNIT_SERVER -> R.string.carlink_settings_method_server
     },
 )
 

@@ -139,6 +139,10 @@ internal fun homeMode(home: HomeState, permissionsNeeded: Boolean, cableOnly: Bo
     else -> HomeMode.READY_EMPTY
 }
 
+/** Wireless Android Auto through the phone's head unit server (#70): no Bluetooth, the phone's developer setting instead. */
+private fun headUnitServer(ui: HomeUi): Boolean = ui.home.link.engine == Engine.ANDROID_AUTO &&
+    ui.home.link.transport == Transport.WIRELESS && ui.network?.path == com.carlink.core.settings.WirelessPath.HEADUNIT_SERVER
+
 /** The phone has not answered for a while (wireless or USB), and the attempt is still on its first step. */
 private fun phoneSilent(link: LinkState): Boolean =
     (link.stage == LinkStage.WAITING || link.stage == LinkStage.CONNECTING) && link.step <= 1 &&
@@ -165,7 +169,9 @@ internal data class HomeUi(
      * known), so Home offers the cable instead of a Connect that can only fail.
      */
     val cableOnly: Boolean get() = stereo != null && (home.defaultPhone?.kind?.engine?.let(::listOf) ?: Engine.entries)
-        .all { DeviceEnvironment.wirelessBlocked(stereo, connection.wirelessOnExternalBluetooth, it) }
+        .all { DeviceEnvironment.wirelessBlocked(stereo, connection.wirelessOnExternalBluetooth, it) &&
+            // The head unit server needs no Bluetooth (DeviceEnvironment.wirelessUnavailable).
+            !(it == Engine.ANDROID_AUTO && network?.method == com.carlink.core.settings.ConnectionMethod.HEADUNIT_SERVER) }
 
     /** Wireless Android Auto goes through the stereo's Bluetooth module (the driver's experimental opt-in). */
     val bluetoothViaModule: Boolean get() =
@@ -663,6 +669,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
         HomeMode.CONNECTING -> stringResource(R.string.carlink_home_connecting_title, engine) to
             // Android phones only start wireless Android Auto when their Bluetooth connects.
             when {
+                headUnitServer(ui) -> stringResource(R.string.carlink_home_server_waiting, phoneName)
                 !androidWaiting(ui) -> stringResource(R.string.carlink_home_connecting_body, phoneName)
                 // Apps cannot open a phone's Bluetooth link; the driver connects it once.
                 !sessionPhoneConnected(ui) -> stringResource(R.string.carlink_home_connecting_connect_bluetooth, phoneName)
@@ -673,6 +680,7 @@ private fun ColumnScope.HeroCopy(mode: HomeMode, ui: HomeUi, actions: HomeAction
             stringResource(if (!usb && link.engine == Engine.CARPLAY) R.string.carlink_home_not_answering_title_iphone
                 else R.string.carlink_home_not_answering_title) to stringResource(when {
                 usb -> R.string.carlink_home_not_answering_body_usb
+                headUnitServer(ui) -> R.string.carlink_home_server_waiting
                 link.engine == Engine.ANDROID_AUTO -> R.string.carlink_home_not_answering_body_android
                 else -> R.string.carlink_home_not_answering_body_iphone
             }, phoneName)

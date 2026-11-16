@@ -125,6 +125,17 @@ object AaSessionSettings {
             // an earlier session's shared network and BSSID.
             val route = if (transport == Transport.USB) WirelessPath.WIFI_DIRECT else path ?: WirelessPath.WIFI_DIRECT
             when (route) {
+                WirelessPath.HEADUNIT_SERVER -> {
+                    // DiAuto's mode 1: its NetworkDiscovery dials the phone's head unit server on
+                    // 5277, the Wi-Fi gateway first (the phone, on its own hotspot), then the subnet.
+                    put("wifi-connection-mode", 1)
+                    put("native-ap-transport", 0)
+                    put("hotspot-interface", "")
+                    put("hotspot-ssid", "")
+                    put("hotspot-password", "")
+                    put("static-bssid", "0")
+                    put("auto-enable-hotspot", false)
+                }
                 WirelessPath.WIFI_DIRECT -> {
                     put("native-ap-transport", 0)
                     put("hotspot-interface", "")

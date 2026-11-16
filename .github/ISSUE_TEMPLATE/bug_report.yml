@@ -49,6 +49,7 @@ body:
         - Wireless, Wi-Fi Direct (Automatic)
         - Wireless, car hotspot
         - Wireless, same Wi-Fi network
+        - Wireless, head unit server (Android Auto)
         - Not sure
     validations:
       required: true

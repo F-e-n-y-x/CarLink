@@ -115,7 +115,7 @@ class GitHubIssueReportTest {
         val connections = sessions.mapNotNull { GitHubIssueReport.connection(it) }.toSet()
         assertEquals(setOf("CarPlay", "Android Auto"), projections)
         assertTrue("${options("projection")}", options("projection").containsAll(projections))
-        assertEquals(5, connections.size)
+        assertEquals(6, connections.size)
         assertTrue("${options("connection")} vs $connections", options("connection").containsAll(connections))
         // The text fields the builder fills exist too.
         listOf("version", "screen", "phone", "car_brand", "what_happened", "log").forEach { id ->

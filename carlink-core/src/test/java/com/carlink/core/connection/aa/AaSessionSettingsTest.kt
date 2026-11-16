@@ -171,4 +171,13 @@ class AaSessionSettingsTest {
         }
         assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])
     }
+
+    @Test fun headUnitServerUsesTheEnginesDiscoveryMode() { // #70
+        val v = values(path = WirelessPath.HEADUNIT_SERVER).values
+        assertEquals(1, v["wifi-connection-mode"])
+        assertEquals(0, v["native-ap-transport"])
+        assertEquals("", v["hotspot-ssid"])
+        // USB sessions keep native Android Auto.
+        assertEquals(3, values(transport = Transport.USB, path = null).values["wifi-connection-mode"])
+    }
 }

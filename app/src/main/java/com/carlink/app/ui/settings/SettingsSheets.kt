@@ -118,6 +118,7 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
                     ConnectionMethod.SAME_WIFI -> R.string.carlink_settings_method_same_wifi_detail
                     ConnectionMethod.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot_detail
                     ConnectionMethod.WIFI_DIRECT -> R.string.carlink_settings_method_direct_detail
+                    ConnectionMethod.HEADUNIT_SERVER -> R.string.carlink_settings_method_server_detail
                 }), methodIcon(m))
             },
             u.connectionMethod, onSelect = { m -> select { it.copy(connectionMethod = m) } }, onDismiss = onDismiss,

@@ -74,6 +74,7 @@ object GitHubIssueReport {
     const val CONNECTION_WIFI_DIRECT = "Wireless, Wi-Fi Direct (Automatic)"
     const val CONNECTION_CAR_HOTSPOT = "Wireless, car hotspot"
     const val CONNECTION_SAME_WIFI = "Wireless, same Wi-Fi network"
+    const val CONNECTION_HEADUNIT_SERVER = "Wireless, head unit server (Android Auto)"
     const val CONNECTION_NOT_SURE = "Not sure"
 
     /** The screen CarLink runs on. [widthDp]/[heightDp] use the panel's real density ([densityDpi]). */
@@ -340,6 +341,7 @@ object GitHubIssueReport {
             WirelessPath.WIFI_DIRECT -> CONNECTION_WIFI_DIRECT
             WirelessPath.CAR_HOTSPOT -> CONNECTION_CAR_HOTSPOT
             WirelessPath.SAME_WIFI -> CONNECTION_SAME_WIFI
+            WirelessPath.HEADUNIT_SERVER -> CONNECTION_HEADUNIT_SERVER
             null -> CONNECTION_NOT_SURE
         }
     }

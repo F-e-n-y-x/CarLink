@@ -148,7 +148,8 @@ object CarPlayPreflight {
                     add(CarPlayProblem.CarHotspotDetailsMissing)
                 input.carHotspotOn == false && !input.carHotspotCanStart -> add(CarPlayProblem.CarHotspotOff)
             }
-            WirelessPath.WIFI_DIRECT -> Unit
+            // HEADUNIT_SERVER is Android Auto only; WirelessPolicy never hands it to CarPlay.
+            WirelessPath.WIFI_DIRECT, WirelessPath.HEADUNIT_SERVER -> Unit
         }
     }
 

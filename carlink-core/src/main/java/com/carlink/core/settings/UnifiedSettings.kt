@@ -44,7 +44,8 @@ data class UnifiedSettings(
 
 data class WifiDetails(val ssid: String = "", val password: String = "")
 
-enum class ConnectionMethod { AUTOMATIC, SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT }
+/** [HEADUNIT_SERVER] is Android Auto only; CarPlay treats it as [AUTOMATIC]. */
+enum class ConnectionMethod { AUTOMATIC, SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT, HEADUNIT_SERVER }
 
 /** Quality versus load; [CUSTOM] when Advanced picked exact per-engine values. */
 enum class Picture { AUTOMATIC, BEST, BALANCED, LIGHT, CUSTOM }

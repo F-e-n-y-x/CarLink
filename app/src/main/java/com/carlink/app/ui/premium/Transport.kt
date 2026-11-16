@@ -52,6 +52,7 @@ fun wirelessPathName(path: WirelessPath): String = stringResource(when (path) {
     WirelessPath.SAME_WIFI -> R.string.carlink_settings_method_same_wifi
     WirelessPath.CAR_HOTSPOT -> R.string.carlink_settings_method_hotspot
     WirelessPath.WIFI_DIRECT -> R.string.carlink_settings_method_direct
+    WirelessPath.HEADUNIT_SERVER -> R.string.carlink_settings_method_server
 })
 
 /** "Cable", or "Wireless · Wi-Fi Direct" when the path is known. */

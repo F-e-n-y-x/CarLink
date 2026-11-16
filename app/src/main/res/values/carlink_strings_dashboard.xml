@@ -90,6 +90,7 @@
     <string name="carlink_home_net_same_wifi_named">%1$s · fastest</string>
     <string name="carlink_home_net_hotspot">Car hotspot</string>
     <string name="carlink_home_net_direct">Wi-Fi Direct</string>
+    <string name="carlink_home_net_server">Head unit server</string>
     <string name="carlink_home_network_sheet_title">Connection type</string>
     <string name="carlink_home_network_sheet_now">Bluetooth starts the connection; the picture and sound travel over Wi-Fi. Now using: %1$s.</string>
     <string name="carlink_home_no_phones">No phone yet</string>
@@ -112,6 +113,7 @@
     <string name="carlink_home_path_same_wifi">your Wi-Fi</string>
     <string name="carlink_home_path_hotspot">the car hotspot</string>
     <string name="carlink_home_path_direct">Wi-Fi Direct</string>
+    <string name="carlink_home_path_server">the head unit server</string>
     <string name="carlink_home_path_usb">USB</string>
 
     <string name="carlink_home_same_wifi_title">Password for %1$s</string>
@@ -130,6 +132,7 @@
     <string name="carlink_home_not_answering_title_iphone">iPhone not reachable over Bluetooth</string>
     <string name="carlink_home_not_answering_body_iphone">Unlock %1$s and check that its Bluetooth is on, or plug it in with a cable. If it still refuses: on the iPhone, Settings › General › CarPlay must not have forgotten this car, Screen Time › Content &amp; Privacy › Allowed Apps must allow CarPlay, and Allow CarPlay While Locked must be on.</string>
     <string name="carlink_home_not_answering_body_usb">Unlock %1$s and accept the prompt on its screen. If nothing happens, unplug it and plug it in again.</string>
+    <string name="carlink_home_server_waiting">Looking for %1$s\'s head unit server. Keep this screen on the phone\'s hotspot. On the phone, open Android Auto\'s settings, tap Version until developer settings unlock, then choose Start head unit server from the menu. It turns off when the phone restarts.</string>
     <string name="carlink_home_not_answering_body_android">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen. Android Auto starts by itself once it connects.</string>
     <!-- Connection v2: pre-flight problems and precise failures. -->
     <string name="carlink_home_error_bt_off_title">Bluetooth is off</string>

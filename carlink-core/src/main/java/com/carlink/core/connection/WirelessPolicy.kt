@@ -40,6 +40,8 @@ object WirelessPolicy {
             ConnectionMethod.SAME_WIFI -> listOf(WirelessPath.SAME_WIFI)
             ConnectionMethod.CAR_HOTSPOT -> listOf(WirelessPath.CAR_HOTSPOT)
             ConnectionMethod.WIFI_DIRECT -> listOf(WirelessPath.WIFI_DIRECT)
+            ConnectionMethod.HEADUNIT_SERVER ->
+                if (inputs.engine == Engine.ANDROID_AUTO) listOf(WirelessPath.HEADUNIT_SERVER) else automatic(inputs)
             ConnectionMethod.AUTOMATIC -> automatic(inputs)
         }
     }
