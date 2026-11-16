@@ -37,6 +37,7 @@ enum class CarBrand(val displayName: String, val profile: VehicleProfile = Vehic
     NISSAN("Nissan"),
     CITROEN("Citroën"),
     JEEP("Jeep"),
+    FORD("Ford"), // GitHub #33: sold in India until 2021, common elsewhere
     BYD("BYD", VehicleProfile.BYD_DILINK),
     MERCEDES_BENZ("Mercedes-Benz", luxury = true),
     BMW("BMW", luxury = true),
