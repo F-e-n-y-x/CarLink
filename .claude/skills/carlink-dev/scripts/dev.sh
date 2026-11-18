@@ -18,6 +18,15 @@ ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SERIAL="${CARLINK_EMULATOR:-emulator-5560}"
 TABLET="${CARLINK_TABLET:-192.168.10.103:5555}" # wireless debugging moves the port; set CARLINK_TABLET=ip:port
 [ "${CARLINK_TARGET:-}" = tablet ] && SERIAL="$TABLET"
+
+# One Gradle build on the machine at a time: parallel worktrees ran it out of RAM (2026-11-18).
+# Skipped when a parent already holds the lock (flock ... dev.sh test), which would deadlock.
+GRADLE_LOCK=(flock /tmp/carlink-gradle.lock)
+p=$PPID
+while [ "${p:-1}" -gt 1 ]; do
+    if tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q carlink-gradle.lock; then GRADLE_LOCK=(); break; fi
+    p=$(awk '{print $4}' "/proc/$p/stat" 2>/dev/null || echo 1)
+done
 ADB="$HOME/android-sdk/platform-tools/adb"
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 PKG="com.carlink.app.hudtest"
@@ -44,13 +53,13 @@ case "$cmd" in
     cd "$ROOT"
     auth=()
     [ -f "$HOME/.carlink-private/offline-mfi/identity.pk8" ] && auth=(env DIPLAY_AUTH_ASSETS_DIR="$HOME/.carlink-private")
-    "${auth[@]}" flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q :app:assembleDebug
+    "${auth[@]}" "${GRADLE_LOCK[@]}" ./gradlew --no-daemon -q :app:assembleDebug
     echo "built $APK"
     ;;
   test)
     cd "$ROOT"
     python3 -I scripts/resource_collisions.py --check
-    flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q --continue :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
+    "${GRADLE_LOCK[@]}" ./gradlew --no-daemon -q --continue :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
       :carplay-shared:testDebugUnitTest :carplay-common:testDebugUnitTest
     echo "all tests passed"
     ;;
@@ -67,7 +76,7 @@ case "$cmd" in
             ANDROID_KEY_ALIAS=androiddebugkey ANDROID_KEY_PASSWORD=android)
     fi
     # Lint vital is skipped: this is a test build, and it doubles the build time.
-    env "${auth[@]}" "${sign[@]}" flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q :app:assembleRelease -x lintVitalAnalyzeRelease ${CARLINK_GRADLE_ARGS:-}
+    env "${auth[@]}" "${sign[@]}" "${GRADLE_LOCK[@]}" ./gradlew --no-daemon -q :app:assembleRelease -x lintVitalAnalyzeRelease ${CARLINK_GRADLE_ARGS:-}
     echo "built release $RELEASE_APK"
     ;;
   install-release)
