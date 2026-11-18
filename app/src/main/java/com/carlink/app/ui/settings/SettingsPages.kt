@@ -210,6 +210,10 @@ private fun SoundEssentials(ui: SettingsUi, actions: SettingsActions, openSheet:
         SwitchRow(stringResource(R.string.carlink_settings_resume_music), u.resumeMusic,
             { on -> actions.update { it.copy(resumeMusic = on) } },
             description = stringResource(R.string.carlink_settings_resume_music_detail), icon = R.drawable.carlink_ic_play_arrow)
+        GroupDivider()
+        SwitchRow(stringResource(R.string.carlink_settings_duck_directions), u.duckMusicForDirections,
+            { on -> actions.update { it.copy(duckMusicForDirections = on) } },
+            description = stringResource(R.string.carlink_settings_duck_directions_detail), icon = R.drawable.carlink_ic_navigation)
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_levels)) }) {
         ChoiceRow(stringResource(R.string.carlink_settings_level_media), levelLabel(u.mediaLevelDb),

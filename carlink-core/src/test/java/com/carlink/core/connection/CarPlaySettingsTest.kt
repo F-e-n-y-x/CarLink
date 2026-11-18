@@ -89,6 +89,9 @@ class CarPlaySettingsTest {
         assertNotNull(HostAudio.microphonePcm)
         assertTrue(HostAudio.callsAsMedia)
         assertTrue(CarPlaySettingsPolicy.resumeMusic)
+        assertTrue(HostAudio.duckMediaForPrompts) // on by default (#83)
+        CarPlaySettingsPolicy.apply(app, map(UnifiedSettings(duckMusicForDirections = false)))
+        assertFalse(HostAudio.duckMediaForPrompts)
         // Back to Normal: DiPlay's own audio path, untouched.
         CarPlaySettingsPolicy.apply(app, map())
         assertNull(HostAudio.playbackPcm)

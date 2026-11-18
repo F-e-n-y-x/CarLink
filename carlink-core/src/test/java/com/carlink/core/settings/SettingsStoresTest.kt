@@ -42,6 +42,7 @@ class SettingsStoresTest {
             callLevelDb = -12,
             callAudioAsMedia = true,
             resumeMusic = true,
+            duckMusicForDirections = false,
             micGainDb = 9,
         )
         UnifiedSettingsStore(app).save(settings)

@@ -37,6 +37,9 @@ is what the in-app update popup shows.
   CarPlay's start by up to 5 s after CarLink restarted (thanks @pphan93).
 - Fixed: wireless Android Auto stopped listening for the phone after a Bluetooth error (for
   example after unpairing it) until the next connection. The listener now reopens on its own.
+- Fixed: CarPlay music now turns down while a navigation prompt speaks, so directions are easy to
+  hear on stereos that play everything through one channel (#83). Settings › Sound › Lower music
+  during directions (on by default).
 
 ## [1.0.16] - 2026-11-12
 

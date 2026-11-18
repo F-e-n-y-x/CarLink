@@ -486,6 +486,8 @@ class CarLinkViewModel(application: Application) : AndroidViewModel(application)
         if (next == _unified.value) return
         _unified.value = next
         unifiedStore.save(next)
+        // Read at each navigation prompt, so it applies to a running CarPlay session at once (#83).
+        com.shilapi.xcertplay.media.HostAudio.duckMediaForPrompts = next.duckMusicForDirections
         // Engines read their settings at the start of each session (SessionManager writes them).
         refreshNetwork()
         session.onSettingsChanged()
