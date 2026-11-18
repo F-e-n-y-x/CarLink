@@ -4,8 +4,8 @@ CarLink imported both engines with `git subtree`, keeping their history:
 
 | Path | Upstream | Engine |
 |---|---|---|
-| `vendor/diplay` | https://github.com/shihabal3amri/DiPlay (fork: F-e-n-y-x/DiPlay). Imported at 9e244d9, updated to **upstream main 615b32ce0** (2026-10-28, DiPlay 0.2.22: security bounds on AirPlay/iAP/NCM/bplist input, data sockets accept only the control peer, USB permission receivers guarded on Android 12 and older, queued session log, merged touch moves, Korean and Turkish; earlier updates 9d8963303 on 2026-10-24, 143f4674b on 2026-10-21, 6d3b8a8ce / 0.2.21 on 2026-10-19, bc2bdb3e7 / 0.2.19+ on 2026-10-15, 6ebb5821 / 0.2.16 on 2026-10-10 and 292b2dd, CarLink commit 5eeed506) | CarPlay, main process |
-| `vendor/diauto` | https://github.com/shihabal3amri/DiAuto (fork: F-e-n-y-x/DiAuto). Imported at a2119f4, updated to **upstream main d53dad71e** (2026-10-19, DiAuto 0.3.12+: the 0.3.12 release plus the dashboard-map follow-ups) | Android Auto, `:aa` process |
+| `vendor/diplay` | https://github.com/shihabal3amri/DiPlay. Imported at 9e244d9, updated to **upstream main 615b32ce0** (2026-10-28, DiPlay 0.2.22: security bounds on AirPlay/iAP/NCM/bplist input, data sockets accept only the control peer, USB permission receivers guarded on Android 12 and older, queued session log, merged touch moves, Korean and Turkish; earlier updates 9d8963303 on 2026-10-24, 143f4674b on 2026-10-21, 6d3b8a8ce / 0.2.21 on 2026-10-19, bc2bdb3e7 / 0.2.19+ on 2026-10-15, 6ebb5821 / 0.2.16 on 2026-10-10 and 292b2dd, CarLink commit 5eeed506) | CarPlay, main process |
+| `vendor/diauto` | https://github.com/shihabal3amri/DiAuto. Imported at a2119f4, updated to **upstream main d53dad71e** (2026-10-19, DiAuto 0.3.12+: the 0.3.12 release plus the dashboard-map follow-ups) | Android Auto, `:aa` process |
 
 **Neither engine is updated with `git subtree pull`.** For DiAuto the subtree pull found no
 merge base either, so it is updated the same way as DiPlay below (its recorded upstream commit is
