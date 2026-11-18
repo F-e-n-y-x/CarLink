@@ -254,6 +254,12 @@ private fun diagnosticsEntries(): List<GalleryEntry> = listOf(
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
         com.carlink.app.ui.diagnostics.IssueConfirmSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onOpen = {}, onCopyLog = {}, onCancel = {})
     },
+    // The same sheet on an old version, for a report already sent an hour ago: update first, send again.
+    GalleryEntry("diagnostics", "report-confirm-resend", opensWindow = true, configs = setOf("tablet", "car-landscape", "phone-portrait")) {
+        DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
+        com.carlink.app.ui.diagnostics.IssueConfirmSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onOpen = {}, onCopyLog = {},
+            onCancel = {}, sentAtMillis = System.currentTimeMillis() - 3_600_000, newerVersion = "1.0.16", installedVersion = "1.0.13")
+    },
     GalleryEntry("diagnostics", "report-qr", opensWindow = true, configs = setOf("tablet", "car-landscape", "phone-portrait")) {
         DiagnosticsContent(DiagnosticsUi(LinkState.Idle, null, null, previewChecks, previewLog()), GalleryDiagnosticsActions)
         com.carlink.app.ui.diagnostics.IssueQrSheet(com.carlink.app.ui.diagnostics.previewIssueReport(), onShareLog = {}, onCopyLog = {}, onDone = {})

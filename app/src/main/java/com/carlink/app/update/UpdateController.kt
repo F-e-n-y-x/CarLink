@@ -99,6 +99,10 @@ class UpdateController(
     /** Wall-clock time of the last check, 0 for never. */
     val lastCheck: StateFlow<Long> = _lastCheck.asStateFlow()
 
+    private val _newer = MutableStateFlow<ReleaseInfo?>(null)
+    /** The newest release a check found above [current], even one the driver chose Later or Ignore for (the report sheet names it). */
+    val newer: StateFlow<ReleaseInfo?> = _newer.asStateFlow()
+
     private var job: Job? = null
     private var verifiedFile: File? = null
 
@@ -150,6 +154,7 @@ class UpdateController(
         job = scope.launch {
             val outcome = withContext(io) { source.latest() }
             log("check (${if (manual) "manual" else "automatic"}): $outcome")
+            if (outcome is CheckOutcome.Newer) _newer.value = outcome.release
             _state.value = when (outcome) {
                 is CheckOutcome.Newer ->
                     if (UpdatePolicy.shouldOffer(outcome.release, current, prefs.ignoredUpdateTag, manual)) UpdateState.Available(outcome.release)
@@ -159,6 +164,26 @@ class UpdateController(
                 is CheckOutcome.Failed -> if (manual) UpdateState.CheckFailed(rateLimited = false) else UpdateState.Idle
             }
         }
+    }
+
+    /**
+     * The report sheet opened: find out quietly whether a newer release exists (fills [newer], never
+     * opens the dialog), unless one is known already. Old versions sent reports fixed long before (#78-#80).
+     */
+    fun refreshNewer() {
+        if (!supported || _newer.value != null || job?.isActive == true) return
+        job = scope.launch {
+            val outcome = withContext(io) { source.latest() }
+            log("check (report): $outcome")
+            if (outcome is CheckOutcome.Newer) _newer.value = outcome.release
+        }
+    }
+
+    /** "Update first" on the report sheet: offer [newer] in the update dialog, even when its tag was ignored. */
+    fun offerNewer() {
+        val release = _newer.value ?: return
+        if (job?.isActive == true || _state.value.showsDialog) return
+        _state.value = UpdateState.Available(release)
     }
 
     /** "Later": close until the next check window. */

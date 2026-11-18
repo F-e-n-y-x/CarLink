@@ -29,28 +29,22 @@ body:
       placeholder: "iPhone 13, iOS 26.5 / Samsung Galaxy S25 Ultra, Android 16"
     validations:
       required: true
-  - type: dropdown
+  # Text inputs, not dropdowns: CarLink's in-app report fills them from the failed session, and
+  # dropdowns arrived contradicting it (#74, #75, #78-#80).
+  - type: input
     id: projection
     attributes:
       label: CarPlay or Android Auto
-      options:
-        - CarPlay
-        - Android Auto
-        - Both
-        - Neither (CarLink's own screens)
+      description: "CarPlay, Android Auto, Both, or Neither (CarLink's own screens)"
+      placeholder: "Android Auto"
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: connection
     attributes:
       label: Connection type
-      options:
-        - USB cable
-        - Wireless, Wi-Fi Direct (Automatic)
-        - Wireless, car hotspot
-        - Wireless, same Wi-Fi network
-        - Wireless, head unit server (Android Auto)
-        - Not sure
+      description: "USB cable; Wireless, Wi-Fi Direct (Automatic); Wireless, car hotspot; Wireless, same Wi-Fi network; Wireless, head unit server (Android Auto); or Not sure"
+      placeholder: "USB cable"
     validations:
       required: true
   - type: input

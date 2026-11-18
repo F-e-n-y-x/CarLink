@@ -22,8 +22,10 @@ import java.util.TimeZone
  *
  * Each query parameter is a form field's `id`; GitHub uses the `id` as "the canonical identifier
  * for the field in URL query parameter prefills" (docs.github.com, "Syntax for GitHub's form
- * schema"). Dropdowns only take a value that is exactly one of their option labels, otherwise
- * they stay empty, so the labels below must match the form word for word (a test reads the form).
+ * schema"). "CarPlay or Android Auto" and "Connection type" are text inputs, not dropdowns: reports
+ * sent as dropdowns arrived with values that contradicted their own session (#74/#75: the digest
+ * said WIFI_DIRECT, the form "car hotspot" and "same Wi-Fi"; #78-#80: Android Auto sent as CarPlay),
+ * while the text inputs always kept what CarLink filled in.
  */
 object GitHubIssueReport {
     const val NEW_ISSUE = "https://github.com/F-e-n-y-x/CarLink/issues/new"
@@ -67,7 +69,7 @@ object GitHubIssueReport {
     /** A single log line longer than this is cut (the full line is in Share log). */
     const val MAX_LINE_CHARS = 220
 
-    // Option labels of the form's dropdowns, word for word.
+    // The values CarLink writes into the form's "CarPlay or Android Auto" and "Connection type" fields.
     const val PROJECTION_CARPLAY = "CarPlay"
     const val PROJECTION_ANDROID_AUTO = "Android Auto"
     const val CONNECTION_USB = "USB cable"
@@ -122,7 +124,7 @@ object GitHubIssueReport {
         val versionName: String,
         val versionCode: Int,
         val device: Device,
-        /** The last session of each engine, newest first; the first fills the form's dropdowns. */
+        /** The last session of each engine, newest first; the first fills the form's fields and leads "What happened". */
         val sessions: List<Session>,
         /** Home's message in the driver's words: its headline and sentence, when something failed. */
         val problemTitle: String?,
@@ -183,6 +185,16 @@ object GitHubIssueReport {
     enum class Route { BROWSER, QR_CODE }
 
     fun route(browserAvailable: Boolean): Route = if (browserAvailable) Route.BROWSER else Route.QR_CODE
+
+    /** The same report opened again within this time was most likely sent already (#73-#75 over 2 h, #78-#80 in seconds). */
+    const val RESEND_WINDOW_MILLIS = 12 * 60 * 60_000L
+
+    /** What makes two reports the same: the version, the title (engine, transport, Home's message) and the connection. */
+    fun sameReportKey(report: Report): String = listOf("version", "title", "connection").joinToString("|") { report.fields[it].orEmpty() }
+
+    /** [key] was sent at [sentAtMillis] (as [sentKey]) less than [RESEND_WINDOW_MILLIS] ago; a clock that went back does not count. */
+    fun sentRecently(key: String, sentKey: String?, sentAtMillis: Long, nowMillis: Long): Boolean =
+        key == sentKey && nowMillis - sentAtMillis in 0 until RESEND_WINDOW_MILLIS
 
     fun build(facts: Facts): Report {
         val title = title(facts)
@@ -326,14 +338,14 @@ object GitHubIssueReport {
         return n.takeIf { it.isNotEmpty() }
     }
 
-    /** A dropdown label of the form, or null to leave the dropdown for the reporter. */
+    /** The form's "CarPlay or Android Auto" value, or null to leave it for the reporter. */
     fun projection(s: Session?): String? = when (s?.engine) {
         Engine.CARPLAY -> PROJECTION_CARPLAY
         Engine.ANDROID_AUTO -> PROJECTION_ANDROID_AUTO
         null -> null
     }
 
-    /** A dropdown label of the form, or null when there was no session. */
+    /** The form's "Connection type" value, or null when there was no session. */
     fun connection(s: Session?): String? = when {
         s?.transport == null -> null
         s.transport == Transport.USB -> CONNECTION_USB
@@ -348,7 +360,7 @@ object GitHubIssueReport {
 
     /**
      * What happened: Home's message, then each session labelled with its engine, transport and time
-     * (the form's dropdowns describe the first), its timeline, the settings, the stereo's Bluetooth and
+     * (the form's fields describe the first), its timeline, the settings, the stereo's Bluetooth and
      * a performance block. Blocks are dropped least important first to stay within [budget] (encoded).
      */
     fun whatHappened(facts: Facts, short: Boolean, budget: Int = Int.MAX_VALUE): String {
@@ -399,7 +411,7 @@ object GitHubIssueReport {
             listOfNotNull(s.transport?.name, s.path?.name).joinToString(" ").takeIf { it.isNotEmpty() },
             if (s.failed) "failed" else "no failure",
             time,
-        ).joinToString(" · ") + if (labelled) " (the form's dropdowns describe this one)" else ""
+        ).joinToString(" · ") + if (labelled) " (the form's fields above describe this one)" else ""
         val lines = listOfNotNull(
             (s.phoneModel ?: s.phoneOs)?.let { "Phone: " + listOfNotNull(s.phoneModel, s.phoneOs?.let { v -> "OS $v" }).joinToString(", ") },
             s.problem?.let { "LinkProblem: $it" },
