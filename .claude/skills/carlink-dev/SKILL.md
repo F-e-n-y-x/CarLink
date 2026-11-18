@@ -104,7 +104,7 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
 (Android Auto, `:aa`; upstream main d53dad71e, DiAuto 0.3.12+) were imported as git subtrees. Change them only through small hooks marked `// CarLink`, and add a row
 to `docs/VENDOR_CHANGES.md` for every edit (every edit needs a row, every row an edit; audit with
 `git diff --stat 615b32ce0: HEAD:vendor/diplay`, `git diff --stat d53dad71e: HEAD:vendor/diauto` and
-`grep -rn CarLink vendor/`). Prefer a host hook over editing engine logic. Do not run
+`grep -rn CarLink vendor/`). Prefer a host hook over editing engine logic. An open upstream PR worth having early is ported with `// CarLink: upstream PR #N` on each line and its number added to the "already carries ports" list in `docs/VENDOR_CHANGES.md`, so the next engine update drops it once merged. Before an update, check upstream main, open PRs and active forks (CarLink's own forks too: pphan93 and 0nezar0 carried fixes in 2026-11). Do not run
 `git subtree pull`; neither engine can be subtree-pulled any more (no merge base): each is updated by applying the upstream diff (commands in `docs/VENDOR_CHANGES.md`).
 
 The hooks CarLink sets (where):
@@ -223,8 +223,18 @@ Measured on the tablet (2026-10-09, plug-in/Connect to picture): USB CarPlay ≈
 Auto ≈ 3.8 s, wireless Android Auto ≈ 5 s, wireless CarPlay ≈ 16-20 s (mostly paging the iPhone
 over Bluetooth). Quote new numbers from these lines, not from memory.
 
-Work autonomously (the user granted full permission, internet access and use of this PC) and run
-**at most two agents at a time**.
+Work autonomously (the user granted full permission, internet access and use of this PC).
+Several agents may run at once (the user's go-ahead, 2026-11-18), each in its own git worktree
+(`isolation: "worktree"`), each owning separate files or topics. This PC has 32 GB and 12 cores,
+so builds take turns:
+- `dev.sh` runs Gradle under `flock /tmp/carlink-gradle.lock` (skipped when a parent already holds
+  it). Wrap any direct `./gradlew` the same way and end it with `./gradlew --stop`; prefer one test
+  class (`--tests`) and run the full `$S test` once at the end. Six parallel builds once filled
+  RAM and 38 GB of swap (load 120+); `~/.gradle/gradle.properties` caps heaps at 2 GB.
+- Merge agent branches into `main` one by one and test after merging. `CHANGELOG.md` uses
+  `merge=union` (`.git/info/attributes`), so every branch's `## [Unreleased]` lines are kept.
+- Brief an agent with what is already known and what other agents are touching; check its claims
+  (a "fix" can be dead code: #82's adapter fallback already existed in DiPlay).
 
 A UI change is not done until you have screenshotted it at head-unit size and at phone size (or
 rendered it in the gallery) and looked at the images for clipped text, wrong colors, empty areas
