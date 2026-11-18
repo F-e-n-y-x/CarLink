@@ -140,5 +140,6 @@ fun FailureReason.toLinkProblem(): LinkProblem = when (this) {
     FailureReason.BLOCKED -> LinkProblem.PERMISSIONS
     FailureReason.AUTHENTICATION -> LinkProblem.CARPLAY_AUTH_MISSING
     FailureReason.HEAD_UNIT_SERVER_OFF -> LinkProblem.HEAD_UNIT_SERVER_OFF
+    FailureReason.HEAD_UNIT_SERVER_STUCK -> LinkProblem.HEAD_UNIT_SERVER_STUCK
     FailureReason.ENGINE -> LinkProblem.ENGINE
 }

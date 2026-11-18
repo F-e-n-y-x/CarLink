@@ -197,6 +197,10 @@ private fun homeEntries(): List<GalleryEntry> = with(HomeFakes) { listOf(
     home("failed-external-module") {
         HomeContent(ui(link = failed(LinkProblem.EXTERNAL_MODULE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
     },
+    // Android Auto's head unit server took the connection and went silent: restart it (#84).
+    home("failed-head-unit-server-stuck") {
+        HomeContent(ui(link = failed(LinkProblem.HEAD_UNIT_SERVER_STUCK, engine = Engine.ANDROID_AUTO), phones = listOf(pixel)), actions)
+    },
     home("failed-engine") {
         HomeContent(ui(link = failed(LinkProblem.ENGINE, engine = Engine.ANDROID_AUTO), phones = listOf(pixel, iphone)), actions)
     },

@@ -34,9 +34,13 @@ class SystemEventReceiver : BroadcastReceiver() {
         when (intent.action) {
             in BOOT_ACTIONS -> {
                 val on = CarLinkPreferences(context).startOnBoot
+                // A wake can arrive while CarPlay or Android Auto is on screen (a stereo that only
+                // dimmed): Home must not cover the picture then.
+                val running = on && runCatching { Connection.get(context).state.value.isActive }.getOrDefault(false)
                 // #23: a report must show whether this stereo sends any wake broadcast at all.
-                EventLog.add("CarLink", "wake broadcast ${intent.action}; start with the car ${if (on) "on: opening Home" else "off"}")
-                if (on) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
+                EventLog.add("CarLink", "wake broadcast ${intent.action}; start with the car " +
+                    when { !on -> "off"; running -> "on: a session is running, Home stays behind"; else -> "on: opening Home" })
+                if (on && !running) CarLinkCore.config.host.openHome(context, CarLinkHost.OpenReason.BOOT)
             }
             BluetoothDevice.ACTION_ACL_CONNECTED -> onPhoneLink(context, intent, sdpDone = false)
             // Only delivered here on Android 7.x: since 8.0 an implicit ACTION_UUID never reaches
@@ -181,6 +185,8 @@ class SystemEventReceiver : BroadcastReceiver() {
             "android.intent.action.ACTION_MT_COMMAND_SLEEP_OUT",
             "com.cayboy.action.ACC_ON",
             "com.carboy.action.ACC_ON",
+            // Autochips-style quick boot (the stereo sleeps instead of powering off).
+            "autochips.intent.action.QB_POWERON",
         )
         private const val DEBOUNCE_MILLIS = 15_000L
 

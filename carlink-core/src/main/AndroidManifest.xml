@@ -82,6 +82,7 @@
                 <action android:name="android.intent.action.ACTION_MT_COMMAND_SLEEP_OUT" />
                 <action android:name="com.cayboy.action.ACC_ON" />
                 <action android:name="com.carboy.action.ACC_ON" />
+                <action android:name="autochips.intent.action.QB_POWERON" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />

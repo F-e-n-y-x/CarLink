@@ -54,7 +54,8 @@ internal fun failedStep(link: LinkState): Int? {
         LinkProblem.LINK_TOO_WEAK -> 3
         LinkProblem.CARPLAY_AUTH_MISSING, LinkProblem.WIFI_OFF, LinkProblem.LOCATION_OFF, LinkProblem.SAME_WIFI_DETAILS_MISSING,
         LinkProblem.SAME_WIFI_NOT_JOINED, LinkProblem.CAR_HOTSPOT_DETAILS_MISSING, LinkProblem.CAR_HOTSPOT_OFF,
-        LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT, LinkProblem.HEAD_UNIT_SERVER_OFF -> return null
+        LinkProblem.PERMISSIONS, LinkProblem.OVERLAY, LinkProblem.VPN_CONSENT, LinkProblem.HEAD_UNIT_SERVER_OFF,
+        LinkProblem.HEAD_UNIT_SERVER_STUCK -> return null
         LinkProblem.ENGINE, null -> null
     }
     return byProblem ?: link.step.takeIf { it in 1..4 }?.minus(1)

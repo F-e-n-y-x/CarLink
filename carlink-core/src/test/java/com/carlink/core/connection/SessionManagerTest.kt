@@ -971,4 +971,28 @@ class SessionManagerTest {
         assertEquals(2, starts.size)
         assertTrue(androidAuto.plan!!.selfMode)
     }
+
+    @Test fun theHeadUnitServerPathIsNeverTornDownForASlowPhase() {
+        paths = listOf(WirelessPath.HEADUNIT_SERVER)
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Stalled(FailureReason.ENGINE, "slow")); idle()
+        advance(60_000)
+        assertEquals("no nudge, retry or next path", emptyList<RecoveryAction>(), androidAuto.recovered)
+        assertEquals("no restart: it would leave the phone's server deaf", 1, starts.size)
+        assertTrue(m.state.value is SessionState.Active)
+    }
+
+    @Test fun aStuckHeadUnitServerFailsWithItsOwnProblem() {
+        val m = manager()
+        m.startSelf(); idle()
+        androidAuto.emit(AdapterEvent.Failed(FailureReason.HEAD_UNIT_SERVER_STUCK, "silent")); idle()
+        assertEquals(LinkProblem.HEAD_UNIT_SERVER_STUCK, (m.state.value as SessionState.Failed).toLinkState().problem)
+    }
+
+    @Test fun theLogNamesSelfMode() {
+        assertEquals("SELF_MODE", where(null, selfMode = true))
+        assertEquals("USB", where(null, selfMode = false))
+        assertEquals("HEADUNIT_SERVER", where(WirelessPath.HEADUNIT_SERVER, selfMode = false))
+    }
 }

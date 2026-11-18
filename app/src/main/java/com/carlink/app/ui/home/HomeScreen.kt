@@ -854,6 +854,7 @@ internal fun failureCopyRes(problem: LinkProblem?): Pair<Int, Int> = when (probl
     LinkProblem.EXTERNAL_BLUETOOTH -> R.string.carlink_home_error_external_bt_title to R.string.carlink_home_error_external_bt_body
     LinkProblem.EXTERNAL_MODULE -> R.string.carlink_home_error_external_module_title to R.string.carlink_home_error_external_module_body
     LinkProblem.HEAD_UNIT_SERVER_OFF -> R.string.carlink_home_error_hu_server_title to R.string.carlink_home_error_hu_server_body
+    LinkProblem.HEAD_UNIT_SERVER_STUCK -> R.string.carlink_home_error_hu_server_stuck_title to R.string.carlink_home_error_hu_server_stuck_body
     LinkProblem.ENGINE, null -> R.string.carlink_home_error_engine_title to R.string.carlink_home_error_engine_body
 }
 
@@ -916,7 +917,7 @@ private fun FailureActions(link: LinkState, network: NetworkPreview?, actions: H
             repair()
         }
         // Coming back from Android Auto's settings tries again by itself (rememberProblemFix).
-        LinkProblem.HEAD_UNIT_SERVER_OFF -> {
+        LinkProblem.HEAD_UNIT_SERVER_OFF, LinkProblem.HEAD_UNIT_SERVER_STUCK -> {
             IonButton(stringResource(R.string.carlink_home_open_aa_settings), { actions.fix(problem) }, icon = R.drawable.carlink_ic_settings)
             GlassButton(stringResource(R.string.carlink_home_try_again), actions::retry, icon = R.drawable.carlink_ic_refresh)
         }

@@ -88,6 +88,8 @@ enum class LinkProblem {
     EXTERNAL_MODULE,
     /** Android Auto on this screen: Android Auto's head unit server (its developer settings) is off. */
     HEAD_UNIT_SERVER_OFF,
+    /** Android Auto's head unit server took the connection and never answered; it needs a restart. */
+    HEAD_UNIT_SERVER_STUCK,
 }
 
 /**
