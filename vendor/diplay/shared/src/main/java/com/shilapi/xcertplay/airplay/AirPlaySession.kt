@@ -454,7 +454,7 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        var accumulated = ByteArray(0)
+        val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -478,10 +478,8 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                accumulated += plaintext
-                val parsed = RtspMessage.parseMessages(accumulated)
-                accumulated = parsed.rest
-                for (request in parsed.messages) {
+                frames.append(plaintext) // CarLink: upstream PR #1304
+                for (request in frames.drain()) {
                     val cseq = request.headers["cseq"] ?: "-"
                     val path = request.path.lowercase()
                     val showInDebugOverlay =
@@ -501,7 +499,16 @@ class AirPlaySession(
                     }
                     val requestNanos = System.nanoTime() // CarLink
                     val response = try {
-                        handle(request)
+                        if (cipher == null && !allowedBeforePairVerify(request)) { // CarLink: upstream PR #1124
+                            debugLog(
+                                AirPlayControlDiagnostics.request(request.method, request.path, request.body.size) +
+                                    " refused before pair-verify",
+                                false,
+                            )
+                            RtspMessage.Response(status = STATUS_AUTHORIZATION_REQUIRED)
+                        } else {
+                            handle(request)
+                        }
                     } catch (error: Exception) {
                         Log.e(
                             TAG,
@@ -546,6 +553,20 @@ class AirPlaySession(
         } finally {
             debugLog("airplay control closing reason=$closeReason activeStreams=$activeStreams")
             close()
+        }
+    }
+
+    /**
+     * The control cipher exists only after the controller proved its key in pair-verify M3, so a request
+     * that arrives without it comes from a peer nobody has authenticated. Only pairing and the static
+     * device info may be answered then. A real iPhone sends nothing else before it is encrypted.
+     */
+    private fun allowedBeforePairVerify(request: RtspMessage.Request): Boolean { // CarLink: upstream PR #1124
+        val path = request.path.lowercase()
+        return when (request.method) {
+            "POST" -> path.endsWith("/pair-setup") || path.endsWith("/pair-verify")
+            "GET" -> path.endsWith("/info")
+            else -> false
         }
     }
 
@@ -934,7 +955,7 @@ class AirPlaySession(
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
             var encrypted = ByteArray(0)
-            var plaintext = ByteArray(0)
+            val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
@@ -948,10 +969,8 @@ class AirPlaySession(
                     break
                 }
                 encrypted = decrypted.rest
-                plaintext += decrypted.data
-                val parsed = RtspMessage.parseMessages(plaintext)
-                plaintext = parsed.rest
-                for (message in parsed.messages) {
+                frames.append(decrypted.data) // CarLink: upstream PR #1304
+                for (message in frames.drain()) {
                     if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
                     debugLog(
                         "airplay event rx ${message.method} ${message.path} cseq=${message.headers["cseq"] ?: "-"} body=${message.body.size}",
@@ -991,6 +1010,7 @@ class AirPlaySession(
         const val PLIST_CONTENT_TYPE = "application/x-apple-binary-plist"
         const val PAIRING_CONTENT_TYPE = "application/pairing+tlv8"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
+        const val STATUS_AUTHORIZATION_REQUIRED = 470 // CarLink: upstream PR #1124
 
         const val STREAM_TYPE_MAIN_SCREEN = 110
         const val STREAM_TYPE_ALT_SCREEN = 111

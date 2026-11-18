@@ -19,6 +19,8 @@ is what the in-app update popup shows.
 - Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) on screens
   whose hardware decoder carries it. If CarPlay shows no picture with HEVC, the next try uses H.264;
   when that one works, CarLink keeps H.264 on that screen from then on.
+- Security: CarPlay engine hardened against malformed data from the phone (upstream DiPlay PRs
+  #1124, #1130, #1294, #1296, #1297, #1299, #1300, #1304, #1307, #1308, #1313).
 
 ## [1.0.16] - 2026-11-12
 

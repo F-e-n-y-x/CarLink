@@ -14,6 +14,8 @@ class PairVerify(
 
     private var ephemeralPublicKey: ByteArray? = null
     private var clientEphemeralPublicKey: ByteArray? = null
+    // Derived from a key the peer chose, so it proves nothing until M4. It is published as sharedSecret only then.
+    private var handshakeSecret: ByteArray? = null // CarLink: upstream PR #1124
     private var sharedSecret: ByteArray? = null
     private var encryptionKey: ByteArray? = null
     private var keys: ControlKeys? = null
@@ -46,7 +48,7 @@ class PairVerify(
         this.clientEphemeralPublicKey = clientEphemeralPublicKey
 
         val shared = AirPlayCrypto.x25519Shared(pair.privateKey, clientEphemeralPublicKey)
-        sharedSecret = shared
+        handshakeSecret = shared // CarLink: upstream PR #1124
         val encryptionKey = AirPlayCrypto.hkdfSha512(shared, VERIFY_ENCRYPT_SALT.asciiBytes(), VERIFY_ENCRYPT_INFO.asciiBytes())
         this.encryptionKey = encryptionKey
 
@@ -74,7 +76,7 @@ class PairVerify(
     private fun m4(tlv: Map<Int, ByteArray>): ByteArray {
         val encrypted = tlv[TYPE_ENCRYPTED_DATA]
         val encryptionKey = this.encryptionKey
-        val shared = sharedSecret
+        val shared = handshakeSecret // CarLink: upstream PR #1124
         val ownEphemeralPublicKey = ephemeralPublicKey
         val clientEphemeralPublicKey = this.clientEphemeralPublicKey
         if (
@@ -96,6 +98,7 @@ class PairVerify(
         val readKey = AirPlayCrypto.hkdfSha512(shared, CONTROL_SALT.asciiBytes(), CONTROL_WRITE_KEY_INFO.asciiBytes())
         val writeKey = AirPlayCrypto.hkdfSha512(shared, CONTROL_SALT.asciiBytes(), CONTROL_READ_KEY_INFO.asciiBytes())
         keys = ControlKeys(readKey, writeKey)
+        sharedSecret = shared // CarLink: upstream PR #1124
         verified = true
         this.controllerId = controllerId.toString(Charsets.UTF_8)
         return Tlv8Codec.encode(listOf(Tlv8Item(TYPE_STATE, byteArrayOf(4))))

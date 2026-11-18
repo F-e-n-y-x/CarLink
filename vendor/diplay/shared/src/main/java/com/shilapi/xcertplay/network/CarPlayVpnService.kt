@@ -24,8 +24,13 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.util.Collections
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Hosts the AirPlay TCP listener for both NCM/VPN and local-only Wi-Fi transports.
@@ -58,6 +63,10 @@ class CarPlayVpnService : VpnService() {
 
     private val binder = LocalBinder()
     private val active = AtomicBoolean(false)
+    private val connectionLimits = AirPlayConnectionLimits() // CarLink: upstream PR #1130
+    private val prePairWatchdog = ScheduledThreadPoolExecutor(1) { task ->
+        Thread(task, "airplay-pre-pair-watchdog").apply { isDaemon = true }
+    }.apply { removeOnCancelPolicy = true }
     private val sessionsLock = Any()
     private val sessions = mutableSetOf<AirPlaySession>()
     @Volatile private var attachment: AirPlayAttachment? = null
@@ -183,6 +192,7 @@ class CarPlayVpnService : VpnService() {
 
     override fun onDestroy() {
         detach()
+        prePairWatchdog.shutdownNow()
         super.onDestroy()
     }
 
@@ -254,68 +264,121 @@ class CarPlayVpnService : VpnService() {
         try {
             while (active.get()) {
                 val socket: Socket = server.accept()
-                val acceptedAtNanos = System.nanoTime()
-                Log.i(TAG, "airplay connection accepted from ${socket.remoteSocketAddress}")
-                socket.tcpNoDelay = true
-                socket.keepAlive = true
-                socket.setSoLinger(true, 0)
-                val session = synchronized(this) {
-                    if (!active.get() || generation != attachGeneration ||
-                        (serverSocket !== server && additionalServers.none { it === server })) {
-                        socket.close()
-                        return
-                    }
-                    val current = attachment
-                    if (current == null) {
-                        socket.close()
-                        return
-                    }
-                    val internalPeer = isInternalAirPlayPeer(socket.inetAddress, socket.localAddress)
-                    current.listenerIdentity?.let { owner ->
-                        current.listener.onTcpAccepted(AirPlayTcpAccepted(
-                            owner, internalPeer, acceptedAtNanos,
-                        ))
-                    }
-                    runCatching { current.listener.onDebugLog(
-                        "airplay TCP accepted family=${if (socket.inetAddress is Inet6Address) "IPv6" else "IPv4"}",
-                    ) }
-                    AirPlaySession(
-                        socket = socket,
-                        config = current.config,
-                        identity = current.identity,
-                        pairings = current.pairings,
-                        mfi = current.mfi,
-                        listener = object : AirPlaySessionListener by current.listener {
-                            override fun onSessionActive(session: AirPlaySession) {
-                                if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionActive(session)
-                            }
-
-                            override fun onRemoteControlMessage(
-                                session: AirPlaySession,
-                                streamId: Long,
-                                message: Map<String, Any?>,
-                            ) {
-                                current.listener.onRemoteControlMessage(session, streamId, message)
-                            }
-
-                            override fun onVideoPlaybackUiRequested(session: AirPlaySession) {
-                                current.listener.onVideoPlaybackUiRequested(session)
-                            }
-
-                            override fun onSessionEnded(session: AirPlaySession) {
-                                removeSession(session)
-                                if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionEnded(session)
-                            }
-                        },
-                        media = current.media,
-                    ).also(::addSession)
-                }
-                session.start()
+                if (!handleAccepted(generation, server, socket, System.nanoTime())) return // CarLink: upstream PR #1130
             }
         } catch (error: IOException) {
             if (active.get()) {
                 attachment?.listener?.let { onTransportError(generation, it, error) }
             }
+        }
+    }
+
+    /** Returns false when the listener is stale and the accept loop must stop. */
+    internal fun handleAccepted( // CarLink: upstream PR #1130
+        generation: Int,
+        server: ServerSocket,
+        socket: Socket,
+        acceptedAtNanos: Long,
+    ): Boolean {
+        var heldSlot: AirPlayConnectionLimits.Slot? = null
+        var startedSession: AirPlaySession? = null
+        try {
+            val slot = connectionLimits.tryAcquire(socket.inetAddress) { runCatching { socket.close() } }
+            if (slot == null) {
+                Log.w(TAG, "airplay connection from ${socket.remoteSocketAddress} refused: connection limit")
+                socket.close()
+                return true
+            }
+            heldSlot = slot
+            Log.i(TAG, "airplay connection accepted from ${socket.remoteSocketAddress}")
+            try {
+                socket.tcpNoDelay = true
+                socket.keepAlive = true
+                socket.setSoLinger(true, 0)
+            } catch (_: SocketException) {
+                // The peer reset the socket, or a limit eviction closed it; one bad socket must not end the loop.
+                connectionLimits.release(slot)
+                socket.close()
+                return true
+            }
+            val watchdog = AtomicReference<ScheduledFuture<*>?>()
+            val ended = AtomicBoolean()
+            val session = synchronized(this) {
+                if (!active.get() || generation != attachGeneration ||
+                    (serverSocket !== server && additionalServers.none { it === server })) {
+                    socket.close()
+                    connectionLimits.release(slot)
+                    return false
+                }
+                val current = attachment
+                if (current == null) {
+                    socket.close()
+                    connectionLimits.release(slot)
+                    return false
+                }
+                val internalPeer = isInternalAirPlayPeer(socket.inetAddress, socket.localAddress)
+                current.listenerIdentity?.let { owner ->
+                    current.listener.onTcpAccepted(AirPlayTcpAccepted(
+                        owner, internalPeer, acceptedAtNanos,
+                    ))
+                }
+                runCatching { current.listener.onDebugLog(
+                    "airplay TCP accepted family=${if (socket.inetAddress is Inet6Address) "IPv6" else "IPv4"}",
+                ) }
+                AirPlaySession(
+                    socket = socket,
+                    config = current.config,
+                    identity = current.identity,
+                    pairings = current.pairings,
+                    mfi = current.mfi,
+                    listener = object : AirPlaySessionListener by current.listener {
+                        override fun onSessionActive(session: AirPlaySession) {
+                            if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionActive(session)
+                        }
+
+                        override fun onRemoteControlMessage(
+                            session: AirPlaySession,
+                            streamId: Long,
+                            message: Map<String, Any?>,
+                        ) {
+                            current.listener.onRemoteControlMessage(session, streamId, message)
+                        }
+
+                        override fun onVideoPlaybackUiRequested(session: AirPlaySession) {
+                            current.listener.onVideoPlaybackUiRequested(session)
+                        }
+
+                        override fun onSessionEnded(session: AirPlaySession) {
+                            connectionLimits.release(slot)
+                            ended.set(true)
+                            watchdog.get()?.cancel(false)
+                            removeSession(session)
+                            if (current.listenerIdentity == null || !internalPeer) current.listener.onSessionEnded(session)
+                        }
+                    },
+                    media = current.media,
+                ).also { created ->
+                    startedSession = created
+                    slot.verified = { created.controllerId != null }
+                    addSession(created)
+                }
+            }
+            val future = prePairWatchdog.schedule(
+                { if (session.controllerId == null) session.close() },
+                AirPlayConnectionLimits.PRE_PAIR_VERIFY_TIMEOUT_MILLIS,
+                TimeUnit.MILLISECONDS,
+            )
+            watchdog.set(future)
+            if (ended.get()) future.cancel(false)
+            session.start()
+            return true
+        } catch (error: Exception) {
+            // One bad connection must not end the accept thread: an uncaught exception there kills the process.
+            Log.w(TAG, "airplay connection from ${socket.remoteSocketAddress} dropped: ${error.javaClass.simpleName}", error)
+            runCatching { startedSession?.close() }
+            runCatching { socket.close() }
+            heldSlot?.let(connectionLimits::release)
+            return true
         }
     }
 
