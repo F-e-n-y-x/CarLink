@@ -188,6 +188,10 @@
     <string name="carlink_report_public">This opens a public issue that anyone can read. Addresses and passwords are removed.</string>
     <string name="carlink_report_sign_in">The browser must be signed in to GitHub. Sign in once; it stays signed in.</string>
     <string name="carlink_report_full_log">The issue holds a short part of the log. Tap Copy full log, then paste it into the issue, or attach the file from Share log.</string>
+    <string name="carlink_report_update_first">CarLink %1$s is out (you have %2$s). Please update first: it may already fix this. If the problem stays, report it from the new version.</string>
+    <string name="carlink_report_update_action">Update to %1$s</string>
+    <string name="carlink_report_already_sent">You already sent this report at %1$s. Each report opens a new issue: send it again only if something changed, or add to the issue you opened.</string>
+    <string name="carlink_report_open_again">Send again</string>
     <string name="carlink_report_open">Open GitHub</string>
     <string name="carlink_report_cancel">Cancel</string>
     <string name="carlink_report_qr_title">Report from your phone</string>

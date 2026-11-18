@@ -87,24 +87,20 @@ class GitHubIssueReportTest {
         assertTrue(GitHubIssueReport.encode(text).all { it.isLetterOrDigit() || it in "+%-_.~" })
     }
 
-    @Test fun dropdownValuesAreExactOptionLabelsOfTheForm() {
+    @Test fun projectionAndConnectionAreTextInputsThatNameEveryValue() {
         val form = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, ".github/ISSUE_TEMPLATE/bug_report.yml") }.first { it.isFile }.readLines()
-        fun options(id: String): Set<String> {
+        // A text input keeps the prefilled value (dropdowns arrived contradicting the session, #74/#75/#78-#80);
+        // its description lists the values the builder writes, so a reporter typing it uses the same words.
+        fun field(id: String): String {
             val start = form.indexOfFirst { it.trim() == "id: $id" }
             check(start >= 0) { "no field $id" }
-            val out = mutableSetOf<String>()
-            var inOptions = false
-            for (raw in form.drop(start + 1)) {
-                val t = raw.trim()
-                if (t.startsWith("- type:")) break
-                if (t == "options:") { inOptions = true; continue }
-                if (inOptions && t.startsWith("- ")) out += t.removePrefix("- ").trim().trim('"')
-                else if (inOptions && t.isNotEmpty()) inOptions = false
-            }
-            return out
+            val type = form[start - 1].trim()
+            assertEquals("$id is a text input", "- type: input", type)
+            return form.drop(start + 1).takeWhile { !it.trim().startsWith("- type:") }
+                .first { it.trim().startsWith("description:") }
         }
-        // Every value the builder can produce for the two dropdowns.
+        // Every value the builder can produce for the two fields.
         val routes: List<Pair<Transport, WirelessPath?>> =
             listOf<Pair<Transport, WirelessPath?>>(Transport.USB to null, Transport.WIRELESS to null) +
                 WirelessPath.entries.map { Transport.WIRELESS to it }
@@ -114,9 +110,9 @@ class GitHubIssueReportTest {
         val projections = sessions.mapNotNull { GitHubIssueReport.projection(it) }.toSet()
         val connections = sessions.mapNotNull { GitHubIssueReport.connection(it) }.toSet()
         assertEquals(setOf("CarPlay", "Android Auto"), projections)
-        assertTrue("${options("projection")}", options("projection").containsAll(projections))
+        projections.forEach { assertTrue(it, field("projection").contains(it)) }
         assertEquals(6, connections.size)
-        assertTrue("${options("connection")} vs $connections", options("connection").containsAll(connections))
+        connections.forEach { assertTrue(it, field("connection").contains(it)) }
         // The text fields the builder fills exist too.
         listOf("version", "screen", "phone", "car_brand", "what_happened", "log").forEach { id ->
             assertTrue(id, form.any { it.trim() == "id: $id" })
@@ -354,7 +350,7 @@ class GitHubIssueReportTest {
             log = listOf(line(1_000, LogSource.ANDROID_AUTO,
                 "VideoDecoder.logThroughput | Throughput over 5003ms: rendered=279 (55fps), dropped=0, codec=c2.qti.hevc.decoder")))
         val what = GitHubIssueReport.whatHappened(f, short = false)
-        assertTrue(what, what.contains("Session #s7 · Android Auto · WIRELESS WIFI_DIRECT · failed · 2025-10-15 03:46:20 +0000 (the form's dropdowns describe this one)"))
+        assertTrue(what, what.contains("Session #s7 · Android Auto · WIRELESS WIFI_DIRECT · failed · 2025-10-15 03:46:20 +0000 (the form's fields above describe this one)"))
         assertTrue(what, what.contains("Session #s3 · CarPlay · USB · no failure · 2025-10-15 02:46:40 +0000\n- Phone: iPhone13,1, OS 26.5.2"))
         assertTrue(what, what.contains("Settings: connection AUTOMATIC; overlay granted"))
         assertTrue(what, what.contains("- Hardware: RAM 2900 MB (low-RAM device), 8 CPU cores up to 1500 MHz, GPU Mali-G52"))
@@ -365,6 +361,39 @@ class GitHubIssueReportTest {
         val tight = GitHubIssueReport.whatHappened(f, short = false, budget = budget)
         assertFalse(tight, tight.contains("#s3") || tight.contains("Performance"))
         assertTrue(tight, tight.contains("#s7") && tight.endsWith("What I did and what I expected (please fill in):"))
+    }
+
+    @Test fun theSameReportWithinHoursCountsAsSent() {
+        val report = GitHubIssueReport.build(facts())
+        val key = GitHubIssueReport.sameReportKey(report)
+        val hour = 3_600_000L
+        assertTrue(GitHubIssueReport.sentRecently(key, key, now - 2 * hour, now))
+        assertFalse("a day later is a new report", GitHubIssueReport.sentRecently(key, key, now - 24 * hour, now))
+        assertFalse("a clock that went back", GitHubIssueReport.sentRecently(key, key, now + hour, now))
+        assertFalse(GitHubIssueReport.sentRecently(key, null, now - hour, now))
+        // Another path or problem is another report; a new log is not.
+        val otherPath = GitHubIssueReport.build(facts(session = failedSession.copy(path = WirelessPath.CAR_HOTSPOT)))
+        assertFalse(GitHubIssueReport.sentRecently(GitHubIssueReport.sameReportKey(otherPath), key, now - hour, now))
+        val otherProblem = GitHubIssueReport.build(facts(title = "Add your Wi-Fi password"))
+        assertFalse(GitHubIssueReport.sentRecently(GitHubIssueReport.sameReportKey(otherProblem), key, now - hour, now))
+        val newerLog = GitHubIssueReport.build(facts(log = listOf(line(1_000, LogSource.CARLINK, "SessionManager: ANDROID_AUTO failed #s7"))))
+        assertTrue(GitHubIssueReport.sentRecently(GitHubIssueReport.sameReportKey(newerLog), key, now - hour, now))
+    }
+
+    @Test fun theFailedSessionFillsTheFormEvenWhenAnotherIsNewer() {
+        // #78-#80: the form said CarPlay while the failure was wireless Android Auto.
+        fun request(engine: Engine, transport: Transport) = com.carlink.core.connection.SessionRequest(engine, transport, null, "Phone")
+        val failed = LastSession(com.carlink.core.connection.SessionState.Failed(request(Engine.ANDROID_AUTO, Transport.WIRELESS),
+            WirelessPath.WIFI_DIRECT, FailureReason.PHONE_DID_NOT_ANSWER, null), now - 60_000)
+        val active = LastSession(com.carlink.core.connection.SessionState.Active(request(Engine.CARPLAY, Transport.USB), null, 1,
+            com.carlink.core.connection.SessionState.Phase.Connected), now - 1_000)
+        val sessions = IssueReporter.sessions(mapOf(Engine.CARPLAY to active, Engine.ANDROID_AUTO to failed), emptyList())
+        assertEquals(listOf(Engine.ANDROID_AUTO, Engine.CARPLAY), sessions.map { it.engine })
+        val f = facts(session = null, others = sessions)
+        val p = params(GitHubIssueReport.build(f).url)
+        assertEquals("Android Auto", p["projection"])
+        assertEquals("Wireless, Wi-Fi Direct (Automatic)", p["connection"])
+        assertTrue(p.getValue("what_happened"), p.getValue("what_happened").contains("Android Auto · WIRELESS WIFI_DIRECT · failed"))
     }
 
     @Test fun removesSerialsAndOwnerNames() {

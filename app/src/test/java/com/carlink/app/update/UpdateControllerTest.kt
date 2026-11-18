@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -103,6 +104,21 @@ class UpdateControllerTest {
         prefs.autoCheckUpdates = false
         assertFalse(controller().maybeAutoCheck(true))
         assertEquals(0, checks)
+    }
+
+    @Test fun theReportSheetLearnsOfANewerVersionAndCanOfferIt() {
+        val c = controller()
+        c.refreshNewer()
+        assertEquals("a quiet check: no dialog", UpdateState.Idle, c.state.value)
+        assertEquals(release, c.newer.value)
+        c.refreshNewer()
+        assertEquals("known already: no second request", 1, checks)
+        c.offerNewer()
+        assertEquals(UpdateState.Available(release), c.state.value)
+        // Ignored for the automatic dialog, still named on the report sheet.
+        c.ignore()
+        assertEquals(release, c.newer.value)
+        assertNull(controller(supported = false).also { it.refreshNewer() }.newer.value)
     }
 
     @Test fun ignoredVersionIsNotOfferedAgainButANewerOneIs() {

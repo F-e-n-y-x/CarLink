@@ -105,12 +105,30 @@ object IssueReporter {
     }
 
     /**
-     * The sessions the report describes, newest first: this process's last session of each engine,
-     * else the last problem in that engine's newest phone record.
+     * The sessions the report describes: this process's last session of each engine, else the last
+     * problem in that engine's newest phone record. A failed session comes first (the report is about
+     * it: it fills the form's fields and leads "What happened"), then newest first.
      */
     fun sessions(last: Map<Engine, LastSession>, health: List<PhoneHealth>): List<GitHubIssueReport.Session> =
         Engine.entries.mapNotNull { engine -> last[engine]?.let(::session) ?: health.firstOrNull { it.engine == engine }?.let(::session) }
-            .sortedByDescending { it.atMillis ?: 0L }
+            .sortedWith(compareByDescending<GitHubIssueReport.Session> { it.failed }.thenByDescending { it.atMillis ?: 0L })
+
+    // ---- The last report sent, so the same failure is not sent twice ------------------------
+
+    private const val SENT = "carlink_issue_report_sent"
+
+    /** When this same report ([GitHubIssueReport.sameReportKey]) was sent within [GitHubIssueReport.RESEND_WINDOW_MILLIS], else null. */
+    fun sentAt(context: Context, report: GitHubIssueReport.Report, nowMillis: Long = System.currentTimeMillis()): Long? {
+        val prefs = context.getSharedPreferences(SENT, Context.MODE_PRIVATE)
+        val at = prefs.getLong("at", 0L)
+        return at.takeIf { GitHubIssueReport.sentRecently(GitHubIssueReport.sameReportKey(report), prefs.getString("key", null), it, nowMillis) }
+    }
+
+    /** The driver opened [report] on GitHub (browser or QR code). */
+    fun markSent(context: Context, report: GitHubIssueReport.Report) {
+        context.getSharedPreferences(SENT, Context.MODE_PRIVATE).edit()
+            .putString("key", GitHubIssueReport.sameReportKey(report)).putLong("at", System.currentTimeMillis()).apply()
+    }
 
     fun session(last: LastSession): GitHubIssueReport.Session? = when (val state = last.state) {
         is SessionState.Failed -> GitHubIssueReport.Session(state.request.engine, state.request.transport, state.path,
