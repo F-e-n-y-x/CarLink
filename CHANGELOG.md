@@ -16,6 +16,9 @@ is what the in-app update popup shows.
   Android Auto never goes below its smallest full layout, so on small stereos Extra large can match Large.
 - Security: the Android Auto engine's message parser (protobuf) updated to 3.25.9 (CVE-2024-7254, a
   crafted message could crash it). Thanks @0nezar0 for spotting it (#84).
+- Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) on screens
+  whose hardware decoder carries it. If CarPlay shows no picture with HEVC, the next try uses H.264;
+  when that one works, CarLink keeps H.264 on that screen from then on.
 
 ## [1.0.16] - 2026-11-12
 

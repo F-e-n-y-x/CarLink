@@ -76,6 +76,14 @@ class DeviceEnvironment(
         ))
     }
 
+    override fun carPlayPictureNeverCame() {
+        CarPlayHevcMemory(app).onNoPicture()
+    }
+
+    override fun carPlayPictureCame() {
+        CarPlayHevcMemory(app).onPicture()
+    }
+
     override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) {
         paths.remember(engine, phoneAddress, path)
         if (path == WirelessPath.WIFI_DIRECT) WifiDirectSupport.connected(app)

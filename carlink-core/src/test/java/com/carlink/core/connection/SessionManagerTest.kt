@@ -84,6 +84,8 @@ class SessionManagerTest {
         override fun wirelessUnavailable(engine: Engine) = blockedFor?.invoke(engine) ?: wirelessUnavailable
         override fun preflight(request: SessionRequest, path: WirelessPath?) = problems(request, path)
         override fun wirelessPaths(request: SessionRequest) = paths
+        var noPictures = 0
+        override fun carPlayPictureNeverCame() { noPictures++ }
         override fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath) { remembered += phoneAddress to path }
         override fun rememberPhone(phoneAddress: String, kind: PhoneKind?, name: String?) { rememberedKinds += phoneAddress to kind }
         var connected: List<PhoneOption> = emptyList()
@@ -691,8 +693,10 @@ class SessionManagerTest {
         advance(AdaptiveDeadlines.HINT_MILLIS + 1)
         assertEquals("the driver is told before anything is torn down", Notice.Kind.SLOW, active(m).notice?.kind)
         assertEquals(1, starts.size)
+        assertEquals("a slow picture is not yet a failed one", 0, env.noPictures)
         advance(10_000)
         assertEquals(listOf("CARPLAY start WIRELESS WIFI_DIRECT", "CARPLAY start WIRELESS WIFI_DIRECT"), starts)
+        assertEquals("told before the retry writes its settings (HEVC fallback)", 1, env.noPictures)
         assertEquals(RecoveryAction.RETRY_STEP, active(m).notice?.action)
         assertTrue(active(m).phase.let { it is SessionState.Phase.Retrying || it is SessionState.Phase.Starting })
         carPlay.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
@@ -711,6 +715,19 @@ class SessionManagerTest {
         assertEquals(4, health.attempts)
         assertEquals(0, health.successes)
         assertEquals(AttemptOutcome.STALL_PICTURE, health.lastProblems.first().kind)
+    }
+
+    @Test fun onlyACarPlayPictureStallCountsAsNoPicture() {
+        val m = manager()
+        m.connect("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        carPlay.emit(AdapterEvent.Progress(3, 4, ProgressStage.JOINING_WIFI)); idle()
+        advance(30_001)
+        assertEquals("a Wi-Fi stall says nothing about the codec", 0, env.noPictures)
+        m.stop(); idle()
+        m.connect("AA:BB", PhoneKind.ANDROID, "Pixel"); idle()
+        androidAuto.emit(AdapterEvent.Progress(4, 4, ProgressStage.STARTING_PROJECTION)); idle()
+        advance(30_001)
+        assertEquals("Android Auto has its own codec rule", 0, env.noPictures)
     }
 
     @Test fun aUsbAndroidAutoHandshakeStallIsReswitchedThenNeedsAReplug() {

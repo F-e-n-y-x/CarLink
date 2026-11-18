@@ -176,6 +176,10 @@ class SessionManager(
         fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem>
         /** Wireless paths to try for [request], in order (see [WirelessPolicy]). */
         fun wirelessPaths(request: SessionRequest): List<WirelessPath>
+        /** A CarPlay attempt that never showed a picture is given up in the picture step ([CarPlayHevcMemory]). */
+        fun carPlayPictureNeverCame() {}
+        /** A CarPlay attempt showed its first picture ([CarPlayHevcMemory]). */
+        fun carPlayPictureCame() {}
         /** Remembers that [path] connected for [phoneAddress]. */
         fun rememberWorkingPath(engine: Engine, phoneAddress: String, path: WirelessPath)
         /**
@@ -752,6 +756,7 @@ class SessionManager(
                 val took = now - a.startedAt
                 if (!a.connectedOnce) {
                     a.connectedOnce = true
+                    if (plan.engine == Engine.CARPLAY) environment.carPlayPictureCame()
                     profiles.recordStage(request, plan.path, a.stage, now - a.stageSince)
                     profiles.recordSuccess(request, plan.path, took)
                 }
@@ -771,6 +776,7 @@ class SessionManager(
             is AdapterEvent.Stalled -> {
                 val now = clock()
                 note("${plan.engine} stuck at ${a.stage} after ${now - a.stageSince} ms: ${event.detail}")
+                noPicture(a)
                 if (quickRetries < MAX_QUICK_RETRIES) {
                     quickRetries++
                     profiles.recordFailure(request, plan.path, event.reason.name, a.stage, event.detail)
@@ -937,6 +943,8 @@ class SessionManager(
         val phaseName = StallPlaybook.phaseName(stage)
         note("stall: ${plan.engine} ${phaseName.lowercase()} on ${plan.path ?: "USB"} has taken $waited ms " +
             "(deadline $deadline ms${usual?.let { ", usual $it ms" } ?: ""}); $action")
+        // Before the restart below writes the next attempt's settings.
+        if (action != RecoveryAction.NUDGE && action != RecoveryAction.RESWITCH_USB) noPicture(a)
         val kind = AttemptOutcome.stallKind(stage)
         val what = "$phaseName took ${waited / 1000} s"
         val message = "$what: ${StallPlaybook.actionText(action)}"
@@ -968,6 +976,13 @@ class SessionManager(
                 val (reason, detail) = StallPlaybook.failure(plan.engine, plan.transport, stage, waited)
                 failSession(a, reason, detail)
             }
+        }
+    }
+
+    /** [a] is given up stalled in CarPlay's picture step, never having shown a frame. */
+    private fun noPicture(a: Attempt) {
+        if (a.plan.engine == Engine.CARPLAY && a.stage == ProgressStage.STARTING_PROJECTION && !a.connectedOnce) {
+            environment.carPlayPictureNeverCame()
         }
     }
 
