@@ -11,6 +11,8 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
+- Security: CarPlay engine hardened against malformed data from the phone (upstream DiPlay PRs
+  #1124, #1130, #1294, #1296, #1297, #1299, #1300, #1304, #1307, #1308, #1313).
 
 ## [1.0.16] - 2026-11-12
 
