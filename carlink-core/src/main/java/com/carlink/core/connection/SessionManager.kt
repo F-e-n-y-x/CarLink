@@ -689,7 +689,7 @@ class SessionManager(
         val path = paths[index]
         val problems = if (request.selfMode) emptyList() else environment.preflight(request, path)
         if (problems.isNotEmpty()) {
-            note("${request.engine} blocked on ${path ?: "USB"}: $problems")
+            note("${request.engine} blocked on ${where(path, request.selfMode)}: $problems")
             _state.value = SessionState.Blocked(request, problems)
             // The hotspot was the only thing missing: switch it on and start again (once per start).
             if (problems == listOf(Problem.CAR_HOTSPOT_OFF) && hotspotTriedFor !== request) {
@@ -722,7 +722,7 @@ class SessionManager(
                     if (sessionToken != token) return@post
                     val a = Attempt(request, plan, paths, index, ++nextAttemptId, clock())
                     attempt = a
-                    note("${plan.engine} starting on ${path ?: "USB"} (attempt ${plan.attempt})")
+                    note("${plan.engine} starting on ${where(path, plan.selfMode)} (attempt ${plan.attempt})")
                     adapters.getValue(plan.engine).start(plan) { event -> main.post { onEvent(a, event) } }
                     armWatchdog()
                 }
@@ -761,7 +761,7 @@ class SessionManager(
                     profiles.recordSuccess(request, plan.path, took)
                 }
                 everConnected = true
-                note("${plan.engine} connected on ${plan.path ?: "USB"} in $took ms")
+                note("${plan.engine} connected on ${where(plan.path, plan.selfMode)} in $took ms")
                 if (plan.path != null && request.phoneAddress != null) {
                     environment.rememberWorkingPath(plan.engine, request.phoneAddress, plan.path)
                 }
@@ -777,6 +777,8 @@ class SessionManager(
                 val now = clock()
                 note("${plan.engine} stuck at ${a.stage} after ${now - a.stageSince} ms: ${event.detail}")
                 noPicture(a)
+                // A restart would drop the head unit server's only connection (it stays deaf after).
+                if (plan.path == WirelessPath.HEADUNIT_SERVER) return
                 if (quickRetries < MAX_QUICK_RETRIES) {
                     quickRetries++
                     profiles.recordFailure(request, plan.path, event.reason.name, a.stage, event.detail)
@@ -788,7 +790,7 @@ class SessionManager(
                 }
             }
             is AdapterEvent.Restart -> {
-                note("${plan.engine} restarting on ${plan.path ?: "USB"}: ${event.detail}")
+                note("${plan.engine} restarting on ${where(plan.path, plan.selfMode)}: ${event.detail}")
                 // The session ran, so its Wi-Fi Direct group works: the restart reads it instead of making one.
                 replaceAttempt(a, a.index, SessionState.Phase.Starting, notice = null, networkSuspect = false)
             }
@@ -934,14 +936,16 @@ class SessionManager(
         // Self Mode: a phase deadline only says it is slow, it never tears down (open-headunit
         // SelfLaunchTimeoutPolicy: a link dropped before the version exchange leaves Android Auto's
         // head unit server deaf until restarted by hand). The whole-attempt backstop still gives up.
-        if (request.selfMode && stage != null) return note("stall: Android Auto on this screen, ${StallPlaybook.phaseName(stage).lowercase()} has taken $waited ms; still waiting")
+        // The Head unit server path (#70) dials the same server, with the same weakness.
+        if ((request.selfMode || plan.path == WirelessPath.HEADUNIT_SERVER) && stage != null)
+            return note("stall: ${where(plan.path, request.selfMode)}, ${StallPlaybook.phaseName(stage).lowercase()} has taken $waited ms; still waiting")
         val key = a.index to stage
         val (action, used) = StallPlaybook.next(StallPlaybook.actions(plan.engine, plan.transport, stage),
             recoveries[key] ?: 0, a.index + 1 < a.paths.size)
         recoveries[key] = used
         val usual = profiles.usualMillis(request, plan.path, stage)
         val phaseName = StallPlaybook.phaseName(stage)
-        note("stall: ${plan.engine} ${phaseName.lowercase()} on ${plan.path ?: "USB"} has taken $waited ms " +
+        note("stall: ${plan.engine} ${phaseName.lowercase()} on ${where(plan.path, plan.selfMode)} has taken $waited ms " +
             "(deadline $deadline ms${usual?.let { ", usual $it ms" } ?: ""}); $action")
         // Before the restart below writes the next attempt's settings.
         if (action != RecoveryAction.NUDGE && action != RecoveryAction.RESWITCH_USB) noPicture(a)
@@ -1101,6 +1105,10 @@ fun FailureReason.retryText(engine: Engine): String {
         FailureReason.BLOCKED -> "a permission or switch is missing"
         FailureReason.AUTHENTICATION -> "authentication failed"
         FailureReason.HEAD_UNIT_SERVER_OFF -> "Android Auto's head unit server is not running"
+        FailureReason.HEAD_UNIT_SERVER_STUCK -> "Android Auto's head unit server is stuck"
         FailureReason.ENGINE -> "the engine restarted"
     }
 }
+
+/** Where an attempt runs, for the log: the wireless path, "USB", or "SELF_MODE" (Android Auto on this screen; one word for report.py). */
+internal fun where(path: WirelessPath?, selfMode: Boolean): String = if (selfMode) "SELF_MODE" else path?.name ?: "USB"

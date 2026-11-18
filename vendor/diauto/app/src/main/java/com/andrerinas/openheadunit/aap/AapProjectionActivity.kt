@@ -1367,7 +1367,16 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private data class ExitOption(val titleResId: Int, val iconResId: Int, val iconColor: Int,
                                   val title: CharSequence? = null) // CarLink: title
 
+    // CarLink: the open exit menu, dismissed with the screen so it never outlives it (WindowLeaked).
+    private var exitDialog: android.app.Dialog? = null
+
     private fun showExitDialog() {
+        // CarLink: a screen that is already closing (session ended, Back pressed twice) shows no menu.
+        if (isFinishing || isDestroyed) {
+            AppLog.i("Exit menu: the screen is closing; not shown")
+            return
+        }
+        if (exitDialog?.isShowing == true) return // CarLink
         val options = mutableListOf<ExitOption>()
         options.add(ExitOption(R.string.exit_dialog_stop, R.drawable.ic_stop, Color.RED))
 
@@ -1427,6 +1436,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
             .setNegativeButton(R.string.cancel, null)
             .show()
 
+        exitDialog = dialog // CarLink
+        dialog.setOnDismissListener { if (exitDialog === dialog) exitDialog = null } // CarLink
         HostIntegration.styleChrome(dialog.window?.decorView, HostIntegration.Chrome.EXIT_MENU) // CarLink
         if (settings.hudMirroring) {
             val root = dialog.window?.findViewById<View>(android.R.id.content) ?: dialog.window?.decorView
@@ -1885,6 +1896,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onDestroy() {
         com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = null // CarLink
+        exitDialog?.let { runCatching { it.dismiss() } }; exitDialog = null // CarLink
         bydFullscreen.release()
         super.onDestroy()
         if (isFinishReceiverRegistered) {

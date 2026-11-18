@@ -32,6 +32,7 @@ class FailureStepsTest {
     @Test fun noTimelineWhereNoStepFits() {
         assertNull(failedStep(failed(LinkProblem.PERMISSIONS, step = 1)))
         assertNull(failedStep(failed(LinkProblem.HEAD_UNIT_SERVER_OFF)))
+        assertNull(failedStep(failed(LinkProblem.HEAD_UNIT_SERVER_STUCK)))
         assertNull("blocked before the start: no step ran", failedStep(failed(LinkProblem.WIFI_OFF)))
         assertNull(failedStep(failed(LinkProblem.CARPLAY_AUTH_MISSING)))
         assertNull("Android Auto on this screen has no transport", failedStep(failed(LinkProblem.ENGINE, step = 2, transport = null)))

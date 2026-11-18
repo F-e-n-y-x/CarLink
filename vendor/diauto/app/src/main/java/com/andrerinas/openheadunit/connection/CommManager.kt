@@ -464,6 +464,13 @@ class CommManager(
         silentPeerFailures =
             UnresponsivePeerPolicy.countAfterSilentFailure(silentPeerFailures, silentPeerEndpoint, endpoint)
         silentPeerEndpoint = endpoint
+        // CarLink: say so at once, so the host can stop and explain instead of retrying a server
+        // that will not answer until it is restarted.
+        if (endpoint?.endsWith(":5277") == true) {
+            com.andrerinas.openheadunit.HostIntegration.engineEvent(context,
+                com.andrerinas.openheadunit.HostIntegration.EngineEvent.HEAD_UNIT_SERVER_STUCK,
+                "endpoint=$endpoint;count=$silentPeerFailures")
+        }
         // Only Android Auto's head unit server — the peer on 5277, so the discovery path and Self
         // Mode — has something the user can restart. The phone dialling our own server on 5288 and
         // the Nearby helper can both reach this branch, and sending their users into Android Auto's

@@ -21,6 +21,15 @@ is what the in-app update popup shows.
   when that one works, CarLink keeps H.264 on that screen from then on.
 - Security: CarPlay engine hardened against malformed data from the phone (upstream DiPlay PRs
   #1124, #1130, #1294, #1296, #1297, #1299, #1300, #1304, #1307, #1308, #1313).
+- Fixed: when Android Auto's head unit server takes the connection but never answers (Android Auto
+  on this screen, or the Head unit server method), CarLink now stops at once and Home says how to
+  restart it, with a button to Android Auto's settings, instead of retrying a server that cannot
+  recover. A slow phase on the Head unit server method no longer restarts the attempt, which left
+  the server deaf.
+- Fixed: a wake signal from the stereo while CarPlay or Android Auto is on screen no longer covers
+  the picture with Home; stereos that wake with an Autochips quick-boot signal now start CarLink
+  too. The Android Auto exit menu no longer crashes when the session ends while it is open.
+  Thanks @0nezar0 for these, from the Changan CS75 Plus fork (#84).
 
 ## [1.0.16] - 2026-11-12
 

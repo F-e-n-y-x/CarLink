@@ -369,6 +369,12 @@ class AaSessionTrackerTest {
         assertEquals(FailureReason.HEAD_UNIT_SERVER_OFF, t.event(EngineEvent.HEAD_UNIT_SERVER_CLOSED).failure().reason)
     }
 
+    @Test fun aStuckHeadUnitServerFailsAtTheFirstSilentHandshake() {
+        val failure = self().event(EngineEvent.HEAD_UNIT_SERVER_STUCK, "endpoint=127.0.0.1:5277;count=1").failure()
+        assertEquals(FailureReason.HEAD_UNIT_SERVER_STUCK, failure.reason)
+        assertEquals(com.carlink.core.core.LinkProblem.HEAD_UNIT_SERVER_STUCK, failure.reason.toLinkProblem())
+    }
+
     @Test fun selfModeWaitsWithoutTimeoutAndFailsOnADrop() {
         val t = self()
         assertEquals(emptyList<AdapterEvent>(), t.after(limits.acceptTimeoutMillis + 1))

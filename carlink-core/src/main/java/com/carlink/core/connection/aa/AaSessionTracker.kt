@@ -189,6 +189,10 @@ internal class AaSessionTracker(
             EngineEvent.FIRST_VIDEO_FRAME.name -> if (sessionLive) connect() else emptyList()
             EngineEvent.HEAD_UNIT_SERVER_CLOSED.name -> fail(FailureReason.HEAD_UNIT_SERVER_OFF,
                 "Android Auto's head unit server is not running (127.0.0.1:5277)")
+            // Only Self Mode and the Head unit server path dial 5277. A server that took the connection
+            // and stayed silent will not answer again until it is restarted, so stop and say how.
+            EngineEvent.HEAD_UNIT_SERVER_STUCK.name -> if (sessionLive) emptyList() else fail(FailureReason.HEAD_UNIT_SERVER_STUCK,
+                "Android Auto's head unit server took the connection and never answered (${d["endpoint"] ?: "5277"})")
             EngineEvent.ORIENTATION_CHANGED.name ->
                 if (sessionLive) listOf(AdapterEvent.Restart("the screen turned ${d["screen"] ?: ""}".trimEnd())) else emptyList()
             EngineEvent.SESSION_ENDED.name -> endSession(d["userExit"] == "true", d["clean"] == "true", now)

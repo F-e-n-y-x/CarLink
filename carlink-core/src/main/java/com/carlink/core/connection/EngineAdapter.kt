@@ -177,6 +177,8 @@ enum class FailureReason(val pathRelated: Boolean) {
     AUTHENTICATION(false),
     /** Android Auto on this screen: Android Auto's head unit server (developer settings) is not running. */
     HEAD_UNIT_SERVER_OFF(false),
+    /** Android Auto's head unit server runs but is stuck on an earlier connection; it needs a restart. */
+    HEAD_UNIT_SERVER_STUCK(false),
     /** Anything else the engine reported. */
     ENGINE(false),
 }
