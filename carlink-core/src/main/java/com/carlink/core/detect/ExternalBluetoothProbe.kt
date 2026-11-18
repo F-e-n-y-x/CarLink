@@ -111,6 +111,16 @@ data class StereoBluetoothReport(
     /** Whether `/dev/socket/zj_bt_socket` accepted a connect; checked only with ZLink markers and 3152 closed. */
     val zjSocket: PortState = PortState.NOT_CHECKED,
 ) {
+    /**
+     * Taken before the stereo finished starting: module markers but no daemon yet, or Android's
+     * Bluetooth not on (so no bond could be seen). Cached for the process, it blocked wireless
+     * CarPlay on every power-up until the app was restarted (a contributor's log, 2026-11-10), so
+     * it is taken again ([ExternalBluetoothProbe.settled]).
+     */
+    val provisional: Boolean get() = signals.isNotEmpty() && (classification == StereoBluetooth.EXTERNAL_UNKNOWN ||
+        ExternalBluetoothProbe.classify(signals, adapter, emptyList(), zjSocket) == StereoBluetooth.EXTERNAL_UNKNOWN ||
+        adapter.enabled != true)
+
     /** One structured block for carlink.log and the shared log. Never holds a hardware address. */
     fun format(): String = buildString {
         append("External Bluetooth probe: classification=").append(classification)
@@ -287,23 +297,35 @@ object ExternalBluetoothProbe {
 
     // --- On a device ------------------------------------------------------------------------------
 
+    /** A [StereoBluetoothReport.provisional] report is taken again after this long... */
+    private const val RECHECK_MILLIS = 3_000L
+    /** ... but only this long after the process's first probe: the module's daemon is up by then. */
+    private const val RECHECK_WINDOW_MILLIS = 180_000L
+
     @Volatile private var cached: StereoBluetoothReport? = null
     private var task: FutureTask<StereoBluetoothReport>? = null
+    @Volatile private var firstAt = 0L
+    private var lastAt = 0L
 
     /** The full report once it is known (null before [start] finished). */
     fun cached(): StereoBluetoothReport? = cached
 
+    /** Whether the cached report is final: none yet, or a provisional one that may still be re-taken, is not. */
+    fun settled(): Boolean = cached?.let { !it.provisional || SystemClock.uptimeMillis() - firstAt >= RECHECK_WINDOW_MILLIS } == true
+
     /**
-     * Runs the full probe once per process on its own thread and writes its block to carlink.log.
-     * Cheap to call again.
+     * Runs the full probe on its own thread and writes its block to carlink.log: once per process,
+     * and again (at most every [RECHECK_MILLIS]) while the last report is not [settled]. Cheap to call again.
      */
     fun start(context: Context): FutureTask<StereoBluetoothReport> = synchronized(this) {
-        task ?: FutureTask {
+        val now = SystemClock.uptimeMillis()
+        task?.takeUnless { it.isDone && !settled() && now - lastAt >= RECHECK_MILLIS } ?: FutureTask {
             val report = probe(deviceSources(context.applicationContext), complete = true, clock = SystemClock::uptimeMillis)
-            cached = report
+            synchronized(this) { cached = report; lastAt = SystemClock.uptimeMillis() }
             EventLog.add("CarLink", report.format())
             report
         }.also { t ->
+            if (firstAt == 0L) firstAt = now
             task = t
             Thread(t, "carlink-stereo-bt").apply { isDaemon = true }.start()
         }
@@ -311,7 +333,8 @@ object ExternalBluetoothProbe {
 
     /** The full report, waiting up to [timeoutMillis] for it; the quick one when it is late. Not on the main thread. */
     fun await(context: Context, timeoutMillis: Long = 2_000): StereoBluetoothReport =
-        cached ?: runCatching { start(context).get(timeoutMillis, TimeUnit.MILLISECONDS) }.getOrNull() ?: quick(context)
+        cached?.takeIf { settled() } ?: runCatching { start(context).get(timeoutMillis, TimeUnit.MILLISECONDS) }.getOrNull()
+            ?: cached ?: quick(context)
 
     /**
      * The full report when known, else the quick one (files, properties, Bluetooth bonds; no
@@ -324,7 +347,7 @@ object ExternalBluetoothProbe {
         probe(deviceSources(context.applicationContext), complete = false, clock = SystemClock::uptimeMillis)
 
     /** Test hook: forget the cached report. */
-    internal fun reset() = synchronized(this) { cached = null; task = null }
+    internal fun reset() = synchronized(this) { cached = null; task = null; firstAt = 0L; lastAt = 0L }
 
     private fun deviceSources(app: Context) = Sources(
         files = FileCheck { path -> File(path).exists() },

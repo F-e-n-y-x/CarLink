@@ -99,7 +99,7 @@ object Connection {
     private fun logPrewarmSkipped() {
         if (prewarmSkipLogged.compareAndSet(false, true)) {
             com.carlink.core.diagnostics.EventLog.add("CarLink",
-                "Android Auto engine not prewarmed: little memory and no Android phone known (it starts when one connects)")
+                "Android Auto engine not prewarmed: no Android phone known (it starts when one connects)")
         }
     }
 
@@ -107,16 +107,26 @@ object Connection {
     @android.annotation.SuppressLint("MissingPermission") // The name is read only when the permission allows.
     fun onHomeShown(context: Context) {
         val app = context.applicationContext
-        // Before the stereo-Bluetooth probe finishes, a module stereo looks "wireless unavailable"
-        // and the first start of the drive was dropped: decide once the probe is in (≤ ~0.5 s).
-        if (com.carlink.core.detect.ExternalBluetoothProbe.cached() == null) {
-            Thread({
-                runCatching { com.carlink.core.detect.ExternalBluetoothProbe.await(app) }
-                android.os.Handler(android.os.Looper.getMainLooper()).post { homeShown(app) }
-            }, "carlink-home-probe").start()
-            return
-        }
-        homeShown(app)
+        afterProbe(app) { homeShown(app) }
+    }
+
+    /** A known phone's Bluetooth connected and Home is in front ([SessionManager.onBluetoothPhone]). */
+    fun onBluetoothPhone(context: Context, address: String, kind: com.carlink.core.core.PhoneKind, name: String?) {
+        val app = context.applicationContext
+        afterProbe(app) { get(app).onBluetoothPhone(address, kind, name) }
+    }
+
+    /**
+     * Before the stereo-Bluetooth probe is final, a module stereo looks "wireless unavailable" and
+     * the first start of the drive was dropped (a probe taken while the stereo was still starting
+     * blocked it until the app restarted, 2026-11-10): decide once a fresh probe is in (≤ 2 s).
+     */
+    private fun afterProbe(app: Context, then: () -> Unit) {
+        if (com.carlink.core.detect.ExternalBluetoothProbe.settled()) return then()
+        Thread({
+            runCatching { com.carlink.core.detect.ExternalBluetoothProbe.await(app) }
+            android.os.Handler(android.os.Looper.getMainLooper()).post(then)
+        }, "carlink-home-probe").start()
     }
 
     private fun homeShown(app: Context) {

@@ -59,9 +59,10 @@ class LowEndSignalsTest {
         assertFalse(EnginePrewarmPolicy.shouldPrewarm(twoGb, listOf(PhoneKind.IPHONE)))
         assertTrue(EnginePrewarmPolicy.shouldPrewarm(twoGb, listOf(PhoneKind.IPHONE, PhoneKind.ANDROID)))
         assertFalse(EnginePrewarmPolicy.shouldPrewarm(twoGb.copy(totalRamMb = 7_600, lowRamDevice = true), emptyList()))
-        // 4 GB and more: always, as before.
+        // 4 GB and more: unless only iPhones are known.
         assertTrue(EnginePrewarmPolicy.shouldPrewarm(uis8581a, emptyList()))
-        assertTrue(EnginePrewarmPolicy.shouldPrewarm(tablet, listOf(PhoneKind.IPHONE)))
+        assertFalse(EnginePrewarmPolicy.shouldPrewarm(tablet, listOf(PhoneKind.IPHONE)))
+        assertTrue(EnginePrewarmPolicy.shouldPrewarm(tablet, listOf(PhoneKind.IPHONE, PhoneKind.ANDROID)))
     }
 
     @Test fun aThreeGbUnitPrewarmsUntilItKnowsOnlyIPhones() {

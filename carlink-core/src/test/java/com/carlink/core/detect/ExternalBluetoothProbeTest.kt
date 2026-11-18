@@ -65,6 +65,24 @@ class ExternalBluetoothProbeTest {
         assertEquals(listOf("127.0.0.1:3152/300"), stereo.portChecks)
     }
 
+    @Test fun aProbeTakenWhileTheStereoStartsIsProvisional() {
+        val markers = mapOf("rw.zlink.bt.type" to "extra")
+        val bondedPhone = mapOf(phone to PhoneKind.IPHONE)
+        val real = AdapterFacts(present = true, enabled = true, addressReal = true)
+        // Power-up (2026-11-10 log): no daemon yet, Bluetooth still off: EXTERNAL_UNKNOWN, not final.
+        val early = Stereo(props = markers, adapter = AdapterFacts(true, false, null), bonded = null, known = bondedPhone).probe()
+        assertEquals(StereoBluetooth.EXTERNAL_UNKNOWN, early.classification)
+        assertTrue(early.provisional)
+        // Daemon not up yet, phone bonded: the module's own type is still unknown.
+        assertTrue(Stereo(props = markers, adapter = real, bonded = listOf(phone), known = bondedPhone).probe().provisional)
+        // Settled: the daemon answers and the phone is bonded.
+        val late = Stereo(props = markers, port = PortState.OPEN, adapter = real, bonded = listOf(phone), known = bondedPhone).probe()
+        assertEquals(StereoBluetooth.LIKELY_FALSE_POSITIVE, late.classification)
+        assertFalse(late.provisional)
+        // An ordinary tablet is never provisional, even with Bluetooth off.
+        assertFalse(Stereo(adapter = AdapterFacts(true, false, null)).probe().provisional)
+    }
+
     @Test fun aDaemonAloneStillCounts() {
         assertEquals(StereoBluetooth.ZLINK_DAEMON, Stereo(port = PortState.OPEN).probe().classification)
     }

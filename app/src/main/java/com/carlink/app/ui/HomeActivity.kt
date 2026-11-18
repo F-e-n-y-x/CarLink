@@ -131,7 +131,7 @@ class HomeActivity : ComponentActivity() {
         val address = intent.getStringExtra(EXTRA_AUTO_PHONE_ADDRESS) ?: return
         val name = intent.getStringExtra(EXTRA_AUTO_PHONE_NAME)
         intent.removeExtra(EXTRA_AUTO_PHONE_KIND)
-        Connection.get(this).onBluetoothPhone(address, kind, name)
+        Connection.onBluetoothPhone(this, address, kind, name)
     }
 
     companion object {

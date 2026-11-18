@@ -11,6 +11,11 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
+- Fixed: on a stereo whose Bluetooth module started after CarLink, wireless was refused as "not
+  available on this stereo" until CarLink was restarted. The check is taken again while the stereo
+  starts, and a blocked start goes ahead once it passes (thanks @pphan93).
+- Fixed: with only iPhones known, CarLink no longer keeps Android Auto's process warm; it delayed
+  CarPlay's start by up to 5 s after CarLink restarted (thanks @pphan93).
 
 ## [1.0.16] - 2026-11-12
 
