@@ -45,6 +45,26 @@ class PicturePolicyTest {
         assertNull(choice.carPlayHevc)
     }
 
+    @Test fun carPlayGetsHevcWhenTheHardwareDecoderCarriesItsStream() {
+        val panel = VideoSize(1920, 1080)
+        val avc = decoder(panel, p1080 * 2)
+        val hevc = avc.copy(name = "c2.vendor.hevc")
+        val choice = PicturePolicy.choose(DeviceCapabilities(panel, strong, avc, hevc))
+        assertEquals(60, choice.carPlayFps)
+        assertEquals(true, choice.carPlayHevc)
+        assertNull("Android Auto keeps its own codec", choice.aaCodec)
+        assertTrue(choice.summary, choice.summary.contains("60 fps HEVC"))
+
+        val hevc30 = PicturePolicy.choose(DeviceCapabilities(panel, strong, avc, decoder(panel, p1080 * 2, fps = 30)))
+        assertNull("HEVC at 30 fps does not carry a 60 fps CarPlay stream", hevc30.carPlayHevc)
+        assertTrue(hevc30.summary, hevc30.summary.contains("engine's choice"))
+        val software = PicturePolicy.choose(DeviceCapabilities(panel, strong, avc, hevc.copy(hardware = false)))
+        assertEquals(false, software.carPlayHevc)
+        val lowEnd = PicturePolicy.choose(DeviceCapabilities(VideoSize(1024, 600), weak,
+            decoder(VideoSize(1024, 600), p1080), decoder(VideoSize(1024, 600), p1080)))
+        assertNull("low-end keeps DiPlay's own", lowEnd.carPlayHevc)
+    }
+
     @Test fun noHardwareHevcMeansH264ForBothEngines() {
         val panel = VideoSize(1280, 720)
         val choice = PicturePolicy.choose(caps(panel, decoder(panel, p1080), hevc = false))

@@ -218,7 +218,8 @@ object Connection {
         val wifi = WifiEnvironmentReader.read(app, stored)
         val settings = effectiveSettings(stored, wifi)
         val profile = vehicleProfile(app)
-        val picture = automaticPicture(app, settings)
+        // Every start, so the HEVC fallback knows whether this attempt sends HEVC (presets: never).
+        val picture = CarPlayHevcMemory(app).apply(automaticPicture(app, settings))
         when (plan.engine) {
             Engine.CARPLAY -> {
                 // CarLink: wireless CarPlay's iAP2 link through the stereo's module (opt-in).

@@ -19,7 +19,8 @@ enum class AaResolution(val id: Int, private val landscape: VideoSize, private v
  * @property aaResolutionId DiAuto `resolutionId`; 0 keeps DiAuto's own Automatic (sized to the panel).
  * @property aaCodec DiAuto `video-codec`: "H.264" when the device has no hardware HEVC decoder.
  * @property carPlayScalePercent DiPlay `display_scale_percent`: the CarPlay picture is the panel at this size.
- * @property carPlayHevc DiPlay `hevc_enabled`: false when the device has no hardware HEVC decoder.
+ * @property carPlayHevc DiPlay `hevc_enabled`: false when the device has no hardware HEVC decoder,
+ *   true when that decoder carries CarPlay's stream ([PicturePolicy.choose]); null leaves DiPlay's own.
  * @property carPlayDirectVideo DiPlay `direct_video_output`: true on slow hardware (a SurfaceView
  *   instead of a TextureView, so no GPU pass per video frame); null leaves the driver's switch alone.
  */
@@ -43,7 +44,10 @@ data class PictureChoice(
  * where the decoder or the device cannot carry that:
  *
  * 1. Codec: H.264 for both engines unless a hardware HEVC decoder exists (DiPlay #13: a wrong HEVC
- *    choice gives a black screen). With hardware HEVC the engines' own codec choice stays.
+ *    choice gives a black screen). With hardware HEVC Android Auto keeps its own codec choice;
+ *    CarPlay gets HEVC when that decoder carries CarPlay's stream (the size and fps of rule 4) on a
+ *    device neither low-end nor constrained, else DiPlay's own. A screen where CarPlay HEVC once
+ *    gave no picture stays on H.264 ([CarPlayHevcMemory]).
  * 2. Android Auto resolution: DiAuto's panel class (480p / 720p / 1080p), then down the ladder to
  *    the first size the H.264 decoder carries at 30 fps. A software decoder is held to 720p.
  * 3. Android Auto frame rate: 60 fps only when the decoder carries 60 at that size and the device
@@ -126,9 +130,13 @@ object PicturePolicy {
         } ?: CARPLAY_SCALES.last()
         val carPlayFps = if (avc.hardware && !slow && !caps.signals.lowEnd && avc.carries(caps.panel.scaled(scale), 60)) 60 else 30
 
+        val hevc = caps.h265
+        val carPlayHevc = if (hevc != null && hevc.hardware && hevc.carries(caps.panel.scaled(scale), carPlayFps) &&
+            !caps.signals.lowEnd && !caps.signals.constrained) true else codecRule.carPlayHevc
         val codec = if (hevcOk) "engine's choice" else H264
+        val carPlayCodec = if (carPlayHevc == true) "HEVC" else codec
         val summary = "Android Auto ${aa.label}${if (aa == panelClass) " (panel)" else ""} $aaFps fps $codec; " +
-            "CarPlay $scale% of ${caps.panel} $carPlayFps fps $codec${directNote(slow)}; decoder ${avc.name}" +
+            "CarPlay $scale% of ${caps.panel} $carPlayFps fps $carPlayCodec${directNote(slow)}; decoder ${avc.name}" +
             (if (avc.hardware) "" else " (software)") + lowEndNote(caps.signals) +
             (if (caps.signals.constrained) "; constrained: CarPlay at most 1280x720, Android Auto SurfaceView" +
                 (if (aaCeiling != panelClass) ", 480p" else "") else "")
@@ -137,6 +145,7 @@ object PicturePolicy {
             aaFps = aaFps,
             carPlayScalePercent = scale,
             carPlayFps = carPlayFps,
+            carPlayHevc = carPlayHevc,
             aaSurfaceView = if (caps.signals.constrained) true else null,
             summary = summary,
         )

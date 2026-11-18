@@ -183,7 +183,7 @@ asks for more than before; it only steps down.
 
 | Rule | Android Auto (DiAuto) | CarPlay (DiPlay) |
 |---|---|---|
-| Codec | `video-codec` = H.264 when there is no hardware HEVC decoder; otherwise untouched | `hevc_enabled` = false when there is no hardware HEVC decoder; otherwise untouched |
+| Codec | `video-codec` = H.264 when there is no hardware HEVC decoder; otherwise untouched | `hevc_enabled` = false when there is no hardware HEVC decoder; true when it carries CarPlay's size and fps on a device neither low-end nor constrained, until HEVC once gave no picture on this screen (`CarPlayHevcMemory`); otherwise untouched |
 | Size | DiAuto's own panel class (800×480 → 480p, up to 1280×720 → 720p, larger → 1080p; portrait 720×1280 / 1080×1920), then down the ladder 1080p → 720p → 480p to the first the H.264 decoder carries at 30 fps. The panel class itself is written as `resolutionId` 0 (DiAuto's Automatic) | The panel at 100 %, 75 % or 50 % (`display_scale_percent`), the first the decoder carries at 30 fps; on slow hardware (the [lite signals](#lite-rendering)) also at most 1600×900 pixels |
 | Frame rate | 60 when the decoder carries 60 at that size and the device is not low-end ([lite signals](#lite-rendering)); otherwise 30 | 30 (DiPlay's default; Automatic never asked for 60) |
 | Software-only H.264 | at most 720p, 30 fps | at most 1280×720 pixels |

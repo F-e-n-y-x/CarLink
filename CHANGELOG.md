@@ -11,6 +11,9 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
+- Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) on screens
+  whose hardware decoder carries it. If CarPlay ever shows no picture with HEVC, CarLink retries
+  with H.264 and keeps H.264 on that screen from then on.
 
 ## [1.0.16] - 2026-11-12
 
