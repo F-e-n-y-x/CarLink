@@ -11,6 +11,8 @@
     <string name="carlink_switcher_switching">Switching…</string>
     <string name="carlink_switcher_home">CarLink Home</string>
     <string name="carlink_switcher_size_reconnects">Changing it reconnects for a few seconds</string>
+    <!-- Android Auto on a tablet held upright: larger sizes would break its layout. %1$s: a size name. -->
+    <string name="carlink_switcher_size_upright">Held upright, Android Auto stops at %1$s</string>
     <string name="carlink_switcher_next_connection">The current session keeps its connection.</string>
     <string name="carlink_switcher_close">Close</string>
     <string name="carlink_switcher_back">Back</string>

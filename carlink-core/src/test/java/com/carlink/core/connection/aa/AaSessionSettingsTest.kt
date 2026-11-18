@@ -113,7 +113,7 @@ class AaSessionSettingsTest {
         assertEquals(2, v["resolutionId"])
         assertEquals(30, v["fps-limit"])
         assertEquals(0, v["dpi-pixel-density"])
-        for ((size, percent) in listOf(InterfaceSize.SMALL to 80, InterfaceSize.MEDIUM to 100, InterfaceSize.LARGE to 135, InterfaceSize.EXTRA_LARGE to 165)) {
+        for ((size, percent) in listOf(InterfaceSize.SMALL to 100, InterfaceSize.MEDIUM to 135, InterfaceSize.LARGE to 165, InterfaceSize.EXTRA_LARGE to 200)) {
             val sized = values(settings = base.copy(interfaceSize = size)).values
             assertEquals(0, sized["dpi-pixel-density"])
             assertEquals(percent, sized[AaSessionSettings.SIZE_PERCENT_KEY])
@@ -179,5 +179,14 @@ class AaSessionSettingsTest {
         assertEquals("", v["hotspot-ssid"])
         // USB sessions keep native Android Auto.
         assertEquals(3, values(transport = Transport.USB, path = null).values["wifi-connection-mode"])
+    }
+
+    /** Upright on the 2560x1600 tablet (320 dpi), Android Auto stops near Medium; sideways every size grows (2026-11-18). */
+    @Test fun aTurningScreenUprightStopsGrowingAtMedium() {
+        val upright = AaSessionSettings.turningMaxPercent(320, 1600, 2560)
+        assertTrue("$upright", upright in 120..134)
+        assertEquals(listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM), AaSessionSettings.sizesThatGrow(upright))
+        val sideways = AaSessionSettings.turningMaxPercent(320, 2560, 1600)
+        assertEquals(InterfaceSize.entries.filter { it != InterfaceSize.CUSTOM }, AaSessionSettings.sizesThatGrow(sideways))
     }
 }

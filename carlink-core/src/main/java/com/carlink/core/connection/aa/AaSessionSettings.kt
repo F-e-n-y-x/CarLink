@@ -198,10 +198,11 @@ object AaSessionSettings {
 
     /** Interface size as a percentage of the Automatic density (Custom: Advanced owns the DPI). */
     fun sizePercent(size: InterfaceSize): Int = when (size) {
-        InterfaceSize.SMALL -> 80
-        InterfaceSize.MEDIUM, InterfaceSize.CUSTOM -> 100
-        InterfaceSize.LARGE -> 135
-        InterfaceSize.EXTRA_LARGE -> 165 // CarPlay's 180 mm against Medium's 300; the 748x450 dp floor still caps it
+        // One step up since 2026-11-18 (Small is the old Medium), matching CarPlay's widths.
+        InterfaceSize.SMALL, InterfaceSize.CUSTOM -> 100
+        InterfaceSize.MEDIUM -> 135
+        InterfaceSize.LARGE -> 165
+        InterfaceSize.EXTRA_LARGE -> 200 // the 748x450 dp floor still caps it on a head unit
     }
 
     /**
@@ -213,7 +214,7 @@ object AaSessionSettings {
      * A [handheld] screen (phone, tablet) starts from a head unit's 160 dpi instead of its own: at a
      * phone's 300+ dpi Android Auto drew a phone-sized layout, while CarPlay on the same screen is laid
      * out for a car-sized display (2026-11-10, Galaxy S25 as the screen). [sizePercent] is the
-     * driver's interface size (Small 80, Large 135; 85/120 were too close to tell apart); the 748x450 dp floor still caps it.
+     * driver's interface size (Small 100 to Extra large 200; steps under 15 % were too close to tell apart); the 748x450 dp floor still caps it.
      */
     fun automaticDensityDpi(deviceDpi: Int, visibleWidthPx: Int, visibleHeightPx: Int, handheld: Boolean = false,
                             sizePercent: Int = 100): Int {
@@ -247,6 +248,23 @@ object AaSessionSettings {
     /** DiAuto preferences read by CarLink's hooks in ":aa" (AaEngineHooks): microphone gain in dB, resume music. */
     const val MIC_GAIN_KEY = "carlink-mic-gain-db"
     const val RESUME_MUSIC_KEY = "carlink-resume-music"
+
+    /**
+     * The largest interface size (percent of Small) Android Auto can show on a turning screen of
+     * [widthPx] x [heightPx] held as it is now: sizes zoom into a smaller region, which DiAuto keeps at
+     * 748x450 dp or more (HeadUnitScreenConfig, "size capped"). Upright on a tablet that is about 130 %.
+     */
+    fun turningMaxPercent(deviceDpi: Int, widthPx: Int, heightPx: Int): Int {
+        if (widthPx <= 0 || heightPx <= 0) return Int.MAX_VALUE
+        val dpi = automaticDensityDpi(deviceDpi, widthPx, heightPx, handheld = true, sizePercent = 100).coerceAtLeast(1)
+        return (100f * minOf(widthPx * 160f / (dpi * MIN_WIDTH_DP), heightPx * 160f / (dpi * MIN_HEIGHT_DP))).toInt()
+    }
+
+    /** The sizes that show larger than the one before them when Android Auto allows at most [maxPercent]. */
+    fun sizesThatGrow(maxPercent: Int): List<InterfaceSize> {
+        val steps = listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE)
+        return steps.filterIndexed { i, _ -> i == 0 || sizePercent(steps[i - 1]) < maxPercent }
+    }
 
     /** DiAuto preference with [sizePercent], read by the Automatic density hook in ":aa". */
     const val SIZE_PERCENT_KEY = "carlink-interface-percent"

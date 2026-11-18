@@ -709,10 +709,10 @@ private fun StepPanel(ui: SetupUi, actions: SetupActions) {
 @Composable
 private fun SizePicker(selected: InterfaceSize, onSelect: (InterfaceSize) -> Unit) {
     val sizes = listOf(
-        Triple(InterfaceSize.SMALL, 0.8f, R.string.carlink_settings_size_small_detail),
-        Triple(InterfaceSize.MEDIUM, 1f, R.string.carlink_settings_size_medium_detail),
-        Triple(InterfaceSize.LARGE, 1.25f, R.string.carlink_settings_size_large_detail),
-        Triple(InterfaceSize.EXTRA_LARGE, 1.55f, R.string.carlink_settings_size_extra_large_detail),
+        Triple(InterfaceSize.SMALL, 1f, R.string.carlink_settings_size_small_detail),
+        Triple(InterfaceSize.MEDIUM, 1.25f, R.string.carlink_settings_size_medium_detail),
+        Triple(InterfaceSize.LARGE, 1.55f, R.string.carlink_settings_size_large_detail),
+        Triple(InterfaceSize.EXTRA_LARGE, 1.85f, R.string.carlink_settings_size_extra_large_detail),
     )
     PresetGrid(sizes.map { (size, scale, detail) ->
         Preset(size, interfaceSizeLabel(size), stringResource(detail), preview = { ScalePreview(scale) })

@@ -262,6 +262,14 @@ object SwitcherController {
 
     // ---- Panel --------------------------------------------------------------------------------
 
+    /** Android Auto on a turning screen (phone, tablet) held upright cannot grow past about Medium. */
+    private fun sizesThatGrow(engine: com.carlink.core.core.Engine): List<InterfaceSize>? {
+        if (engine != com.carlink.core.core.Engine.ANDROID_AUTO || !com.carlink.core.detect.HeadUnitDetector.handheld(app)) return null
+        val metrics = app.resources.displayMetrics
+        val max = com.carlink.core.connection.aa.AaSessionSettings.turningMaxPercent(metrics.densityDpi, metrics.widthPixels, metrics.heightPixels)
+        return com.carlink.core.connection.aa.AaSessionSettings.sizesThatGrow(max)
+    }
+
     private fun openPanel() {
         if (panel != null) return
         val active = session as? SessionState.Active ?: return
@@ -277,6 +285,7 @@ object SwitcherController {
             usbKinds = com.carlink.app.ui.premium.usbPhoneKinds(app),
             method = UnifiedSettingsStore(app).load().connectionMethod,
             interfaceSize = UnifiedSettingsStore(app).load().interfaceSize,
+            sizesThatGrow = sizesThatGrow(active.request.engine),
             dayNight = UnifiedSettingsStore(app).load().dayNight, dimmer = ScreenDimmer.level,
             edge = bubble?.let { if (it.params.x + geometry.bubble / 2 < geometry.screenWidth / 2) Edge.LEFT else Edge.RIGHT }
                 ?: Edge.RIGHT,

@@ -99,8 +99,6 @@ enum class CarLinkAppearance { FOLLOW_SYSTEM, DARK, LIGHT }
 
 /** Pure translation from CarLink's settings to DiPlay's, so every rule is unit tested. */
 object CarPlaySettingsPolicy {
-    /** Interface size Medium: the screen's long side told to the iPhone, in mm (Android Auto on a phone or tablet follows it). */
-    const val MEDIUM_WIDTH_MM = 300
 
     /**
      * CarLink's theme at the time of a write; the app sets it at start-up. The default, dark,
@@ -119,10 +117,12 @@ object CarPlaySettingsPolicy {
 
     /** The screen width told to the iPhone for [size]; null leaves DiPlay's own (Custom). */
     fun widthMm(size: InterfaceSize): Int? = when (size) {
-        InterfaceSize.SMALL -> 350
-        InterfaceSize.MEDIUM -> MEDIUM_WIDTH_MM
-        InterfaceSize.LARGE -> 220 // 250 looked too close to Medium on a tablet (2026-11-12)
-        InterfaceSize.EXTRA_LARGE -> 180 // #83: Large was still small on a 10" stereo
+        // Shifted up two steps on 2026-11-18 (the driver's call on the tablet): 350 and 300 mm drew
+        // CarPlay too small to use, so Small starts at 220 mm. Android Auto shifted one step (AaSessionSettings).
+        InterfaceSize.SMALL -> 220
+        InterfaceSize.MEDIUM -> 180 // #83: 220 was still small on a 10" stereo
+        InterfaceSize.LARGE -> 150
+        InterfaceSize.EXTRA_LARGE -> 120
         InterfaceSize.CUSTOM -> null
     }
 

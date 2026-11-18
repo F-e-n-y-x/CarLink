@@ -107,6 +107,8 @@ data class SwitcherUi(
     val method: ConnectionMethod = ConnectionMethod.AUTOMATIC,
     /** Interface size for both engines; changing it reconnects the session. */
     val interfaceSize: InterfaceSize = InterfaceSize.MEDIUM,
+    /** Sizes that would show larger right now; null = all (Android Auto upright on a tablet stops at Medium). */
+    val sizesThatGrow: List<InterfaceSize>? = null,
     /** Day/night for both engines; applies from the next connection. */
     val dayNight: DayNight = DayNight.AUTOMATIC,
     /** The screen dimmer's step (0 = off), an index into switcher/ScreenDimmer.ALPHAS. */
@@ -302,8 +304,9 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
     Row(Modifier.alpha(if (switching) 0.5f else 1f), horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
         listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE).forEach { size ->
             val selected = size == ui.interfaceSize
-            SelectableGlass(selected, { if (!switching && !selected) actions.setInterfaceSize(size) }, Modifier.weight(1f),
-                role = Role.RadioButton) {
+            val grows = ui.sizesThatGrow?.contains(size) ?: true
+            SelectableGlass(selected, { if (!switching && !selected && grows) actions.setInterfaceSize(size) },
+                Modifier.weight(1f).alpha(if (grows || selected) 1f else 0.4f), role = Role.RadioButton) {
                 Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = dimens.minTouch).padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center) {
                     Text(com.carlink.app.ui.settings.interfaceSizeLabel(size), style = MaterialTheme.typography.titleSmall,
@@ -313,7 +316,10 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
         }
     }
     Spacer(Modifier.height(6.dp))
-    Text(stringResource(R.string.carlink_switcher_size_reconnects), style = MaterialTheme.typography.bodySmall,
+    val largest = ui.sizesThatGrow?.lastOrNull()
+    Text(if (largest != null && ui.sizesThatGrow.size < 4)
+            stringResource(R.string.carlink_switcher_size_upright, com.carlink.app.ui.settings.interfaceSizeLabel(largest))
+        else stringResource(R.string.carlink_switcher_size_reconnects), style = MaterialTheme.typography.bodySmall,
         color = scheme.onSurfaceVariant)
 
     Spacer(Modifier.height(dimens.gutter))

@@ -296,7 +296,21 @@ object HeadUnitScreenConfig {
             val longSide = maxOf(screenWidthPx, screenHeightPx).toFloat()
             turnScale = minOf(getNegotiatedWidth(), getNegotiatedHeight()) / longSide
             turnSizeFactorUsed = com.andrerinas.openheadunit.HostIntegration.turnSizeFactor
-            val sized = turnScale / turnSizeFactorUsed.coerceAtLeast(1f) // CarLink
+            var sized = turnScale / turnSizeFactorUsed.coerceAtLeast(1f) // CarLink
+            // CarLink: a larger interface size zooms into a smaller region, but never below Android Auto's
+            // 748x450 dp minimum at this session's density: under it (729 dp wide in portrait, 2026-11-18)
+            // the map took taps but no drags. Larger sizes stop at the largest one that still works.
+            val sessionDpi = if (this::currentSettings.isInitialized && currentSettings.dpiPixelDensity != 0) {
+                currentSettings.dpiPixelDensity.toFloat()
+            } else {
+                (com.andrerinas.openheadunit.HostIntegration.automaticDensityDpi?.invoke(densityDpi, screenWidthPx, screenHeightPx)
+                    ?: densityDpi) * turnScale
+            }
+            val floorSized = maxOf(748f * sessionDpi / 160f / screenWidthPx, 450f * sessionDpi / 160f / screenHeightPx)
+            if (sized < floorSized) {
+                AppLog.i("[UI_DEBUG] CarScreen turning: size capped at Android Auto's 748x450 dp minimum ($sized -> ${minOf(floorSized, turnScale)})")
+                sized = minOf(floorSized, turnScale)
+            }
             turnRegionW = ((screenWidthPx * sized).roundToInt() and 1.inv()).coerceIn(2, getNegotiatedWidth())
             turnRegionH = ((screenHeightPx * sized).roundToInt() and 1.inv()).coerceIn(2, getNegotiatedHeight())
             isSmallScreen = true

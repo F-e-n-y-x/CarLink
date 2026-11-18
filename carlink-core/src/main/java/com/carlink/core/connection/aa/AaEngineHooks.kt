@@ -120,8 +120,8 @@ object AaEngineHooks {
         com.carlink.core.connection.PicturePolicy.turningHighRes(com.carlink.core.connection.DeviceCapabilities.read(app))
     }.getOrDefault(false).also { highResCapable = it }
 
-    /** Small: the size a turning screen connects at, so every interface size is reachable live. */
-    private const val LIVE_BASE_PERCENT = 80
+    /** Small: the size a turning screen connects at, so every interface size is reachable live (and the sharpest). */
+    private const val LIVE_BASE_PERCENT = 100
 
     /**
      * Interface size during a session. The phone takes the density only at connect, but on a turning

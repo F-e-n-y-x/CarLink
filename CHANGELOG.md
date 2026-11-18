@@ -11,9 +11,12 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
-- New: Interface size › Extra large, for screens far from the driver (#83). In Advanced, CarPlay's
+- Changed: interface sizes are bigger, and Extra large is new (#83). CarPlay moves up two steps
+  (Small 220 mm, Medium 180 mm, Large 150 mm, Extra large 120 mm); Android Auto one step (Small is
+  the old Medium, Medium the old Large). The old Small was too small to use. On a phone or tablet the smallest size is also the
+  sharpest Android Auto picture, so starting there keeps every size sharper. In Advanced, CarPlay's
   "Screen width reported to iPhone" now goes down to 150 mm and includes every preset's width.
-  Android Auto never goes below its smallest full layout, so on small stereos Extra large can match Large.
+  Android Auto never goes below its smallest full layout, so on small stereos the largest sizes can match.
 - Security: the Android Auto engine's message parser (protobuf) updated to 3.25.9 (CVE-2024-7254, a
   crafted message could crash it). Thanks @0nezar0 for spotting it (#84).
 - Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) on screens
@@ -40,6 +43,9 @@ is what the in-app update popup shows.
 - Fixed: CarPlay music now turns down while a navigation prompt speaks, so directions are easy to
   hear on stereos that play everything through one channel (#83). Settings › Sound › Lower music
   during directions (on by default).
+
+- Fixed: on a phone or tablet held upright, Android Auto's map could be tapped but not dragged at
+  Large and Extra large. Larger sizes now stop where Android Auto still has its full layout.
 
 ## [1.0.16] - 2026-11-12
 

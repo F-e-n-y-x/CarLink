@@ -110,7 +110,7 @@ object AdvancedSettings {
                 AirPlayPersistence::loadFps, AirPlayPersistence::saveFps), Overrides.PICTURE),
         AdvancedSetting("cp_width", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Screen width reported to iPhone", "A wider screen makes CarPlay's icons and text smaller.",
-            Applies.NEXT_CONNECTION, carPlayIntChoice(options(150 to "150 mm (largest)", 180 to "180 mm", 200 to "200 mm", 220 to "220 mm", 250 to "250 mm", 300 to "300 mm", 350 to "350 mm", 400 to "400 mm (smallest)"),
+            Applies.NEXT_CONNECTION, carPlayIntChoice(options(120 to "120 mm (largest)", 150 to "150 mm", 180 to "180 mm", 200 to "200 mm", 220 to "220 mm", 250 to "250 mm", 300 to "300 mm", 350 to "350 mm", 400 to "400 mm (smallest)"),
                 AirPlayPersistence::loadWidthPhysicalMm, AirPlayPersistence::saveWidthPhysicalMm), Overrides.INTERFACE_SIZE),
         AdvancedSetting("cp_dock", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Dock position", "Where CarPlay shows its row of apps.",
