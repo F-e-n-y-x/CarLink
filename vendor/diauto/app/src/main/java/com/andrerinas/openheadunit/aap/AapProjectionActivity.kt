@@ -769,7 +769,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = { runOnUiThread { postTurnMargins() } } // CarLink
+        com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = relayoutHook // CarLink
         // [FIX] applyOrientationSettings() must be called AFTER super.onCreate() so that the
         // Activity window is fully initialized before we lock the orientation. Calling it before
         // super.onCreate() caused SCREEN_ORIENTATION_LOCKED to inherit the orientation context
@@ -1893,9 +1893,14 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
 
     private val bydFullscreen = com.andrerinas.openheadunit.utils.BydFullscreen()
+    private val relayoutHook: () -> Unit = { runOnUiThread { postTurnMargins() } } // CarLink
 
     override fun onDestroy() {
-        com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = null // CarLink
+        // CarLink: only our own hook. A relaunched screen's onCreate can run before this one's onDestroy,
+        // and clearing its hook made the next interface size reconnect instead of applying live.
+        if (com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen === relayoutHook) {
+            com.andrerinas.openheadunit.HostIntegration.relayoutTurningScreen = null
+        }
         exitDialog?.let { runCatching { it.dismiss() } }; exitDialog = null // CarLink
         bydFullscreen.release()
         super.onDestroy()

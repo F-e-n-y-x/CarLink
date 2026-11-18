@@ -38,6 +38,7 @@ object AaSessionSettings {
      * @param panelDensityDpi the head unit's own density, which scales Android Auto's interface.
      * @param wifi the car's Wi-Fi right now; Same Wi-Fi needs its client interface and the router's BSSID.
      * @param moduleRoute the stereo's Bluetooth module route the driver opted into (DeviceEnvironment.moduleRoute).
+     * @param bydHeadUnit this screen is a BYD DiLink head unit ([VehicleProfile.detect]), not just set to the BYD brand.
      */
     fun values(
         settings: UnifiedSettings,
@@ -49,6 +50,7 @@ object AaSessionSettings {
         wifi: WifiEnvironment? = null,
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
         moduleRoute: ExternalBtTransportPolicy.Route? = null,
+        bydHeadUnit: Boolean = profile == VehicleProfile.BYD_DILINK,
     ): AaSessionValues {
         var problem: String? = null
         val values = buildMap<String, Any> {
@@ -76,10 +78,9 @@ object AaSessionSettings {
             put("vehicle-display-name", carName)
             // A tablet or generic head unit is no A2DP sink: true omits Android Auto's media sink
             // and leaves no music at all (DA§4.5 item 4). DiLink's own default is true (DA§12 #9).
-            put("music-via-bluetooth", when (profile) {
-                VehicleProfile.BYD_DILINK -> true
-                VehicleProfile.GENERIC -> settings.soundThroughCarBluetooth
-            })
+            // Only on a real DiLink head unit ([bydHeadUnit], VehicleProfile.detect): a phone or tablet whose
+            // car brand is set to BYD kept its music on the phone (tablet, 2026-11-18).
+            put("music-via-bluetooth", (profile == VehicleProfile.BYD_DILINK && bydHeadUnit) || settings.soundThroughCarBluetooth)
             // BYD's HUD/cluster outputs only on a BYD (DA§12.2).
             put("byd-navigation-enabled", profile == VehicleProfile.BYD_DILINK && settings.bydDirections)
             // DiAuto 0.3.12's BYD dashboard map (a second video stream announced to the phone and a

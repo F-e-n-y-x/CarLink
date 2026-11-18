@@ -47,6 +47,10 @@ is what the in-app update popup shows.
 - Fixed: on a phone or tablet held upright, Android Auto's map could be tapped but not dragged at
   Large and Extra large. Larger sizes now stop where Android Auto still has its full layout.
 
+- Fixed: a phone or tablet whose car brand is set to BYD now plays Android Auto music itself; only a
+  real BYD DiLink head unit sends it over the car's Bluetooth. Interface size changes during a wired
+  Android Auto session no longer reconnect after the phone's USB link restarted.
+
 ## [1.0.16] - 2026-11-12
 
 - New: change the interface size (Small, Medium, Large) from the floating switcher, live, in

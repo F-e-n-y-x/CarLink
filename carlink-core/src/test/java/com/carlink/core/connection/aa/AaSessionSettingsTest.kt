@@ -22,8 +22,8 @@ class AaSessionSettingsTest {
 
     private fun values(settings: UnifiedSettings = base, transport: Transport = Transport.WIRELESS,
                        path: WirelessPath? = WirelessPath.WIFI_DIRECT, profile: VehicleProfile = VehicleProfile.GENERIC,
-                       wifi: WifiEnvironment? = null) =
-        AaSessionSettings.values(settings, transport, path, profile, "My Car", 320, wifi)
+                       wifi: WifiEnvironment? = null, bydHeadUnit: Boolean = profile == VehicleProfile.BYD_DILINK) =
+        AaSessionSettings.values(settings, transport, path, profile, "My Car", 320, wifi, bydHeadUnit = bydHeadUnit)
 
     @Test fun everySessionWritesTheHostOwnedKeys() {
         for (path in listOf(WirelessPath.WIFI_DIRECT, WirelessPath.CAR_HOTSPOT)) {
@@ -188,5 +188,13 @@ class AaSessionSettingsTest {
         assertEquals(listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM), AaSessionSettings.sizesThatGrow(upright))
         val sideways = AaSessionSettings.turningMaxPercent(320, 2560, 1600)
         assertEquals(InterfaceSize.entries.filter { it != InterfaceSize.CUSTOM }, AaSessionSettings.sizesThatGrow(sideways))
+    }
+
+    /** A phone or tablet set to BYD keeps Android Auto's music; a real DiLink sends it over the car's Bluetooth. */
+    @Test fun bydBluetoothMusicOnlyOnARealDiLink() {
+        val tablet = values(profile = VehicleProfile.BYD_DILINK, bydHeadUnit = false).values
+        assertEquals(false, tablet["music-via-bluetooth"])
+        val dilink = values(profile = VehicleProfile.BYD_DILINK, bydHeadUnit = true).values
+        assertEquals(true, dilink["music-via-bluetooth"])
     }
 }

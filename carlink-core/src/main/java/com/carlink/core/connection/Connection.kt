@@ -259,7 +259,8 @@ object Connection {
                 }
                 val values = AaSessionSettings.values(settings, plan.transport, plan.path, profile,
                     carName = CarLinkCore.config.accessoryName, panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
-                    picture = picture, moduleRoute = moduleRoute)
+                    picture = picture, moduleRoute = moduleRoute,
+                    bydHeadUnit = VehicleProfile.detect(app) == VehicleProfile.BYD_DILINK)
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
             }
