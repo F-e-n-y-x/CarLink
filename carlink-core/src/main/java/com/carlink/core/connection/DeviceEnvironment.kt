@@ -48,6 +48,28 @@ class DeviceEnvironment(
         !(engine == Engine.ANDROID_AUTO && unified.load().connectionMethod == ConnectionMethod.HEADUNIT_SERVER) &&
             wirelessBlocked(effectiveStereo(app), preferences.wirelessOnExternalBluetooth, engine)
 
+    private val rechecking = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** The latest blocked request's engine and callback: a second block while a recheck runs replaces the first. */
+    @Volatile private var recheck: Pair<Engine, () -> Unit>? = null
+
+    override fun recheckStereo(engine: Engine, changed: () -> Unit) {
+        if (ExternalBluetoothProbe.settled()) return
+        recheck = engine to changed
+        if (!rechecking.compareAndSet(false, true)) return
+        Thread({
+            try {
+                // The probe re-takes at most every 3 s and is final 180 s after the first one.
+                while (!ExternalBluetoothProbe.settled() && recheck?.first?.let(::wirelessUnavailable) == true) {
+                    Thread.sleep(3_000)
+                    runCatching { ExternalBluetoothProbe.await(app) }
+                }
+            } finally {
+                rechecking.set(false)
+            }
+            recheck?.second?.invoke()
+        }, "carlink-stereo-recheck").apply { isDaemon = true }.start()
+    }
+
     override fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem> {
         val settings = unified.load()
         val wifi = WifiEnvironmentReader.read(app, settings)

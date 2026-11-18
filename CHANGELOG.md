@@ -30,6 +30,13 @@ is what the in-app update popup shows.
   the picture with Home; stereos that wake with an Autochips quick-boot signal now start CarLink
   too. The Android Auto exit menu no longer crashes when the session ends while it is open.
   Thanks @0nezar0 for these, from the Changan CS75 Plus fork (#84).
+- Fixed: on a stereo whose Bluetooth module started after CarLink, wireless was refused as "not
+  available on this stereo" until CarLink was restarted. The check is taken again while the stereo
+  starts, and a blocked start goes ahead once it passes (thanks @pphan93).
+- Fixed: with only iPhones known, CarLink no longer keeps Android Auto's process warm; it delayed
+  CarPlay's start by up to 5 s after CarLink restarted (thanks @pphan93).
+- Fixed: wireless Android Auto stopped listening for the phone after a Bluetooth error (for
+  example after unpairing it) until the next connection. The listener now reopens on its own.
 
 ## [1.0.16] - 2026-11-12
 

@@ -172,6 +172,13 @@ class SessionManager(
          */
         fun wirelessUnavailable(engine: Engine): Boolean = false
 
+        /**
+         * The stereo-Bluetooth probe may still change its answer (taken before the module started):
+         * take it again until it is final or wireless becomes available for [engine], then call
+         * [changed] on any thread. No-op when the probe is final.
+         */
+        fun recheckStereo(engine: Engine, changed: () -> Unit) {}
+
         /** Problems that prevent [request] on [path] (pre-flight; does not open anything). */
         fun preflight(request: SessionRequest, path: WirelessPath?): List<Problem>
         /** Wireless paths to try for [request], in order (see [WirelessPolicy]). */
@@ -323,6 +330,9 @@ class SessionManager(
                 main.post {
                     if (projecting) {
                         note("kept a running ${adapter.engine} session after a restart of this process")
+                        stopping--; drainAfterStop()
+                    } else if (!adapter.hasSession()) {
+                        // Only the engine's process was alive (e.g. prewarmed): nothing to stop.
                         stopping--; drainAfterStop()
                     } else {
                         note("stopping an orphaned ${adapter.engine} session")
@@ -607,6 +617,14 @@ class SessionManager(
         retry()
     }
 
+    /** The stereo-Bluetooth probe changed: a start blocked on the external module starts once wireless is available. */
+    fun onStereoProbe() {
+        val s = _state.value as? SessionState.Blocked ?: return
+        if (Problem.EXTERNAL_BLUETOOTH !in s.problems || environment.wirelessUnavailable(s.request.engine)) return
+        note("stereo Bluetooth probe changed; starting the blocked request again")
+        start(s.request)
+    }
+
     /** The driver cancelled or disconnected: stop, and pause automatic starts until they connect. */
     fun disconnect() {
         note("driver disconnect")
@@ -652,6 +670,10 @@ class SessionManager(
         if (request.transport == Transport.WIRELESS && !request.selfMode && environment.wirelessUnavailable(request.engine)) {
             note("${request.engine} blocked: wireless is not available on this stereo (external Bluetooth module)")
             _state.value = SessionState.Blocked(request, listOf(Problem.EXTERNAL_BLUETOOTH))
+            // A probe taken while the car woke said "external module"; the next one, a second later,
+            // did not, and the start stayed blocked for 20 min (a contributor's log, 2026-11-15).
+            val blockedToken = token
+            environment.recheckStereo(request.engine) { main.post { if (blockedToken == token) onStereoProbe() } }
             return
         }
         val paths = if (request.transport == Transport.WIRELESS && !request.selfMode) {

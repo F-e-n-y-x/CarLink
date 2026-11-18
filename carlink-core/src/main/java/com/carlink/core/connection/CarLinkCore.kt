@@ -26,7 +26,7 @@ interface CarLinkHost {
 
         /**
          * A known phone's Bluetooth connected (address, kind and name are set). The host's main
-         * screen calls `Connection.get(context).onBluetoothPhone(address, kind, name)` once it is
+         * screen calls `Connection.onBluetoothPhone(context, address, kind, name)` once it is
          * in the foreground: Android does not let a background receiver start the engines.
          */
         PHONE,

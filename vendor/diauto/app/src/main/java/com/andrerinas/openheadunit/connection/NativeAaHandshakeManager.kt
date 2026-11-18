@@ -141,6 +141,8 @@ class NativeAaHandshakeManager(
     // Set by closeAaListeners() so the AA accept loops can tell "we closed this on purpose
     // after a successful handoff" apart from a real socket error, for logging only.
     @Volatile private var aaListenersClosedForSession = false
+    // CarLink (DiAuto #77): bumped by start() and stop(), so a listener reopen never outlives its run.
+    @Volatile private var listenRun = 0
     // Whether the "already have a hands-free link, not poking" line has been said at info level for
     // the current run of skips. Cleared as soon as a poke does go ahead, so a later skip says so
     // again rather than hiding behind a line from minutes earlier.
@@ -347,6 +349,7 @@ class NativeAaHandshakeManager(
 
         isRunning = true
         aaListenersClosedForSession = false
+        val run = ++listenRun // CarLink (DiAuto #77)
         // Local Bluetooth radio name; logged on every accept so a dual-radio head unit's logs
         // show which radio the phone actually reached (compare with the HU name in the phone's
         // log). Uses adapter.name, not adapter.address: getAddress() returns the fixed masked
@@ -357,11 +360,16 @@ class NativeAaHandshakeManager(
 
         // Start AA RFCOMM Server
         scope.launch(Dispatchers.IO + CoroutineName("NativeAa-RfcommServer")) {
+          var failures = 0 // CarLink (DiAuto #77): reopen a listener that failed, see ListenerReopenPolicy
+          while (true) {
+            var server: BluetoothServerSocket? = null // CarLink (DiAuto #77)
+            val openedAt = SystemClock.elapsedRealtime() // CarLink (DiAuto #77)
             try {
-                aaServerSocket = adapter.listenUsingRfcommWithServiceRecord("AA BT Listener", AA_UUID)
+                server = adapter.listenUsingRfcommWithServiceRecord("AA BT Listener", AA_UUID) // CarLink (DiAuto #77): a local
+                aaServerSocket = server
                 AppLog.i("NativeAA: ACTIVELY LISTENING on Android Auto UUID ($AA_UUID) on radio [$localRadioName]... Waiting for phone to connect back!")
                 while (isRunning && isActive) {
-                    val socket = aaServerSocket?.accept()
+                    val socket = server.accept() // CarLink (DiAuto #77)
                     if (socket != null) {
                         AppLog.i("NativeAA: Connection accepted from ${socket.remoteDevice.name} (${socket.remoteDevice.address}) on local radio [$localRadioName]")
                         if (refuseWhileBackedOff(socket)) continue
@@ -380,16 +388,35 @@ class NativeAaHandshakeManager(
                     AppLog.d("NativeAA: AA Server socket closed cleanly.")
                 }
             }
+            // CarLink (DiAuto #77): reopen only within this run (not after stop()/start() or a
+            // handoff); past the cap, report it closed so the re-arm paths (poke, auto-start) run.
+            if (!isRunning || !isActive || aaListenersClosedForSession || run != listenRun) break
+            try { server?.close() } catch (e: Exception) {}
+            failures = ListenerReopenPolicy.failuresInRow(failures, SystemClock.elapsedRealtime() - openedAt)
+            val wait = ListenerReopenPolicy.delayMillis(failures)
+            if (wait == null) {
+                AppLog.e("NativeAA: AA listener failed $failures times in a row; leaving it closed until Native AA is re-armed.")
+                aaListenersClosedForSession = true
+                break
+            }
+            AppLog.w("NativeAA: reopening the AA listener in ${wait}ms (failure $failures).")
+            delay(wait)
+            if (!isRunning || !isActive || aaListenersClosedForSession || run != listenRun) break
+          }
         }
 
         // Start HFP RFCOMM Server (Required by some phones to detect HU)
         // CarLink (open-headunit c86332be): only where the radio advertises no Hands-Free of its own.
         standingInForHfp = shouldRegisterDummyHfp(adapter, localRadioName)
         if (standingInForHfp) scope.launch(Dispatchers.IO + CoroutineName("NativeAa-HfpServer")) {
+          var failures = 0 // CarLink (DiAuto #77): reopen a listener that failed, see ListenerReopenPolicy
+          while (true) {
+            var server: BluetoothServerSocket? = null // CarLink (DiAuto #77)
+            val openedAt = SystemClock.elapsedRealtime() // CarLink (DiAuto #77)
             try {
                 // CarLink (PR #1029): a local, so a record withdrawn for the session ends this loop
                 // instead of leaving it spinning on a nulled field.
-                val server = openHfpRecord(adapter, localRadioName) ?: return@launch // CarLink (c3b58e61)
+                server = openHfpRecord(adapter, localRadioName) ?: return@launch // CarLink (c3b58e61)
                 hfpServerSocket = server
                 while (isRunning && isActive) {
                     val socket = server.accept()
@@ -409,6 +436,15 @@ class NativeAaHandshakeManager(
                     AppLog.d("NativeAA: HFP Server socket closed cleanly.")
                 }
             }
+            // CarLink (DiAuto #77): as for the AA listener above; giving up leaves only the stand-in record closed.
+            if (!isRunning || !isActive || aaListenersClosedForSession || run != listenRun) break
+            try { server?.close() } catch (e: Exception) {}
+            failures = ListenerReopenPolicy.failuresInRow(failures, SystemClock.elapsedRealtime() - openedAt)
+            val wait = ListenerReopenPolicy.delayMillis(failures) ?: break
+            AppLog.w("NativeAA: reopening the stand-in HFP listener in ${wait}ms (failure $failures).")
+            delay(wait)
+            if (!isRunning || !isActive || aaListenersClosedForSession || run != listenRun) break
+          }
         }
 
         // Some head units have two Bluetooth radios (e.g. "K706" and "CAR8032"). The phone may
@@ -1849,6 +1885,7 @@ class NativeAaHandshakeManager(
 
     fun stop() {
         isRunning = false
+        listenRun++ // CarLink (DiAuto #77)
         moduleCarrier?.close() // CarLink: unblocks the carrier's pump or reader
         moduleCarrier = null
         try { aaServerSocket?.close() } catch (e: Exception) {}
