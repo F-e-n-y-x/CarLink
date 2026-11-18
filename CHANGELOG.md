@@ -4,54 +4,36 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
-## [Unreleased]
+## [1.0.17] - 2026-11-18
 
 - New: Connection method › Head unit server, a backup for wireless Android Auto when Bluetooth or
-  Wi-Fi Direct fails (#70). This screen joins the phone's hotspot and connects to Android Auto's
-  head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
-  developer settings first (again after every phone restart). CarPlay keeps Automatic.
+  Wi-Fi Direct fails (#70). This screen joins the phone's hotspot; turn on "Start head unit server"
+  in Android Auto's developer settings first (again after every phone restart). If the server gets
+  stuck, Home says how to restart it.
+- New: music turns down while a CarPlay direction speaks, CarPlay's own music and other apps on the
+  screen alike (#83). Settings › Sound & voice › Lower music during directions, on by default.
+- New: Interface size › Extra large, and all sizes are bigger: the old Small was too small to use
+  (#83). On a phone or tablet held upright, Android Auto stops at the largest size that keeps its
+  full layout, and the floating switcher says so.
 - New: Ford in the car brand list (#33).
-- Changed: interface sizes are bigger, and Extra large is new (#83). CarPlay moves up two steps
-  (Small 220 mm, Medium 180 mm, Large 150 mm, Extra large 120 mm); Android Auto one step (Small is
-  the old Medium, Medium the old Large). The old Small was too small to use. On a phone or tablet the smallest size is also the
-  sharpest Android Auto picture, so starting there keeps every size sharper. In Advanced, CarPlay's
-  "Screen width reported to iPhone" now goes down to 150 mm and includes every preset's width.
-  Android Auto never goes below its smallest full layout, so on small stereos the largest sizes can match.
-- Security: the Android Auto engine's message parser (protobuf) updated to 3.25.9 (CVE-2024-7254, a
-  crafted message could crash it). Thanks @0nezar0 for spotting it (#84).
-- Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) on screens
-  whose hardware decoder carries it. If CarPlay shows no picture with HEVC, the next try uses H.264;
-  when that one works, CarLink keeps H.264 on that screen from then on.
-- Security: CarPlay engine hardened against malformed data from the phone (upstream DiPlay PRs
-  #1124, #1130, #1294, #1296, #1297, #1299, #1300, #1304, #1307, #1308, #1313).
-- Fixed: when Android Auto's head unit server takes the connection but never answers (Android Auto
-  on this screen, or the Head unit server method), CarLink now stops at once and Home says how to
-  restart it, with a button to Android Auto's settings, instead of retrying a server that cannot
-  recover. A slow phase on the Head unit server method no longer restarts the attempt, which left
-  the server deaf.
-- Fixed: a wake signal from the stereo while CarPlay or Android Auto is on screen no longer covers
-  the picture with Home; stereos that wake with an Autochips quick-boot signal now start CarLink
-  too. The Android Auto exit menu no longer crashes when the session ends while it is open.
-  Thanks @0nezar0 for these, from the Changan CS75 Plus fork (#84).
-- Fixed: on a stereo whose Bluetooth module started after CarLink, wireless was refused as "not
-  available on this stereo" until CarLink was restarted. The check is taken again while the stereo
-  starts, and a blocked start goes ahead once it passes (thanks @pphan93).
-- Fixed: with only iPhones known, CarLink no longer keeps Android Auto's process warm; it delayed
-  CarPlay's start by up to 5 s after CarLink restarted (thanks @pphan93).
-- Fixed: wireless Android Auto stopped listening for the phone after a Bluetooth error (for
-  example after unpairing it) until the next connection. The listener now reopens on its own.
-- Fixed: music now turns down while a CarPlay navigation prompt speaks, so directions are easy to
-  hear on stereos that play everything through one channel (#83): CarPlay's own music, and music
-  from other apps on the screen. Settings › Sound › Lower music during directions (on by default).
-
-- Fixed: on a phone or tablet held upright, Android Auto's map could be tapped but not dragged at
-  Large and Extra large. Larger sizes now stop where Android Auto still has its full layout.
-
-- Fixed: a phone or tablet whose car brand is set to BYD now plays Android Auto music itself; only a
-  real BYD DiLink head unit sends it over the car's Bluetooth. Interface size changes during a wired
-  Android Auto session no longer reconnect after the phone's USB link restarted. A wired Android
-  Auto phone that stops answering after its USB link blinks now gets the link restarted after 16 s,
-  instead of "unplug and plug in again" after 32 s.
+- Better: with Picture on Automatic, CarPlay uses HEVC (sharper at the same data rate) where the
+  screen's decoder handles it, and falls back to H.264 on a screen where HEVC shows no picture.
+- Better: Report a problem says when the same report was already sent, and offers the update first
+  when a newer CarLink is out.
+- Fixed: Android Auto on a phone or tablet held upright: the map could be tapped but not dragged at
+  the larger sizes.
+- Fixed: a phone or tablet set to the BYD brand kept Android Auto's music on the phone.
+- Fixed: a wired Android Auto phone whose USB link blinked ended in "unplug and plug in again";
+  CarLink now restarts the link itself. Changing the size no longer reconnects after such a blink.
+- Fixed: wireless was refused on a stereo whose Bluetooth module started after CarLink, until
+  CarLink was restarted (thanks @pphan93). With only iPhones known, CarPlay no longer waits for
+  Android Auto's engine to warm up (thanks @pphan93).
+- Fixed: wireless Android Auto stopped listening for the phone after a Bluetooth error.
+- Fixed: a stereo's wake signal no longer covers a running CarPlay or Android Auto picture with
+  Home; Autochips quick-boot stereos start CarLink on wake; the Android Auto exit menu no longer
+  crashes when the session ends (thanks @0nezar0, #84).
+- Security: the CarPlay engine is hardened against malformed data from the phone (upstream DiPlay
+  fixes), and Android Auto's message parser is updated (CVE-2024-7254, thanks @0nezar0).
 
 ## [1.0.16] - 2026-11-12
 
