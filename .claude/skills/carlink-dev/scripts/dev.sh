@@ -44,13 +44,13 @@ case "$cmd" in
     cd "$ROOT"
     auth=()
     [ -f "$HOME/.carlink-private/offline-mfi/identity.pk8" ] && auth=(env DIPLAY_AUTH_ASSETS_DIR="$HOME/.carlink-private")
-    "${auth[@]}" ./gradlew --no-daemon -q :app:assembleDebug
+    "${auth[@]}" flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q :app:assembleDebug
     echo "built $APK"
     ;;
   test)
     cd "$ROOT"
     python3 -I scripts/resource_collisions.py --check
-    ./gradlew --no-daemon -q --continue :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
+    flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q --continue :app:testDebugUnitTest :carlink-core:testDebugUnitTest :androidauto:testGithubDebugUnitTest \
       :carplay-shared:testDebugUnitTest :carplay-common:testDebugUnitTest
     echo "all tests passed"
     ;;
@@ -67,7 +67,7 @@ case "$cmd" in
             ANDROID_KEY_ALIAS=androiddebugkey ANDROID_KEY_PASSWORD=android)
     fi
     # Lint vital is skipped: this is a test build, and it doubles the build time.
-    env "${auth[@]}" "${sign[@]}" ./gradlew --no-daemon -q :app:assembleRelease -x lintVitalAnalyzeRelease ${CARLINK_GRADLE_ARGS:-}
+    env "${auth[@]}" "${sign[@]}" flock /tmp/carlink-gradle.lock ./gradlew --no-daemon -q :app:assembleRelease -x lintVitalAnalyzeRelease ${CARLINK_GRADLE_ARGS:-}
     echo "built release $RELEASE_APK"
     ;;
   install-release)
