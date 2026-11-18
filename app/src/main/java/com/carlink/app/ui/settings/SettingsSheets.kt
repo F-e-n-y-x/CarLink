@@ -156,6 +156,8 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
                     preview = { ScalePreview(1f) }),
                 Preset(InterfaceSize.LARGE, interfaceSizeLabel(InterfaceSize.LARGE), stringResource(R.string.carlink_settings_size_large_detail),
                     preview = { ScalePreview(1.25f) }),
+                Preset(InterfaceSize.EXTRA_LARGE, interfaceSizeLabel(InterfaceSize.EXTRA_LARGE),
+                    stringResource(R.string.carlink_settings_size_extra_large_detail), preview = { ScalePreview(1.55f) }),
             ) + customPreset(u.interfaceSize == InterfaceSize.CUSTOM, InterfaceSize.CUSTOM),
             u.interfaceSize, onSelect = { s -> select { it.copy(interfaceSize = s) } }, onDismiss = onDismiss,
         )

@@ -113,7 +113,7 @@ class AaSessionSettingsTest {
         assertEquals(2, v["resolutionId"])
         assertEquals(30, v["fps-limit"])
         assertEquals(0, v["dpi-pixel-density"])
-        for ((size, percent) in listOf(InterfaceSize.SMALL to 80, InterfaceSize.MEDIUM to 100, InterfaceSize.LARGE to 135)) {
+        for ((size, percent) in listOf(InterfaceSize.SMALL to 80, InterfaceSize.MEDIUM to 100, InterfaceSize.LARGE to 135, InterfaceSize.EXTRA_LARGE to 165)) {
             val sized = values(settings = base.copy(interfaceSize = size)).values
             assertEquals(0, sized["dpi-pixel-density"])
             assertEquals(percent, sized[AaSessionSettings.SIZE_PERCENT_KEY])

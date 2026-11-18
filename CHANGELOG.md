@@ -11,6 +11,11 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
+- New: Interface size › Extra large, for screens far from the driver (#83). In Advanced, CarPlay's
+  "Screen width reported to iPhone" now goes down to 150 mm and includes every preset's width.
+  Android Auto never goes below its smallest full layout, so on small stereos Extra large can match Large.
+- Security: the Android Auto engine's message parser (protobuf) updated to 3.25.9 (CVE-2024-7254, a
+  crafted message could crash it). Thanks @0nezar0 for spotting it (#84).
 
 ## [1.0.16] - 2026-11-12
 

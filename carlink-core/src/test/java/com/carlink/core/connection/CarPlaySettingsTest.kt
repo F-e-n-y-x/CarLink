@@ -60,6 +60,14 @@ class CarPlaySettingsTest {
         assertEquals("system", map().nightModeKey)
     }
 
+    /** Every preset width is one the Advanced list offers, so choosing Advanced never shows an unknown value (#83). */
+    @Test fun presetWidthsAreOnTheAdvancedList() {
+        assertEquals(180, map(UnifiedSettings(interfaceSize = InterfaceSize.EXTRA_LARGE)).widthPhysicalMm)
+        val offered = (com.carlink.core.settings.AdvancedSettings.all.first { it.id == "cp_width" }.control
+            as com.carlink.core.settings.Control.Choice).options.map { it.value.toInt() }
+        InterfaceSize.entries.mapNotNull(CarPlaySettingsPolicy::widthMm).forEach { assertTrue("$it mm", it in offered) }
+    }
+
     @Test fun audioDelayMapsToDiPlaysMusicBuffers() {
         fun buffers(delay: AudioDelay) = map(UnifiedSettings(audioDelay = delay)).let { it.wiredMediaBufferMillis to it.wirelessMediaBufferMillis }
         assertEquals(100 to 300, buffers(AudioDelay.LOW))

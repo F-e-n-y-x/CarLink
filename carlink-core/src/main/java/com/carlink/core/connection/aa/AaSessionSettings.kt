@@ -201,6 +201,7 @@ object AaSessionSettings {
         InterfaceSize.SMALL -> 80
         InterfaceSize.MEDIUM, InterfaceSize.CUSTOM -> 100
         InterfaceSize.LARGE -> 135
+        InterfaceSize.EXTRA_LARGE -> 165 // CarPlay's 180 mm against Medium's 300; the 748x450 dp floor still caps it
     }
 
     /**

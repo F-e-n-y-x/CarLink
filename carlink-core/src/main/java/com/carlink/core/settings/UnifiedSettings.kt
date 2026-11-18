@@ -50,7 +50,8 @@ enum class ConnectionMethod { AUTOMATIC, SAME_WIFI, CAR_HOTSPOT, WIFI_DIRECT, HE
 /** Quality versus load; [CUSTOM] when Advanced picked exact per-engine values. */
 enum class Picture { AUTOMATIC, BEST, BALANCED, LIGHT, CUSTOM }
 
-enum class InterfaceSize { SMALL, MEDIUM, LARGE, CUSTOM }
+/** [EXTRA_LARGE] for screens read from further away (GitHub #83); [CUSTOM] when Advanced set exact per-engine values. */
+enum class InterfaceSize { SMALL, MEDIUM, LARGE, EXTRA_LARGE, CUSTOM }
 
 enum class DayNight { AUTOMATIC, DAY, NIGHT, SCHEDULE }
 

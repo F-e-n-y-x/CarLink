@@ -120,6 +120,7 @@ object CarPlaySettingsPolicy {
         InterfaceSize.SMALL -> 350
         InterfaceSize.MEDIUM -> MEDIUM_WIDTH_MM
         InterfaceSize.LARGE -> 220 // 250 looked too close to Medium on a tablet (2026-11-12)
+        InterfaceSize.EXTRA_LARGE -> 180 // #83: Large was still small on a 10" stereo
         InterfaceSize.CUSTOM -> null
     }
 

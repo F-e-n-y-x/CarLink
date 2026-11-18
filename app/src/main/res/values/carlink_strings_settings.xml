@@ -116,6 +116,7 @@
     <string name="carlink_settings_size_small_detail">More fits on the screen</string>
     <string name="carlink_settings_size_medium_detail">Recommended</string>
     <string name="carlink_settings_size_large_detail">Easier to read and tap</string>
+    <string name="carlink_settings_size_extra_large_detail">For a screen far from the driver</string>
     <string name="carlink_settings_daynight">Day and night</string>
     <string name="carlink_settings_daynight_detail">When maps and screens turn dark</string>
     <string name="carlink_settings_daynight_auto">Automatic</string>

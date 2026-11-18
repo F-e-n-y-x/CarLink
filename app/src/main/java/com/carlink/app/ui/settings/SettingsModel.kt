@@ -240,6 +240,7 @@ internal fun interfaceSizeLabel(size: InterfaceSize): String = stringResource(
         InterfaceSize.SMALL -> R.string.carlink_settings_size_small
         InterfaceSize.MEDIUM -> R.string.carlink_settings_size_medium
         InterfaceSize.LARGE -> R.string.carlink_settings_size_large
+        InterfaceSize.EXTRA_LARGE -> R.string.carlink_settings_size_extra_large
         InterfaceSize.CUSTOM -> R.string.carlink_settings_custom
     },
 )

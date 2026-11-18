@@ -300,7 +300,7 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
     Eyebrow(stringResource(R.string.carlink_settings_interface_size))
     Spacer(Modifier.height(10.dp))
     Row(Modifier.alpha(if (switching) 0.5f else 1f), horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
-        listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE).forEach { size ->
+        listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE).forEach { size ->
             val selected = size == ui.interfaceSize
             SelectableGlass(selected, { if (!switching && !selected) actions.setInterfaceSize(size) }, Modifier.weight(1f),
                 role = Role.RadioButton) {
