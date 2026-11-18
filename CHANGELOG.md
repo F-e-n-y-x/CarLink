@@ -40,9 +40,9 @@ is what the in-app update popup shows.
   CarPlay's start by up to 5 s after CarLink restarted (thanks @pphan93).
 - Fixed: wireless Android Auto stopped listening for the phone after a Bluetooth error (for
   example after unpairing it) until the next connection. The listener now reopens on its own.
-- Fixed: CarPlay music now turns down while a navigation prompt speaks, so directions are easy to
-  hear on stereos that play everything through one channel (#83). Settings › Sound › Lower music
-  during directions (on by default).
+- Fixed: music now turns down while a CarPlay navigation prompt speaks, so directions are easy to
+  hear on stereos that play everything through one channel (#83): CarPlay's own music, and music
+  from other apps on the screen. Settings › Sound › Lower music during directions (on by default).
 
 - Fixed: on a phone or tablet held upright, Android Auto's map could be tapped but not dragged at
   Large and Extra large. Larger sizes now stop where Android Auto still has its full layout.

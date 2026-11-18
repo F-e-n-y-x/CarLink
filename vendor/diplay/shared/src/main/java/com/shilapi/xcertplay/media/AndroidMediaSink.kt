@@ -110,6 +110,10 @@ internal class AudioFocusCoordinator(
         if (closed || promptDucked == ducked) return
         promptDucked = ducked
         setMediaVolume(mediaVolume)
+        runCatching {
+            report("Audio: prompt duck=$ducked music=${combinedMediaVolume(mediaVolume, promptDucked)} " +
+                "tracks=${active.values.joinToString { "${it.channel}@${it.appliedVolume}" }.ifEmpty { "none" }}")
+        }
     }
 
     fun onExternalFocusChange(change: Int) {
@@ -251,14 +255,17 @@ class AndroidMediaSink(
 
     private val navigationPromptFocus = NavigationPromptFocus(
         appContext,
-        promptFocusEnabled = navigationPromptAudioFocus,
-        audioFocusEnabled = audioFocusEnabled,
+        // CarLink: "Lower music during directions" (#83) also ducks other apps on the screen, such as
+        // the head unit's own music player, for each prompt, with or without the Audio focus setting.
+        promptFocusEnabled = navigationPromptAudioFocus || HostAudio.duckMediaForPrompts,
+        audioFocusEnabled = audioFocusEnabled || HostAudio.duckMediaForPrompts,
         attributes = { navigationRouteAttributes(navigationChannel) },
         report = onAudioDiagnostic,
     )
 
     override fun onAudioDuck(ducked: Boolean) {
         if (ducked) navigationPromptFocus.onDuck() else navigationPromptFocus.onUnduck()
+        if (!HostAudio.duckMediaForPrompts) runCatching { onAudioDiagnostic("Audio: prompt duck=$ducked ignored (Lower music during directions is off)") }
         audioFocusCoordinator.setPromptDuck(ducked && HostAudio.duckMediaForPrompts) // CarLink: #83
     }
 
