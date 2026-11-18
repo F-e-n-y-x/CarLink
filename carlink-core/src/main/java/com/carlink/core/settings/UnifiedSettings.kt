@@ -38,6 +38,8 @@ data class UnifiedSettings(
     val callAudioAsMedia: Boolean = false,
     /** Press play once a session is back when the phone was playing music as the last one ended. */
     val resumeMusic: Boolean = false,
+    /** CarPlay lowers its own music while a navigation prompt plays (GitHub #83). */
+    val duckMusicForDirections: Boolean = true,
     /** Software gain on the microphone sent to the phone ([AudioLevels.MIC_DB]). */
     val micGainDb: Int = 0,
 )
@@ -86,6 +88,7 @@ class UnifiedSettingsStore(context: Context) {
         callLevelDb = prefs.getInt("call_level_db", 0),
         callAudioAsMedia = prefs.getBoolean("call_audio_as_media", false),
         resumeMusic = prefs.getBoolean("resume_music", false),
+        duckMusicForDirections = prefs.getBoolean("duck_music_directions", true),
         micGainDb = prefs.getInt("mic_gain_db", 0),
     )
 
@@ -114,6 +117,7 @@ class UnifiedSettingsStore(context: Context) {
             .putInt("call_level_db", settings.callLevelDb)
             .putBoolean("call_audio_as_media", settings.callAudioAsMedia)
             .putBoolean("resume_music", settings.resumeMusic)
+            .putBoolean("duck_music_directions", settings.duckMusicForDirections)
             .putInt("mic_gain_db", settings.micGainDb)
             .apply()
     }

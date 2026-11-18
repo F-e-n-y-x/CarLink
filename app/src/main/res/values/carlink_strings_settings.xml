@@ -165,6 +165,8 @@
     <string name="carlink_settings_call_stream_media_detail">For head units that play calls too quietly or not at all. The other person may hear an echo: if so, turn on Call echo cancellation under Show advanced, or go back to Phone call.</string>
     <string name="carlink_settings_resume_music">Resume music after reconnecting</string>
     <string name="carlink_settings_resume_music_detail">If music was playing when the phone disconnected, press play once it is back</string>
+    <string name="carlink_settings_duck_directions">Lower music during directions</string>
+    <string name="carlink_settings_duck_directions_detail">CarPlay turns its music down while a navigation prompt speaks</string>
     <string name="carlink_settings_group_microphone">Microphone</string>
     <string name="carlink_settings_mic_gain">Microphone level</string>
     <string name="carlink_settings_mic_gain_detail">How loud your voice reaches calls and the voice assistant</string>

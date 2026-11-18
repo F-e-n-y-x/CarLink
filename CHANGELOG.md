@@ -11,6 +11,9 @@ is what the in-app update popup shows.
   head unit server; no Bluetooth needed. Turn on "Start head unit server" in Android Auto's
   developer settings first (again after every phone restart). CarPlay keeps Automatic.
 - New: Ford in the car brand list (#33).
+- Fixed: CarPlay music now turns down while a navigation prompt speaks, so directions are easy to
+  hear on stereos that play everything through one channel (#83). Settings › Sound › Lower music
+  during directions (on by default).
 
 ## [1.0.16] - 2026-11-12
 

@@ -52,6 +52,7 @@ internal class AudioFocusCoordinator(
     private var request: AudioFocusRequestCompat? = null
     private var requestedChannel: AudioChannel? = null
     private var mediaVolume = FULL_VOLUME
+    private var promptDucked = false // CarLink: the iPhone's duckAudio, a second reason next to focus loss
     private var closed = false
     private var focusGeneration = 0L
     private var currentListener = listenerFor(focusGeneration)
@@ -90,15 +91,25 @@ internal class AudioFocusCoordinator(
 
     @Synchronized
     fun acquire(track: AudioTrack, channel: AudioChannel, attributes: AudioAttributes) {
-        if (closed || !enabled || manager == null || channel == AudioChannel.NAVIGATION) return
+        if (closed || manager == null || channel == AudioChannel.NAVIGATION) return
+        // CarLink: without focus, media tracks are still kept so a prompt duck can lower them.
+        if (!enabled && channel != AudioChannel.MEDIA) return
         active[track] = Entry(channel, attributes)
-        refreshRequest()
+        if (enabled) refreshRequest() // CarLink
         applyMediaVolume(track, active.getValue(track))
     }
 
     @Synchronized
     fun release(track: AudioTrack) {
-        if (active.remove(track) != null) refreshRequest()
+        if (active.remove(track) != null && enabled) refreshRequest() // CarLink: enabled
+    }
+
+    /** CarLink: lowers media while the iPhone ducks for a prompt; focus changes keep their own level. */
+    @Synchronized
+    fun setPromptDuck(ducked: Boolean) {
+        if (closed || promptDucked == ducked) return
+        promptDucked = ducked
+        setMediaVolume(mediaVolume)
     }
 
     fun onExternalFocusChange(change: Int) {
@@ -153,9 +164,10 @@ internal class AudioFocusCoordinator(
     private fun applyMediaVolume(track: AudioTrack, entry: Entry) {
         // Telephony and assistant speech remain audible, and navigation never enters this map.
         // This changes only the renderer's relative gain, never Android's user stream volume.
-        if (entry.channel != AudioChannel.MEDIA || entry.appliedVolume == mediaVolume) return
-        val applied = runCatching { track.setStereoVolume(mediaVolume, mediaVolume) == AudioTrack.SUCCESS }.getOrDefault(false)
-        if (applied) entry.appliedVolume = mediaVolume
+        val volume = combinedMediaVolume(mediaVolume, promptDucked) // CarLink
+        if (entry.channel != AudioChannel.MEDIA || entry.appliedVolume == volume) return
+        val applied = runCatching { track.setStereoVolume(volume, volume) == AudioTrack.SUCCESS }.getOrDefault(false)
+        if (applied) entry.appliedVolume = volume
     }
 
     private fun AudioChannel.focusPriority(): Int = when (this) {
@@ -165,10 +177,14 @@ internal class AudioFocusCoordinator(
         AudioChannel.NAVIGATION -> 0
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "DiPlay-AudioFocus"
         const val FULL_VOLUME = 1f
         const val DUCKED_VOLUME = 0.2f
+
+        /** CarLink: the quieter of the focus level and a prompt duck, so neither reason undoes the other. */
+        fun combinedMediaVolume(focusVolume: Float, promptDucked: Boolean): Float =
+            if (promptDucked) minOf(focusVolume, DUCKED_VOLUME) else focusVolume
     }
 }
 
@@ -243,6 +259,7 @@ class AndroidMediaSink(
 
     override fun onAudioDuck(ducked: Boolean) {
         if (ducked) navigationPromptFocus.onDuck() else navigationPromptFocus.onUnduck()
+        audioFocusCoordinator.setPromptDuck(ducked && HostAudio.duckMediaForPrompts) // CarLink: #83
     }
 
     /** The media-key session may own Android's current focus request for this same sink. */

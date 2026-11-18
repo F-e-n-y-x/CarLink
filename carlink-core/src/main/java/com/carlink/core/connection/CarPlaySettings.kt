@@ -69,6 +69,8 @@ data class CarPlayEngineSettings(
     /** Calls play as media (`HostAudio.callsAsMedia`, GitHub #32). */
     val callAudioAsMedia: Boolean = false,
     val resumeMusic: Boolean = false,
+    /** Music lowered during navigation prompts (`HostAudio.duckMediaForPrompts`, GitHub #83). */
+    val duckMusicForDirections: Boolean = true,
 )
 
 /** The vehicle-profile part of [CarPlayEngineSettings] (DIPLAY.md §12, F5). */
@@ -205,6 +207,7 @@ object CarPlaySettingsPolicy {
             micGainDb = settings.micGainDb,
             callAudioAsMedia = settings.callAudioAsMedia,
             resumeMusic = settings.resumeMusic,
+            duckMusicForDirections = settings.duckMusicForDirections,
         )
     }
 
@@ -243,6 +246,7 @@ object CarPlaySettingsPolicy {
         HostAudio.playbackPcm = AudioLevels.carPlayPlayback(values.mediaLevelDb, values.navigationLevelDb, values.callLevelDb)
         HostAudio.microphonePcm = AudioLevels.pcmGain(values.micGainDb)
         HostAudio.callsAsMedia = values.callAudioAsMedia
+        HostAudio.duckMediaForPrompts = values.duckMusicForDirections
         resumeMusic = values.resumeMusic
         if (BydOutputSettings.carPlayCallControls(context) != values.callKeys) {
             BydOutputSettings.setCarPlayCallControls(context, values.callKeys)

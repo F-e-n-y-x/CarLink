@@ -23,4 +23,9 @@ object HostAudio {
     @Volatile
     @JvmStatic
     var callsAsMedia: Boolean = false
+
+    /** Lowers CarPlay's own music while the iPhone ducks audio for a navigation prompt (CarLink #83). */
+    @Volatile
+    @JvmStatic
+    var duckMediaForPrompts: Boolean = false
 }
