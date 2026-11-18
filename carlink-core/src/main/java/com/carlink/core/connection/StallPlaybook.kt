@@ -78,9 +78,15 @@ object StallPlaybook {
     fun actions(engine: Engine, transport: Transport, stage: ProgressStage?): List<RecoveryAction> {
         val usb = transport == Transport.USB
         return when (stage) {
-            ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING ->
-                if (usb) listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.ASK_REPLUG)
-                else listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.GIVE_UP)
+            ProgressStage.WAITING_FOR_PHONE, ProgressStage.PHONE_NOT_ANSWERING -> when {
+                // Android Auto's engine can keep reading a USB link that dropped and came back (tablet,
+                // 2026-11-18: 32 s of read errors, then "replug"); a USB restart replaces it, and the
+                // nudges either side still give a phone waiting for its owner time.
+                usb && engine == Engine.ANDROID_AUTO ->
+                    listOf(RecoveryAction.NUDGE, RecoveryAction.RESWITCH_USB, RecoveryAction.NUDGE, RecoveryAction.ASK_REPLUG)
+                usb -> listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.ASK_REPLUG)
+                else -> listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.GIVE_UP)
+            }
             ProgressStage.HANDSHAKE -> when {
                 usb && engine == Engine.ANDROID_AUTO -> listOf(RecoveryAction.NUDGE, RecoveryAction.RESWITCH_USB, RecoveryAction.ASK_REPLUG)
                 usb -> listOf(RecoveryAction.NUDGE, RecoveryAction.RETRY_STEP, RecoveryAction.ASK_REPLUG)

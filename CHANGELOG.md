@@ -49,7 +49,9 @@ is what the in-app update popup shows.
 
 - Fixed: a phone or tablet whose car brand is set to BYD now plays Android Auto music itself; only a
   real BYD DiLink head unit sends it over the car's Bluetooth. Interface size changes during a wired
-  Android Auto session no longer reconnect after the phone's USB link restarted.
+  Android Auto session no longer reconnect after the phone's USB link restarted. A wired Android
+  Auto phone that stops answering after its USB link blinks now gets the link restarted after 16 s,
+  instead of "unplug and plug in again" after 32 s.
 
 ## [1.0.16] - 2026-11-12
 

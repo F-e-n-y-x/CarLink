@@ -27,6 +27,8 @@ class StallPlaybookTest {
             StallPlaybook.actions(Engine.ANDROID_AUTO, wireless, ProgressStage.WAITING_FOR_PHONE))
         assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.NUDGE, RecoveryAction.ASK_REPLUG),
             StallPlaybook.actions(Engine.CARPLAY, usb, ProgressStage.PHONE_NOT_ANSWERING))
+        assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.RESWITCH_USB, RecoveryAction.NUDGE, RecoveryAction.ASK_REPLUG),
+            StallPlaybook.actions(Engine.ANDROID_AUTO, usb, ProgressStage.WAITING_FOR_PHONE))
         assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.RESWITCH_USB, RecoveryAction.ASK_REPLUG),
             StallPlaybook.actions(Engine.ANDROID_AUTO, usb, ProgressStage.HANDSHAKE))
         assertEquals(listOf(RecoveryAction.NUDGE, RecoveryAction.RETRY_STEP, RecoveryAction.ASK_REPLUG),
