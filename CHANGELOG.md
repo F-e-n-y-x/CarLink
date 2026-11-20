@@ -4,6 +4,12 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [Unreleased]
+
+- Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
+  Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
+  Android Auto's own Bluetooth service, and asks otherwise.
+
 ## [1.0.17] - 2026-11-18
 
 - New: Connection method › Head unit server, a backup for wireless Android Auto when Bluetooth or
