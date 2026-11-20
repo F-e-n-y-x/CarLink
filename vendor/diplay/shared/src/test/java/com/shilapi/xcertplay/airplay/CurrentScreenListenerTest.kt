@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +32,8 @@ class CurrentScreenListenerTest {
     /** Records the four video deliveries; the 4-argument frame is recorded on its own, not via the 3-argument default. */
     private class RecordingSink : MediaSink {
         val events: MutableList<Event> = Collections.synchronizedList(mutableListOf())
+        val activity: MutableList<Pair<Int, Boolean>> = Collections.synchronizedList(mutableListOf())
+        override fun onScreenStreamActive(type: Int, active: Boolean) { activity += type to active }
         override fun onVideoCodec(type: Int, codec: VideoCodec) { events += Event.Codec(type, codec) }
         override fun onVideoConfig(type: Int, codecData: ByteArray) { events += Event.CodecData(type, codecData.toList()) }
         override fun onVideoFrame(type: Int, naluBytes: ByteArray) { events += Event.Frame(type, naluBytes.toList()) }
@@ -139,6 +142,127 @@ class CurrentScreenListenerTest {
         } finally {
             engine.onSessionClosed(session)
             session.close()
+        }
+    }
+
+    @Test fun anInFlightCloseFromAReplacedScreenKeepsTheSessionAndSuccessorPlaying() {
+        val sink = RecordingSink()
+        val engine = CarPlayMediaEngine(sink)
+        val ended = mutableListOf<AirPlaySession>()
+        val session = testSession(object : AirPlaySessionListener {
+            override fun onSessionEnded(session: AirPlaySession) { ended += session }
+        })
+        try {
+            withSharedSecret(session)
+            val key = CarPlayMediaEngine.StreamKey(session, 110)
+            engine.onScreen(session, 110, mapOf("streamConnectionID" to 1L))
+            val retiredListener = listenerOf(streamsOf(engine).getValue(key) as ScreenStream)
+            engine.onScreen(session, 110, mapOf("streamConnectionID" to 2L))
+            val successor = streamsOf(engine).getValue(key) as ScreenStream
+            sink.activity.clear()
+
+            // The old TCP thread passed ScreenStream's closed check before its replacement
+            // was installed. Deliver that already-entered callback after replacement.
+            retiredListener.onClosed(java.io.IOException("retired screen EOF"))
+
+            assertFalse("A retired stream must not close the live control session", session.isClosed)
+            assertTrue("No session-ended callback for the retired stream", ended.isEmpty())
+            assertTrue("The successor must not be marked inactive", sink.activity.isEmpty())
+            assertSame(successor, streamsOf(engine)[key])
+            listenerOf(successor).deliverAll()
+            assertEquals(expected(110), sink.take())
+        } finally {
+            engine.onSessionClosed(session)
+            session.close()
+        }
+    }
+
+    @Test fun closingTheCurrentMainOrOtherScreenStillEndsItsSession() {
+        // Preserve the existing policy: an actual current main OR cluster TCP stream loss
+        // ends that AirPlay session; only a replaced screen's late callback is ignored.
+        for (type in listOf(110, 111)) for (cause in listOf(null, java.io.IOException("current screen failed"))) {
+            val sink = RecordingSink()
+            val engine = CarPlayMediaEngine(sink)
+            val ended = mutableListOf<AirPlaySession>()
+            val session = testSession(object : AirPlaySessionListener {
+                override fun onSessionEnded(session: AirPlaySession) { ended += session }
+            })
+            try {
+                withSharedSecret(session)
+                engine.onScreen(session, 110, mapOf("streamConnectionID" to 1L))
+                engine.onScreen(session, 111, mapOf("streamConnectionID" to 2L))
+                val key = CarPlayMediaEngine.StreamKey(session, type)
+                val current = streamsOf(engine).getValue(key) as ScreenStream
+                sink.activity.clear()
+
+                listenerOf(current).onClosed(cause)
+
+                assertTrue("Current screen $type still ends its session", session.isClosed)
+                assertEquals(listOf(session), ended)
+                assertEquals(listOf(type to false), sink.activity)
+                assertFalse(streamsOf(engine).containsKey(key))
+            } finally {
+                engine.onSessionClosed(session)
+                session.close()
+            }
+        }
+    }
+
+    @Test fun aLateCloseAfterExplicitStreamTeardownKeepsTheSessionAndOtherScreen() {
+        val sink = RecordingSink()
+        val engine = CarPlayMediaEngine(sink)
+        val session = testSession()
+        try {
+            withSharedSecret(session)
+            val mainKey = CarPlayMediaEngine.StreamKey(session, 110)
+            val otherKey = CarPlayMediaEngine.StreamKey(session, 111)
+            engine.onScreen(session, 110, mapOf("streamConnectionID" to 1L))
+            val retiredListener = listenerOf(streamsOf(engine).getValue(mainKey) as ScreenStream)
+            engine.onScreen(session, 111, mapOf("streamConnectionID" to 2L))
+            val otherScreen = streamsOf(engine).getValue(otherKey) as ScreenStream
+            engine.onTeardown(session, 110)
+            assertFalse(streamsOf(engine).containsKey(mainKey))
+            sink.activity.clear()
+
+            retiredListener.onClosed(null)
+
+            assertFalse("A TEARDOWN-retired stream cannot end the remaining session", session.isClosed)
+            assertTrue("No duplicate inactive callback after TEARDOWN", sink.activity.isEmpty())
+            assertSame(otherScreen, streamsOf(engine)[otherKey])
+            listenerOf(otherScreen).deliverAll()
+            assertEquals(expected(111), sink.take())
+        } finally {
+            engine.onSessionClosed(session)
+            session.close()
+        }
+    }
+
+    @Test fun aCurrentScreenCloseDoesNotCloseAnotherSessionsScreen() {
+        val sink = RecordingSink()
+        val engine = CarPlayMediaEngine(sink)
+        val first = testSession()
+        val second = testSession()
+        try {
+            withSharedSecret(first)
+            withSharedSecret(second)
+            engine.onScreen(first, 110, mapOf("streamConnectionID" to 1L))
+            engine.onScreen(second, 110, mapOf("streamConnectionID" to 2L))
+            val firstScreen = streamsOf(engine).getValue(CarPlayMediaEngine.StreamKey(first, 110)) as ScreenStream
+            val secondKey = CarPlayMediaEngine.StreamKey(second, 110)
+            val secondScreen = streamsOf(engine).getValue(secondKey) as ScreenStream
+
+            listenerOf(firstScreen).onClosed(null)
+
+            assertTrue(first.isClosed)
+            assertFalse(second.isClosed)
+            assertSame(secondScreen, streamsOf(engine)[secondKey])
+            listenerOf(secondScreen).deliverAll()
+            assertEquals(expected(110), sink.take())
+        } finally {
+            engine.onSessionClosed(first)
+            engine.onSessionClosed(second)
+            first.close()
+            second.close()
         }
     }
 

@@ -9,6 +9,10 @@ is what the in-app update popup shows.
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.
+- Fixed: wireless CarPlay could restart every 10 to 20 s during navigation, when the iPhone sent a
+  burst of route updates at once (upstream DiPlay fix).
+- Fixed: a late close from a replaced CarPlay video stream no longer ends the running session
+  (thanks @buckydajunior).
 
 ## [1.0.17] - 2026-11-18
 

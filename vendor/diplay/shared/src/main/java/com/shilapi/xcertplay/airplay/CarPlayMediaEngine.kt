@@ -158,13 +158,17 @@ class CarPlayMediaEngine(
         val port = screen.listen(
             object : ScreenStream.Listener by currentScreenListener(type, sink, isCurrent = { streams[streamKey] === screen }) {
                 override fun onClosed(cause: Throwable?) {
+                    // CarLink: a replaced/torn-down screen may already be delivering its close.
+                    // Only the stream that still owns this key can end the live session.
+                    if (!streams.remove(streamKey, screen)) {
+                        session.logDebug("Video: ignored obsolete screen close type=$type")
+                        return
+                    }
                     Log.w(
                         TAG,
                         "screen stream ended type=$type reason=${cause?.message ?: "peer EOF"}",
                     )
-                    if (streams.remove(streamKey, screen)) {
-                        sink.onScreenStreamActive(type, false)
-                    }
+                    sink.onScreenStreamActive(type, false)
                     session.close()
                 }
             },
