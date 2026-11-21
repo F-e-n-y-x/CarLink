@@ -40,6 +40,8 @@ data class UnifiedSettings(
     val resumeMusic: Boolean = false,
     /** CarPlay lowers its own music while a navigation prompt plays (GitHub #83). */
     val duckMusicForDirections: Boolean = true,
+    /** CarPlay's Same Wi-Fi reaches the network over this screen's wired Ethernet, not its Wi-Fi (GitHub #87). */
+    val sameWifiWired: Boolean = false,
     /** Software gain on the microphone sent to the phone ([AudioLevels.MIC_DB]). */
     val micGainDb: Int = 0,
 )
@@ -90,6 +92,7 @@ class UnifiedSettingsStore(context: Context) {
         callAudioAsMedia = prefs.getBoolean("call_audio_as_media", false),
         resumeMusic = prefs.getBoolean("resume_music", false),
         duckMusicForDirections = prefs.getBoolean("duck_music_directions", true),
+        sameWifiWired = prefs.getBoolean("same_wifi_wired", false),
         micGainDb = prefs.getInt("mic_gain_db", 0),
     )
 
@@ -119,6 +122,7 @@ class UnifiedSettingsStore(context: Context) {
             .putBoolean("call_audio_as_media", settings.callAudioAsMedia)
             .putBoolean("resume_music", settings.resumeMusic)
             .putBoolean("duck_music_directions", settings.duckMusicForDirections)
+            .putBoolean("same_wifi_wired", settings.sameWifiWired)
             .putInt("mic_gain_db", settings.micGainDb)
             .apply()
     }

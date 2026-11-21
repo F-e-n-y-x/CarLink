@@ -71,6 +71,8 @@ data class CarPlayEngineSettings(
     val resumeMusic: Boolean = false,
     /** Music lowered during navigation prompts (`HostAudio.duckMediaForPrompts`, GitHub #83). */
     val duckMusicForDirections: Boolean = true,
+    /** Same Wi-Fi over this screen's Ethernet: DiPlay attaches to that interface, not to Wi-Fi (#87). */
+    val sameWifiWired: Boolean = false,
 )
 
 /** The vehicle-profile part of [CarPlayEngineSettings] (DIPLAY.md §12, F5). */
@@ -209,6 +211,7 @@ object CarPlaySettingsPolicy {
             callAudioAsMedia = settings.callAudioAsMedia,
             resumeMusic = settings.resumeMusic,
             duckMusicForDirections = settings.duckMusicForDirections,
+            sameWifiWired = settings.sameWifiWired,
         )
     }
 
@@ -241,6 +244,9 @@ object CarPlaySettingsPolicy {
         AirPlayPersistence.saveManualHotspotSecurity(context, ManualHotspotValidation.securityFor(values.carHotspot.password))
         // Same Wi-Fi: always CarLink's values, also when cleared (F17: stale details).
         AirPlayPersistence.saveExistingWifiCredentials(context, values.homeWifi.ssid, values.homeWifi.password)
+        // DiPlay's explicit interface skips its Wi-Fi checks; empty keeps its own Wi-Fi selection.
+        AirPlayPersistence.saveExistingWifiInterface(context,
+            if (values.sameWifiWired) WiredNetwork.interfaceName(context).orEmpty() else "")
 
         CarPlayHostIntegration.keyRemap = values.wheelKeyRemap
         // Read by each new audio stream and microphone; null hooks leave DiPlay's audio untouched.

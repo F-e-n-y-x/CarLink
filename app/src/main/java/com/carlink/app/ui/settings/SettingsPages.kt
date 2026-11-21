@@ -104,6 +104,13 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
                 ui.unified.homeWifi.ssid.ifEmpty { stringResource(R.string.carlink_settings_not_set) },
                 { openSheet(SheetKey.of(EssentialSheet.SAME_WIFI)) },
                 description = stringResource(R.string.carlink_settings_same_wifi_detail), icon = R.drawable.carlink_ic_wifi)
+            // #87: Automatic never picks Same Wi-Fi, so only the explicit choice shows the cable option.
+            if (ui.unified.showAdvanced && method == ConnectionMethod.SAME_WIFI) {
+                GroupDivider()
+                SwitchRow(stringResource(R.string.carlink_settings_same_wifi_wired), ui.unified.sameWifiWired,
+                    { on -> actions.update { it.copy(sameWifiWired = on) } },
+                    description = stringResource(R.string.carlink_settings_same_wifi_wired_detail), icon = R.drawable.carlink_ic_wifi)
+            }
         }
         // Advanced, and only where the probe found an external Bluetooth module.
         if (ui.unified.showAdvanced && ui.stereoBluetoothExternal) {

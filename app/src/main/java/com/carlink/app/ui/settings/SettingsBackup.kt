@@ -54,6 +54,7 @@ object SettingsBackup {
         Field(UNIFIED, "send_location", Type.BOOL),
         Field(UNIFIED, "byd_directions", Type.BOOL),
         Field(UNIFIED, "duck_music_directions", Type.BOOL),
+        Field(UNIFIED, "same_wifi_wired", Type.BOOL),
         Field(UNIFIED, "show_advanced", Type.BOOL),
         Field(UNIFIED, "lab_unlocked", Type.BOOL),
         Field(UNIFIED, "wheel_keys", Type.STRING),

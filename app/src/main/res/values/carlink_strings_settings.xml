@@ -77,6 +77,8 @@
     <string name="carlink_settings_hotspot_not_applied">Saved in CarLink. This stereo does not let CarLink change its hotspot: set the same name and password in the car’s hotspot settings.</string>
     <string name="carlink_settings_same_wifi">Same Wi-Fi network</string>
     <string name="carlink_settings_same_wifi_detail">The router both the car and your iPhone join</string>
+    <string name="carlink_settings_same_wifi_wired">Over a wired network (Ethernet)</string>
+    <string name="carlink_settings_same_wifi_wired_detail">CarPlay only. This screen is on the router by cable (a USB Ethernet adapter); the iPhone still joins the Wi-Fi above.</string>
     <string name="carlink_settings_same_wifi_sheet_body">The car must already be on this Wi-Fi. CarLink tells your iPhone to join it over Bluetooth.</string>
     <string name="carlink_settings_wifi_name">Network name</string>
     <string name="carlink_settings_wifi_password">Password</string>

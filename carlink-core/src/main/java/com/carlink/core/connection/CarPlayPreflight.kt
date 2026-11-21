@@ -91,6 +91,9 @@ data class CarPlayPreflightInput(
     val carHotspotOn: Boolean?,
     /** CarLink can switch the hotspot on itself (DiPlay's adb/WRITE_SETTINGS automation). */
     val carHotspotCanStart: Boolean,
+    /** Same Wi-Fi over a wired Ethernet link (#87), and that link's interface (null when none is up). */
+    val sameWifiWired: Boolean = false,
+    val wiredInterface: String? = null,
 )
 
 /**
@@ -140,7 +143,8 @@ object CarPlayPreflight {
         } else if (input.bondedAddresses != null && address.uppercase() !in input.bondedAddresses) {
             add(CarPlayProblem.IphoneNotBonded(address))
         }
-        if (path != WirelessPath.CAR_HOTSPOT && !input.wifiOn) add(CarPlayProblem.WifiOff)
+        val wired = path == WirelessPath.SAME_WIFI && input.sameWifiWired
+        if (path != WirelessPath.CAR_HOTSPOT && !input.wifiOn && !wired) add(CarPlayProblem.WifiOff)
         when (path) {
             WirelessPath.SAME_WIFI -> sameWifi(input)?.let(::add)
             WirelessPath.CAR_HOTSPOT -> when {
@@ -157,6 +161,8 @@ object CarPlayPreflight {
         val saved = input.homeWifi
         // CarLink's own values, not DiPlay's copy (F17). Same rules DiPlay applies to its fields.
         if (ManualHotspotValidation.error(saved.ssid, saved.password) != null) return CarPlayProblem.SameWifiDetailsMissing
+        // Over Ethernet the iPhone still joins the saved Wi-Fi; this screen only needs its cable link (#87).
+        if (input.sameWifiWired) return if (input.wiredInterface == null) CarPlayProblem.SameWifiNotConnected else null
         if (!input.wifiOn) return null // reported as WifiOff
         return when {
             input.joinedNetworks == 0 -> CarPlayProblem.SameWifiNotConnected
@@ -213,6 +219,8 @@ object CarPlayPreflight {
             carHotspotOn = wifi?.carHotspotOn ?: runCatching { CarHotspotStatus.isEnabled(app) }.getOrNull(),
             carHotspotCanStart = runCatching { CarHotspotSettings.enabled(app) && CarHotspotTethering.permitted(app) }
                 .getOrDefault(false),
+            sameWifiWired = settings.sameWifiWired,
+            wiredInterface = if (settings.sameWifiWired) WiredNetwork.interfaceName(app) else null,
         )
     }
 

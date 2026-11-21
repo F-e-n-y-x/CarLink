@@ -124,4 +124,15 @@ class DevicePreflightTest {
         assertEquals(emptyList<Problem>(), check(noRadios, path = server))
         assertEquals(listOf(Problem.WIFI_OFF), check(noRadios.copy(wifiOn = false), path = server))
     }
+
+    /** #87: CarPlay's Same Wi-Fi over Ethernet ignores this screen's Wi-Fi; Android Auto still needs it. */
+    @Test fun sameWifiOverEthernetSkipsTheScreensWifiForCarPlayOnly() {
+        val wired = UnifiedSettings(homeWifi = WifiDetails("Home", "homepassword"), sameWifiWired = true)
+        val carPlay = SessionRequest(Engine.CARPLAY, Transport.WIRELESS, "AA:BB", "iPhone")
+        val noWifi = ready.copy(wifiOn = false, locationOn = false)
+        assertEquals(emptyList<Problem>(),
+            check(noWifi, carPlay, WirelessPath.SAME_WIFI, wired, WifiEnvironment(0, null, null)))
+        assertEquals(listOf(Problem.WIFI_OFF, Problem.LOCATION_OFF),
+            check(noWifi, wireless, WirelessPath.SAME_WIFI, wired, WifiEnvironment(0, null, null)))
+    }
 }

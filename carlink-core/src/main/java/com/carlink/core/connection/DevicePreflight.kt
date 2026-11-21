@@ -10,6 +10,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
 import androidx.core.location.LocationManagerCompat
+import com.carlink.core.core.Engine
 import com.carlink.core.core.Transport
 import com.carlink.core.settings.UnifiedSettings
 import com.carlink.core.settings.WifiDetails
@@ -62,11 +63,14 @@ object DevicePreflight {
             // Wi-Fi Direct and the same Wi-Fi need the radio; DiAuto aborts its P2P path silently
             // when it is off (DA§10.8). Not the car hotspot: many stereos turn the Wi-Fi client
             // off while their hotspot is on, and CAR_HOTSPOT_OFF covers the hotspot (#32).
-            if (!facts.wifiOn && path != WirelessPath.CAR_HOTSPOT) add(Problem.WIFI_OFF)
+            // CarPlay's Same Wi-Fi over Ethernet (#87): this screen's Wi-Fi and the joined name do not matter;
+            // CarPlayPreflight checks the wired link.
+            val wired = path == WirelessPath.SAME_WIFI && request.engine == Engine.CARPLAY && settings.sameWifiWired
+            if (!facts.wifiOn && path != WirelessPath.CAR_HOTSPOT && !wired) add(Problem.WIFI_OFF)
             // Android hides SSIDs/BSSIDs and P2P details with the Location switch off (DA§10.8).
-            if (!facts.locationOn) add(Problem.LOCATION_OFF)
+            if (!facts.locationOn && !wired) add(Problem.LOCATION_OFF)
             when (path) {
-                WirelessPath.SAME_WIFI -> sameWifi(settings.homeWifi, wifi, facts)?.let(::add)
+                WirelessPath.SAME_WIFI -> if (!wired) sameWifi(settings.homeWifi, wifi, facts)?.let(::add)
                 WirelessPath.CAR_HOTSPOT -> when {
                     wifi.carHotspotOn == false -> add(Problem.CAR_HOTSPOT_OFF)
                     !WirelessPolicy.hotspotUsable(settings, wifi) -> add(Problem.CAR_HOTSPOT_DETAILS)

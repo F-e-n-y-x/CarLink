@@ -109,4 +109,13 @@ class CarPlayPreflightTest {
         assertTrue(all.any { it is CarPlayProblem.PermissionsMissing })
         assertEquals(CarPlayProblem.WifiOff, all.last())
     }
+
+    /** #87: over Ethernet the screen's Wi-Fi does not matter, but a cable link must be up and the details saved. */
+    @Test fun sameWifiOverEthernetNeedsOnlyTheWiredLink() {
+        val wired = ready.copy(path = WirelessPath.SAME_WIFI, homeWifi = home, sameWifiWired = true,
+            wifiOn = false, joinedNetworks = 0, joinedSsid = null)
+        assertEquals(emptyList<CarPlayProblem>(), check(wired.copy(wiredInterface = "eth0")))
+        assertEquals(listOf(CarPlayProblem.SameWifiNotConnected), check(wired))
+        assertEquals(listOf(CarPlayProblem.SameWifiDetailsMissing), check(wired.copy(wiredInterface = "eth0", homeWifi = WifiDetails())))
+    }
 }

@@ -13,6 +13,9 @@ is what the in-app update popup shows.
   burst of route updates at once (upstream DiPlay fix).
 - Fixed: a late close from a replaced CarPlay video stream no longer ends the running session
   (thanks @buckydajunior).
+- New: CarPlay's Same Wi-Fi can reach the router over a wired network (a USB Ethernet adapter) instead
+  of this screen's Wi-Fi (#87). Settings › Connection, with Same Wi-Fi chosen and Show advanced on:
+  Over a wired network (Ethernet). The iPhone still joins the Wi-Fi.
 
 ## [1.0.17] - 2026-11-18
 
