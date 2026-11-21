@@ -16,6 +16,10 @@ is what the in-app update popup shows.
 - New: CarPlay's Same Wi-Fi can reach the router over a wired network (a USB Ethernet adapter) instead
   of this screen's Wi-Fi (#87). Settings › Connection, with Same Wi-Fi chosen and Show advanced on:
   Over a wired network (Ethernet). The iPhone still joins the Wi-Fi.
+- Fixed: wireless CarPlay music no longer gets extra silence after a Wi-Fi hiccup that already
+  stalled it; lost music is filled in only while the sound is still playing.
+- Fixed: wireless CarPlay over some car hotspots timed out on every attempt because the iPhone
+  chose an address the car could not answer; CarLink now offers the hotspot's IPv4 address instead.
 
 ## [1.0.17] - 2026-11-18
 
