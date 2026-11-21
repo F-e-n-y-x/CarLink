@@ -299,6 +299,13 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             connection = settingsPreviewUi().connection.copy(wirelessOnExternalBluetooth = true)), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.CONNECTION)
     },
+    // Same Wi-Fi over a wired Ethernet link (#87, advanced): the switch under the Same Wi-Fi row.
+    GalleryEntry("settings", "connection-same-wifi-wired") {
+        val ui = settingsPreviewUi(showAdvanced = true)
+        SettingsContent(ui.copy(unified = ui.unified.copy(connectionMethod = com.carlink.core.settings.ConnectionMethod.SAME_WIFI,
+            homeWifi = com.carlink.core.settings.WifiDetails("HomeNet", "homepassword"), sameWifiWired = true)),
+            SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.CONNECTION)
+    },
     // Root mode on (advanced): the switch and what it does.
     GalleryEntry("settings", "connection-root") {
         SettingsContent(settingsPreviewUi(showAdvanced = true).copy(
