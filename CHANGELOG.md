@@ -4,6 +4,13 @@ CarLink's releases, newest first. Versions follow `major.minor.patch`; each one 
 [GitHub](https://github.com/F-e-n-y-x/CarLink/releases) with its APK. The text under each version
 is what the in-app update popup shows.
 
+## [Unreleased]
+
+- Fixed: wireless CarPlay music no longer gets extra silence after a Wi-Fi hiccup that already
+  stalled it; lost music is filled in only while the sound is still playing.
+- Fixed: wireless CarPlay over some car hotspots timed out on every attempt because the iPhone
+  chose an address the car could not answer; CarLink now offers the hotspot's IPv4 address instead.
+
 ## [1.0.17] - 2026-11-18
 
 - New: Connection method › Head unit server, a backup for wireless Android Auto when Bluetooth or

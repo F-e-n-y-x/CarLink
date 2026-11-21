@@ -48,6 +48,18 @@ internal object WirelessAddressFamilyPlan {
         if (choice.guessed && choice.preferredFamily == publishedFamily) GUESS_FIRST_TCP_MILLIS
         else WirelessStartupPolicy.FIRST_TCP_MILLIS
 
+    /**
+     * The StartSession address list (upstream PR #1071): the published address first, then the interface's
+     * others, except a link-local IPv6 address when an IPv4 one is there. Upstream DiPlay #1344: offered both,
+     * the iPhone picked fe80:: on car hotspots whose link-local reply has no route, and every attempt timed out.
+     * A published link-local address (the family flip after a first-TCP timeout) is always kept.
+     */
+    fun endpointAddresses(published: java.net.InetAddress, all: List<java.net.InetAddress>): List<java.net.InetAddress> {
+        val others = all.filter { it != published }
+        val hasIpv4 = published is java.net.Inet4Address || others.any { it is java.net.Inet4Address }
+        return listOf(published) + others.filterNot { hasIpv4 && it is java.net.Inet6Address && it.isLinkLocalAddress }
+    }
+
     /** The family to remember after the first TCP, or null to leave the preference as it is. */
     fun familyToRemember(choice: Choice, publishedFamily: String, acceptedFamily: String?): String? =
         if (choice.guessed && choice.preferredFamily == publishedFamily && acceptedFamily == publishedFamily) {

@@ -65,4 +65,21 @@ class WirelessAddressFamilyPlanTest {
         assertNull(WirelessAddressFamilyPlan.familyToRemember(
             Choice(FAMILY_IPV4, guessed = false), FAMILY_IPV4, FAMILY_IPV4))
     }
+
+    // Upstream DiPlay #1344: an offered fe80:: next to IPv4 pulled the iPhone onto a link-local path with no reply route.
+    private val v4 = java.net.InetAddress.getByName("192.168.43.1")
+    private val v6 = java.net.Inet6Address.getByAddress(null, java.net.InetAddress.getByName("fe80::1").address, 5)
+    private val v6Global = java.net.InetAddress.getByName("2001:db8::1")
+
+    @Test fun endpointLeavesOutLinkLocalIpv6NextToIpv4() {
+        assertEquals(listOf(v4, v6Global), WirelessAddressFamilyPlan.endpointAddresses(v4, listOf(v4, v6, v6Global)))
+    }
+
+    @Test fun endpointKeepsAPublishedLinkLocalAddressFirst() {
+        assertEquals(listOf(v6, v4), WirelessAddressFamilyPlan.endpointAddresses(v6, listOf(v4, v6)))
+    }
+
+    @Test fun endpointKeepsLinkLocalWhenThereIsNoIpv4() {
+        assertEquals(listOf(v6Global, v6), WirelessAddressFamilyPlan.endpointAddresses(v6Global, listOf(v6, v6Global)))
+    }
 }
