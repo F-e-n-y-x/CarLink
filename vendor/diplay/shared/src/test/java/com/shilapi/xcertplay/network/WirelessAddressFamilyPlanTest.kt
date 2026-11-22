@@ -30,10 +30,50 @@ class WirelessAddressFamilyPlanTest {
         // #283: the Android 9 link-local reply route failed; car hotspot and LAN are unchanged.
         assertEquals(Choice(null, guessed = false),
             WirelessAddressFamilyPlan.choose(WirelessHotspotBackend.WIFI_P2P, null, 28))
-        for (backend in listOf(WirelessHotspotBackend.MANUAL_HOTSPOT, WirelessHotspotBackend.EXISTING_WIFI,
-                WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT)) {
-            assertEquals(Choice(null, guessed = false), WirelessAddressFamilyPlan.choose(backend, null, 36))
+        assertEquals(Choice(null, guessed = false),
+            WirelessAddressFamilyPlan.choose(WirelessHotspotBackend.EXISTING_WIFI, null, 36))
+    }
+
+    // CarLink #93: the car hotspot and local-only AP are IPv4 end to end.
+    @Test fun carHotspotIgnoresARememberedIpv6Family() {
+        for (backend in listOf(WirelessHotspotBackend.MANUAL_HOTSPOT, WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT)) {
+            for (remembered in listOf(null, FAMILY_IPV4, FAMILY_IPV6)) {
+                assertEquals(Choice(FAMILY_IPV4, guessed = false), WirelessAddressFamilyPlan.choose(backend, remembered, 36))
+            }
+            // IPv4 is never a guess, so a first TCP on it is never stored as a remembered family.
+            assertNull(WirelessAddressFamilyPlan.familyToRemember(
+                WirelessAddressFamilyPlan.choose(backend, null, 36), FAMILY_IPV4, FAMILY_IPV4))
         }
+    }
+
+    @Test fun sharedWifiAndWifiDirectStillHonourARememberedIpv6Family() {
+        for (backend in listOf(WirelessHotspotBackend.EXISTING_WIFI, WirelessHotspotBackend.WIFI_P2P)) {
+            assertEquals(Choice(FAMILY_IPV6, guessed = false), WirelessAddressFamilyPlan.choose(backend, FAMILY_IPV6, 36))
+        }
+    }
+
+    @Test fun carHotspotUsesOnlyIpv4Addresses() {
+        val all = listOf(v6, v4, v6Global)
+        assertEquals(listOf(v4), WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.MANUAL_HOTSPOT, all))
+        assertEquals(listOf(v4), WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT, all))
+        assertEquals(all, WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.EXISTING_WIFI, all))
+        assertEquals(all, WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.WIFI_P2P, all))
+        // With IPv6 only, the car hotspot has no host yet: the address wait looks for IPv4.
+        assertEquals(emptyList<java.net.InetAddress>(),
+            WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.MANUAL_HOTSPOT, listOf(v6)))
+    }
+
+    @Test fun carHotspotInfoDropsItsIpv6Host() {
+        fun info(backend: WirelessHotspotBackend, host: java.net.InetAddress?, hosts: List<java.net.InetAddress>) =
+            WirelessHotspotInfo("car", "secret", com.shilapi.xcertplay.transport.Iap2WirelessSecurity.WPA_WPA2, 6,
+                2437, null, "wlan0", host, "2.4 GHz", backend, hosts)
+        val ap = WirelessAddressFamilyPlan.forPath(info(WirelessHotspotBackend.MANUAL_HOTSPOT, v6, listOf(v6, v4)))
+        assertEquals(v4, ap.hostAddress)
+        assertEquals(listOf(v4), ap.hostAddresses)
+        assertEquals("wlan0", ap.interfaceName)
+        assertNull(WirelessAddressFamilyPlan.forPath(info(WirelessHotspotBackend.MANUAL_HOTSPOT, v6, listOf(v6))).hostAddress)
+        val lan = info(WirelessHotspotBackend.EXISTING_WIFI, v6, listOf(v6, v4))
+        org.junit.Assert.assertSame(lan, WirelessAddressFamilyPlan.forPath(lan))
     }
 
     @Test fun aRememberedFamilyWinsAndIsNotAGuess() {

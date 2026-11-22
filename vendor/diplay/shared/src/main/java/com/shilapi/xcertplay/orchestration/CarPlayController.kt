@@ -1545,7 +1545,7 @@ class CarPlayController(
             }
             } // CarLink
             wirelessTimeline.mark(WirelessStartupTimeline.Phase.RFCOMM_DIAL)
-            val hotspotInfo = startWirelessHotspot(generation)
+            val hotspotInfo = WirelessAddressFamilyPlan.forPath(startWirelessHotspot(generation)) // CarLink: #93
             if (isStaleWirelessRun(generation)) {
                 return
             }
@@ -1555,7 +1555,8 @@ class CarPlayController(
                 if (!isStaleWirelessRun(generation)) startedHotspot?.onCarPlayConfirmed()
             }
             wirelessAirPlayHandshake.begin(generation)
-            // CarLink: Wi-Fi Direct tries the IPv6 link-local endpoint first (WirelessAddressFamilyPlan).
+            // CarLink: Wi-Fi Direct tries the IPv6 link-local endpoint first, and the car hotspot and
+            // local-only AP stay on IPv4 whatever family was remembered (WirelessAddressFamilyPlan, #93).
             val familyChoice = WirelessAddressFamilyPlan.choose(
                 hotspotInfo.backend,
                 HotspotAddressPolicy.parseFamily(
@@ -1616,6 +1617,7 @@ class CarPlayController(
                     "family=${if (hostAddress is Inet6Address) "IPv6" else "IPv4"} " +
                     "preference=${preferredFamily ?: "default"} " +
                     "guess=${familyChoice.guessed} firstTcpMs=${watchdog.timeoutMillis} " + // CarLink
+                    "ipv4Only=${WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend)} " + // CarLink: #93
                     "alternate=${wirelessAlternateAddress != null} " +
                     "identitySource=${if (deviceIdentifier == hotspotInfo.bssid) "interface" else "saved"} " +
                     "host=$hostAddressText " +
@@ -1664,6 +1666,7 @@ class CarPlayController(
             val wirelessAirPlayConfig = airPlayConfig.copy(
                 deviceId = deviceIdentifier,
                 btMac = hostBluetoothMac,
+                bindMediaToSessionIpv4 = WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend), // CarLink: #93
             )
 
             onStatus(CarPlayStatus.AttachingNetwork)
@@ -1747,10 +1750,13 @@ class CarPlayController(
                 // CarLink: plus the group's IPv6 link-local, which appears ~0.3 s after the group.
                 // Without it Bonjour ran on IPv4 only and never heard the iPhone's _carplay-ctrl
                 // (bonjourAdded=0 on every start, tablet 2026-10-20), so no invite ever went out.
-                // Since #1361 the base is the addresses that really have a listener.
-                additionalAddresses = (servedAddresses + addressRecovery.awaitCandidates(
-                    hotspotCandidates(hotspotInfo), HotspotAddressPolicy.FAMILY_IPV6, BONJOUR_LINK_LOCAL_WAIT_MILLIS,
-                ).filter { it is Inet6Address && it.isLinkLocalAddress && it.scopeId != 0 })
+                // Since #1361 the base is the addresses that really have a listener. The car hotspot
+                // waits for no link-local: it advertises A records only (#93).
+                additionalAddresses = (servedAddresses +
+                    (if (WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend)) emptyList()
+                    else addressRecovery.awaitCandidates(
+                        hotspotCandidates(hotspotInfo), HotspotAddressPolicy.FAMILY_IPV6, BONJOUR_LINK_LOCAL_WAIT_MILLIS,
+                    ).filter { it is Inet6Address && it.isLinkLocalAddress && it.scopeId != 0 }))
                     .distinct().filter { it != publishedHost },
             )
             synchronized(wirelessResourceLock) {
@@ -3565,7 +3571,8 @@ class CarPlayController(
             debugLog("wireless interface scan failed iface=$name error=${error.javaClass.simpleName}")
             emptyList()
         }
-        return if (scanned.isEmpty() && fallbackToSnapshot) info.hostAddresses else scanned
+        // CarLink: #93, the car hotspot's live IPv6 addresses never become a host, an alternate or a flip.
+        return WirelessAddressFamilyPlan.usable(info.backend, if (scanned.isEmpty() && fallbackToSnapshot) info.hostAddresses else scanned)
     }
 
     private fun hostAddressText(address: InetAddress): String {

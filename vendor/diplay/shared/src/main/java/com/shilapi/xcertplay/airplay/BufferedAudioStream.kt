@@ -29,6 +29,7 @@ internal class BufferedAudioStream(
     private val nanoTime: () -> Long = System::nanoTime,
     private val pause: (Long) -> Unit = { Thread.sleep(it) },
     private val expectedPeer: InetAddress = InetAddress.getLoopbackAddress(),
+    private val bindAddress: InetAddress? = null, // CarLink: #93, null = wildcard as before
 ) : Closeable {
     internal class Frame(val sequence: Int, val timestamp: Long, val rtp: ByteArray)
 
@@ -38,7 +39,7 @@ internal class BufferedAudioStream(
     private var cleanupStarted = false // guarded by lock; permits reentrant close without recursion
     @Volatile internal var outputCleanupComplete = false
         private set
-    private val server = ServerSocket(0)
+    private val server = ServerSocket(0, 50, bindAddress) // CarLink: #93
     private val boundPort = server.localPort
     @Volatile private var client: Socket? = null
     private val lock = Object()

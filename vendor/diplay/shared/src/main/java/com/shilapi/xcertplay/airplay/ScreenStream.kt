@@ -44,11 +44,11 @@ class ScreenStream(
     private var thread: Thread? = null
     @Volatile private var listener: Listener = object : Listener {}
 
-    fun listen(listener: Listener): Int {
+    fun listen(listener: Listener, bindAddress: InetAddress = InetAddress.getByName("::")): Int { // CarLink: #93 bindAddress
         this.listener = listener
         val bound = ServerSocket()
         bound.reuseAddress = true
-        bound.bind(InetSocketAddress(InetAddress.getByName("::"), 0))
+        bound.bind(InetSocketAddress(bindAddress, 0))
         server = bound
         thread = Thread({ accept(bound) }, "airplay-screen").apply { isDaemon = true; start() }
         return bound.localPort

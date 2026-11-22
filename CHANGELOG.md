@@ -6,6 +6,10 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Fixed: wireless CarPlay over the car's own hotspot stalled at "Picture" on head units whose hotspot
+  has no IPv6 (#93, thanks @0nezar0). On the car hotspot CarLink now offers and listens on IPv4 only,
+  and the log says whether the hotspot interface carries IPv6.
+
 - Updated the CarPlay engine (DiPlay, 2026-11-22): wireless CarPlay keeps working when one of the
   screen's addresses cannot take a connection, a screen without Wi-Fi Direct no longer retries it,
   silent Bluetooth links are retried on adapters that already carried data, and fixes for music

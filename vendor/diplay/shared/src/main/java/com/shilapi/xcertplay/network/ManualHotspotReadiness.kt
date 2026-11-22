@@ -36,8 +36,12 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
         log("hotspot sample rejected: network_changed=${!snapshot.consistent} apEnabled=${snapshot.apEnabled}")
         return null
     }
+    // CarLink: #93, a modem interface listed as the AP (a stale ownership set) is no AP evidence; when it was the
+    // only one listed, the set reads as unobservable so the real wlan0/softap/ap0 can still be found.
+    val apInterfaces = snapshot.apInterfaces?.filterNot(::mobileDataInterfaceName)?.toSet()
+        ?.takeUnless { it.isEmpty() && snapshot.apInterfaces.isNotEmpty() }
     return snapshot.interfaces.mapNotNull { iface ->
-        val owned = snapshot.apInterfaces?.contains(iface.name) == true
+        val owned = apInterfaces?.contains(iface.name) == true
         val upstream = snapshot.wifiUpstreams?.contains(iface.name) == true
         val hotspotAddress = wirelessHostAddress(iface.addresses.filter {
             it is Inet6Address && it.isLinkLocalAddress || publishesHotspotAddress(it)
@@ -55,9 +59,10 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
         val reportedDown = !iface.up && !(snapshot.platformAp?.contains(iface.name) == true && address != null)
         val reason = when {
             reportedDown || iface.index <= 0 -> "interface_down"
+            mobileDataInterfaceName(iface.name) -> "mobile_data" // CarLink: #93
             address == null -> "address_unavailable"
             owned -> "platform_ap"
-            snapshot.apInterfaces != null -> "not_platform_ap"
+            apInterfaces != null -> "not_platform_ap" // CarLink: #93 (was snapshot.apInterfaces)
             upstream -> "wifi_upstream"
             snapshot.defaultInterface == iface.name -> "default_network_without_ap_evidence"
             snapshot.wifiUpstreams == null -> "upstream_unobservable"
@@ -67,11 +72,13 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
         log("hotspot candidate iface=${iface.name} index=${iface.index} " +
             "family=${if (address is Inet6Address) "IPv6" else if (address != null) "IPv4" else "none"} " +
             "scope=${(address as? Inet6Address)?.scopeId ?: 0} evidence=$reason " +
-            "ap=${snapshot.apInterfaces?.let { if (owned) "yes" else "no" } ?: "unobservable"} " +
+            "ap=${apInterfaces?.let { if (owned) "yes" else "no" } ?: "unobservable"} " + // CarLink: #93
             "defaultConflict=${owned && (upstream || snapshot.defaultInterface == iface.name)} up=${iface.up}")
         if (reason != "platform_ap" && reason != "wireless_non_upstream") null
         else (if (owned) 100 else 0) to HotspotSelection(iface.name, iface.index, address!!)
-    }.sortedWith(compareByDescending<Pair<Int, HotspotSelection>> { it.first }.thenBy { it.second.name })
+    }.sortedWith(compareByDescending<Pair<Int, HotspotSelection>> { it.first }
+        .thenByDescending { it.second.address is Inet4Address } // CarLink: #93, a usable IPv4 wins a tie
+        .thenBy { it.second.name })
         .firstOrNull()?.second
 }
 

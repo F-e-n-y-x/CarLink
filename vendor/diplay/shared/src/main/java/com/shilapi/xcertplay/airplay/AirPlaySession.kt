@@ -120,6 +120,8 @@ class AirPlaySession(
 
     val host: String = socket.inetAddress?.hostAddress ?: ""
     val localAddress: InetAddress? = socket.localAddress
+    /** CarLink: #93, where the picture, audio, timing, event and keep-alive listeners bind. */
+    internal val mediaBindAddress: InetAddress = mediaBindAddress(localAddress, config.bindMediaToSessionIpv4)
     private val peerAddress: InetAddress? = socket.inetAddress
     internal val remoteAddress: InetAddress?
         get() = (socket.remoteSocketAddress as? InetSocketAddress)?.address
@@ -859,7 +861,7 @@ class AirPlaySession(
     }
 
     private fun openTiming(peerPort: Int): Int {
-        val port = ntp.listen()
+        val port = ntp.listen(mediaBindAddress) // CarLink: #93
         if (peerPort > 0) peerAddress?.let { ntp.start(it, peerPort) }
         return port
     }
@@ -867,7 +869,7 @@ class AirPlaySession(
     private fun openKeepAlive(): Int {
         val socket = DatagramSocket(null)
         socket.reuseAddress = true
-        socket.bind(InetSocketAddress(InetAddress.getByName("::"), 0))
+        socket.bind(InetSocketAddress(mediaBindAddress, 0)) // CarLink: #93
         keepAliveSocket = socket
         keepAliveThread = Thread({ runKeepAlive(socket) }, "airplay-keepalive").apply {
             isDaemon = true
@@ -888,7 +890,7 @@ class AirPlaySession(
     }
 
     private fun openEvent(): Int {
-        val server = ServerSocket(0, 50, InetAddress.getByName("::"))
+        val server = ServerSocket(0, 50, mediaBindAddress) // CarLink: #93
         eventServer = server
         spawnEvent("airplay-event-accept") { acceptEvent(server) }
         return server.localPort
@@ -1105,3 +1107,11 @@ private fun asMap(value: Any?): Map<String, Any?>? {
 private fun string(value: Any?): String = value as? String ?: ""
 
 private fun long(value: Any?): Long? = (value as? Number)?.toLong()
+
+/**
+ * CarLink: #93. On the car hotspot the media listeners bind the control session's IPv4 address; elsewhere, and
+ * without one, they keep upstream's `::`. On an IPv4-only head unit 0nezar0 saw SETUP finish and the `::` ports
+ * then never accept the iPhone's IPv4 connects.
+ */
+internal fun mediaBindAddress(local: InetAddress?, ipv4Only: Boolean): InetAddress =
+    local?.takeIf { ipv4Only && it is java.net.Inet4Address } ?: InetAddress.getByName("::")
