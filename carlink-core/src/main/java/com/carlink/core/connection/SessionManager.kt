@@ -561,6 +561,17 @@ class SessionManager(
     private var lastSessionEndedAt = -HOME_AUTO_START_COOLDOWN_MILLIS
 
     /**
+     * The stereo reported ACC on (HeadUnitSignals): the car did start, so the next Home-shown start
+     * is not held back by the cooldowns, which only guess that (uptime stops while the stereo sleeps,
+     * so the session that ended at ACC off still looks recent). The driver's pause still holds.
+     */
+    fun onCarStarted() {
+        lastHomeAutoStart = -HOME_AUTO_START_COOLDOWN_MILLIS
+        lastSessionEndedAt = -HOME_AUTO_START_COOLDOWN_MILLIS
+        note("the stereo reported ACC on")
+    }
+
+    /**
      * The driver asked for Android Auto on this screen ([SessionRequest.selfMode]); experimental.
      * Needs no phone, Bluetooth or Wi-Fi, so pre-flight is skipped.
      */

@@ -634,6 +634,20 @@ class SessionManagerTest {
         assertEquals("paused by the driver", 1, starts.size)
     }
 
+    @Test fun accOnLiftsTheHomeCooldownsButNotThePause() {
+        val m = manager()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        m.stop(); idle()
+        m.onCarStarted()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals("the car started: no cooldown", 2, starts.size)
+        m.stop(); idle()
+        env.autoConnectPaused = true
+        m.onCarStarted()
+        m.onHomeShown("AA:BB", PhoneKind.IPHONE, "iPhone"); idle()
+        assertEquals("paused by the driver", 2, starts.size)
+    }
+
     @Test fun unpluggingAUsbPhoneNeverStartsTheLastWirelessPhone() {
         val m = manager()
         m.onUsbPhone(PhoneKind.ANDROID, "S25", null); idle()

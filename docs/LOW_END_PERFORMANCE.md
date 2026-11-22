@@ -201,6 +201,22 @@ Examples:
 | 1920×720 head unit whose decoder tops out at 720p30 | **720p**, **30 fps**, H.264 | **75 %** (1440×540), 30 fps |
 | 1920×1080 unit with only a software decoder | **720p**, **30 fps** | **50 %** (960×540) |
 
+**Compared with commercial head-unit apps (2026-11-22, static reading of their APKs;
+`re-headunit-apps/reports/speedplay.md` §5, `zlink.md` §4).** Neither gives a reason to change
+Automatic:
+
+- SpeedPlay's Android Auto density table is 215 dpi for an ordinary landscape panel (180 portrait,
+  150–180 for small panels). CarLink's Automatic density on a 160 dpi head unit at the default
+  Interface size (Medium, 135 %) is 216 dpi, capped so the canvas stays at least 748×450 dp
+  (`AaSessionSettings.automaticDensityDpi`); Small (100 %) gives 160 dpi for drivers who want more
+  on screen. The two agree on the common case, and CarLink's floor keeps Android Auto's full layout
+  on panels the table's small-panel rows would shrink below it.
+- ZLink forces 1280×720 on a fixed list of platforms (bengal, i.e. QCM6125, and some Unisoc/MTK
+  boards). CarLink already steps down by what the decoder reports carrying (Size row above), and
+  those stereos usually have 1280×720 panels, whose panel class is 720p anyway. A name list would
+  also hold a strong board with a 1080p panel at 720p. Kept as is; a stereo that proves otherwise
+  gets a `StereoQuirks` profile.
+
 Each session logs the decision to CarLink's event log ("Automatic picture: Android Auto 720p
 (panel) 30 fps H.264; CarPlay 100% of 1024x600 30 fps H.264; decoder …; low-end: 1981 MB RAM, 2
 CPU cores"), and logcat `CarLink-Capabilities` has the full probe. The only connection-layer

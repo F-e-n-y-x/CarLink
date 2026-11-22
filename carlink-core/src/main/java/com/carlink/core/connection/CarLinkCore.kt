@@ -109,6 +109,7 @@ object CarLinkCore {
             CarPlayAdapter.install(app, Connection.vehicleProfile(app))
             CarPlayWaitingView.register(config.waitingView)
             UsbWatcher.get(app).start()
+            HeadUnitSignals.install(app)
             app.registerComponentCallbacks(MemoryTrimmer)
             deferStartupWork(app)
         }

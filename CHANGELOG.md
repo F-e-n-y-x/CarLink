@@ -12,6 +12,14 @@ is what the in-app update popup shows.
 - Android Auto's audio buffer and audio queue can be set under Settings › Sound & voice › Show
   advanced (smaller = less music delay, larger = less stutter; from the next connection). Defaults
   are unchanged (#86).
+- FYT and Joying stereos: with Day and night on Automatic, CarPlay and Android Auto turn dark when
+  the car's lights come on, following the stereo's own light signal.
+- The stereo's voice key can open Siri or Google Assistant during a session: CarLink now answers the
+  voice-command request Joying stereos send (pick CarLink when the stereo asks which app to use).
+  With no session it passes the press on to the screen's own assistant.
+- FYT and Joying stereos: when the car is switched on, CarLink connects the last phone as soon as
+  Bluetooth is back, even if the previous drive ended only minutes ago (the stop rules still apply).
+- FYT and Joying stereos: Driving side starts from the side the stereo reports, until you choose one.
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
   Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
   thanks @dorsi90).

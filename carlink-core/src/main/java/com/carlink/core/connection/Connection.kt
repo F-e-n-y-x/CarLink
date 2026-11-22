@@ -110,6 +110,33 @@ object Connection {
         afterProbe(app) { homeShown(app) }
     }
 
+    /**
+     * The stereo reported ACC on ([HeadUnitSignals]): Home's automatic start, as if Home were shown,
+     * once Bluetooth is back (FYT turns it off at ACC off and on again at ACC on), at most 15 s later.
+     */
+    fun onCarStarted(context: Context) {
+        val app = context.applicationContext
+        val main = Handler(Looper.getMainLooper())
+        val deadline = android.os.SystemClock.uptimeMillis() + CAR_START_BLUETOOTH_WAIT_MILLIS
+        main.post(object : Runnable {
+            override fun run() {
+                val on = runCatching {
+                    app.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.isEnabled == true
+                }.getOrDefault(false)
+                if (!on && android.os.SystemClock.uptimeMillis() < deadline) {
+                    main.postDelayed(this, 1_000)
+                    return
+                }
+                afterProbe(app) {
+                    get(app).onCarStarted()
+                    homeShown(app)
+                }
+            }
+        })
+    }
+
+    private const val CAR_START_BLUETOOTH_WAIT_MILLIS = 15_000L
+
     /** A known phone's Bluetooth connected and Home is in front ([SessionManager.onBluetoothPhone]). */
     fun onBluetoothPhone(context: Context, address: String, kind: com.carlink.core.core.PhoneKind, name: String?) {
         val app = context.applicationContext
@@ -260,7 +287,8 @@ object Connection {
                 val values = AaSessionSettings.values(settings, plan.transport, plan.path, profile,
                     carName = CarLinkCore.config.accessoryName, panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
                     picture = picture, moduleRoute = moduleRoute,
-                    bydHeadUnit = VehicleProfile.detect(app) == VehicleProfile.BYD_DILINK)
+                    bydHeadUnit = VehicleProfile.detect(app) == VehicleProfile.BYD_DILINK,
+                    stereoLights = HeadUnitSignals.lightsNight(app) != null)
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
             }

@@ -941,7 +941,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         initializeSessionLog()
         lastConfiguration = Configuration(resources.configuration)
         darkMode = savedInstanceState?.getBoolean("carplay_night_active")
-            ?: nightModeOrNull(resources.configuration.uiMode) ?: false
+            ?: systemNight() ?: false // CarLink
         appNight = resolveAppNightNow(darkMode)
         logThemeState(ThemeModeDiagnostics.Source.CREATE, resources.configuration)
         advancedAudioChannelMappingSupported =
@@ -992,7 +992,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         nightSchedule = AirPlayPersistence.loadCarPlayNightSchedule(this)
         nightModeController.configure(
             carPlayNightMode,
-            nightModeOrNull(resources.configuration.uiMode) ?: false,
+            systemNight() ?: false, // CarLink
             ambientLightThreshold,
             ambientDelaySeconds,
             nightSchedule,
@@ -1278,7 +1278,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         val savedThreshold = AirPlayPersistence.loadAmbientLightThreshold(this)
         val savedDelay = AirPlayPersistence.loadAmbientDelaySeconds(this)
         val savedSchedule = AirPlayPersistence.loadCarPlayNightSchedule(this)
-        val systemNight = nightModeOrNull(resources.configuration.uiMode) ?: false
+        val systemNight = systemNight() ?: false // CarLink
         if (savedNightMode != carPlayNightMode || savedThreshold != ambientLightThreshold ||
             savedDelay != ambientDelaySeconds || savedSchedule != nightSchedule) {
             carPlayNightMode = savedNightMode
@@ -1289,6 +1289,7 @@ open class CarPlayHostActivity : ComponentActivity() {
                 nightSchedule)
         }
         nightModeController.resume(systemNight)
+        CarPlayHostIntegration.stereoNightChanged = { mainHandler.post { this.systemNight()?.let(nightModeController::systemChanged) } } // CarLink
         AppAppearanceRuntime.publishHost(this, darkMode)
         refreshAppAppearance()
         if (!menuOpen) {
@@ -1935,6 +1936,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         hostAppearanceResumed = false
         updateCallPopupGuard()
         AppAppearanceRuntime.clearHost(this)
+        CarPlayHostIntegration.stereoNightChanged = null // CarLink
         nightModeController.pause()
         super.onPause()
     }
@@ -5919,6 +5921,10 @@ open class CarPlayHostActivity : ComponentActivity() {
         }
     }
 
+    // CarLink: the stereo's day/night (CarPlayHostIntegration.stereoNight) stands in for Android's.
+    private fun systemNight(configuration: Configuration = resources.configuration): Boolean? =
+        CarPlayHostIntegration.stereoNight ?: nightModeOrNull(configuration.uiMode)
+
     private fun refreshConfiguration(
         newConfig: Configuration = resources.configuration,
         source: ThemeModeDiagnostics.Source,
@@ -5931,7 +5937,7 @@ open class CarPlayHostActivity : ComponentActivity() {
         lastConfiguration = Configuration(newConfig)
         nightModeDiagnosticSource = source
         try {
-            nightModeOrNull(newConfig.uiMode)?.let { nightModeController.systemChanged(it) }
+            systemNight(newConfig)?.let { nightModeController.systemChanged(it) } // CarLink
         } finally {
             nightModeDiagnosticSource = ThemeModeDiagnostics.Source.CARPLAY_MODE
         }

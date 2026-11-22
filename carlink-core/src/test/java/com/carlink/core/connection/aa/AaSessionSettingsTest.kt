@@ -43,6 +43,17 @@ class AaSessionSettingsTest {
         assertEquals(false, values(transport = Transport.USB, path = null).values["auto-connect-last-session"])
     }
 
+    @Test fun automaticDayNightFollowsTheStereoLightsWhereItReportsThem() {
+        fun night(dayNight: com.carlink.core.settings.DayNight, lights: Boolean) = AaSessionSettings.values(
+            base.copy(dayNight = dayNight), Transport.USB, null, VehicleProfile.GENERIC, "My Car", 320, stereoLights = lights,
+        ).values["night-mode"]
+        assertEquals("sunrise/sunset", 0, night(com.carlink.core.settings.DayNight.AUTOMATIC, lights = false))
+        assertEquals("DiAuto's CAR_SIGNAL", 6, night(com.carlink.core.settings.DayNight.AUTOMATIC, lights = true))
+        assertEquals("a fixed choice wins", 1, night(com.carlink.core.settings.DayNight.DAY, lights = true))
+        assertEquals(3, night(com.carlink.core.settings.DayNight.SCHEDULE, lights = true))
+        assertEquals(com.andrerinas.openheadunit.utils.Settings.NightMode.CAR_SIGNAL.value, 6)
+    }
+
     @Test fun theModuleRouteReachesTheEngineOnlyForWirelessSessions() {
         val key = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.HOST_ROUTE_KEY
         val blink = com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy.Route.BLINK
