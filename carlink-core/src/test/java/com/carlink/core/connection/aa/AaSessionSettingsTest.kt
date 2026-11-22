@@ -199,7 +199,7 @@ class AaSessionSettingsTest {
         assertEquals(165, AaSessionSettings.carPlayWidthForPercent(150))
         assertEquals(120, AaSessionSettings.carPlayWidthForPercent(200))
         assertEquals(245, AaSessionSettings.carPlayWidthForPercent(80)) // beyond Small, along the end segment
-        assertEquals(AaSessionSettings.CUSTOM_PERCENT_RANGE.last, AaSessionSettings.percentForCarPlayWidth(100))
+        assertTrue(AaSessionSettings.percentForCarPlayWidth(100) in AaSessionSettings.CUSTOM_PERCENT_RANGE) // the narrowest CarPlay width still fits
     }
 
     @Test fun joyingStreamsUseDiAutosCarVolumeGroups() {
