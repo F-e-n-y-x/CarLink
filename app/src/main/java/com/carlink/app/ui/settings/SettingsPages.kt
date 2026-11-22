@@ -160,18 +160,30 @@ private fun ConnectionEssentials(ui: SettingsUi, actions: SettingsActions, openS
 private fun PausedCard(onResume: () -> Unit) {
     val colors = CarLinkTokens.colors
     GlassCard(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(rowPadding)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(if (isCar) 14.dp else 10.dp).clip(CircleShape).background(colors.warning))
-            Spacer(Modifier.width(if (isCar) 20.dp else 14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.carlink_settings_paused_title), style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.carlink_settings_paused_body), style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.foundation.layout.BoxWithConstraints {
+            // On a narrow screen the button goes under the words; beside them the text was squeezed into a sliver.
+            val stacked = maxWidth < 480.dp
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(if (isCar) 14.dp else 10.dp).clip(CircleShape).background(colors.warning))
+                    Spacer(Modifier.width(if (isCar) 20.dp else 14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.carlink_settings_paused_title), style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(Modifier.height(4.dp))
+                        Text(stringResource(R.string.carlink_settings_paused_body), style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (!stacked) {
+                        Spacer(Modifier.width(CarLinkTokens.dimens.gutter))
+                        IonButton(stringResource(R.string.carlink_settings_resume), onResume, icon = R.drawable.carlink_ic_play_arrow_filled)
+                    }
+                }
+                if (stacked) {
+                    Spacer(Modifier.height(CarLinkTokens.dimens.gutter))
+                    IonButton(stringResource(R.string.carlink_settings_resume), onResume, icon = R.drawable.carlink_ic_play_arrow_filled)
+                }
             }
-            Spacer(Modifier.width(CarLinkTokens.dimens.gutter))
-            IonButton(stringResource(R.string.carlink_settings_resume), onResume, icon = R.drawable.carlink_ic_play_arrow_filled)
         }
     }
 }

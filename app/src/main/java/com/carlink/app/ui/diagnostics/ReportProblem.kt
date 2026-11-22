@@ -161,7 +161,8 @@ private val monoStyle: TextStyle
 /**
  * Before anything leaves the stereo: what the issue will hold (readable, with the first lines),
  * that it is public with addresses and passwords removed, and that the browser must be signed in.
- * Open GitHub and Cancel stay docked under the scrolling details, as large targets.
+ * Open GitHub and Copy stay docked under the scrolling details, as large targets; the header's close button
+ * cancels (a third docked button wrapped to a second row and squeezed the details on a car screen).
  */
 @Composable
 internal fun IssueConfirmSheet(
@@ -220,7 +221,6 @@ internal fun IssueConfirmSheet(
                 IonButton(openLabel, { if (report != null) onOpen() }, icon = R.drawable.carlink_ic_open_in_new)
             }
             GlassButton(stringResource(R.string.carlink_diag_log_copy), onCopyLog, icon = R.drawable.carlink_ic_content_copy)
-            GlassButton(stringResource(R.string.carlink_report_cancel), onCancel, icon = R.drawable.carlink_ic_close)
         }
     }
 }

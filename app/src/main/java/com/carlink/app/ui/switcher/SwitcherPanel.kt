@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,7 +85,6 @@ import com.carlink.core.settings.ConnectionMethod
 import com.carlink.core.settings.DayNight
 import com.carlink.app.ui.settings.dayNightIcon
 import com.carlink.app.ui.settings.dayNightLabel
-import androidx.compose.foundation.layout.fillMaxHeight
 import com.carlink.core.settings.InterfaceSize
 import com.carlink.core.settings.WirelessPath
 
@@ -250,11 +250,6 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
             Text(engineName(ui.engine), style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(8.dp))
-            // Cable or wireless as a badge: a plug with "Cable", or the path's glyph with "Wireless · Wi-Fi Direct".
-            com.carlink.app.ui.premium.TransportBadge(com.carlink.app.ui.premium.transportIcon(ui.transport, ui.path),
-                com.carlink.app.ui.premium.transportLabel(ui.transport, ui.path), tint = colors.success,
-                style = MaterialTheme.typography.labelLarge)
-            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(if (CarLinkTokens.profile == UiProfile.CAR) 12.dp else 8.dp).clip(CircleShape).background(colors.success))
                 Spacer(Modifier.width(8.dp))
@@ -266,6 +261,11 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
         Spacer(Modifier.width(12.dp))
         RoundGlassButton(R.drawable.carlink_ic_close, stringResource(R.string.carlink_switcher_close), actions::close)
     }
+    Spacer(Modifier.height(10.dp))
+    // Cable or wireless as a badge on its own row: beside the close button "Wireless · Wi-Fi Direct" wrapped.
+    com.carlink.app.ui.premium.TransportBadge(com.carlink.app.ui.premium.transportIcon(ui.transport, ui.path),
+        com.carlink.app.ui.premium.transportLabel(ui.transport, ui.path), tint = colors.success,
+        style = MaterialTheme.typography.labelLarge)
 
     Spacer(Modifier.height(dimens.gutter))
     QuickToggles(ui, actions, enabled = !switching)
@@ -313,16 +313,19 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
     // A picture too big or too small for this screen: one tap here instead of Settings > Display.
     Eyebrow(stringResource(R.string.carlink_settings_interface_size))
     Spacer(Modifier.height(10.dp))
-    Row(Modifier.alpha(if (switching) 0.5f else 1f), horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+    Row(Modifier.alpha(if (switching) 0.5f else 1f).height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
         listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE).forEach { size ->
             val selected = size == ui.interfaceSize
             val grows = ui.sizesThatGrow?.contains(size) ?: true
             SelectableGlass(selected, { if (!switching && !selected && grows) actions.setInterfaceSize(size) },
-                Modifier.weight(1f).alpha(if (grows || selected) 1f else 0.4f), role = Role.RadioButton) {
-                Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = dimens.minTouch).padding(vertical = 12.dp),
+                Modifier.weight(1f).fillMaxHeight().alpha(if (grows || selected) 1f else 0.4f), role = Role.RadioButton) {
+                Box(Modifier.fillMaxSize().defaultMinSize(minHeight = dimens.minTouch).padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center) {
                     Text(com.carlink.app.ui.settings.interfaceSizeLabel(size), style = MaterialTheme.typography.titleSmall,
-                        color = if (selected) scheme.primary else scheme.onSurface, maxLines = 1)
+                        // Two lines: "Extra large" in a phone-width quarter was cut to "Extra".
+                        color = if (selected) scheme.primary else scheme.onSurface, maxLines = 2,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         }

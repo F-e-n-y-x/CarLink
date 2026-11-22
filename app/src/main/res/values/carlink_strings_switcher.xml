@@ -2,7 +2,6 @@
 <resources>
     <!-- Floating switcher: the bubble over CarPlay / Android Auto and the panel it opens. -->
     <string name="carlink_switcher_bubble">CarLink switcher</string>
-    <string name="carlink_switcher_bubble_action">Open phone switcher</string>
     <!-- %1$s: time connected, e.g. 12:04 -->
     <string name="carlink_switcher_connected_for">Connected · %1$s</string>
     <string name="carlink_switcher_switch_title">Switch phone</string>

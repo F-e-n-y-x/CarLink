@@ -6,10 +6,6 @@
     <string name="carlink_setup_back">Back</string>
     <string name="carlink_setup_continue">Continue</string>
     <string name="carlink_setup_step_of">Step %1$d of %2$d</string>
-    <string name="carlink_setup_step_welcome">Welcome</string>
-    <string name="carlink_setup_step_permissions">Access</string>
-    <string name="carlink_setup_step_car">Car</string>
-    <string name="carlink_setup_step_pair">Phone</string>
     <string name="carlink_setup_step_done">Done</string>
 
     <!-- Welcome -->
@@ -117,5 +113,5 @@
     <string name="carlink_setup_done_access">Access</string>
     <string name="carlink_setup_done_access_all">Everything allowed</string>
     <string name="carlink_setup_done_access_missing">%1$d not allowed yet</string>
-    <string name="carlink_setup_done_phone_value">%1$s · %2$s</string>
+    <string name="carlink_setup_done_phone_value">%1$s ·\u00A0%2$s</string>
 </resources>

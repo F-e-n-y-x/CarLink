@@ -789,7 +789,8 @@ private fun PairPanel(ui: SetupUi, actions: SetupActions) {
     val dimens = CarLinkTokens.dimens
     val session = sessionOf(ui)
     Column(verticalArrangement = Arrangement.spacedBy(dimens.gutter)) {
-        if (ui.cable) CableCard(session) else NameCard(ui, actions)
+        // Once the plugged-in phone answers, FoundCard names it; the waiting card would repeat it.
+        if (!ui.cable) NameCard(ui, actions) else if (session == null) CableCard()
         // The first cable connection's two one-time prompts, said before they appear.
         if (ui.cable && session?.stage != LinkStage.CONNECTED) {
             NoticeLine(stringResource(R.string.carlink_setup_pair_cable_prompts), R.drawable.carlink_ic_info)
@@ -858,13 +859,13 @@ private fun LitStatus(text: String, color: Color) {
 }
 
 @Composable
-private fun CableCard(session: LinkState?) {
+private fun CableCard() {
     val scheme = MaterialTheme.colorScheme
     GlassCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(if (isCar) 36.dp else 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconTile(R.drawable.carlink_ic_usb, tint = scheme.primary, size = if (isCar) 88.dp else 64.dp)
             Spacer(Modifier.width(if (isCar) 28.dp else 18.dp))
-            Text(session?.phoneName?.let(::isolate) ?: stringResource(R.string.carlink_setup_pair_cable_waiting),
+            Text(stringResource(R.string.carlink_setup_pair_cable_waiting),
                 style = MaterialTheme.typography.titleLarge, color = scheme.onSurface)
         }
     }
@@ -944,8 +945,8 @@ private fun DoneSummary(ui: SetupUi) {
     val phone = ui.phone
     GlassGroup {
         SettingsRow(stringResource(R.string.carlink_setup_done_phone), icon = phone?.let { phoneIcon(it.kind) } ?: R.drawable.carlink_ic_smartphone,
-            value = phone?.let { p -> stringResource(R.string.carlink_setup_done_phone_value, isolate(p.name),
-                p.kind.engine?.let { engineName(it) } ?: "") } ?: stringResource(R.string.carlink_setup_done_phone_none))
+            value = phone?.let { p -> p.kind.engine?.let { stringResource(R.string.carlink_setup_done_phone_value, isolate(p.name), engineName(it)) }
+                ?: isolate(p.name) } ?: stringResource(R.string.carlink_setup_done_phone_none))
         GroupDivider()
         SettingsRow(stringResource(R.string.carlink_setup_done_car), icon = R.drawable.carlink_ic_directions_car,
             value = carBrandLabel(ui.carBrand ?: ui.detectedBrand))

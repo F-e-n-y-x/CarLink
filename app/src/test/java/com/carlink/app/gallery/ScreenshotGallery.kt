@@ -191,7 +191,20 @@ class ScreenshotGallery {
         base.draw(canvas)
         for (view in rootViews()) {
             if (view === base || !view.isShown || view.width == 0 || view.height == 0) continue
+            // Robolectric neither places a dialog window by its gravity nor dims behind it: do both as a device would.
+            val params = view.layoutParams as? android.view.WindowManager.LayoutParams
+            if (params != null && params.flags and android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND != 0) {
+                canvas.drawColor(android.graphics.Color.argb((params.dimAmount * 255).toInt(), 0, 0, 0))
+            }
             val location = IntArray(2).also(view::getLocationOnScreen)
+            if (params != null && location[0] == 0 && location[1] == 0) {
+                val gravity = params.gravity
+                val horizontal = gravity and android.view.Gravity.HORIZONTAL_GRAVITY_MASK
+                val vertical = gravity and android.view.Gravity.VERTICAL_GRAVITY_MASK
+                if (horizontal == android.view.Gravity.CENTER_HORIZONTAL || gravity == android.view.Gravity.NO_GRAVITY) location[0] = (base.width - view.width) / 2
+                if (vertical == android.view.Gravity.CENTER_VERTICAL || gravity == android.view.Gravity.NO_GRAVITY) location[1] = (base.height - view.height) / 2
+                if (vertical == android.view.Gravity.BOTTOM) location[1] = base.height - view.height
+            }
             canvas.save()
             canvas.translate(location[0].toFloat(), location[1].toFloat())
             view.draw(canvas)

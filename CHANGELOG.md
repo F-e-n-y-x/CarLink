@@ -6,6 +6,11 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- UI polish from a full-app check: the floating ball's "Wireless · Wi-Fi Direct" badge has its own row
+  and no longer wraps, and "Extra large" is no longer cut to "Extra" on a phone; the long failure screens
+  fit a car screen; Report a problem gives its details more room (the header's close button replaces
+  Cancel); the paused card in Settings › Connection stacks on a phone; setup no longer shows the
+  plugged-in phone twice; "0.3 s" and "Phone · CarPlay" no longer break mid-value.
 - Fixed: wireless CarPlay started again right after a stop could sit on "Linking over Wi-Fi" for
   10 s and fail once before connecting. When the iPhone joins the car's Wi-Fi but does not open
   CarPlay within 3 s, CarLink now asks it to start once more.

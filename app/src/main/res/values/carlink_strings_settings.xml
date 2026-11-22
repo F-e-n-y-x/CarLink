@@ -30,7 +30,6 @@
     <string name="carlink_settings_loading">Loading…</string>
     <string name="carlink_settings_not_set">Not set</string>
     <string name="carlink_settings_done">Done</string>
-    <string name="carlink_settings_close">Close</string>
 
     <!-- Connection -->
     <string name="carlink_settings_group_start">Start</string>
@@ -147,9 +146,9 @@
     <string name="carlink_settings_audio_delay_low">Low</string>
     <string name="carlink_settings_audio_delay_normal">Normal</string>
     <string name="carlink_settings_audio_delay_high">High</string>
-    <string name="carlink_settings_audio_delay_low_detail">Sound closest to the picture: about 0.1 s over USB. Wireless stays at 0.3 s. Try Normal if music stutters.</string>
-    <string name="carlink_settings_audio_delay_normal_detail">About 0.3 s over USB and wireless. Recommended.</string>
-    <string name="carlink_settings_audio_delay_high_detail">Steadiest music on a weak link: about 0.5 s over USB, 1 s wireless.</string>
+    <string name="carlink_settings_audio_delay_low_detail">Sound closest to the picture: about 0.1\u00A0s over USB. Wireless stays at 0.3\u00A0s. Try Normal if music stutters.</string>
+    <string name="carlink_settings_audio_delay_normal_detail">About 0.3\u00A0s over USB and wireless. Recommended.</string>
+    <string name="carlink_settings_audio_delay_high_detail">Steadiest music on a weak link: about 0.5\u00A0s over USB, 1\u00A0s wireless.</string>
     <string name="carlink_settings_group_levels">Levels</string>
     <string name="carlink_settings_level_media">Media</string>
     <string name="carlink_settings_level_media_detail">Music, podcasts and other media</string>

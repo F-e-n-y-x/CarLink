@@ -193,7 +193,6 @@
     <string name="carlink_report_already_sent">You already sent this report at %1$s. Each report opens a new issue: send it again only if something changed, or add to the issue you opened.</string>
     <string name="carlink_report_open_again">Send again</string>
     <string name="carlink_report_open">Open GitHub</string>
-    <string name="carlink_report_cancel">Cancel</string>
     <string name="carlink_report_qr_title">Report from your phone</string>
     <string name="carlink_diag_hotspot_ok">Not on a phone’s hotspot</string>
     <string name="carlink_diag_hotspot_on_phone">This screen is on a phone’s hotspot</string>
