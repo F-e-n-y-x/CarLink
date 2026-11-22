@@ -47,6 +47,7 @@ import com.andrerinas.openheadunit.utils.Settings
 import com.andrerinas.openheadunit.utils.ToastUtils
 import com.andrerinas.openheadunit.view.OverlayTouchView
 import com.andrerinas.openheadunit.utils.HeadUnitScreenConfig
+import com.andrerinas.openheadunit.utils.SessionShapePolicy
 import com.andrerinas.openheadunit.utils.SystemUI
 import com.andrerinas.openheadunit.aap.AapService
 import android.content.IntentFilter
@@ -298,6 +299,12 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private fun warmRelaunchWindowMs(): Long = WarmRelaunchKeyframePolicy.escalateAfterSurfaceMs(
         teardownReleasesFocus = ::projectionView.isInitialized && projectionView is ProjectionView
     )
+
+    /** Runs once the window has stayed as it is for [SessionShapePolicy.SETTLE_MS]. */
+    private val shapeCheckRunnable = Runnable { redrawIfReshaped() }
+
+    /** Set when this screen ends a session to redraw it, until that disconnect has been seen. */
+    private var redrawingForShape = false
 
     private var focusCycleGainPending = false
 
@@ -814,10 +821,15 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                             // Don't leave the renderer bar floating over the reconnecting/exit UI;
                             // if the renderer is still broken after a reconnect it re-offers itself.
                             dismissRendererConfirmBanner()
-                            if (!state.isClean && !state.isUserExit) {
+                            if (redrawingForShape) {
+                                // Our own doing (redrawIfReshaped), so not the toast that sends
+                                // the driver to the phone's WiFi settings.
+                                AppLog.i("AapProjectionActivity: Disconnected to redraw the session for its window; waiting for it to come back.")
+                            } else if (!state.isClean && !state.isUserExit) {
                                 AppLog.w("AapProjectionActivity: Disconnected unexpectedly.")
                                 ToastUtils.showToast(this@AapProjectionActivity, getString(R.string.wifi_disconnect_toast), Toast.LENGTH_LONG)
                             }
+                            redrawingForShape = false
                             // Only finish immediately if the user explicitly exited, it was a clean close, or killOnDisconnect is enabled.
                             if (state.isUserExit || state.isClean || settings.killOnDisconnect) {
                                 AppLog.i("AapProjectionActivity: Finishing because state isUserExit=${state.isUserExit}, isClean=${state.isClean}, killOnDisconnect=${settings.killOnDisconnect}")
@@ -843,6 +855,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                         }
                         is CommManager.ConnectionState.HandshakeComplete -> {
                             watchdogHandler.removeCallbacks(exitRunnable)
+                            redrawingForShape = false
 
                             // Restart the video watchdog so it can request keyframes for the new session
                             watchdogHandler.removeCallbacks(videoWatchdogRunnable)
@@ -850,6 +863,16 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
                             // Lock the resolution so that orientation changes don't cause re-negotiation
                             HeadUnitScreenConfig.lockResolution()
+
+                            // The session that just ended closed the dashboard map, and onStart() is
+                            // the only other place that opens it. A reconnect under this screen never
+                            // passes through onStart(), so the phone streamed the dashboard picture to
+                            // a decoder with no surface, and the map and turn card stayed away until
+                            // the driver left DiAuto and came back (#58). No-op while it is showing.
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+                                lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                                com.andrerinas.openheadunit.hud.ClusterMapScreen.show(this@AapProjectionActivity)
+                            }
 
                             // Handshake done. If the surface is already ready (e.g. reconnect
                             // while the activity is in the foreground), start reading immediately.
@@ -861,6 +884,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                         }
                         is CommManager.ConnectionState.TransportStarted -> {
                             watchdogHandler.removeCallbacks(exitRunnable)
+                            // A session that started, or came back, in another shape than its window.
+                            scheduleShapeCheck()
                         }
                         else -> {}
                     }
@@ -977,6 +1002,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         // Before the handler is cleared below, and never after it.
         settleFocusCycle()
         watchdogHandler.removeCallbacks(warmRelaunchCheckRunnable)
+        watchdogHandler.removeCallbacks(shapeCheckRunnable)
         watchdogHandler.removeCallbacks(watchdogRunnable)
         watchdogHandler.removeCallbacks(videoWatchdogRunnable)
         watchdogHandler.removeCallbacks(reconnectingWatchdog)
@@ -1010,6 +1036,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         watchdogHandler.postDelayed(watchdogRunnable, 2000)
         watchdogHandler.postDelayed(videoWatchdogRunnable, 3000)
         watchdogHandler.postDelayed(reconnectingWatchdog, 5000)
+        // Back in front: the window may have changed shape while this was away.
+        scheduleShapeCheck()
 
 
         if (!isKeyEventReceiverRegistered) {
@@ -1592,9 +1620,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
             AppLog.i("[UI_DEBUG_FIX] Surface mismatch! Expected: ${prevUsableW}x${prevUsableH}, Actual: ${width}x${height}")
 
             // Cache the real surface size for next session
-            settings.cachedSurfaceWidth = width
-            settings.cachedSurfaceHeight = height
-            settings.cachedSurfaceSettingsHash = HeadUnitScreenConfig.computeSettingsHash(settings)
+            rememberSurface(width, height)
 
             if (commManager.connectionState.value is CommManager.ConnectionState.TransportStarted) {
                 // AA is already running → send corrected per-side margins dynamically
@@ -1645,6 +1671,118 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                 ProjectionViewScaler.updateScale(projectionView as View, currentVideoWidth, currentVideoHeight)
             }
         }
+        scheduleShapeCheck()
+    }
+
+    private fun rememberSurface(width: Int, height: Int) {
+        settings.cachedSurfaceWidth = width
+        settings.cachedSurfaceHeight = height
+        settings.cachedSurfaceSettingsHash = HeadUnitScreenConfig.computeSettingsHash(settings)
+    }
+
+    // The manifest takes these changes instead of a relaunch. A window that changes shape arrives
+    // here on every backend; the TextureView one does not report a resize as a surface change.
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppLog.i("[AapProjectionActivity] onConfigurationChanged: ${newConfig.screenWidthDp}x${newConfig.screenHeightDp}dp, orientation=${newConfig.orientation}")
+        scheduleShapeCheck()
+        postOrientationCheck() // CarLink: CarLink #31, see postOrientationCheck
+    }
+
+    private fun scheduleShapeCheck() {
+        watchdogHandler.removeCallbacks(shapeCheckRunnable)
+        if (HeadUnitScreenConfig.turning()) return // CarLink: a turning screen follows by margins, never a new session
+        watchdogHandler.postDelayed(shapeCheckRunnable, SessionShapePolicy.SETTLE_MS)
+    }
+
+    /**
+     * Ends a session whose window has settled in a shape it was not announced for, so that it
+     * reconnects announced for that one (#61). Everything about when is [SessionShapePolicy].
+     *
+     * The session ends the way an unexpected disconnect does, because that is the path AapService
+     * reconnects from (scheduleReconnectIfNeeded). Not every session comes back that way:
+     *
+     *  - USB. After a bye-bye the phone stays enumerated as an accessory it has closed. AapService
+     *    retries on it only with a USB auto-connect option on and no wireless mode running, that
+     *    handshake is expected to fail, and recovery then rests on re-enumerating the phone -
+     *    while this screen waits 8 s for USB before it closes. A USB session is therefore left as
+     *    it is and keeps its resolution until the cable is replugged.
+     *  - The Manual wireless mode, which runs no server and no discovery to reconnect with.
+     *  - Kill-on-disconnect and Self Mode, which end for good on any disconnect.
+     */
+    private fun redrawIfReshaped() {
+        // The window itself, which is what split screen changes. Not the area left to draw in:
+        // that also shrinks by insets, and by half the window while the keyboard is up.
+        val width: Int
+        val height: Int
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            width = bounds.width()
+            height = bounds.height()
+        } else {
+            width = window.decorView.width
+            height = window.decorView.height
+        }
+        val session = HeadUnitScreenConfig.sessionShape()
+        val settled = HeadUnitScreenConfig.shapeForWindow(width, height)
+        val wireless = commManager.isWirelessSession
+        val wirelessMode = WirelessScopePolicy.effectiveMode(settings.wifiConnectionMode, settings.connectionModes)
+        val verdict = SessionShapePolicy.decide(
+            session = session,
+            window = settled,
+            sessionUp = commManager.connectionState.value is CommManager.ConnectionState.TransportStarted,
+            inFront = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED),
+            pictureInPicture = App.isPiPActive ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode),
+            screenOn = isScreenOn(),
+            keyguardLocked = isKeyguardLocked(),
+            reconnectsByItself = wireless && wirelessMode != WirelessScopePolicy.NO_WIRELESS_MODE &&
+                !settings.killOnDisconnect && !AapService.selfMode,
+            redrawnFor = shapeRedrawnFor,
+        )
+        shapeRedrawnFor = SessionShapePolicy.rememberAfter(verdict, settled, shapeRedrawnFor)
+        if (session == null || settled == null) return
+        when (verdict) {
+            SessionShapePolicy.Verdict.NO_SESSION, SessionShapePolicy.Verdict.MATCHES -> {}
+            SessionShapePolicy.Verdict.REDRAW -> {
+                AppLog.i(
+                    "[AapProjectionActivity] The window settled at ${settled.canvas} and wants ${settled.resolution}, " +
+                        "under a session announced as ${session.resolution} for ${session.canvas}: " +
+                        "reconnecting so Android Auto draws it for this window."
+                )
+                // The next announcement has to be made for this window, also if service discovery
+                // reads another one and falls back on the remembered surface.
+                if (HeadUnitScreenConfig.adoptWindow(width, height)) {
+                    rememberSurface(HeadUnitScreenConfig.getUsableWidth(), HeadUnitScreenConfig.getUsableHeight())
+                }
+                redrawingForShape = true
+                // CarLink: a host that runs the sessions restarts this one itself (counted as no loss).
+                if (com.andrerinas.openheadunit.HostIntegration.onEngineEvent != null) {
+                    com.andrerinas.openheadunit.HostIntegration.engineEvent(this,
+                        com.andrerinas.openheadunit.HostIntegration.EngineEvent.ORIENTATION_CHANGED, "cause=window-shape")
+                } else commManager.disconnect(sendByeBye = true, isUserExit = false)
+            }
+            else -> AppLog.i(
+                "[AapProjectionActivity] The window is ${settled.canvas} and wants ${settled.resolution}, the session is " +
+                    "${session.resolution} for ${session.canvas}; not reconnecting: $verdict (wireless=$wireless, " +
+                    "wirelessMode=$wirelessMode, killOnDisconnect=${settings.killOnDisconnect}, selfMode=${AapService.selfMode}, " +
+                    "already redrawn for ${shapeRedrawnFor ?: "nothing"})."
+            )
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isScreenOn(): Boolean = try {
+        val power = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) power.isInteractive else power.isScreenOn
+    } catch (e: Exception) {
+        true // A state that cannot be read is not held against the window.
+    }
+
+    private fun isKeyguardLocked(): Boolean = try {
+        (getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked
+    } catch (e: Exception) {
+        false
     }
 
     override fun onSurfaceDestroyed(surface: android.view.Surface) {
@@ -1819,11 +1957,6 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     // other orientation shows a stretched picture with misplaced touches (CarLink #31). Tell the
     // host, which reconnects in the new orientation; 1.5 s lets a rotation finish first. Checked on
     // a configuration change and on a new surface, as a rotation can also rebuild this activity.
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
-        super.onConfigurationChanged(newConfig)
-        postOrientationCheck()
-    }
-
     private fun postOrientationCheck() {
         watchdogHandler.removeCallbacks(orientationSettledCheck)
         // CarLink: a turning screen moves Android Auto by margins; a turn is not a new session.
@@ -1949,6 +2082,14 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
          * value can't leak into a subsequent connection attempt.
          */
         @Volatile var pendingStatusText: String? = null
+
+        /**
+         * The window shape the session was last redrawn for, see [SessionShapePolicy.rememberAfter].
+         * Here rather than in the instance because this screen is rebuilt under a running session
+         * (the launcher icon, a return from the app's home), and a new instance must not redraw
+         * for a shape the last one already tried.
+         */
+        @Volatile private var shapeRedrawnFor: SessionShapePolicy.Size? = null
 
         fun intent(context: Context): Intent {
             val aapIntent = Intent(context, AapProjectionActivity::class.java)

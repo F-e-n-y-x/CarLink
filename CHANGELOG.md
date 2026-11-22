@@ -6,6 +6,17 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Updated the Android Auto engine (DiAuto, upstream a5340bb39). Fixed: wireless Android Auto stopped
+  answering the phone after the car's Bluetooth dropped its listeners (for example after a phone was
+  unpaired) until the app was restarted.
+- Fixed: wireless Android Auto could stay waiting when the phone was already on this screen's
+  Bluetooth hands-free link before Android Auto started listening; the phone is now woken over it.
+- Fixed: on a BYD split screen, a wireless Android Auto picture that no longer fits its window is
+  reconnected for the new window instead of staying stretched.
+- Fixed: the Android Auto picture after returning from another app recovers on a real keyframe
+  (upstream's version of the earlier fix), and the system bar margin is kept on the first
+  connection after the app starts.
+
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.

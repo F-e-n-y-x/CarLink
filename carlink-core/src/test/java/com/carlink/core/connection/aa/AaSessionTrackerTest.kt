@@ -54,6 +54,8 @@ class AaSessionTrackerTest {
         t.event(EngineEvent.FIRST_VIDEO_FRAME)
         assertEquals(listOf(AdapterEvent.Restart("the screen turned portrait")),
             t.event(EngineEvent.ORIENTATION_CHANGED, "picture=1920x1080;screen=portrait"))
+        assertEquals(listOf(AdapterEvent.Restart("the projection window changed shape")),
+            t.event(EngineEvent.ORIENTATION_CHANGED, "cause=window-shape"))
     }
 
     @Test fun aStateReportWithAFrameAlsoConnects() {
