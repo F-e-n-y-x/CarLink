@@ -37,6 +37,7 @@ class DeviceEnvironment(
     private val paths = PathMemory(app)
     private val callMicrophone = CallMicrophoneWatch(app)
     private val fyt = FytHeadUnit.createIfFyt(app)
+    private val qzd = QzdHeadUnit.createIfPresent(app)
 
     override val autoConnectUsb get() = preferences.autoConnectUsb
     override val autoConnectBluetooth get() = preferences.autoConnectBluetooth
@@ -157,6 +158,7 @@ class DeviceEnvironment(
     override fun onEngaged(engine: Engine?) {
         callMicrophone.setWatching(engine != null)
         fyt?.engaged(engine)
+        qzd?.engaged(engine != null)
         if (preferences.rootMode) kotlin.concurrent.thread(name = "carlink-root") { com.carlink.core.settings.RootMode.projecting(engine != null) }
         val state = if (engine == Engine.ANDROID_AUTO) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED

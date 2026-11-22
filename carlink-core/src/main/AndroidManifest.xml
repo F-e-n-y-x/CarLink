@@ -42,6 +42,8 @@
         <!-- FYT's main service (toolkit binder) and floating button: FytHeadUnit. -->
         <package android:name="com.syu.ms" />
         <package android:name="com.fyt.screenbutton" />
+        <!-- Joying/QZD CarService (IRemote binder): QzdHeadUnit. -->
+        <package android:name="com.car.service" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
