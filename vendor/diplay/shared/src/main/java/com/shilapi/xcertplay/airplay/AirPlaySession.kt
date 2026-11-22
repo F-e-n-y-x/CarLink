@@ -120,6 +120,8 @@ class AirPlaySession(
 
     val host: String = socket.inetAddress?.hostAddress ?: ""
     val localAddress: InetAddress? = socket.localAddress
+    /** CarLink: #93, where the picture, audio, timing, event and keep-alive listeners bind. */
+    internal val mediaBindAddress: InetAddress = mediaBindAddress(localAddress, config.bindMediaToSessionIpv4)
     private val peerAddress: InetAddress? = socket.inetAddress
     internal val remoteAddress: InetAddress?
         get() = (socket.remoteSocketAddress as? InetSocketAddress)?.address
@@ -382,6 +384,11 @@ class AirPlaySession(
         sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
     }
 
+    /** Presses [index] and keeps it down until [releaseMedia]; the iPhone seeks while Fast Forward or Rewind is held. */
+    fun holdMedia(index: Int) = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(index))
+
+    fun releaseMedia() = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
+
     fun sendTelephony(index: Int) {
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(index))
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(0))
@@ -454,7 +461,7 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
+        val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -478,7 +485,7 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                frames.append(plaintext) // CarLink: upstream PR #1304
+                frames.append(plaintext)
                 for (request in frames.drain()) {
                     val cseq = request.headers["cseq"] ?: "-"
                     val path = request.path.lowercase()
@@ -708,7 +715,8 @@ class AirPlaySession(
         val deviceId = string(dict["deviceID"])
         val wifiMac = string(dict["macAddress"]).lowercase()
         val model = string(dict["model"])
-        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"])))
+        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"]),
+            string(dict["osBuildVersion"])))
         if (deviceId.isNotEmpty()) deviceBtMac = deviceId
         if (name.isNotEmpty() || deviceId.isNotEmpty() || wifiMac.isNotEmpty()) {
             listener.onDeviceInfo(this, AirPlayDeviceInfo(name, deviceId, wifiMac, model))
@@ -853,7 +861,7 @@ class AirPlaySession(
     }
 
     private fun openTiming(peerPort: Int): Int {
-        val port = ntp.listen()
+        val port = ntp.listen(mediaBindAddress) // CarLink: #93
         if (peerPort > 0) peerAddress?.let { ntp.start(it, peerPort) }
         return port
     }
@@ -861,7 +869,7 @@ class AirPlaySession(
     private fun openKeepAlive(): Int {
         val socket = DatagramSocket(null)
         socket.reuseAddress = true
-        socket.bind(InetSocketAddress(InetAddress.getByName("::"), 0))
+        socket.bind(InetSocketAddress(mediaBindAddress, 0)) // CarLink: #93
         keepAliveSocket = socket
         keepAliveThread = Thread({ runKeepAlive(socket) }, "airplay-keepalive").apply {
             isDaemon = true
@@ -882,7 +890,7 @@ class AirPlaySession(
     }
 
     private fun openEvent(): Int {
-        val server = ServerSocket(0, 50, InetAddress.getByName("::"))
+        val server = ServerSocket(0, 50, mediaBindAddress) // CarLink: #93
         eventServer = server
         spawnEvent("airplay-event-accept") { acceptEvent(server) }
         return server.localPort
@@ -955,7 +963,7 @@ class AirPlaySession(
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
             var encrypted = ByteArray(0)
-            val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
+            val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
@@ -969,7 +977,7 @@ class AirPlaySession(
                     break
                 }
                 encrypted = decrypted.rest
-                frames.append(decrypted.data) // CarLink: upstream PR #1304
+                frames.append(decrypted.data)
                 for (message in frames.drain()) {
                     if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
                     debugLog(
@@ -1099,3 +1107,11 @@ private fun asMap(value: Any?): Map<String, Any?>? {
 private fun string(value: Any?): String = value as? String ?: ""
 
 private fun long(value: Any?): Long? = (value as? Number)?.toLong()
+
+/**
+ * CarLink: #93. On the car hotspot the media listeners bind the control session's IPv4 address; elsewhere, and
+ * without one, they keep upstream's `::`. On an IPv4-only head unit 0nezar0 saw SETUP finish and the `::` ports
+ * then never accept the iPhone's IPv4 connects.
+ */
+internal fun mediaBindAddress(local: InetAddress?, ipv4Only: Boolean): InetAddress =
+    local?.takeIf { ipv4Only && it is java.net.Inet4Address } ?: InetAddress.getByName("::")

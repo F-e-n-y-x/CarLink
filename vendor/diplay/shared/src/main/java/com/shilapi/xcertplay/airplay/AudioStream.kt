@@ -57,8 +57,8 @@ class AudioStream(
     private var controlThread: Thread? = null
     private var started = false
 
-    fun listen(listener: Listener): Pair<Int, Int> {
-        val data = bindAnyPort()
+    fun listen(listener: Listener, bindAddress: InetAddress = InetAddress.getByName("::")): Pair<Int, Int> { // CarLink: #93 bindAddress
+        val data = bindAnyPort(bindAddress)
         // Keep short Wi-Fi bursts in the kernel while decrypting or scheduling pauses
         // the receive thread. The platform may cap this request; log the actual size.
         val originalBufferBytes = runCatching { data.receiveBufferSize }.getOrDefault(0)
@@ -66,7 +66,7 @@ class AudioStream(
             runCatching { data.receiveBufferSize = AUDIO_RECEIVE_BUFFER_BYTES }
         }
         onDiagnostic("Audio UDP receive buffer type=$streamType original=$originalBufferBytes requested=$AUDIO_RECEIVE_BUFFER_BYTES actual=${runCatching { data.receiveBufferSize }.getOrDefault(0)}")
-        val control = bindAnyPort()
+        val control = bindAnyPort(bindAddress)
         dataSocket = data
         controlSocket = control
         dataThread = Thread({ runData(data, listener) }, "airplay-audio-rx").apply {
@@ -189,10 +189,10 @@ class AudioStream(
         }
     }
 
-    private fun bindAnyPort(): DatagramSocket {
+    private fun bindAnyPort(bindAddress: InetAddress): DatagramSocket {
         val socket = DatagramSocket(null)
         socket.reuseAddress = true
-        socket.bind(InetSocketAddress(InetAddress.getByName("::"), 0))
+        socket.bind(InetSocketAddress(bindAddress, 0))
         return socket
     }
 

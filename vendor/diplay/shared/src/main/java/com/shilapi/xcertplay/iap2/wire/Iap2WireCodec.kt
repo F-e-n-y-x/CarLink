@@ -127,7 +127,7 @@ object Iap2WireCodec {
         }
         val body = payload.copyOf(payload.size - 1)
         // string() refuses U+0000, so a decoded string must not contain one either.
-        if (body.contains(0.toByte())) { // CarLink: upstream PR #1297
+        if (body.contains(0.toByte())) {
             throw Iap2ProtocolException("CSM string contains an embedded NUL")
         }
         return body.decodeToString()

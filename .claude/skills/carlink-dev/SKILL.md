@@ -100,10 +100,10 @@ entry/ (USB, boot, Bluetooth)  ui/ (Home, Settings, …)  switcher/ (bubble, swi
 
 ## Vendor engines
 
-`vendor/diplay` (CarPlay, main process; upstream main 615b32ce0, DiPlay 0.2.22+) and `vendor/diauto`
+`vendor/diplay` (CarPlay, main process; upstream main 76562fe2f, DiPlay 0.2.22+) and `vendor/diauto`
 (Android Auto, `:aa`; upstream main a5340bb39, DiAuto 0.3.12+) were imported as git subtrees. Change them only through small hooks marked `// CarLink`, and add a row
 to `docs/VENDOR_CHANGES.md` for every edit (every edit needs a row, every row an edit; audit with
-`git diff --stat 615b32ce0: HEAD:vendor/diplay`, `git diff --stat a5340bb39: HEAD:vendor/diauto` and
+`git diff --stat 76562fe2f: HEAD:vendor/diplay`, `git diff --stat a5340bb39: HEAD:vendor/diauto` and
 `grep -rn CarLink vendor/`). Prefer a host hook over editing engine logic. An open upstream PR worth having early is ported with `// CarLink: upstream PR #N` on each line and its number added to the "already carries ports" list in `docs/VENDOR_CHANGES.md`, so the next engine update drops it once merged. Before an update, check upstream main, open PRs and active forks (CarLink's own forks too: pphan93 and 0nezar0 carried fixes in 2026-11). Do not run
 `git subtree pull`; neither engine can be subtree-pulled any more (no merge base): each is updated by applying the upstream diff (commands in `docs/VENDOR_CHANGES.md`).
 

@@ -1,4 +1,3 @@
-// CarLink: ported from upstream DiPlay PR #1206 (head 7a6382d1e)
 package com.shilapi.xcertplay.media
 
 /**

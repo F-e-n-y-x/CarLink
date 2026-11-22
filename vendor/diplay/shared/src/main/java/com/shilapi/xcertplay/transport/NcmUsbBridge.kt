@@ -121,6 +121,9 @@ class NcmUsbBridge internal constructor(
                 }
             }
             checkOpen()
+            // CarLink: the queue keeps blocks, not frames, so upstream's SYN-ACK/RST record (#1360) is
+            // taken here as the frame is queued; the writer counts the delivered blocks.
+            traffic.sent(frame, delivered = false)
             if (outbound.offer(block) > 0 && outbound.dropped == 1L) {
                 Log.i(IphoneCarPlayConfiguration.TAG, "ncm outbound queue full; dropping oldest frames")
             }
@@ -162,7 +165,7 @@ class NcmUsbBridge internal constructor(
             synchronized(outLock) {
                 if (transferred == block.size) {
                     outbound.removeHead()
-                    traffic.sent() // CarLink: upstream counted in its synchronous send()
+                    traffic.sent(ByteArray(0), delivered = true) // CarLink: upstream counted in its synchronous send()
                     if (linkOpenedAtNanos == null) linkOpenedAtNanos = System.nanoTime() // CarLink: upstream set it in send()
                     event = pacing.onAccepted()
                 } else {
@@ -230,6 +233,10 @@ class NcmUsbBridge internal constructor(
 
     /** Whether the iPhone tried to connect to [port] at or after [sinceNanos]; see [NcmTrafficCounter]. */
     fun connectionAttemptSince(port: Int, sinceNanos: Long): Boolean = traffic.connectionAttemptSince(port, sinceNanos)
+
+    /** Where the iPhone's connection attempts went and what DiPlay answered; see [NcmTrafficCounter]. */
+    fun connectionAttemptSummary(advertisedAddress: ByteArray?): String? =
+        traffic.connectionAttemptSummary(advertisedAddress)
 
     /**
      * Returns the next complete Ethernet frame, or null when [timeoutMillis] elapses without one.

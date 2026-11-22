@@ -29,6 +29,15 @@ is what the in-app update popup shows.
 - Joying/QZD stereos (com.car.service, e.g. QCM6125): CarLink takes the stereo's audio source while
   a session runs, so the radio stops and the steering-wheel media buttons reach CarPlay or Android
   Auto, and hands the previous source back when the session ends.
+- Fixed: wireless CarPlay over the car's own hotspot stalled at "Picture" on head units whose hotspot
+  has no IPv6 (#93, thanks @0nezar0). On the car hotspot CarLink now offers and listens on IPv4 only,
+  and the log says whether the hotspot interface carries IPv6.
+
+- Updated the CarPlay engine (DiPlay, 2026-11-22): wireless CarPlay keeps working when one of the
+  screen's addresses cannot take a connection, a screen without Wi-Fi Direct no longer retries it,
+  silent Bluetooth links are retried on adapters that already carried data, and fixes for music
+  skips and the wired music clock.
+
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.

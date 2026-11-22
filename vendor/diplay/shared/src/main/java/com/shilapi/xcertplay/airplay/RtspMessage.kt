@@ -33,7 +33,7 @@ object RtspMessage {
      * belong to complete messages; [needed] is the total buffer size required to finish the
      * message at the front, or -1 when its header has not ended yet.
      */
-    internal data class Scan(val messages: List<Request>, val consumed: Int, val needed: Int) // CarLink: upstream PR #1304
+    internal data class Scan(val messages: List<Request>, val consumed: Int, val needed: Int)
 
     /** Real requests carry headers under 1 KiB; the cap leaves ample room. */
     private const val MAX_HEADER_BYTES = 16 * 1024
@@ -56,7 +56,7 @@ object RtspMessage {
      * @throws ProtocolException when a header or body exceeds its cap, so a peer cannot make the caller buffer without limit.
      */
     fun parseMessages(buffer: ByteArray): Parsed {
-        val scanned = scan(buffer, buffer.size) // CarLink: upstream PR #1304
+        val scanned = scan(buffer, buffer.size)
         return Parsed(scanned.messages, buffer.copyOfRange(scanned.consumed, buffer.size))
     }
 
@@ -67,7 +67,7 @@ object RtspMessage {
      * skip scanning altogether until the current message is complete; the header and body caps are
      * still enforced on the read that finishes the header.
      */
-    internal fun scan(buffer: ByteArray, limit: Int): Scan { // CarLink: upstream PR #1304
+    internal fun scan(buffer: ByteArray, limit: Int): Scan {
         val messages = ArrayList<Request>()
         var offset = 0
         while (offset < limit) {
@@ -127,7 +127,7 @@ object RtspMessage {
         return head.toByteArray(Charsets.US_ASCII) + body
     }
 
-    private fun indexOf(source: ByteArray, target: ByteArray, start: Int, limit: Int): Int? { // CarLink: upstream PR #1304
+    private fun indexOf(source: ByteArray, target: ByteArray, start: Int, limit: Int): Int? {
         if (target.isEmpty()) return start
         val first = target[0]
         // `limit`, not source.size: a reusable buffer holds stale bytes past the bytes read so far.

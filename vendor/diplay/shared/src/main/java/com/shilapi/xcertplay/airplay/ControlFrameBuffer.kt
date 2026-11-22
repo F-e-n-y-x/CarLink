@@ -1,4 +1,3 @@
-// CarLink: ported from upstream DiPlay PR #1304
 package com.shilapi.xcertplay.airplay
 
 /**

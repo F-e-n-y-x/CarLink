@@ -36,7 +36,33 @@ internal object WirelessAddressFamilyPlan {
     @JvmStatic
     var ipv6Guess: Boolean = false
 
+    /**
+     * CarLink #93: the car hotspot and LocalOnlyHotspot run IPv4 end to end. On an IPv4-only head unit's SoftAP
+     * (Changan CS75 Plus, Allwinner T7) CarPlay stalled after the Wi-Fi credentials while any IPv6 was offered:
+     * a link-local AAAA in Bonjour, an IPv6 host in iAP2 0x4301/0x5703, or a family remembered from Same Wi-Fi
+     * or flipped after a first-TCP timeout. Wi-Fi Direct and Same Wi-Fi keep both families. Diagnosis: 0nezar0.
+     */
+    fun ipv4Only(backend: WirelessHotspotBackend): Boolean =
+        backend == WirelessHotspotBackend.MANUAL_HOTSPOT || backend == WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT
+
+    /** [addresses] this path may publish, listen on or offer: only the IPv4 ones on an [ipv4Only] backend. */
+    fun usable(backend: WirelessHotspotBackend, addresses: List<java.net.InetAddress>): List<java.net.InetAddress> =
+        if (ipv4Only(backend)) addresses.filterIsInstance<java.net.Inet4Address>() else addresses
+
+    /** [info] without its IPv6 addresses on an [ipv4Only] backend; a null host is then found by the address wait. */
+    fun forPath(info: WirelessHotspotInfo): WirelessHotspotInfo {
+        if (!ipv4Only(info.backend)) return info
+        val hosts = usable(info.backend, info.hostAddresses)
+        return WirelessHotspotInfo(
+            info.ssid, info.passphrase, info.security, info.channel, info.frequencyMHz, info.bssid,
+            info.interfaceName, info.hostAddress as? java.net.Inet4Address ?: hosts.firstOrNull(), info.bandLabel,
+            info.backend, hosts, info.accessPointBssid, info.identityDetail,
+        )
+    }
+
     fun choose(backend: WirelessHotspotBackend, remembered: String?, sdkInt: Int): Choice = when {
+        // #93: a remembered or flipped family never applies here, and IPv4 is never a guess to remember.
+        ipv4Only(backend) -> Choice(HotspotAddressPolicy.FAMILY_IPV4, guessed = false)
         remembered != null -> Choice(remembered, guessed = false)
         ipv6Guess && backend == WirelessHotspotBackend.WIFI_P2P && sdkInt >= MIN_IPV6_GUESS_SDK ->
             Choice(HotspotAddressPolicy.FAMILY_IPV6, guessed = true)

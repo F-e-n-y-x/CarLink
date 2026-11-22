@@ -68,6 +68,9 @@ object BydNavigationOutputs {
     /** Whether the car is in P (read over adb), or null when it cannot tell. Blocking. */
     fun parked(context: Context): Boolean? = BydParkedState.parked(context.applicationContext)
 
+    /** Why the latest [parked] returned null (#1180), or null after a read that worked. */
+    fun gearUnreadable(): GearUnreadable? = BydParkedState.lastUnreadable
+
     fun start(context: Context) {
         if (!VehicleIntegrations.enabled) return // CarLink: no SOME/IP binds or tickers on generic cars
         val app = context.applicationContext

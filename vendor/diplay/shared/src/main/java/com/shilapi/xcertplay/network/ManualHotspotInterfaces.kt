@@ -49,7 +49,7 @@ internal class ManualHotspotInterfaces(
             }
         }.getOrDefault(emptyList())
         val apEnabled = CarHotspotStatus.isEnabled(context)
-        val observed = publicTethering?.interfaces ?: legacyApInterfaces() // CarLink: upstream PR #1218
+        val observed = publicTethering?.interfaces ?: legacyApInterfaces()
         val ap = apInterfaces(
             observed = observed,
             interfaces = interfaces,
@@ -62,7 +62,7 @@ internal class ManualHotspotInterfaces(
             interfaces, ap, upstreams, defaultName,
             consistent = before.isSuccess && after.isSuccess && before.getOrNull() == after.getOrNull(),
             apEnabled = apEnabled,
-            platformAp = observed, // CarLink: upstream PR #1218
+            platformAp = observed,
         )
     }
 

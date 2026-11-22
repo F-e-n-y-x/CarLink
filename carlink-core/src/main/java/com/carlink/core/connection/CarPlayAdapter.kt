@@ -19,6 +19,8 @@ import androidx.core.content.ContextCompat
 import com.carlink.core.settings.WirelessPath
 import android.util.Log
 import com.carlink.core.core.Engine
+import com.carlink.core.diagnostics.InterfaceIpv6
+import com.shilapi.xcertplay.network.WirelessHotspotBackend
 import com.carlink.core.core.Transport
 import com.carlink.core.settings.VehicleProfile
 import com.shilapi.xcertplay.AirPlayPersistence
@@ -155,7 +157,20 @@ class CarPlayAdapter internal constructor(
     private fun onStatus(status: CarPlayStatus?) {
         val tracker = tracker ?: return
         if (listener == null) return
+        if (status is CarPlayStatus.HotspotReady) logApIpv6(status)
         deliver(tracker.onStatus(status))
+    }
+
+    /** #93: on the car hotspot (or local-only AP) the log says whether its interface carries IPv6 at all. */
+    private fun logApIpv6(status: CarPlayStatus.HotspotReady) {
+        if (status.backend != WirelessHotspotBackend.MANUAL_HOTSPOT.label &&
+            status.backend != WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT.label) return
+        Thread({
+            val iface = runCatching {
+                java.net.NetworkInterface.getByInetAddress(java.net.InetAddress.getByName(status.address))?.name
+            }.getOrNull() ?: return@Thread
+            com.carlink.core.diagnostics.EventLog.add("CarLink", "car hotspot ${InterfaceIpv6.describe(iface)}")
+        }, "carlink-ap-ipv6").apply { isDaemon = true }.start()
     }
 
     private fun onMilestone(phase: WirelessStartupTimeline.Phase) {

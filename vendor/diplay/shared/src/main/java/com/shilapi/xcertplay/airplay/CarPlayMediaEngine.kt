@@ -155,7 +155,7 @@ class CarPlayMediaEngine(
                 session.logDebug("Video recovery: requested keyframe sent=$sent")
             }
         }
-        val port = screen.listen(
+        val port = screen.listen(bindAddress = session.mediaBindAddress, listener = // CarLink: #93
             object : ScreenStream.Listener by currentScreenListener(type, sink, isCurrent = { streams[streamKey] === screen }) {
                 override fun onClosed(cause: Throwable?) {
                     // CarLink: a replaced/torn-down screen may already be delivering its close.
@@ -223,7 +223,7 @@ class CarPlayMediaEngine(
         val clockProbe = RtpClockProbe()
         val microphoneStart = microphone?.let { config -> MicrophoneStart { sink.onMicrophoneStarted(streamId, config) } }
         val audio = AudioStream(key, type, session::logDebug)
-        val (dataPort, controlPort) = audio.listen(
+        val (dataPort, controlPort) = audio.listen(bindAddress = session.mediaBindAddress, listener = // CarLink: #93
             object : AudioStream.Listener {
                 override fun onStarted(firstSample: Int) {
                     meta.firstSample = firstSample
@@ -301,7 +301,8 @@ class CarPlayMediaEngine(
         }
         val peer = session.remoteAddress ?: return null
         val buffered = try {
-            BufferedAudioStream(key, format, sink, session::logDebug, expectedPeer = peer)
+            BufferedAudioStream(key, format, sink, session::logDebug, expectedPeer = peer,
+                bindAddress = session.mediaBindAddress.takeIf { it is java.net.Inet4Address }) // CarLink: #93
         } catch (error: Exception) {
             Log.w(TAG, "buffered audio listener failed", error)
             return null
@@ -373,7 +374,13 @@ class CarPlayMediaEngine(
             }
             "GETANCHOR" -> buffered.anchor()
             "FLUSHBUFFERED" -> {
-                (body["flushUntilTS"] as? Number)?.toLong()?.let { buffered.flush(it) }
+                // Pass the sequence as well as the timestamp: the timestamp alone cannot tell
+                // a late old-track frame from a new-track one when the new track restarts its
+                // RTP clock more than half the 32-bit range ahead (#1031). Either value on its
+                // own still flushes; only a body naming neither is ignored, as before.
+                val untilTs = (body["flushUntilTS"] as? Number)?.toLong()
+                val untilSeq = (body["flushUntilSeq"] as? Number)?.toLong()
+                if (untilTs != null || untilSeq != null) buffered.flush(untilTs, untilSeq)
                 null
             }
             else -> null
