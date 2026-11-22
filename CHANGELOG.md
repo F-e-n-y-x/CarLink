@@ -6,6 +6,8 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+## [1.0.18] - 2026-11-23
+
 - UI polish from a full-app check: the floating ball's "Wireless · Wi-Fi Direct" badge has its own row
   and no longer wraps, and "Extra large" is no longer cut to "Extra" on a phone; the long failure screens
   fit a car screen; Report a problem gives its details more room (the header's close button replaces
