@@ -39,6 +39,9 @@
     <queries>
         <package android:name="com.syu.carlink" />
         <package android:name="com.zjinnova.zlink" />
+        <!-- FYT's main service (toolkit binder) and floating button: FytHeadUnit. -->
+        <package android:name="com.syu.ms" />
+        <package android:name="com.fyt.screenbutton" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
