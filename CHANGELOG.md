@@ -6,6 +6,22 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- New Lab option for CarPlay calls over USB, "Calls at phone-call rate": calls and their microphone
+  use 8-32 kHz audio as stock CarPlay stereos do, for stereos where the other person hears you
+  choppy or robotic.
+- The floating switcher has a Custom size: step CarPlay's screen width (5 mm steps) or Android
+  Auto's size (5 % steps) between the presets. It is saved as Settings' Custom size and applies live
+  where the session can, otherwise with a quick reconnect (#83).
+- Joying (QZD) stereos: CarPlay and Android Auto directions and the voice assistant now play on the
+  streams the stereo treats as navigation and voice, so they mix over music instead of being muted
+  with it; CarPlay calls use the stereo's call stream when its settings name one.
+- Fixed: CarPlay directions over USB sounded like a phone call (#83). The iPhone picked 8 kHz audio
+  for them; CarLink now asks for a higher rate. If directions go silent on your stereo, turn off
+  Settings › Sound & voice › Show advanced › Clear navigation voice over USB.
+- CarPlay's "Screen width reported to iPhone" (Advanced) now has 10 mm steps from 120 to 200 mm,
+  so a size between the Large and Medium presets can be picked (#83).
+- Navigation volume now goes up to +12 dB (Settings › Sound & voice), for CarPlay and Android Auto;
+  boosted sound has its loudest peaks softened instead of clipped (#83).
 - The head unit's Back button now goes back inside Android Auto instead of opening the menu to
   leave it (#72). Turn it off in Settings › Car › Back button goes back in Android Auto; the
   two-finger swipe from the left edge still opens the menu. Home stays the system's.

@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.KeyEvent
 import com.andrerinas.openheadunit.App
 import com.andrerinas.openheadunit.HostIntegration
+import com.andrerinas.openheadunit.aap.protocol.Channel
 import com.andrerinas.openheadunit.connection.CommManager.ConnectionState
 import com.carlink.core.connection.ResumeMusic
 import com.carlink.core.settings.AudioLevels
@@ -61,6 +62,11 @@ object AaEngineHooks {
         HostIntegration.microphonePcm = { data, length ->
             val db = prefs.getInt(AaSessionSettings.MIC_GAIN_KEY, 0)
             if (db != 0) AudioLevels.scalePcm16(data, 0, length, AudioLevels.linear(db))
+        }
+        // Sound level boosts (AaSessionSettings writes DiAuto's own offsets only for cuts), soft-clipped.
+        HostIntegration.playbackPcm = { channel, data, length ->
+            val db = prefs.getInt(if (channel == Channel.ID_AUD) AaSessionSettings.MEDIA_BOOST_KEY else AaSessionSettings.NAVIGATION_BOOST_KEY, 0)
+            if (db > 0) AudioLevels.scalePcm16(data, 0, length, AudioLevels.linear(db))
         }
         val resume = ResumeMusic(app.getSharedPreferences("carlink_resume_music_aa", Context.MODE_PRIVATE), "aa_playing")
         HostIntegration.onPhonePlaying = resume::onPhonePlaying

@@ -276,7 +276,7 @@ object Connection {
                 }
                 val fineLocation = app.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 CarPlaySettingsPolicy.apply(app, CarPlaySettingsPolicy.map(settings, plan.path, profile, fineLocation,
-                    brandName = CarLinkCore.config.accessoryName, picture = picture))
+                    brandName = CarLinkCore.config.accessoryName, picture = picture, audioStreams = QzdHeadUnit.audioStreams(app)))
             }
             Engine.ANDROID_AUTO -> {
                 val moduleRoute = DeviceEnvironment.moduleRoute(DeviceEnvironment.effectiveStereo(app),
@@ -288,7 +288,7 @@ object Connection {
                     carName = CarLinkCore.config.accessoryName, panelDensityDpi = app.resources.displayMetrics.densityDpi, wifi = wifi,
                     picture = picture, moduleRoute = moduleRoute,
                     bydHeadUnit = VehicleProfile.detect(app) == VehicleProfile.BYD_DILINK,
-                    stereoLights = HeadUnitSignals.lightsNight(app) != null)
+                    stereoLights = HeadUnitSignals.lightsNight(app) != null, audioStreams = QzdHeadUnit.audioStreams(app))
                 values.problem?.let { Log.w(TAG, "Android Auto settings: $it") }
                 AaSessionSettings.apply(app, values)
             }

@@ -338,6 +338,24 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             }
         }
     },
+    // #83 and the call-rate option: CarPlay's Advanced and Lab sound rows.
+    GalleryEntry("settings", "sound-advanced-carplay") {
+        com.carlink.app.ui.premium.PremiumScreen("Sound & voice", onBack = {}) { margin ->
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = margin)
+                .widthIn(max = 900.dp)) {
+                com.carlink.app.ui.settings.GlassGroup(header = { com.carlink.app.ui.settings.EngineHeader(Engine.CARPLAY) }) {
+                    com.carlink.core.settings.AdvancedSettings.all.filter { it.id in setOf("cp_clear_prompts", "cp_echo", "cp_call_rate") }
+                        .forEachIndexed { index, setting ->
+                            if (index > 0) com.carlink.app.ui.settings.GroupDivider()
+                            com.carlink.app.ui.settings.EngineSettingRow(setting, settingsPreviewUi().advancedValues,
+                                SettingsPreviewActions, openSheet = {})
+                        }
+                }
+            }
+        }
+    },
     GalleryEntry("settings", "sheet-audio-delay", opensWindow = true) {
         SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.SOUND,
             initialSheet = SheetKey.of(EssentialSheet.AUDIO_DELAY))
@@ -461,6 +479,17 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(showAdvanced = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.DISPLAY,
             initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "aa_resolution" }))
+    },
+    // #83: 10 mm steps between the CarPlay size presets.
+    GalleryEntry("settings", "sheet-carplay-width", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(showAdvanced = true), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.DISPLAY,
+            initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "cp_width" }))
+    },
+    // #83: directions up to +12 dB.
+    GalleryEntry("settings", "sheet-navigation-level", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.SOUND,
+            initialSheet = SheetKey.of(EssentialSheet.NAVIGATION_LEVEL))
     },
 )
 

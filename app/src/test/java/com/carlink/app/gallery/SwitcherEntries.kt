@@ -78,6 +78,25 @@ internal fun switcherEntries(): List<GalleryEntry> = with(HomeFakes) {
             val since = remember { SystemClock.elapsedRealtime() - 754_000 }
             FakeProjection { SwitcherOverlay(ui(SwitcherPage.CONNECTION_TYPE, Edge.LEFT, since), GallerySwitcherActions) }
         },
+        // #83: a Custom size between the presets, chosen in the panel (also at phone size).
+        GalleryEntry("switcher", "panel-custom", configs = switcherConfigs + "phone-portrait") {
+            val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+            FakeProjection {
+                SwitcherOverlay(ui(since = since).copy(interfaceSize = com.carlink.core.settings.InterfaceSize.CUSTOM, customSize = 165),
+                    GallerySwitcherActions)
+            }
+        },
+        GalleryEntry("switcher", "panel-custom-size", configs = switcherConfigs + "phone-portrait") {
+            val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+            FakeProjection { SwitcherOverlay(ui(SwitcherPage.CUSTOM_SIZE, since = since).copy(customSize = 165), GallerySwitcherActions) }
+        },
+        GalleryEntry("switcher", "panel-custom-size-aa", configs = switcherConfigs + "phone-portrait") {
+            val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+            FakeProjection {
+                SwitcherOverlay(ui(SwitcherPage.CUSTOM_SIZE, since = since).copy(engine = Engine.ANDROID_AUTO, phoneName = pixel.name,
+                    customSize = 150), GallerySwitcherActions)
+            }
+        },
         entry("panel-switching") {
             val since = remember { SystemClock.elapsedRealtime() - 61_000 }
             FakeProjection { SwitcherOverlay(ui(since = since).copy(switchingTo = pixel.address), GallerySwitcherActions) }

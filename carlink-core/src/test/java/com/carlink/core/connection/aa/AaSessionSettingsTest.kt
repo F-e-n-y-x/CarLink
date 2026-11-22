@@ -172,15 +172,44 @@ class AaSessionSettingsTest {
             resumeMusic = true)).values
         assertEquals(-50, v["media-volume-offset"])
         // Android Auto's speech channel carries the directions (and the Assistant); its system channel the chimes.
-        assertEquals(100, v["assistant-volume-offset"])
-        assertEquals(100, v["navigation-volume-offset"])
+        // Boosts go through CarLink's soft-clipping hook, not DiAuto's flat clip.
+        assertEquals(0, v["assistant-volume-offset"])
+        assertEquals(0, v["navigation-volume-offset"])
+        assertEquals(6, v[AaSessionSettings.NAVIGATION_BOOST_KEY])
+        assertEquals(0, v[AaSessionSettings.MEDIA_BOOST_KEY])
+        assertEquals(12, values(UnifiedSettings(navigationLevelDb = 12)).values[AaSessionSettings.NAVIGATION_BOOST_KEY])
         assertEquals(9, v[AaSessionSettings.MIC_GAIN_KEY])
         assertEquals(true, v[AaSessionSettings.RESUME_MUSIC_KEY])
         val normal = values().values
-        for (key in listOf("media-volume-offset", "assistant-volume-offset", "navigation-volume-offset", AaSessionSettings.MIC_GAIN_KEY)) {
+        for (key in listOf("media-volume-offset", "assistant-volume-offset", "navigation-volume-offset", AaSessionSettings.MIC_GAIN_KEY,
+            AaSessionSettings.MEDIA_BOOST_KEY, AaSessionSettings.NAVIGATION_BOOST_KEY)) {
             assertEquals("every session writes $key", 0, normal[key])
         }
         assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])
+    }
+
+    /** The switcher's Custom size (#83): Android Auto's own percent, and the same size for both engines. */
+    @Test fun customSizeUsesItsPercentAndMatchesCarPlaysWidth() {
+        val v = values(UnifiedSettings(interfaceSize = InterfaceSize.CUSTOM, customSizePercent = 150)).values
+        assertEquals(150, v[AaSessionSettings.SIZE_PERCENT_KEY])
+        assertEquals(false, v.containsKey("dpi-pixel-density")) // an Advanced DPI still wins
+        // The presets map onto each other exactly; between them it is linear.
+        assertEquals(135, AaSessionSettings.percentForCarPlayWidth(180))
+        assertEquals(150, AaSessionSettings.percentForCarPlayWidth(165))
+        assertEquals(165, AaSessionSettings.carPlayWidthForPercent(150))
+        assertEquals(120, AaSessionSettings.carPlayWidthForPercent(200))
+        assertEquals(245, AaSessionSettings.carPlayWidthForPercent(80)) // beyond Small, along the end segment
+        assertEquals(AaSessionSettings.CUSTOM_PERCENT_RANGE.last, AaSessionSettings.percentForCarPlayWidth(100))
+    }
+
+    @Test fun joyingStreamsUseDiAutosCarVolumeGroups() {
+        val v = AaSessionSettings.values(base, Transport.USB, null, VehicleProfile.GENERIC, "My Car", 320,
+            audioStreams = mapOf("NAVIGATION" to 4, "ASSISTANT" to 7, "PHONE" to 2)).values
+        assertEquals(true, v["car-volume-groups"])
+        assertEquals(4, v["car-navi-stream"])
+        assertEquals(7, v["car-voice-stream"])
+        // Other stereos: DiAuto's own values stay.
+        assertEquals(false, values().values.containsKey("car-volume-groups"))
     }
 
     @Test fun headUnitServerUsesTheEnginesDiscoveryMode() { // #70

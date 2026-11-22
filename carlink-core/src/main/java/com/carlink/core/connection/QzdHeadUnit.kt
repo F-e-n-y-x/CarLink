@@ -135,6 +135,28 @@ internal class QzdHeadUnit(context: Context) {
         /** The driver side from one ICallback update: 1 right, 0 left; null for any other id. */
         fun driverOnRight(id: String?, value: Int?): Boolean? = if (id == ID_DRIVER_ON_RIGHT) value?.let { it != 0 } else null
 
+        /**
+         * The stream type CarService treats as each CarPlay audio channel (DiPlay `AudioChannel` names), empty
+         * without Joying's CarService (joying-qcm6125.md §4, `AudioKit`): 4 is navigation and 7 the voice
+         * assistant; any other stream plays as the "player" and is ducked or muted with music. The unit's own
+         * ZLink settings (`rw.zlink.audiostream.*`, readable by apps) win; calls only from them, because the call
+         * stream differs by chip (2 on QCM6125, where 0 is the ring).
+         */
+        fun audioStreams(context: Context): Map<String, Int> =
+            if (createIfPresent(context) == null) emptyMap() else audioStreams(com.carlink.core.detect.SystemProps::get)
+
+        internal fun audioStreams(read: (String) -> String?): Map<String, Int> {
+            fun prop(name: String) = read("rw.zlink.audiostream.$name")?.trim()?.toIntOrNull()?.takeIf { it in 1..10 }
+            return buildMap {
+                put("NAVIGATION", prop("tts") ?: STREAM_NAVIGATION)
+                put("ASSISTANT", prop("speech") ?: STREAM_ASSISTANT)
+                prop("phonecall")?.let { put("PHONE", it) }
+            }
+        }
+
+        private const val STREAM_NAVIGATION = 4 // STREAM_ALARM
+        private const val STREAM_ASSISTANT = 7 // STREAM_SYSTEM_ENFORCED
+
         /** Null unless Joying's CarService is installed, so other head units never see these calls. */
         fun createIfPresent(context: Context): QzdHeadUnit? = if (present(context)) QzdHeadUnit(context) else null
 

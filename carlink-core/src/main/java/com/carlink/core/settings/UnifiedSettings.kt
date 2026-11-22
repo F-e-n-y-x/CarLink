@@ -44,6 +44,11 @@ data class UnifiedSettings(
     val sameWifiWired: Boolean = false,
     /** Software gain on the microphone sent to the phone ([AudioLevels.MIC_DB]). */
     val micGainDb: Int = 0,
+    /**
+     * Android Auto's size, percent of its Automatic density, under [InterfaceSize.CUSTOM] while the Advanced
+     * DPI stays Automatic (set from the switcher's Custom size). CarPlay's custom size is DiPlay's own width.
+     */
+    val customSizePercent: Int = 100,
     /** The head unit's Back key goes back inside Android Auto (GitHub #72); off, it opens the session menu. */
     val androidAutoBack: Boolean = true,
 )
@@ -97,6 +102,7 @@ class UnifiedSettingsStore(context: Context) {
         duckMusicForDirections = prefs.getBoolean("duck_music_directions", true),
         sameWifiWired = prefs.getBoolean("same_wifi_wired", false),
         micGainDb = prefs.getInt("mic_gain_db", 0),
+        customSizePercent = prefs.getInt("custom_size_percent", 100),
         androidAutoBack = prefs.getBoolean("android_auto_back", true),
     )
 
@@ -132,6 +138,7 @@ class UnifiedSettingsStore(context: Context) {
             .putBoolean("duck_music_directions", settings.duckMusicForDirections)
             .putBoolean("same_wifi_wired", settings.sameWifiWired)
             .putInt("mic_gain_db", settings.micGainDb)
+            .putInt("custom_size_percent", settings.customSizePercent)
             .putBoolean("android_auto_back", settings.androidAutoBack)
             .apply()
     }
