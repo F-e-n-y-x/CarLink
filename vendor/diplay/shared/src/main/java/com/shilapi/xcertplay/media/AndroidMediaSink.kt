@@ -2257,7 +2257,7 @@ private class AudioRenderer(
         AudioChannel.MEDIA -> mediaChannel
         AudioChannel.NAVIGATION -> navigationChannel
         else -> 0
-    }
+    }.takeIf { it != 0 } ?: HostAudio.legacyStreamTypes[channel.name] ?: 0 // CarLink: HostAudio.legacyStreamTypes
 
     fun setNavigationAttenuationDb(db: Int) {
         // The Settings callback must never wait for release(), which may be blocked in

@@ -114,14 +114,14 @@ The hooks CarLink sets (where):
 | DiAuto `HostIntegration` | `homeActivity`, `appName`, `serviceChannelName`, `mediaSessionTag`, `toastHandler`, `openCarScreen` (car tile → Settings) | `CarLinkApplication.brandEngines` |
 | | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession`, `automaticDensityDpi`, `keepWifiDirectGroupOnStop`, `turningHighResStream` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
-| | `microphonePcm` (microphone level), `onPhonePlaying` (resume music) | `connection/aa/AaEngineHooks` |
+| | `microphonePcm` (microphone level), `playbackPcm` (level boosts, soft clip), `onPhonePlaying` (resume music) | `connection/aa/AaEngineHooks` |
 | | `onLearnMediaButton` (wheel Learn during Android Auto, #81) | `settings/WheelMediaLearning` (installed by `AaEngineHooks`) |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
 | | `liveSizeWidthsMm`; `setInterfaceSizeLive` (call: the size as a smaller view area, false = reconnect) | `CarPlayAdapter.install`; `switcher/SwitcherController` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
-| DiPlay `HostAudio` | `playbackPcm` (Sound levels), `microphonePcm`, `callsAsMedia`, `duckMediaForPrompts` (#83) | `CarPlaySettingsPolicy.apply` |
+| DiPlay `HostAudio` | `playbackPcm` (Sound levels), `microphonePcm`, `callsAsMedia`, `duckMediaForPrompts` (#83), `legacyStreamTypes` (Joying streams, `QzdHeadUnit.audioStreams`) | `CarPlaySettingsPolicy.apply` |
 | DiPlay `CarPlayController` / `CarPlayHostIntegration` | `onPhonePlaying` / `pressPlay` (resume music, `connection/ResumeMusic`) | `CarPlayAdapter.install` |
 | DiPlay `WirelessStartupTimeline` | `milestoneListener` (wireless milestones as progress) | `CarPlayAdapter` |
 | DiPlay `CarPlayController` | `openCarScreen` (the iPhone's car tile → Settings) | `CarLinkApplication.brandEngines` |

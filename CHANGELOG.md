@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Joying (QZD) stereos: CarPlay and Android Auto directions and the voice assistant now play on the
+  streams the stereo treats as navigation and voice, so they mix over music instead of being muted
+  with it; CarPlay calls use the stereo's call stream when its settings name one.
 - Fixed: CarPlay directions over USB sounded like a phone call (#83). The iPhone picked 8 kHz audio
   for them; CarLink now asks for a higher rate. If directions go silent on your stereo, turn off
   Settings › Sound & voice › Show advanced › Clear navigation voice over USB.

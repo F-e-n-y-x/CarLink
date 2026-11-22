@@ -177,6 +177,16 @@ class AaSessionSettingsTest {
         assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])
     }
 
+    @Test fun joyingStreamsUseDiAutosCarVolumeGroups() {
+        val v = AaSessionSettings.values(base, Transport.USB, null, VehicleProfile.GENERIC, "My Car", 320,
+            audioStreams = mapOf("NAVIGATION" to 4, "ASSISTANT" to 7, "PHONE" to 2)).values
+        assertEquals(true, v["car-volume-groups"])
+        assertEquals(4, v["car-navi-stream"])
+        assertEquals(7, v["car-voice-stream"])
+        // Other stereos: DiAuto's own values stay.
+        assertEquals(false, values().values.containsKey("car-volume-groups"))
+    }
+
     @Test fun headUnitServerUsesTheEnginesDiscoveryMode() { // #70
         val v = values(path = WirelessPath.HEADUNIT_SERVER).values
         assertEquals(1, v["wifi-connection-mode"])

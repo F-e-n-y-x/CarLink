@@ -73,6 +73,8 @@ data class CarPlayEngineSettings(
     val duckMusicForDirections: Boolean = true,
     /** Same Wi-Fi over this screen's Ethernet: DiPlay attaches to that interface, not to Wi-Fi (#87). */
     val sameWifiWired: Boolean = false,
+    /** Stream types per DiPlay audio channel for a stereo that sorts sources by stream (Joying, [QzdHeadUnit.audioStreams]). */
+    val legacyStreamTypes: Map<String, Int> = emptyMap(),
 )
 
 /** The vehicle-profile part of [CarPlayEngineSettings] (DIPLAY.md §12, F5). */
@@ -139,6 +141,7 @@ object CarPlaySettingsPolicy {
         brandName: String = "CarLink",
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
         appearance: CarLinkAppearance = runCatching { this.appearance() }.getOrDefault(CarLinkAppearance.DARK),
+        audioStreams: Map<String, Int> = emptyMap(),
     ): CarPlayEngineSettings {
         // Picture and size: v1's settings mapping (verified correct, F17); Automatic follows the
         // device's decoder ([PicturePolicy]: DiPlay's own 100 % / 30 fps unless the decoder needs less).
@@ -215,6 +218,7 @@ object CarPlaySettingsPolicy {
             resumeMusic = settings.resumeMusic,
             duckMusicForDirections = settings.duckMusicForDirections,
             sameWifiWired = settings.sameWifiWired,
+            legacyStreamTypes = audioStreams,
         )
     }
 
@@ -266,6 +270,7 @@ object CarPlaySettingsPolicy {
         HostAudio.microphonePcm = AudioLevels.pcmGain(values.micGainDb)
         HostAudio.callsAsMedia = values.callAudioAsMedia
         HostAudio.duckMediaForPrompts = values.duckMusicForDirections
+        HostAudio.legacyStreamTypes = values.legacyStreamTypes
         resumeMusic = values.resumeMusic
         if (BydOutputSettings.carPlayCallControls(context) != values.callKeys) {
             BydOutputSettings.setCarPlayCallControls(context, values.callKeys)

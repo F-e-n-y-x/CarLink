@@ -51,6 +51,7 @@ object AaSessionSettings {
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
         moduleRoute: ExternalBtTransportPolicy.Route? = null,
         bydHeadUnit: Boolean = profile == VehicleProfile.BYD_DILINK,
+        audioStreams: Map<String, Int> = emptyMap(),
     ): AaSessionValues {
         var problem: String? = null
         val values = buildMap<String, Any> {
@@ -116,6 +117,13 @@ object AaSessionSettings {
             put("navigation-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb.coerceAtMost(0)))
             put(MEDIA_BOOST_KEY, settings.mediaLevelDb.coerceAtLeast(0))
             put(NAVIGATION_BOOST_KEY, settings.navigationLevelDb.coerceAtLeast(0))
+            // A stereo that sorts sources by stream type (Joying, QzdHeadUnit.audioStreams): directions and the
+            // Assistant on its navigation and voice streams through DiAuto's car volume groups. Elsewhere untouched.
+            audioStreams["NAVIGATION"]?.let {
+                put("car-volume-groups", true)
+                put("car-navi-stream", it)
+                put("car-voice-stream", audioStreams["ASSISTANT"] ?: -1)
+            }
             put(MIC_GAIN_KEY, settings.micGainDb)
             put(RESUME_MUSIC_KEY, settings.resumeMusic)
             // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md). A wireless
