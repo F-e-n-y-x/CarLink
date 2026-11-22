@@ -8,6 +8,8 @@ is what the in-app update popup shows.
 
 - Fixed: on a phone, Home's dial no longer cuts off the connection step ("Reaching phone",
   "Phone answered") under the CarPlay or Android Auto name while connecting.
+- Fixed: the delete button next to each phone in Home's Phones list is as large as the other car
+  buttons (76 dp on a head unit), so it is easier to hit while parked.
 - The head unit's Back button now goes back inside Android Auto instead of opening the menu to
   leave it (#72). Turn it off in Settings › Car › Back button goes back in Android Auto; the
   two-finger swipe from the left edge still opens the menu. Home stays the system's.
