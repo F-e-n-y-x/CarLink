@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Fixed: wireless CarPlay started again right after a stop could sit on "Linking over Wi-Fi" for
+  10 s and fail once before connecting. When the iPhone joins the car's Wi-Fi but does not open
+  CarPlay within 3 s, CarLink now asks it to start once more.
 - The floating ball no longer reconnects by itself when a size cannot change live (a CarPlay width wider than
   the one the session started with): it saves the size and offers **Reconnect with the new size**.
 - New Lab option for CarPlay calls over USB, "Calls at phone-call rate": calls and their microphone

@@ -77,9 +77,15 @@ class CarPlayAdapter internal constructor(
     private val clientsListener: (Int, Int) -> Unit = { clients, leased ->
         main.post { if (watching) linkWatch.onClients(clients, leased, SystemClock.uptimeMillis()) }
     }
+    /** Read and cleared by DiPlay's iAP2 thread (WirelessStartupTimeline.startSessionAgain). */
+    private val startAgainWanted = java.util.concurrent.atomic.AtomicBoolean(false)
     private val linkPoll = object : Runnable {
         override fun run() {
             if (!watching) return
+            if (linkWatch.startAgain(SystemClock.uptimeMillis())) {
+                com.carlink.core.diagnostics.EventLog.add("CarLink", "the iPhone joined the car's Wi-Fi but opened no CarPlay connection; asking it to start once more")
+                startAgainWanted.set(true)
+            }
             linkWatch.verdict(SystemClock.uptimeMillis())?.let(::onLinkVerdict)
             if (watching) main.postDelayed(this, CarPlayLinkWatch.POLL_MILLIS)
         }
@@ -115,6 +121,8 @@ class CarPlayAdapter internal constructor(
             linkWatch.reset()
             watching = true
             hooks.watchClients(clientsListener)
+            startAgainWanted.set(false)
+            hooks.setStartSessionAgain { startAgainWanted.getAndSet(false) }
             main.postDelayed(linkPoll, CarPlayLinkWatch.POLL_MILLIS)
         }
         deliver(listOf(tracker.started()))
@@ -186,7 +194,7 @@ class CarPlayAdapter internal constructor(
         Log.i(TAG, "host state $state")
         when (state) {
             is HostState.Retrying -> linkWatch.reset() // DiPlay brings the link up again
-            HostState.FirstFrame -> linkWatch.onConnected()
+            HostState.FirstFrame -> { linkWatch.onConnected(); hooks.setStartSessionAgain(null) }
             else -> Unit
         }
         deliver(tracker.onHostState(state))
@@ -229,6 +237,7 @@ class CarPlayAdapter internal constructor(
             watching = false
             main.removeCallbacks(linkPoll)
             hooks.watchClients(null)
+            hooks.setStartSessionAgain(null)
         }
         hooks.holdWifi(false)
         hooks.removeStatusListener(statusListener)
@@ -308,6 +317,9 @@ interface CarPlayEngineHooks {
     /** DiPlay's wireless `WIRELESS_TIMING` milestones (any thread); null stops them. */
     fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {}
 
+    /** DiPlay's iAP2 thread asks it whether to send StartSession once more; null: never. */
+    fun setStartSessionAgain(hook: (() -> Boolean)?) {}
+
     /** The Wi-Fi Direct group's (clients, clients with a DHCP lease) on every change (any thread); null stops. */
     fun watchClients(listener: ((Int, Int) -> Unit)?) {}
 
@@ -359,6 +371,10 @@ internal class DiPlayEngineHooks(private val app: Context) : CarPlayEngineHooks 
 
     override fun setMilestoneListener(listener: ((WirelessStartupTimeline.Phase) -> Unit)?) {
         WirelessStartupTimeline.milestoneListener = listener
+    }
+
+    override fun setStartSessionAgain(hook: (() -> Boolean)?) {
+        WirelessStartupTimeline.startSessionAgain = hook
     }
 
     private var clientsReceiver: BroadcastReceiver? = null

@@ -97,6 +97,14 @@ class WirelessStartupTimeline(
         var beforeBluetoothDial: ((address: String) -> Unit)? = null
 
         /**
+         * CarLink: asked by the wireless iAP2 control loop (every 0.5 s while set) after its first
+         * StartSession; true sends one more, like [WiredStartAgain] on USB. Null: never.
+         */
+        @Volatile
+        @JvmStatic
+        var startSessionAgain: (() -> Boolean)? = null
+
+        /**
          * CarLink: six hex digits of SHA-256 of [address] (a BSSID), so logs show whether it changed
          * between sessions without the address itself; `unknown` when Android hides it.
          */

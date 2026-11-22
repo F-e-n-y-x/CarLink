@@ -34,11 +34,13 @@ class CarPlayLinkWatch {
     private var hadClient = false
     private var goneSince: Long? = null
     private var reported = false
+    private var startedAgain = false
 
     /** A new bring-up (DiPlay restarts inside the session, or a new attempt): forget everything. */
     fun reset() {
         wifiConfigAt = null; startAt = null; associatedAt = null; leasedAt = null
         tcp = false; connected = false; hadClient = false; goneSince = null; reported = false
+        startedAgain = false
     }
 
     fun onMilestone(phase: Phase, now: Long) {
@@ -65,6 +67,22 @@ class CarPlayLinkWatch {
             goneSince = null
         } else if (hadClient && goneSince == null) goneSince = now
         if (leased > 0 && leasedAt == null) leasedAt = now
+    }
+
+    /**
+     * Whether to send StartSession once more at [now] (once per bring-up): it went out before the
+     * iPhone was on the Wi-Fi, and the iPhone has been on it (leased) [START_AGAIN_MILLIS] without
+     * opening AirPlay. Tablet 2026-11-22 #s3/#s4: a restart right after a stop sent StartSession
+     * 1.8 s before the iPhone rejoined; it joined, leased and never connected, while every start
+     * whose iPhone was already on the network, and every cold start, connected.
+     */
+    fun startAgain(now: Long): Boolean {
+        val start = startAt ?: return false
+        val joined = associatedAt ?: return false
+        if (startedAgain || tcp || connected || joined < start) return false
+        if (now - (leasedAt ?: joined) < START_AGAIN_MILLIS) return false
+        startedAgain = true
+        return true
     }
 
     /** What is wrong at [now], at most once per bring-up; null while all is well or undecided. */
@@ -95,6 +113,8 @@ class CarPlayLinkWatch {
     }
 
     companion object {
+        /** TCP came ≤ 2.8 s after the lease on every good start on a known network. */
+        const val START_AGAIN_MILLIS = 3_000L
         /** StartSession comes ≤ 0.25 s after the Wi-Fi details on every good start; counted from the join. */
         const val NO_START_MILLIS = 4_000L
         /** Association took ≤ 5.1 s after the Wi-Fi details (a never-seen network: 3.3 s). */

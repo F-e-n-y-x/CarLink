@@ -3,6 +3,8 @@ package com.carlink.core.connection
 import com.carlink.core.connection.CarPlayLinkWatch.Verdict
 import com.shilapi.xcertplay.orchestration.WirelessStartupTimeline.Phase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -67,5 +69,24 @@ class CarPlayLinkWatchTest {
         assertNull(w.verdict(10_000))
         w.onMilestone(Phase.WIFI_CONFIG, 10_000)
         assertEquals(Verdict.NOT_JOINED, w.verdict(19_000))
+    }
+
+    @Test fun aStartSentBeforeTheJoinIsSentAgainThreeSecondsAfterTheLease() { // 2026-11-22 23:29:53 (#s3)
+        w.onMilestone(Phase.WIFI_CONFIG, 905); w.onMilestone(Phase.START_SESSION, 939)
+        w.onMilestone(Phase.PEER_ASSOCIATED, 2_741); w.onClients(1, 1, 2_800)
+        assertFalse(w.startAgain(5_700))
+        assertTrue(w.startAgain(5_800))
+        assertFalse(w.startAgain(6_300)) // once per bring-up
+        w.reset()
+        w.onMilestone(Phase.START_SESSION, 100); w.onClients(1, 0, 900) // no lease reported (below Android 15)
+        assertTrue(w.startAgain(3_900))
+    }
+
+    @Test fun aStartAfterTheJoinOrAConnectedOneIsNotSentAgain() {
+        w.onMilestone(Phase.PEER_ASSOCIATED, 350); w.onMilestone(Phase.START_SESSION, 1_539) // 23:30:05, joined first
+        for (t in 2_000L..20_000L step 500) assertFalse(w.startAgain(t))
+        w.reset()
+        w.onMilestone(Phase.START_SESSION, 2_275); w.onClients(1, 1, 2_834); w.onMilestone(Phase.TCP_ACCEPTED, 3_269)
+        for (t in 3_500L..20_000L step 500) assertFalse(w.startAgain(t))
     }
 }
