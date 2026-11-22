@@ -232,6 +232,17 @@ object CarPlayHostIntegration {
     /** CarLink: whether the running session's iPhone reports music playing; null without a session. */
     fun phonePlaying(): Boolean? = CarPlayBackgroundSession.snapshot()?.controller?.nowPlayingSnapshot()?.playing
 
+    /**
+     * CarLink: the stereo's own day/night (its headlight signal), used in place of Android's day/night
+     * under the "system" night mode; null where the stereo gives none. Any thread; a change reaches
+     * an open host at once.
+     */
+    @Volatile
+    var stereoNight: Boolean? = null
+        set(value) { field = value; stereoNightChanged?.invoke() }
+    @Volatile
+    internal var stereoNightChanged: (() -> Unit)? = null
+
     /** CarLink: an explicit play press (not the toggle) on the running session; false without one. */
     fun pressPlay(): Boolean = CarPlayBackgroundSession.snapshot()?.controller
         ?.sendMediaButton(com.shilapi.xcertplay.airplay.CarPlayMediaButton.PLAY) == true

@@ -52,6 +52,54 @@ internal class QzdHeadUnit(context: Context) {
         binder = null
     }
 
+    /**
+     * Reads the stereo's driver side once: IRemote.register(["canbus.driverOnRight"], callback, pushNow)
+     * replays it to `com.car.ipc.ICallback.update(Bundle{id, value})` (CS/module/canbus/ModuleCanbus).
+     * [onResult] runs on the main thread, at most once; the binding ends after [READ_WINDOW_MILLIS].
+     */
+    fun readDriverSide(onResult: (right: Boolean) -> Unit) {
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        var done = false
+        val callback = object : android.os.Binder() {
+            override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+                if (code != 1) return super.onTransact(code, data, reply, flags)
+                data.enforceInterface(CALLBACK_DESCRIPTOR)
+                val bundle = if (data.readInt() != 0) Bundle.CREATOR.createFromParcel(data) else null
+                driverOnRight(bundle?.getString("id"), bundle?.takeIf { it.containsKey("value") }?.getInt("value"))
+                    ?.let { right -> main.post { if (!done) { done = true; onResult(right) } } }
+                return true
+            }
+        }
+        var service: IBinder? = null
+        val c = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                service = binder
+                remoteCall(binder, TXN_REGISTER) { writeStringArray(arrayOf(ID_DRIVER_ON_RIGHT)); writeStrongBinder(callback); writeInt(1) }
+            }
+            override fun onServiceDisconnected(name: ComponentName) { service = null }
+        }
+        val bound = runCatching { app.bindService(Intent(ACTION).setPackage(PACKAGE), c, Context.BIND_AUTO_CREATE) }.getOrDefault(false)
+        main.postDelayed({
+            done = true
+            service?.let { remoteCall(it, TXN_UNREGISTER) { writeStringArray(arrayOf(ID_DRIVER_ON_RIGHT)); writeStrongBinder(callback) } }
+            runCatching { app.unbindService(c) }
+        }, if (bound) READ_WINDOW_MILLIS else 0L)
+    }
+
+    /** A oneway IRemote call (register 3, unregister 4) in CarService's own proxy layout. */
+    private inline fun remoteCall(service: IBinder, txn: Int, write: Parcel.() -> Unit) {
+        val data = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(DESCRIPTOR)
+            data.write()
+            service.transact(txn, data, null, IBinder.FLAG_ONEWAY)
+        } catch (e: Exception) {
+            Log.w(TAG, "IRemote call $txn failed", e)
+        } finally {
+            data.recycle()
+        }
+    }
+
     /** IRemote.cmd(String, Bundle), transaction 1, oneway — the layout of CarService's own proxy. */
     private fun requestSource(service: IBinder, appId: Int) {
         val data = Parcel.obtain()
@@ -78,11 +126,19 @@ internal class QzdHeadUnit(context: Context) {
         private const val CMD_APP_ID = "main.appId"
         private const val APP_ID_THIRD_PARTY_PLAYER = 10
         private const val APP_ID_PREVIOUS = -1
+        private const val CALLBACK_DESCRIPTOR = "com.car.ipc.ICallback"
+        private const val TXN_REGISTER = 3
+        private const val TXN_UNREGISTER = 4
+        private const val ID_DRIVER_ON_RIGHT = "canbus.driverOnRight"
+        private const val READ_WINDOW_MILLIS = 5_000L
+
+        /** The driver side from one ICallback update: 1 right, 0 left; null for any other id. */
+        fun driverOnRight(id: String?, value: Int?): Boolean? = if (id == ID_DRIVER_ON_RIGHT) value?.let { it != 0 } else null
 
         /** Null unless Joying's CarService is installed, so other head units never see these calls. */
-        fun createIfPresent(context: Context): QzdHeadUnit? = runCatching {
-            context.packageManager.getPackageInfo(PACKAGE, 0)
-            QzdHeadUnit(context)
-        }.getOrNull()
+        fun createIfPresent(context: Context): QzdHeadUnit? = if (present(context)) QzdHeadUnit(context) else null
+
+        /** Joying's CarService is installed. */
+        fun present(context: Context): Boolean = runCatching { context.packageManager.getPackageInfo(PACKAGE, 0) }.isSuccess
     }
 }

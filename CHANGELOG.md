@@ -6,6 +6,11 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- FYT and Joying stereos: with Day and night on Automatic, CarPlay and Android Auto turn dark when
+  the car's lights come on, following the stereo's own light signal.
+- FYT and Joying stereos: when the car is switched on, CarLink connects the last phone as soon as
+  Bluetooth is back, even if the previous drive ended only minutes ago (the stop rules still apply).
+- FYT and Joying stereos: Driving side starts from the side the stereo reports, until you choose one.
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
   Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
   thanks @dorsi90).

@@ -39,6 +39,7 @@ object AaSessionSettings {
      * @param wifi the car's Wi-Fi right now; Same Wi-Fi needs its client interface and the router's BSSID.
      * @param moduleRoute the stereo's Bluetooth module route the driver opted into (DeviceEnvironment.moduleRoute).
      * @param bydHeadUnit this screen is a BYD DiLink head unit ([VehicleProfile.detect]), not just set to the BYD brand.
+     * @param stereoLights an FYT/Joying stereo reports its headlights ([com.carlink.core.connection.HeadUnitSignals]).
      */
     fun values(
         settings: UnifiedSettings,
@@ -51,6 +52,7 @@ object AaSessionSettings {
         picture: PictureChoice = PicturePolicy.ENGINE_DEFAULTS,
         moduleRoute: ExternalBtTransportPolicy.Route? = null,
         bydHeadUnit: Boolean = profile == VehicleProfile.BYD_DILINK,
+        stereoLights: Boolean = false,
     ): AaSessionValues {
         var problem: String? = null
         val values = buildMap<String, Any> {
@@ -93,7 +95,8 @@ object AaSessionSettings {
             // turned screen reports ORIENTATION_CHANGED and SessionManager reconnects (issue #31).
             put("screen-orientation", 0)
             put("night-mode", when (settings.dayNight) {
-                DayNight.AUTOMATIC -> 0 // sunrise/sunset
+                // The stereo's headlight signal (DiAuto's CAR_SIGNAL reads Settings.System car_mode), else sunrise/sunset.
+                DayNight.AUTOMATIC -> if (stereoLights) 6 else 0
                 DayNight.DAY -> 1
                 DayNight.NIGHT -> 2
                 DayNight.SCHEDULE -> 3
