@@ -287,7 +287,7 @@ object AaSessionSettings {
 
     /** The sizes that show larger than the one before them when Android Auto allows at most [maxPercent]. */
     /** The switcher's Custom size range for Android Auto, percent of the Automatic density. */
-    val CUSTOM_PERCENT_RANGE = 80..200
+    val CUSTOM_PERCENT_RANGE = 50..300
 
     /**
      * The Android Auto percent that looks like CarPlay at [widthMm] (and back), interpolated between the

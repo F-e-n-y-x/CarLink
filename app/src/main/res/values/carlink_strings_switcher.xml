@@ -17,15 +17,12 @@
     <string name="carlink_switcher_size_upright">Held upright, Android Auto stops at %1$s</string>
     <!-- Custom interface size (#83): a stepper between the presets. -->
     <string name="carlink_switcher_custom_size">Custom size</string>
-    <string name="carlink_switcher_custom_size_carplay">The screen width CarPlay is told. A smaller width draws CarPlay larger.</string>
-    <string name="carlink_switcher_custom_size_aa">Android Auto\'s size against its automatic one. A higher value draws it larger.</string>
+    <string name="carlink_switcher_custom_size_carplay">100% is Small. A higher value draws CarPlay larger.</string>
+    <string name="carlink_switcher_custom_size_aa">100% is Small. A higher value draws Android Auto larger.</string>
     <string name="carlink_switcher_custom_size_apply">Use this size</string>
-    <string name="carlink_switcher_size_lower">Lower</string>
-    <string name="carlink_switcher_size_higher">Higher</string>
     <!-- %1$d: CarPlay screen width in millimetres. -->
-    <string name="carlink_switcher_size_mm">%1$d mm</string>
     <!-- %1$d: Android Auto size in percent of its automatic size. -->
-    <string name="carlink_switcher_size_percent">%1$d %%</string>
+    <string name="carlink_switcher_size_percent">%1$d%%</string>
     <string name="carlink_switcher_next_connection">The current session keeps its connection.</string>
     <string name="carlink_switcher_close">Close</string>
     <string name="carlink_switcher_back">Back</string>

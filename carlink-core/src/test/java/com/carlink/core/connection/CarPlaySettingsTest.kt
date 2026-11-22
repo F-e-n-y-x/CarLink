@@ -100,11 +100,21 @@ class CarPlaySettingsTest {
         assertFalse(CarPlaySettingsPolicy.resumeMusic)
     }
 
-    /** The live size areas: every preset plus the saved width, so a custom size chosen once comes back live. */
+    /** The live size areas: every preset, the saved width and its neighbours 5 and 10 % either way. */
     @Test fun liveSizeAreasIncludeTheSavedWidth() {
         AirPlayPersistence.saveWidthPhysicalMm(app, 165)
         CarPlaySettingsPolicy.apply(app, map(UnifiedSettings(interfaceSize = InterfaceSize.CUSTOM)))
-        assertEquals(listOf(220, 180, 150, 120, 165), CarPlayHostIntegration.liveSizeWidthsMm)
+        assertEquals(listOf(220, 180, 150, 120, 165, 179, 172, 159, 154), CarPlayHostIntegration.liveSizeWidthsMm)
+    }
+
+    @Test fun customSizePercentRoundTrips() {
+        assertEquals(100, CarPlaySettingsPolicy.percentForWidth(220))
+        assertEquals(220, CarPlaySettingsPolicy.widthForPercent(100))
+        assertEquals(55..220, CarPlaySettingsPolicy.CUSTOM_PERCENT_RANGE)
+        assertEquals(400, CarPlaySettingsPolicy.widthForPercent(40))
+        for (p in CarPlaySettingsPolicy.CUSTOM_PERCENT_RANGE) {
+            assertEquals(p, CarPlaySettingsPolicy.percentForWidth(CarPlaySettingsPolicy.widthForPercent(p)))
+        }
     }
 
     /** Joying: CarPlay's channels on the streams CarService sorts sources by; other stereos keep DiPlay's routing. */

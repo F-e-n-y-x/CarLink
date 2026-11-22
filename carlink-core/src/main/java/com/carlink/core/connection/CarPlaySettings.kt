@@ -124,7 +124,34 @@ object CarPlaySettingsPolicy {
 
     /** The screen width told to the iPhone for [size]; null leaves DiPlay's own (Custom). */
     /** The switcher's Custom size range for CarPlay (DiPlay accepts 100-400 mm in 5 mm steps). */
-    val CUSTOM_WIDTH_RANGE_MM = 100..250
+    /** DiPlay's whole range (AirPlayDisplaySettings sanitizes the saved width to it). */
+    val CUSTOM_WIDTH_RANGE_MM = com.shilapi.xcertplay.airplay.AirPlayDisplaySettings.MIN_WIDTH_PHYSICAL_MM..
+        com.shilapi.xcertplay.airplay.AirPlayDisplaySettings.MAX_WIDTH_PHYSICAL_MM
+
+    /**
+     * The widths each session declares as areas, so the switcher changes size live: the presets, the saved
+     * width and its neighbours 5 and 10 % either way (the switcher's steps), so stepping around a custom size stays
+     * live. Kept short: every width is one more view area in the iPhone's display description.
+     */
+    fun liveWidthsMm(savedMm: Int): List<Int> {
+        val percent = percentForWidth(savedMm)
+        return (InterfaceSize.entries.mapNotNull(::widthMm) + savedMm +
+            listOf(-10, -5, 5, 10).map { widthForPercent(percent + it) }).distinct()
+    }
+
+    /**
+     * The switcher's Custom size for CarPlay as a percent, the unit Android Auto's uses: 100 % is Small
+     * (220 mm), and CarPlay draws larger in proportion as the width it is told shrinks.
+     */
+    fun percentForWidth(widthMm: Int): Int = Math.round(SIZE_PERCENT_BASE_MM * 100f / widthMm)
+
+    fun widthForPercent(percent: Int): Int =
+        Math.round(SIZE_PERCENT_BASE_MM * 100f / percent.coerceAtLeast(1)).coerceIn(CUSTOM_WIDTH_RANGE_MM)
+
+    private const val SIZE_PERCENT_BASE_MM = 220
+
+    /** DiPlay's whole width range (400 to 100 mm) as percents: about 55 to 220 %. */
+    val CUSTOM_PERCENT_RANGE: IntRange get() = percentForWidth(CUSTOM_WIDTH_RANGE_MM.last)..percentForWidth(CUSTOM_WIDTH_RANGE_MM.first)
 
     fun widthMm(size: InterfaceSize): Int? = when (size) {
         // Shifted up two steps on 2026-11-18 (the driver's call on the tablet): 350 and 300 mm drew
@@ -267,10 +294,7 @@ object CarPlaySettingsPolicy {
             diPlayPrefs.edit().putBoolean(CLEAR_PROMPTS_DEFAULTED, true).apply()
         }
 
-        // Each session declares the larger sizes as smaller areas, so the switcher changes size live; the saved
-        // width is among them, so a custom size chosen once can come back live.
-        CarPlayHostIntegration.liveSizeWidthsMm = (InterfaceSize.entries.mapNotNull(::widthMm) +
-            AirPlayPersistence.loadWidthPhysicalMm(context)).distinct()
+        CarPlayHostIntegration.liveSizeWidthsMm = liveWidthsMm(AirPlayPersistence.loadWidthPhysicalMm(context))
         CarPlayHostIntegration.keyRemap = values.wheelKeyRemap
         // Read by each new audio stream and microphone; null hooks leave DiPlay's audio untouched.
         HostAudio.playbackPcm = AudioLevels.carPlayPlayback(values.mediaLevelDb, values.navigationLevelDb, values.callLevelDb)

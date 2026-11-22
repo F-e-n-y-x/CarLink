@@ -336,7 +336,7 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
             verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.carlink_switcher_custom_size), style = MaterialTheme.typography.titleSmall,
                 color = if (custom) scheme.primary else scheme.onSurface, modifier = Modifier.weight(1f), maxLines = 1)
-            if (custom) Text(customSizeLabel(ui.engine, ui.customSize), style = MaterialTheme.typography.titleSmall,
+            if (custom) Text(customSizeLabel(ui.customSize), style = MaterialTheme.typography.titleSmall,
                 color = scheme.primary, maxLines = 1)
             Spacer(Modifier.width(8.dp))
             Icon(painterResource(R.drawable.carlink_ic_chevron_right), null, Modifier.size(dimens.iconTertiary + 4.dp),
@@ -504,8 +504,8 @@ private fun ConnectionTypePage(ui: SwitcherUi, actions: SwitcherActions) {
 }
 
 @Composable
-private fun customSizeLabel(engine: Engine, value: Int): String =
-    stringResource(if (engine == Engine.CARPLAY) R.string.carlink_switcher_size_mm else R.string.carlink_switcher_size_percent, value)
+/** Both engines' Custom size is a percent (100 % = Small). */
+private fun customSizeLabel(value: Int): String = stringResource(R.string.carlink_switcher_size_percent, value)
 
 /** A stepper for a size between the presets, in CarPlay's millimetres or Android Auto's percent. */
 @Composable
@@ -513,11 +513,11 @@ private fun CustomSizePage(ui: SwitcherUi, actions: SwitcherActions) {
     val dimens = CarLinkTokens.dimens
     val scheme = MaterialTheme.colorScheme
     val carPlay = ui.engine == Engine.CARPLAY
-    val range = if (carPlay) com.carlink.core.connection.CarPlaySettingsPolicy.CUSTOM_WIDTH_RANGE_MM
+    val range = if (carPlay) com.carlink.core.connection.CarPlaySettingsPolicy.CUSTOM_PERCENT_RANGE
         else com.carlink.core.connection.aa.AaSessionSettings.CUSTOM_PERCENT_RANGE
     var value by remember { mutableIntStateOf(ui.customSize.coerceIn(range)) }
     // The buttons move the number shown; the hint says which way is larger for this engine.
-    fun step(up: Boolean) { value = (value + if (up) SIZE_STEP else -SIZE_STEP).coerceIn(range) }
+    fun step(by: Int) { value = (value + by).coerceIn(range) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         RoundGlassButton(R.drawable.carlink_ic_arrow_back, stringResource(R.string.carlink_switcher_back),
             { actions.showPage(SwitcherPage.MAIN) })
@@ -529,11 +529,13 @@ private fun CustomSizePage(ui: SwitcherUi, actions: SwitcherActions) {
     Text(stringResource(if (carPlay) R.string.carlink_switcher_custom_size_carplay else R.string.carlink_switcher_custom_size_aa),
         style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
     Spacer(Modifier.height(dimens.gutter))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        RoundGlassButton(R.drawable.carlink_ic_remove, stringResource(R.string.carlink_switcher_size_lower)) { step(false) }
-        Text(customSizeLabel(ui.engine, value), style = MaterialTheme.typography.headlineSmall, color = scheme.primary,
-            textAlign = TextAlign.Center, maxLines = 1, modifier = Modifier.weight(1f))
-        RoundGlassButton(R.drawable.carlink_ic_add, stringResource(R.string.carlink_switcher_size_higher)) { step(true) }
+    Text(customSizeLabel(value), style = MaterialTheme.typography.headlineMedium, color = scheme.primary,
+        textAlign = TextAlign.Center, maxLines = 1, modifier = Modifier.fillMaxWidth())
+    Spacer(Modifier.height(dimens.targetGap))
+    Row(horizontalArrangement = Arrangement.spacedBy(dimens.targetGap)) {
+        SIZE_STEPS.forEach { by ->
+            GlassButton(if (by > 0) "+$by" else "\u2212${-by}", { step(by) }, Modifier.weight(1f))
+        }
     }
     Spacer(Modifier.height(dimens.gutter))
     GlassButton(stringResource(R.string.carlink_switcher_custom_size_apply), { actions.setCustomSize(value) }, Modifier.fillMaxWidth())
@@ -542,7 +544,8 @@ private fun CustomSizePage(ui: SwitcherUi, actions: SwitcherActions) {
         color = scheme.onSurfaceVariant)
 }
 
-private const val SIZE_STEP = 5
+/** The stepper's buttons, in the engine's unit (mm or percent). */
+private val SIZE_STEPS = listOf(-10, -5, 5, 10)
 
 private fun methodDetail(method: ConnectionMethod): Int = when (method) {
     ConnectionMethod.AUTOMATIC -> R.string.carlink_settings_method_auto_detail
