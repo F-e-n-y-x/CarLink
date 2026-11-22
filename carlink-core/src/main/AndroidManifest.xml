@@ -71,6 +71,20 @@
                 android:resource="@xml/carlink_usb_device_filter" />
         </activity>
 
+        <!-- The stereo's voice key (Joying sends VOICE_COMMAND): the phone's assistant during a session. -->
+        <activity
+            android:name="com.carlink.core.entry.VoiceCommandActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity="${applicationId}.voice"
+            android:theme="@style/Theme.CarLink.Invisible">
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name="com.carlink.core.entry.SystemEventReceiver"
             android:exported="true">

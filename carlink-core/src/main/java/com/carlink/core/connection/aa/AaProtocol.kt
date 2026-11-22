@@ -35,6 +35,8 @@ internal object AaProtocol {
     const val COMMAND_SET_SIZE = "set_size"
     const val EXTRA_SIZE_PERCENT = "size_percent"
     const val COMMAND_REPORT = "report"
+    /** The stereo's voice key: open (or close) the phone's Google Assistant, as a wheel voice button does. */
+    const val COMMAND_VOICE = "voice"
     /** Wake the chosen phone again on an armed, idle engine (DiAuto's manual poke is a single 20 s hold). */
     const val COMMAND_POKE = "poke"
     /**

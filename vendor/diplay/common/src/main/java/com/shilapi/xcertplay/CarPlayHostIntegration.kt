@@ -243,6 +243,9 @@ object CarPlayHostIntegration {
     @Volatile
     internal var stereoNightChanged: (() -> Unit)? = null
 
+    /** CarLink: opens Siri on the running session's iPhone (the stereo's voice key); false without one. */
+    fun requestSiri(): Boolean = CarPlayBackgroundSession.snapshot()?.controller?.requestSiri() == true
+
     /** CarLink: an explicit play press (not the toggle) on the running session; false without one. */
     fun pressPlay(): Boolean = CarPlayBackgroundSession.snapshot()?.controller
         ?.sendMediaButton(com.shilapi.xcertplay.airplay.CarPlayMediaButton.PLAY) == true

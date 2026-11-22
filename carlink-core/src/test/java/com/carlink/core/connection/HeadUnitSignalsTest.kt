@@ -1,6 +1,8 @@
 package com.carlink.core.connection
 
 import android.app.Application
+import com.carlink.core.connection.aa.AaProtocol
+import com.carlink.core.core.Engine
 import com.carlink.core.settings.UnifiedSettingsStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -53,5 +56,13 @@ class HeadUnitSignalsTest {
         store.saveStereoDriveSide(true)
         store.save(store.load().copy(rightHandDrive = false)) // the driver picks left
         assertFalse(store.load().rightHandDrive)
+    }
+
+    @Test fun androidAutoVoiceKeyGoesToTheEngineProcess() {
+        assertTrue(StereoVoiceKey.press(app, Engine.ANDROID_AUTO))
+        val sent = shadowOf(app).broadcastIntents.last()
+        assertEquals(AaProtocol.ACTION_COMMAND, sent.action)
+        assertEquals(AaProtocol.COMMAND_VOICE, sent.getStringExtra(AaProtocol.EXTRA_COMMAND))
+        assertFalse("no CarPlay session: no Siri", StereoVoiceKey.press(app, Engine.CARPLAY))
     }
 }
