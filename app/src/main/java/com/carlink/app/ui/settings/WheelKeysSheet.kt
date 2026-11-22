@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -39,12 +40,14 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.carlink.app.R
 import com.carlink.app.ui.premium.GlassButton
 import com.carlink.app.ui.premium.GlassCard
 import com.carlink.app.ui.theme.CarLinkTokens
 import com.carlink.core.settings.WheelAction
 import com.carlink.core.settings.WheelKeys
+import com.carlink.core.settings.WheelMediaLearning
 import kotlinx.coroutines.delay
 
 /** How long Learn waits for a button. */
@@ -52,8 +55,7 @@ internal const val WHEEL_LEARN_SECONDS = 15
 
 /**
  * Settings › Car › Steering-wheel buttons: one row per [WheelAction] with its learned key and a
- * Learn button, and Reset. Learn waits for the next key event that reaches this window (the
- * stereo's wheel keys arrive as key events, or as media keys, to the app in front).
+ * Learn button, and Reset. Learn accepts keys delivered to the window or to a media session.
  */
 @Composable
 internal fun WheelKeysSheet(
@@ -111,7 +113,19 @@ internal fun LearnPanel(action: WheelAction, onKey: (Int) -> Unit, onTimeout: ()
     val focus = remember { FocusRequester() }
     var remaining by remember(action) { mutableIntStateOf(WHEEL_LEARN_SECONDS) }
     var pressed by remember(action) { mutableIntStateOf(KeyEvent.KEYCODE_UNKNOWN) }
+    var learned by remember(action) { mutableStateOf(false) }
+    val context = LocalContext.current
+    val acceptKey by rememberUpdatedState<(Int) -> Unit> { code ->
+        if (!learned) {
+            learned = true
+            onKey(code)
+        }
+    }
     val timeout by rememberUpdatedState(onTimeout)
+    LifecycleResumeEffect(action) {
+        val listener = WheelMediaLearning.listen(context, remaining * 1000L) { acceptKey(it) }
+        onPauseOrDispose { listener.close() }
+    }
     LaunchedEffect(action) {
         runCatching { focus.requestFocus() }
         while (remaining > 0) { delay(1_000); remaining-- }
@@ -126,7 +140,11 @@ internal fun LearnPanel(action: WheelAction, onKey: (Int) -> Unit, onTimeout: ()
                 code == KeyEvent.KEYCODE_BACK -> { if (!down) onCancel(); true }
                 !WheelKeys.canLearn(code) -> false
                 down -> { if (native.repeatCount == 0) pressed = code; true }
-                native.action == KeyEvent.ACTION_UP && code == pressed -> { onKey(code); true }
+                native.action == KeyEvent.ACTION_UP && code == pressed -> {
+                    pressed = KeyEvent.KEYCODE_UNKNOWN
+                    if (!native.isCanceled) acceptKey(code)
+                    true
+                }
                 else -> true
             }
         },

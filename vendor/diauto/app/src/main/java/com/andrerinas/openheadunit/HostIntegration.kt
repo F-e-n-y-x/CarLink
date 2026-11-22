@@ -29,6 +29,9 @@ object HostIntegration {
     @JvmStatic
     var mediaSessionTag: String = "HeadunitRevived"
 
+    /** CarLink's short-lived wheel learning window. True consumes the media event. */
+    @Volatile var onLearnMediaButton: ((android.view.KeyEvent) -> Boolean)? = null // CarLink
+
     /**
      * Sees every engine toast first; returns true when the host handled it (showed its own status
      * or chose to drop it). [forced] marks toasts the engine shows even with toasts turned off.

@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
+  Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
+  thanks @dorsi90).
 - Updated the Android Auto engine (DiAuto, upstream a5340bb39). Fixed: wireless Android Auto stopped
   answering the phone after the car's Bluetooth dropped its listeners (for example after a phone was
   unpaired) until the app was restarted.

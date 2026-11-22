@@ -115,6 +115,7 @@ The hooks CarLink sets (where):
 | | `stickyService`, `restartOnTaskRemoved`, `claimHiddenBottomStrip`, `hostOwnsUsbSwitch`, `onEngineEvent`, `usbOnlySession`, `automaticDensityDpi`, `keepWifiDirectGroupOnStop`, `turningHighResStream` | `connection/aa/AaEngineHooks` (and `AaCommandHandler` per session) |
 | | `chromeStyler`, `exitMenuHomeLabel` | `engine/EngineChrome` |
 | | `microphonePcm` (microphone level), `onPhonePlaying` (resume music) | `connection/aa/AaEngineHooks` |
+| | `onLearnMediaButton` (wheel Learn during Android Auto, #81) | `settings/WheelMediaLearning` (installed by `AaEngineHooks`) |
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |

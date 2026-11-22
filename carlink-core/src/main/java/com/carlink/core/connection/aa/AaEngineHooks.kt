@@ -39,6 +39,7 @@ object AaEngineHooks {
         if (installed) return
         installed = true
         val app = context.applicationContext
+        com.carlink.core.settings.WheelMediaLearning.installAndroidAuto(app)
         HostIntegration.stickyService = false
         HostIntegration.restartOnTaskRemoved = false
         HostIntegration.claimHiddenBottomStrip = false
