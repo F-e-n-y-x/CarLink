@@ -16,6 +16,8 @@ is what the in-app update popup shows.
 - Fixed: the Android Auto picture after returning from another app recovers on a real keyframe
   (upstream's version of the earlier fix), and the system bar margin is kept on the first
   connection after the app starts.
+- Fixed: BYD head-up display, cluster guidance and turn card no longer go blank during a merge
+  without a side (upstream DiAuto PR #88).
 
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
