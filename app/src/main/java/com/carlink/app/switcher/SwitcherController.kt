@@ -158,8 +158,20 @@ object SwitcherController {
         }
     }
 
+    /** A size was saved that the running session could not take live; it waits for the driver's reconnect. */
+    private var sizePending = false
+
+    /** After a size change: live → close the panel; not live → keep it open on "Reconnect with the new size". */
+    private fun applied(live: Boolean) {
+        if (live) return closePanel()
+        sizePending = true
+        panelUi = panelUi?.copy(sizePending = true, page = SwitcherPage.MAIN)
+    }
+
     private fun trackConnectedTime(state: SessionState) {
         val active = state as? SessionState.Active
+        // Any reconnect starts with the saved size, so nothing is waiting any more.
+        if (active?.phase != SessionState.Phase.Connected) sizePending = false
         when {
             active == null -> { connectedRequest = null; connectedSince = null }
             active.phase == SessionState.Phase.Connected && connectedRequest != active.request -> {
@@ -286,6 +298,7 @@ object SwitcherController {
             method = UnifiedSettingsStore(app).load().connectionMethod,
             interfaceSize = UnifiedSettingsStore(app).load().interfaceSize,
             sizesThatGrow = sizesThatGrow(active.request.engine),
+            sizePending = sizePending,
             customSize = if (active.request.engine == com.carlink.core.core.Engine.CARPLAY)
                 com.shilapi.xcertplay.AirPlayPersistence.loadWidthPhysicalMm(app) else UnifiedSettingsStore(app).load().customSizePercent,
             dayNight = UnifiedSettingsStore(app).load().dayNight, dimmer = ScreenDimmer.level,
@@ -396,19 +409,17 @@ object SwitcherController {
             val store = UnifiedSettingsStore(app)
             store.save(store.load().copy(interfaceSize = size))
             val engine = panelUi?.engine
-            closePanel()
-            // The size is agreed when the session starts: restart it with the same phone and transport,
-            // unless the session can take it live (Android Auto on a turning screen; CarPlay with a
-            // size area declared at start). The saved size starts the next session natively (sharp).
+            panelUi = panelUi?.copy(interfaceSize = size)
+            // The size is agreed when the session starts. A session that can take it live (Android Auto
+            // on a turning screen; CarPlay up to the width it started with) switches now; otherwise the
+            // size is saved and the panel offers "Reconnect with the new size", the driver's choice.
             if (engine == com.carlink.core.core.Engine.CARPLAY) {
                 val mm = com.carlink.core.connection.CarPlaySettingsPolicy.widthMm(size)
-                if (mm == null || !com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(mm)) Connection.get(app).retry()
+                applied(mm != null && com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(mm))
                 return
             }
-            if (engine != com.carlink.core.core.Engine.ANDROID_AUTO) return Connection.get(app).retry()
-            com.carlink.core.connection.aa.AaLiveSize.request(app, com.carlink.core.connection.aa.AaSessionSettings.sizePercent(size)) { live ->
-                if (!live) Connection.get(app).retry()
-            }
+            if (engine != com.carlink.core.core.Engine.ANDROID_AUTO) return applied(false)
+            com.carlink.core.connection.aa.AaLiveSize.request(app, com.carlink.core.connection.aa.AaSessionSettings.sizePercent(size), ::applied)
         }
 
         override fun setCustomSize(value: Int) {
@@ -423,12 +434,15 @@ object SwitcherController {
             com.shilapi.xcertplay.AirPlayPersistence.saveWidthPhysicalMm(app, widthMm)
             store.save(settings.copy(interfaceSize = InterfaceSize.CUSTOM, customSizePercent = percent))
             if (!carPlay) com.carlink.core.engine.AndroidAutoSettings.write(app, android.os.Bundle().apply { putInt("dpi-pixel-density", 0) })
+            panelUi = panelUi?.copy(interfaceSize = InterfaceSize.CUSTOM, customSize = value)
+            if (carPlay) applied(com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(widthMm))
+            else com.carlink.core.connection.aa.AaLiveSize.request(app, percent, ::applied)
+        }
+
+        override fun reconnectForSize() {
+            sizePending = false
             closePanel()
-            if (carPlay) {
-                if (!com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(widthMm)) Connection.get(app).retry()
-            } else {
-                com.carlink.core.connection.aa.AaLiveSize.request(app, percent) { live -> if (!live) Connection.get(app).retry() }
-            }
+            Connection.get(app).retry()
         }
 
         override fun disconnect() {

@@ -86,6 +86,13 @@ internal fun switcherEntries(): List<GalleryEntry> = with(HomeFakes) {
                     GallerySwitcherActions)
             }
         },
+        GalleryEntry("switcher", "panel-size-pending", configs = switcherConfigs + "phone-portrait") {
+            val since = remember { SystemClock.elapsedRealtime() - 754_000 }
+            FakeProjection {
+                SwitcherOverlay(ui(since = since).copy(interfaceSize = com.carlink.core.settings.InterfaceSize.CUSTOM,
+                    customSize = 230, sizePending = true), GallerySwitcherActions)
+            }
+        },
         GalleryEntry("switcher", "panel-custom-size", configs = switcherConfigs + "phone-portrait") {
             val since = remember { SystemClock.elapsedRealtime() - 754_000 }
             FakeProjection { SwitcherOverlay(ui(SwitcherPage.CUSTOM_SIZE, since = since).copy(customSize = 165), GallerySwitcherActions) }

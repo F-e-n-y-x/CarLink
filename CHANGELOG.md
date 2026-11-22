@@ -6,6 +6,8 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- The floating ball no longer reconnects by itself when a size cannot change live (a CarPlay width wider than
+  the one the session started with): it saves the size and offers **Reconnect with the new size**.
 - New Lab option for CarPlay calls over USB, "Calls at phone-call rate": calls and their microphone
   use 8-32 kHz audio as stock CarPlay stereos do, for stereos where the other person hears you
   choppy or robotic.

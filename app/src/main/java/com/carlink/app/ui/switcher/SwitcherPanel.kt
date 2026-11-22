@@ -114,6 +114,8 @@ data class SwitcherUi(
     val sizesThatGrow: List<InterfaceSize>? = null,
     /** The custom size in the running engine's unit: CarPlay's screen width in mm, Android Auto's percent. */
     val customSize: Int = 165,
+    /** A size was saved that the running session could not take live: the panel offers to reconnect. */
+    val sizePending: Boolean = false,
     /** Day/night for both engines; applies from the next connection. */
     val dayNight: DayNight = DayNight.AUTOMATIC,
     /** The screen dimmer's step (0 = off), an index into switcher/ScreenDimmer.ALPHAS. */
@@ -134,6 +136,8 @@ interface SwitcherActions {
     fun setInterfaceSize(size: InterfaceSize) {}
     /** The Custom size page: [value] in [SwitcherUi.customSize]'s unit, saved as Settings' Custom size. */
     fun setCustomSize(value: Int) {}
+    /** Reconnects so a saved size the session could not take live is used. */
+    fun reconnectForSize() {}
     fun disconnect() {}
     fun close() {}
     /** Quick toggles: Day → Night → Automatic ([nextDayNight]). */
@@ -341,7 +345,13 @@ private fun MainPage(ui: SwitcherUi, actions: SwitcherActions) {
     }
     Spacer(Modifier.height(6.dp))
     val largest = ui.sizesThatGrow?.lastOrNull()
-    Text(if (largest != null && ui.sizesThatGrow.size < 4)
+    if (ui.sizePending) {
+        Text(stringResource(R.string.carlink_switcher_size_pending), style = MaterialTheme.typography.bodySmall,
+            color = scheme.onSurfaceVariant)
+        Spacer(Modifier.height(dimens.targetGap))
+        GlassButton(stringResource(R.string.carlink_switcher_size_reconnect), { if (!switching) actions.reconnectForSize() },
+            Modifier.fillMaxWidth(), icon = R.drawable.carlink_ic_refresh)
+    } else Text(if (largest != null && ui.sizesThatGrow.size < 4)
             stringResource(R.string.carlink_switcher_size_upright, com.carlink.app.ui.settings.interfaceSizeLabel(largest))
         else stringResource(R.string.carlink_switcher_size_reconnects), style = MaterialTheme.typography.bodySmall,
         color = scheme.onSurfaceVariant)
