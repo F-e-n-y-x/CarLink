@@ -18,6 +18,20 @@ class CarPlayViewAreasTest {
         assertNull(CarPlayViewAreas.build(2560, 1440, CarPlayDock.AUTOMATIC, splitWindow = null))
     }
 
+    // CarLink: a plain screen still declares its interface-size areas, or every size change reconnected.
+    @Test
+    fun plainScreenWithLiveSizesDeclaresTheSizeAreas() {
+        val areas = CarPlayViewAreas.build(2560, 1600, CarPlayDock.AUTOMATIC, splitWindow = null,
+            sizeWidthsMm = listOf(220, 180, 150, 120), sessionWidthMm = 220)!!
+        assertEquals(4, areas.areas.size)
+        assertEquals(0, areas.current)
+        val medium = areas.sizeVariant(180)!!
+        assertEquals((2560 / (220f / 180)).toInt() and 1.inv(), areas.areas[medium].width)
+        assertEquals(0, areas.sizeVariant(220))
+        assertNull(CarPlayViewAreas.build(2560, 1600, CarPlayDock.AUTOMATIC, splitWindow = null,
+            sizeWidthsMm = listOf(220, 180), sessionWidthMm = 120))
+    }
+
     @Test
     fun fixedDockDeclaresTheScreenOncePerEdgeAndStartsOnTheChosenOne() {
         val driver = CarPlayViewAreas.build(2560, 1440, CarPlayDock.DRIVER_SIDE, splitWindow = null)!!

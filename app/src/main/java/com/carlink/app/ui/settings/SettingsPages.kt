@@ -61,7 +61,7 @@ internal fun CategoryPage(
             SettingsCategory.DISPLAY -> DisplayEssentials(ui, openSheet)
             SettingsCategory.SOUND -> SoundEssentials(ui, actions, openSheet)
             SettingsCategory.NAVIGATION -> NavigationEssentials(ui, actions)
-            SettingsCategory.CAR -> CarEssentials(ui, openSheet)
+            SettingsCategory.CAR -> CarEssentials(ui, actions, openSheet)
             SettingsCategory.GENERAL -> GeneralEssentials(ui, actions, openSheet, versionTaps, onVersionTap)
         }
         if (ui.unified.showAdvanced) EngineSection(category, Tier.ADVANCED, ui, actions, openSheet)
@@ -271,7 +271,7 @@ private fun NavigationEssentials(ui: SettingsUi, actions: SettingsActions) {
 }
 
 @Composable
-private fun CarEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
+private fun CarEssentials(ui: SettingsUi, actions: SettingsActions, openSheet: (String) -> Unit) {
     val right = ui.unified.rightHandDrive
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_car)) }) {
         ChoiceRow(stringResource(R.string.carlink_settings_driving_side),
@@ -290,6 +290,11 @@ private fun CarEssentials(ui: SettingsUi, openSheet: (String) -> Unit) {
             else pluralStringResource(R.plurals.carlink_wheel_keys_value, learned, learned),
             { openSheet(SheetKey.of(EssentialSheet.WHEEL_KEYS)) },
             description = stringResource(R.string.carlink_wheel_keys_detail), icon = R.drawable.carlink_ic_search_hands_free,
+            tags = { NextConnectionTag() })
+        GroupDivider()
+        SwitchRow(stringResource(R.string.carlink_settings_aa_back), ui.unified.androidAutoBack,
+            { on -> actions.update { it.copy(androidAutoBack = on) } },
+            description = stringResource(R.string.carlink_settings_aa_back_detail), icon = R.drawable.carlink_ic_android,
             tags = { NextConnectionTag() })
     }
 }

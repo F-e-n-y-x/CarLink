@@ -44,6 +44,8 @@ data class UnifiedSettings(
     val sameWifiWired: Boolean = false,
     /** Software gain on the microphone sent to the phone ([AudioLevels.MIC_DB]). */
     val micGainDb: Int = 0,
+    /** The head unit's Back key goes back inside Android Auto (GitHub #72); off, it opens the session menu. */
+    val androidAutoBack: Boolean = true,
 )
 
 data class WifiDetails(val ssid: String = "", val password: String = "")
@@ -94,6 +96,7 @@ class UnifiedSettingsStore(context: Context) {
         duckMusicForDirections = prefs.getBoolean("duck_music_directions", true),
         sameWifiWired = prefs.getBoolean("same_wifi_wired", false),
         micGainDb = prefs.getInt("mic_gain_db", 0),
+        androidAutoBack = prefs.getBoolean("android_auto_back", true),
     )
 
     fun save(settings: UnifiedSettings) {
@@ -124,6 +127,7 @@ class UnifiedSettingsStore(context: Context) {
             .putBoolean("duck_music_directions", settings.duckMusicForDirections)
             .putBoolean("same_wifi_wired", settings.sameWifiWired)
             .putInt("mic_gain_db", settings.micGainDb)
+            .putBoolean("android_auto_back", settings.androidAutoBack)
             .apply()
     }
 

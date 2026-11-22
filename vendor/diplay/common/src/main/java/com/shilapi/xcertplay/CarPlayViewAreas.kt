@@ -189,6 +189,7 @@ class CarPlayViewAreas private constructor(
         ): CarPlayViewAreas? {
             val splits = screens.associateWith { splitWindow(it.portrait) }
             if (screens.size == 1 && dock.edge == null && splits.values.all { it == null } && !sidePanel &&
+                sizeWidthsMm.none { it in 1 until sessionWidthMm } && // CarLink: size variants need the area list
                 screens[0].width == canvasWidth && screens[0].height == canvasHeight) return null
             val edges = dock.edge?.let { listOf(AirPlayInfoPlist.DOCK_EDGE_DRIVER_SIDE, AirPlayInfoPlist.DOCK_EDGE_BOTTOM) }
                 ?: listOf(null)

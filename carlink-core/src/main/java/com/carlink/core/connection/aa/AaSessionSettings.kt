@@ -34,6 +34,8 @@ data class AaSessionValues(val values: Map<String, Any>, val problem: String? = 
  * The wake-poke targets (`auto-start-bt-macs`) are set by the ":aa" receiver at start.
  */
 object AaSessionSettings {
+    private const val BACK = android.view.KeyEvent.KEYCODE_BACK
+
     /**
      * @param panelDensityDpi the head unit's own density, which scales Android Auto's interface.
      * @param wifi the car's Wi-Fi right now; Same Wi-Fi needs its client interface and the router's BSSID.
@@ -105,7 +107,10 @@ object AaSessionSettings {
             put("gps-navigation", settings.sendCarLocation)
             // The learned steering-wheel buttons, in DiAuto's own keymap (logical-physical), which
             // CommManager.sendKey applies to every key route. CarLink owns the keymap: always written.
-            put("key-codes", WheelKeys.diAutoKeyCodes(settings.wheelKeys))
+            // Back mapped to itself makes AapProjectionActivity send it to the phone instead of opening
+            // its exit menu (ProjectionKeyPolicy, #72); the two-finger edge swipe still opens the menu.
+            put("key-codes", WheelKeys.diAutoKeyCodes(settings.wheelKeys) +
+                if (settings.androidAutoBack) setOf("$BACK-$BACK") else emptySet())
             // Sound levels as DiAuto's own offsets. Android Auto's speech channel (DiAuto's "assistant")
             // carries the spoken directions as well as the Assistant, and its system channel (DiAuto's
             // "navigation") the prompts' chimes, so both follow the navigation level. Calls are not
