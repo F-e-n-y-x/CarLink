@@ -799,6 +799,15 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // CarLink: with predictive back (targetSdk 33+, Android 13+) Back comes here, never through
+                // dispatchKeyEvent, so a learned Back-to-Back (#72) must be routed to the phone here too.
+                if (commManager.connectionState.value is CommManager.ConnectionState.TransportStarted && // CarLink
+                    ProjectionKeyPolicy.shouldRouteBackKeyToProjection(cachedKeyCodes, KeyEvent.KEYCODE_BACK)) { // CarLink
+                    val now = android.os.SystemClock.uptimeMillis() // CarLink
+                    commManager.sendKey(KeyEvent.KEYCODE_BACK, true, now, "projection") // CarLink
+                    commManager.sendKey(KeyEvent.KEYCODE_BACK, false, now, "projection") // CarLink
+                    return // CarLink
+                } // CarLink
                 showExitDialog()
             }
         })

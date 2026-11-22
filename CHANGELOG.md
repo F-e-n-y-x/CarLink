@@ -19,9 +19,9 @@ is what the in-app update popup shows.
 - New Lab option for CarPlay calls over USB, "Calls at phone-call rate": calls and their microphone
   use 8-32 kHz audio as stock CarPlay stereos do, for stereos where the other person hears you
   choppy or robotic.
-- The floating switcher has a Custom size: step CarPlay's screen width (5 mm steps) or Android
-  Auto's size (5 % steps) between the presets. It is saved as Settings' Custom size and applies live
-  where the session can, otherwise with a quick reconnect (#83).
+- The floating switcher has a Custom size, in percent for both CarPlay and Android Auto (100% is
+  Small), with −10, −5, +5 and +10 steps and no 250 mm limit. It is saved as Settings' Custom size
+  and applies live where the session can (#83).
 - Joying (QZD) stereos: CarPlay and Android Auto directions and the voice assistant now play on the
   streams the stereo treats as navigation and voice, so they mix over music instead of being muted
   with it; CarPlay calls use the stereo's call stream when its settings name one.
@@ -37,7 +37,7 @@ is what the in-app update popup shows.
 - Fixed: the delete button next to each phone in Home's Phones list is as large as the other car
   buttons (76 dp on a head unit), so it is easier to hit while parked.
 - The head unit's Back button now goes back inside Android Auto instead of opening the menu to
-  leave it (#72). Turn it off in Settings › Car › Back button goes back in Android Auto; the
+  leave it (#72), also on Android 13 and later. Turn it off in Settings › Car › Back button goes back in Android Auto; the
   two-finger swipe from the left edge still opens the menu. Home stays the system's.
 - Android Auto's audio buffer and audio queue can be set under Settings › Sound & voice › Show
   advanced (smaller = less music delay, larger = less stutter; from the next connection). Defaults
