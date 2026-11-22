@@ -90,6 +90,11 @@ private fun aaToggle(key: String, default: Boolean) =
 private fun aaIntChoice(key: String, default: Int, options: List<SettingOption>) =
     Control.Choice(options, { it.aaInt(key, default).toString() }, { access, value -> access.putAa(key, value.toInt()) })
 
+/** 10 mm steps where the presets sit (#83: the sweet spot was between Large's 150 and Medium's 180 mm), wider above. */
+private val widthOptions = ((120..200 step 10) + listOf(220, 250, 300, 350, 400)).map {
+    SettingOption(it.toString(), when (it) { 120 -> "120 mm (largest)"; 400 -> "400 mm (smallest)"; else -> "$it mm" })
+}
+
 /** Android audio stream choices DiPlay accepts (0 = by usage, otherwise a legacy stream type). */
 private val audioStreams = options(0 to "Automatic", 3 to "Media", 4 to "Alarm", 5 to "Notification", 1 to "System", 10 to "Accessibility")
 
@@ -110,7 +115,7 @@ object AdvancedSettings {
                 AirPlayPersistence::loadFps, AirPlayPersistence::saveFps), Overrides.PICTURE),
         AdvancedSetting("cp_width", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Screen width reported to iPhone", "A wider screen makes CarPlay's icons and text smaller.",
-            Applies.NEXT_CONNECTION, carPlayIntChoice(options(120 to "120 mm (largest)", 150 to "150 mm", 180 to "180 mm", 200 to "200 mm", 220 to "220 mm", 250 to "250 mm", 300 to "300 mm", 350 to "350 mm", 400 to "400 mm (smallest)"),
+            Applies.NEXT_CONNECTION, carPlayIntChoice(widthOptions,
                 AirPlayPersistence::loadWidthPhysicalMm, AirPlayPersistence::saveWidthPhysicalMm), Overrides.INTERFACE_SIZE),
         AdvancedSetting("cp_dock", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Dock position", "Where CarPlay shows its row of apps.",

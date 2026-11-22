@@ -439,5 +439,16 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
             startCategory = SettingsCategory.DISPLAY,
             initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "aa_resolution" }))
     },
+    // #83: 10 mm steps between the CarPlay size presets.
+    GalleryEntry("settings", "sheet-carplay-width", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(showAdvanced = true), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.DISPLAY,
+            initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "cp_width" }))
+    },
+    // #83: directions up to +12 dB.
+    GalleryEntry("settings", "sheet-navigation-level", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(), SettingsPreviewActions, onBack = {}, startCategory = SettingsCategory.SOUND,
+            initialSheet = SheetKey.of(EssentialSheet.NAVIGATION_LEVEL))
+    },
 )
 

@@ -6,6 +6,8 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- CarPlay's "Screen width reported to iPhone" (Advanced) now has 10 mm steps from 120 to 200 mm,
+  so a size between the Large and Medium presets can be picked (#83).
 - Navigation volume now goes up to +12 dB (Settings › Sound & voice), for CarPlay and Android Auto;
   boosted sound has its loudest peaks softened instead of clipped (#83).
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
