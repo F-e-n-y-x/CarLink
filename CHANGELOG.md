@@ -6,6 +6,10 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- FYT stereos: an iPhone plugged in while CarLink is open is now found (the firmware sends the
+  plug-in only to its own Car Link app). When a session starts, CarLink asks FYT's Car Link app to
+  let go of the phone, becomes the stereo's audio source so the steering-wheel media buttons and
+  the knob reach CarPlay or Android Auto, and hides FYT's floating button until the session ends.
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.
