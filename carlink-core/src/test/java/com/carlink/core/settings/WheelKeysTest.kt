@@ -53,10 +53,10 @@ class WheelKeysTest {
     @Test fun bothEnginesReceiveTheMapping() {
         val settings = UnifiedSettings(wheelKeys = mapOf(WheelAction.VOICE to 84, WheelAction.HANG_UP to 601))
         val aa = AaSessionSettings.values(settings, Transport.USB, null, VehicleProfile.GENERIC, "Car", 160).values
-        assertEquals(setOf("231-84", "6-601"), aa["key-codes"])
-        // Nothing learnt: DiAuto's keymap is cleared, not left from an earlier session.
-        assertEquals(emptySet<String>(), AaSessionSettings.values(UnifiedSettings(), Transport.USB, null, VehicleProfile.GENERIC,
-            "Car", 160).values["key-codes"])
+        assertEquals(setOf("231-84", "6-601", "4-4"), aa["key-codes"])
+        // Nothing learnt and Back left to the menu (#72): DiAuto's keymap is cleared, not left from an earlier session.
+        assertEquals(emptySet<String>(), AaSessionSettings.values(UnifiedSettings(androidAutoBack = false), Transport.USB, null,
+            VehicleProfile.GENERIC, "Car", 160).values["key-codes"])
 
         val cp = CarPlaySettingsPolicy.map(settings, null, VehicleProfile.GENERIC, true)
         assertEquals(mapOf(84 to KeyEvent.KEYCODE_VOICE_ASSIST, 601 to KeyEvent.KEYCODE_ENDCALL), cp.wheelKeyRemap)

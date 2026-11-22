@@ -44,6 +44,7 @@ class SettingsStoresTest {
             resumeMusic = true,
             duckMusicForDirections = false,
             micGainDb = 9,
+            androidAutoBack = false,
         )
         UnifiedSettingsStore(app).save(settings)
         // A new instance reads what the old one wrote.
