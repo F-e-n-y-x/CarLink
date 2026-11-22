@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- New Lab option for CarPlay calls over USB, "Calls at phone-call rate": calls and their microphone
+  use 8-32 kHz audio as stock CarPlay stereos do, for stereos where the other person hears you
+  choppy or robotic.
 - The floating switcher has a Custom size: step CarPlay's screen width (5 mm steps) or Android
   Auto's size (5 % steps) between the presets. It is saved as Settings' Custom size and applies live
   where the session can, otherwise with a quick reconnect (#83).

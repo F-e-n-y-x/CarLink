@@ -180,6 +180,12 @@ object AdvancedSettings {
             "Clearer call voices", "Filter road noise from your voice on calls.",
             Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadCallVoiceFilter, AirPlayPersistence::saveCallVoiceFilter)),
 
+        // ZLink's is_cp_mic_force_8k and SpeedPlay's 8/16 kHz recorder (re-headunit-apps zlink.md, speedplay.md):
+        // some stereos' microphones and echo cancellers work only at call rates. DiPlay's own opt-in, USB only.
+        AdvancedSetting("cp_call_rate", Engine.CARPLAY, SettingsCategory.SOUND, Tier.LAB,
+            "Calls at phone-call rate", "Over USB, calls and their microphone use 8 to 32 kHz audio, as stock CarPlay stereos do, instead of 48 kHz. Try it if the other person hears you choppy or robotic; turn it off if a call has no sound.",
+            Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadCallAtCallRate, AirPlayPersistence::saveCallAtCallRate)),
+
         // ---------- CarPlay: connection, car, lab ----------
         AdvancedSetting("cp_p2p_channel", Engine.CARPLAY, SettingsCategory.CONNECTION, Tier.ADVANCED,
             "Wi-Fi Direct channel", "Pin CarPlay's Wi-Fi Direct link to a band or channel if it drops.",
