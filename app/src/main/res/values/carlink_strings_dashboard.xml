@@ -46,20 +46,20 @@
     <string name="carlink_home_try_again">Try again</string>
     <string name="carlink_home_diagnostics">Diagnostics</string>
     <string name="carlink_home_open_settings">Open settings</string>
-    <string name="carlink_home_error_auth_title">CarPlay can\'t sign in</string>
-    <string name="carlink_home_error_auth_body">This build is missing CarPlay\'s authentication files. Android Auto still works.</string>
+    <string name="carlink_home_error_auth_title">CarPlay can’t sign in</string>
+    <string name="carlink_home_error_auth_body">This build is missing CarPlay’s authentication files. Android Auto still works.</string>
     <string name="carlink_home_error_iphone_title">Pair your iPhone first</string>
-    <string name="carlink_home_error_iphone_body">Pair it in the car\'s Bluetooth settings, then try again. A cable works without pairing.</string>
+    <string name="carlink_home_error_iphone_body">Pair it in the car’s Bluetooth settings, then try again. A cable works without pairing.</string>
     <string name="carlink_home_error_hotspot_details_title">Add the car hotspot</string>
-    <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car\'s hotspot. Add them once.</string>
+    <string name="carlink_home_error_hotspot_details_body">Wireless needs the name and password of the car’s hotspot. Add them once.</string>
     <string name="carlink_home_error_hotspot_off_title">The car hotspot is off</string>
-    <string name="carlink_home_error_hotspot_off_body">Turn on this screen\'s hotspot, or use Wi-Fi Direct, which needs no hotspot.</string>
+    <string name="carlink_home_error_hotspot_off_body">Turn on this screen’s hotspot, or use Wi-Fi Direct, which needs no hotspot.</string>
     <string name="carlink_home_error_hotspot_off_body_no_direct">This screen has no Wi-Fi Direct, so wireless needs its hotspot. Turn the hotspot on, or connect with a USB cable.</string>
     <string name="carlink_home_error_wifi_details_title">Add your Wi-Fi password</string>
-    <string name="carlink_home_error_wifi_details_body">Same Wi-Fi is chosen in Settings › Connection. CarLink needs the network\'s name and password once.</string>
-    <string name="carlink_home_error_wifi_not_joined_title">This screen isn\'t on your Wi-Fi</string>
+    <string name="carlink_home_error_wifi_details_body">Same Wi-Fi is chosen in Settings › Connection. CarLink needs the network’s name and password once.</string>
+    <string name="carlink_home_error_wifi_not_joined_title">This screen isn’t on your Wi-Fi</string>
     <string name="carlink_home_error_wifi_not_joined_body">Same Wi-Fi needs this screen on the network saved in Settings › Connection. Join that network, or use Wi-Fi Direct.</string>
-    <string name="carlink_home_error_engine_title">Couldn\'t connect</string>
+    <string name="carlink_home_error_engine_title">Couldn’t connect</string>
     <string name="carlink_home_error_engine_body">%1$s stopped the connection. Unlock your phone and try again.</string>
 
     <string name="carlink_home_chip_bluetooth">Bluetooth</string>
@@ -67,22 +67,22 @@
     <string name="carlink_home_chip_phone">Phone</string>
     <string name="carlink_home_bt_chip_on">On</string>
     <string name="carlink_home_forget_title">Forget %1$s?</string>
-    <string name="carlink_home_forget_body">CarLink unpairs it from this screen\'s Bluetooth and forgets how it connected. If Android does not allow that, Bluetooth settings open to unpair it there. On a stereo with a separate Bluetooth module, remove it in the stereo\'s own Bluetooth settings too.</string>
+    <string name="carlink_home_forget_body">CarLink unpairs it from this screen’s Bluetooth and forgets how it connected. If Android does not allow that, Bluetooth settings open to unpair it there. On a stereo with a separate Bluetooth module, remove it in the stereo’s own Bluetooth settings too.</string>
     <string name="carlink_home_forget_action">Forget</string>
     <string name="carlink_home_add_phone">Add a new phone</string>
-    <string name="carlink_home_new_iphone">Connect a new iPhone (through the stereo\'s Bluetooth)</string>
-    <string name="carlink_home_new_android">Connect a new Android phone (through the stereo\'s Bluetooth)</string>
+    <string name="carlink_home_new_iphone">Connect a new iPhone (through the stereo’s Bluetooth)</string>
+    <string name="carlink_home_new_android">Connect a new Android phone (through the stereo’s Bluetooth)</string>
     <string name="carlink_choose_phone_title">Two phones are trying to connect</string>
     <string name="carlink_choose_phone_body">An iPhone and an Android phone are both connecting to this stereo. Pick the one to use.</string>
     <string name="carlink_choose_phone_later">Not now</string>
     <string name="carlink_choose_bt_title">Bluetooth</string>
-    <string name="carlink_choose_bt_body">This stereo has two: its own module and Android\'s. Use the one your phone is paired with.</string>
-    <string name="carlink_choose_bt_module">Stereo\'s Bluetooth module</string>
-    <string name="carlink_choose_bt_module_body">Pair phones in the stereo\'s own Bluetooth app</string>
-    <string name="carlink_choose_bt_android">This screen\'s Bluetooth</string>
-    <string name="carlink_choose_bt_android_body">Android\'s own Bluetooth; pair phones in Android\'s settings</string>
-    <string name="carlink_home_bt_chip_module">Stereo\'s module</string>
-    <string name="carlink_home_ready_module_body">This stereo\'s Bluetooth is a separate module. Pair your phone in the stereo\'s own Bluetooth settings or phone app; after its first connection CarLink lists it here.</string>
+    <string name="carlink_choose_bt_body">This stereo has two: its own module and Android’s. Use the one your phone is paired with.</string>
+    <string name="carlink_choose_bt_module">Stereo’s Bluetooth module</string>
+    <string name="carlink_choose_bt_module_body">Pair phones in the stereo’s own Bluetooth app</string>
+    <string name="carlink_choose_bt_android">This screen’s Bluetooth</string>
+    <string name="carlink_choose_bt_android_body">Android’s own Bluetooth; pair phones in Android’s settings</string>
+    <string name="carlink_home_bt_chip_module">Stereo’s module</string>
+    <string name="carlink_home_ready_module_body">This stereo’s Bluetooth is a separate module. Pair your phone in the stereo’s own Bluetooth settings or phone app; after its first connection CarLink lists it here.</string>
     <string name="carlink_home_bt_chip_off">Off</string>
     <string name="carlink_home_bt_no_permission">Needs permission</string>
     <string name="carlink_home_bt_chip_unsupported">Not available</string>
@@ -132,7 +132,7 @@
     <string name="carlink_home_not_answering_title_iphone">iPhone not reachable over Bluetooth</string>
     <string name="carlink_home_not_answering_body_iphone">Unlock %1$s and check that its Bluetooth is on, or plug it in with a cable. If it still refuses: on the iPhone, Settings › General › CarPlay must not have forgotten this car, Screen Time › Content &amp; Privacy › Allowed Apps must allow CarPlay, and Allow CarPlay While Locked must be on.</string>
     <string name="carlink_home_not_answering_body_usb">Unlock %1$s and accept the prompt on its screen. If nothing happens, unplug it and plug it in again.</string>
-    <string name="carlink_home_server_waiting">Looking for %1$s\'s head unit server. Keep this screen on the phone\'s hotspot. On the phone, open Android Auto\'s settings, tap Version until developer settings unlock, then choose Start head unit server from the menu. It turns off when the phone restarts.</string>
+    <string name="carlink_home_server_waiting">Looking for %1$s’s head unit server. Keep this screen on the phone’s hotspot. On the phone, open Android Auto’s settings, tap Version until developer settings unlock, then choose Start head unit server from the menu. It turns off when the phone restarts.</string>
     <string name="carlink_home_not_answering_body_android">Make sure %1$s has Bluetooth on and is unlocked, then keep it near this screen. Android Auto starts by itself once it connects.</string>
     <!-- Connection v2: pre-flight problems and precise failures. -->
     <string name="carlink_home_error_bt_off_title">Bluetooth is off</string>
@@ -149,7 +149,7 @@
     <string name="carlink_home_error_wifi_off_title">Wi-Fi is off</string>
     <string name="carlink_home_error_wifi_off_body">The picture travels over Wi-Fi. Turn Wi-Fi on here; it doesn’t need to be connected to a network.</string>
     <string name="carlink_home_error_location_off_title">Location is off</string>
-    <string name="carlink_home_error_location_off_body">While Location is off, Android hides Wi-Fi names and nearby devices, so the wireless link can\'t start. Turn it on, then come back.</string>
+    <string name="carlink_home_error_location_off_body">While Location is off, Android hides Wi-Fi names and nearby devices, so the wireless link can’t start. Turn it on, then come back.</string>
     <string name="carlink_home_error_permissions_title">Permissions needed</string>
     <string name="carlink_home_error_permissions_body">CarLink needs Nearby devices, Location and Microphone to connect your phone.</string>
     <string name="carlink_home_error_overlay_title">Allow CarLink to open over other apps</string>
@@ -169,15 +169,15 @@
     <string name="carlink_home_error_bluetooth_title">Bluetooth connection failed</string>
     <string name="carlink_home_error_bluetooth_body">On your phone, turn Bluetooth off and on, then try again. If it keeps failing, forget this screen and pair again.</string>
     <!-- The stereo's Bluetooth is an external module apps cannot use (detect/ExternalBluetoothProbe). -->
-    <string name="carlink_home_error_external_bt_title">Wireless isn\'t available on this stereo yet</string>
-    <string name="carlink_home_error_external_module_title">Couldn\'t reach the stereo\'s Bluetooth module</string>
-    <string name="carlink_home_error_external_module_body">Wireless through the stereo\'s Bluetooth module is experimental, and it didn\'t work here. On an FYT stereo, disable the stereo\'s own “Car Link” app first. Otherwise connect your phone with a USB cable\u00A0— it works the same. Share the log from Diagnostics so this can be fixed.</string>
-    <string name="carlink_home_error_external_bt_body">This stereo\'s Bluetooth is a separate module that apps can\'t use, so CarPlay and Android Auto can\'t start wirelessly. Connect your phone with a USB cable\u00A0— it works the same.</string>
+    <string name="carlink_home_error_external_bt_title">Wireless isn’t available on this stereo yet</string>
+    <string name="carlink_home_error_external_module_title">Couldn’t reach the stereo’s Bluetooth module</string>
+    <string name="carlink_home_error_external_module_body">Wireless through the stereo’s Bluetooth module is experimental, and it didn’t work here. On an FYT stereo, disable the stereo’s own “Car Link” app first. Otherwise connect your phone with a USB cable\u00A0— it works the same. Share the log from Diagnostics so this can be fixed.</string>
+    <string name="carlink_home_error_external_bt_body">This stereo’s Bluetooth is a separate module that apps can’t use, so CarPlay and Android Auto can’t start wirelessly. Connect your phone with a USB cable\u00A0— it works the same.</string>
     <string name="carlink_home_how_to_connect">How to connect with a cable</string>
     <string name="carlink_home_cable_only_title">Plug in your phone</string>
-    <string name="carlink_home_cable_only_body">Wireless needs your phone to talk to this screen\'s own Bluetooth. On this stereo that is a separate module apps can\'t use, so connect with a USB cable\u00A0— CarPlay or Android Auto starts by itself.</string>
+    <string name="carlink_home_cable_only_body">Wireless needs your phone to talk to this screen’s own Bluetooth. On this stereo that is a separate module apps can’t use, so connect with a USB cable\u00A0— CarPlay or Android Auto starts by itself.</string>
     <string name="carlink_home_cable_title">Connect with a USB cable</string>
-    <string name="carlink_home_cable_body">1. Plug your phone into the stereo\'s USB port with a cable that carries data (not a charge-only cable).\n2. iPhone: CarPlay starts by itself. Android phone: unlock it and allow Android Auto if it asks.\n\nWireless needs your phone to talk to this screen\'s own Bluetooth. On this stereo that is a separate module apps can\'t use.</string>
+    <string name="carlink_home_cable_body">1. Plug your phone into the stereo’s USB port with a cable that carries data (not a charge-only cable).\n2. iPhone: CarPlay starts by itself. Android phone: unlock it and allow Android Auto if it asks.\n\nWireless needs your phone to talk to this screen’s own Bluetooth. On this stereo that is a separate module apps can’t use.</string>
     <string name="carlink_home_cable_ok">Got it</string>
     <string name="carlink_home_error_usb_title">USB connection failed</string>
     <string name="carlink_home_error_usb_body">Unlock your phone and accept its prompt. Try another cable if it keeps failing.</string>
@@ -231,10 +231,10 @@
     <!-- Android Auto on this screen (experimental Self Mode against Android Auto's head unit server). -->
     <string name="carlink_home_aa_on_screen">Run Android Auto on this screen</string>
     <string name="carlink_home_open_aa_settings">Open Android Auto settings</string>
-    <string name="carlink_home_error_hu_server_title">Start Android Auto\'s head unit server</string>
-    <string name="carlink_home_error_hu_server_stuck_title">Restart Android Auto\'s head unit server</string>
-    <string name="carlink_home_error_hu_server_stuck_body">Android Auto\'s head unit server took the connection but never answered. It is stuck on an earlier connection and does not recover by itself, so CarLink stopped trying.\n1. Tap Open Android Auto settings.\n2. Open the ⋮ menu at the top right and tap Stop head unit server, then Start head unit server.\n3. Come back here: CarLink tries again by itself.</string>
-    <string name="carlink_home_error_hu_server_body">Android Auto on this screen needs Android Auto\'s head unit server, and it is off.\n1. Tap Open Android Auto settings.\n2. Scroll to Version and tap it 10 times, then allow developer settings.\n3. Open the ⋮ menu at the top right and tap Start head unit server.\n4. Come back here: CarLink tries again by itself.</string>
+    <string name="carlink_home_error_hu_server_title">Start Android Auto’s head unit server</string>
+    <string name="carlink_home_error_hu_server_stuck_title">Restart Android Auto’s head unit server</string>
+    <string name="carlink_home_error_hu_server_stuck_body">Android Auto’s head unit server took the connection but never answered. It is stuck on an earlier connection and does not recover by itself, so CarLink stopped trying.\n1. Tap Open Android Auto settings.\n2. Open the ⋮ menu at the top right and tap Stop head unit server, then Start head unit server.\n3. Come back here: CarLink tries again by itself.</string>
+    <string name="carlink_home_error_hu_server_body">Android Auto on this screen needs Android Auto’s head unit server, and it is off.\n1. Tap Open Android Auto settings.\n2. Scroll to Version and tap it 10 times, then allow developer settings.\n3. Open the ⋮ menu at the top right and tap Start head unit server.\n4. Come back here: CarLink tries again by itself.</string>
     <!-- A failure's timeline: the step it stopped on is red. -->
     <string name="carlink_home_fail_step_bluetooth">Bluetooth</string>
     <string name="carlink_home_fail_step_cable">Cable</string>
