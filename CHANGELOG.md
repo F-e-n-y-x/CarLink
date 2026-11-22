@@ -6,6 +6,12 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- The head unit's Back button now goes back inside Android Auto instead of opening the menu to
+  leave it (#72). Turn it off in Settings › Car › Back button goes back in Android Auto; the
+  two-finger swipe from the left edge still opens the menu. Home stays the system's.
+- Android Auto's audio buffer and audio queue can be set under Settings › Sound & voice › Show
+  advanced (smaller = less music delay, larger = less stutter; from the next connection). Defaults
+  are unchanged (#86).
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
   Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
   thanks @dorsi90).

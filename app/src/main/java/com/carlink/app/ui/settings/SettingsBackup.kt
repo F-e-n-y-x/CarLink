@@ -58,6 +58,7 @@ object SettingsBackup {
         Field(UNIFIED, "show_advanced", Type.BOOL),
         Field(UNIFIED, "lab_unlocked", Type.BOOL),
         Field(UNIFIED, "wheel_keys", Type.STRING),
+        Field(UNIFIED, "android_auto_back", Type.BOOL),
         Field(CARLINK, "auto_connect_usb", Type.BOOL),
         Field(CARLINK, "auto_connect_bluetooth", Type.BOOL),
         Field(CARLINK, "start_on_boot", Type.BOOL),

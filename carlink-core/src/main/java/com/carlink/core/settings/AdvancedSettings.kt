@@ -246,6 +246,16 @@ object AdvancedSettings {
         AdvancedSetting("aa_playback_focus", Engine.ANDROID_AUTO, SettingsCategory.SOUND, Tier.ADVANCED,
             "Pause other audio", "Whether the car's own audio pauses while Android Auto plays.",
             Applies.NEXT_CONNECTION, aaIntChoice("playback-focus-mode", 0, options(0 to "Automatic", 1 to "Always", 2 to "Never"))),
+        // #86: DiAuto's audio buffer (AudioTrack size = minimum × this; directions and Assistant are capped at 4×).
+        AdvancedSetting("aa_audio_buffer", Engine.ANDROID_AUTO, SettingsCategory.SOUND, Tier.ADVANCED,
+            "Audio buffer", "How much sound the head unit holds back. Smaller cuts the music's delay; larger stops stutter.",
+            Applies.NEXT_CONNECTION, aaIntChoice("audio-latency-multiplier", 8, options(1 to "1× (shortest delay)", 2 to "2×",
+                4 to "4×", 8 to "8× (default, steadiest)"))),
+        // #86: chunks waiting for the buffer; when full the phone's stream is slowed instead of piling up delay. 0 = unbounded.
+        AdvancedSetting("aa_audio_queue", Engine.ANDROID_AUTO, SettingsCategory.SOUND, Tier.ADVANCED,
+            "Audio queue", "How much sound can wait before it plays. Shorter keeps music in step with the picture.",
+            Applies.NEXT_CONNECTION, aaIntChoice("audio-queue-capacity", 50, options(10 to "10 chunks (shortest delay)",
+                20 to "20 chunks", 50 to "50 chunks (default)", 0 to "Unlimited"))),
         // Music, directions and Assistant volume are CarLink's Sound levels (UnifiedSettings), written each session.
         AdvancedSetting("aa_mic_source", Engine.ANDROID_AUTO, SettingsCategory.SOUND, Tier.ADVANCED,
             "Microphone", "Which microphone Android Auto listens with.",
