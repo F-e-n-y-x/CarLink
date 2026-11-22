@@ -100,6 +100,13 @@ class CarPlaySettingsTest {
         assertFalse(CarPlaySettingsPolicy.resumeMusic)
     }
 
+    /** The live size areas: every preset plus the saved width, so a custom size chosen once comes back live. */
+    @Test fun liveSizeAreasIncludeTheSavedWidth() {
+        AirPlayPersistence.saveWidthPhysicalMm(app, 165)
+        CarPlaySettingsPolicy.apply(app, map(UnifiedSettings(interfaceSize = InterfaceSize.CUSTOM)))
+        assertEquals(listOf(220, 180, 150, 120, 165), CarPlayHostIntegration.liveSizeWidthsMm)
+    }
+
     /** Joying: CarPlay's channels on the streams CarService sorts sources by; other stereos keep DiPlay's routing. */
     @Test fun stereoStreamTypesReachDiPlay() {
         val streams = mapOf("NAVIGATION" to 4, "ASSISTANT" to 7, "PHONE" to 2)

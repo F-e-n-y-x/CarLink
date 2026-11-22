@@ -3,6 +3,7 @@ package com.carlink.core.connection.aa
 import android.content.Context
 import android.os.Bundle
 import com.andrerinas.openheadunit.connection.ExternalBtTransportPolicy
+import com.carlink.core.connection.CarPlaySettingsPolicy
 import com.carlink.core.connection.PictureChoice
 import com.carlink.core.connection.PicturePolicy
 import com.carlink.core.core.Transport
@@ -210,7 +211,8 @@ object AaSessionSettings {
         }
         // Small and Large scale the Automatic density, which already fits this screen: scaling the
         // panel's own density made Large 2.4x Medium on a 320 dpi tablet whose Automatic is 160.
-        put(SIZE_PERCENT_KEY, sizePercent(settings.interfaceSize))
+        put(SIZE_PERCENT_KEY, if (settings.interfaceSize == InterfaceSize.CUSTOM) settings.customSizePercent
+            else sizePercent(settings.interfaceSize))
         if (settings.interfaceSize != InterfaceSize.CUSTOM) put("dpi-pixel-density", 0)
     }
 
@@ -281,6 +283,32 @@ object AaSessionSettings {
     }
 
     /** The sizes that show larger than the one before them when Android Auto allows at most [maxPercent]. */
+    /** The switcher's Custom size range for Android Auto, percent of the Automatic density. */
+    val CUSTOM_PERCENT_RANGE = 80..200
+
+    /**
+     * The Android Auto percent that looks like CarPlay at [widthMm] (and back), interpolated between the
+     * presets' pairs, so a custom size set for one engine gives the other the same size.
+     */
+    fun percentForCarPlayWidth(widthMm: Int): Int =
+        interpolate(widthMm.toFloat(), sizePairs.map { it.first.toFloat() to it.second.toFloat() }).roundToInt()
+            .coerceIn(CUSTOM_PERCENT_RANGE)
+
+    fun carPlayWidthForPercent(percent: Int): Int =
+        (interpolate(percent.toFloat(), sizePairs.map { it.second.toFloat() to it.first.toFloat() }) / 5f).roundToInt() * 5
+
+    private val sizePairs get() = listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE)
+        .map { CarPlaySettingsPolicy.widthMm(it)!! to sizePercent(it) }
+
+    /** Piecewise linear through [points] (x ascending or descending), extended along the end segments. */
+    private fun interpolate(x: Float, points: List<Pair<Float, Float>>): Float {
+        val sorted = points.sortedBy { it.first }
+        val i = sorted.indexOfFirst { it.first >= x }.let { if (it <= 0) 1 else it }.coerceAtMost(sorted.size - 1)
+        val (x0, y0) = sorted[i - 1]
+        val (x1, y1) = sorted[i]
+        return y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+    }
+
     fun sizesThatGrow(maxPercent: Int): List<InterfaceSize> {
         val steps = listOf(InterfaceSize.SMALL, InterfaceSize.MEDIUM, InterfaceSize.LARGE, InterfaceSize.EXTRA_LARGE)
         return steps.filterIndexed { i, _ -> i == 0 || sizePercent(steps[i - 1]) < maxPercent }

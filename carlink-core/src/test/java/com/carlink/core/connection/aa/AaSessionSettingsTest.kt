@@ -177,6 +177,20 @@ class AaSessionSettingsTest {
         assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])
     }
 
+    /** The switcher's Custom size (#83): Android Auto's own percent, and the same size for both engines. */
+    @Test fun customSizeUsesItsPercentAndMatchesCarPlaysWidth() {
+        val v = values(UnifiedSettings(interfaceSize = InterfaceSize.CUSTOM, customSizePercent = 150)).values
+        assertEquals(150, v[AaSessionSettings.SIZE_PERCENT_KEY])
+        assertEquals(false, v.containsKey("dpi-pixel-density")) // an Advanced DPI still wins
+        // The presets map onto each other exactly; between them it is linear.
+        assertEquals(135, AaSessionSettings.percentForCarPlayWidth(180))
+        assertEquals(150, AaSessionSettings.percentForCarPlayWidth(165))
+        assertEquals(165, AaSessionSettings.carPlayWidthForPercent(150))
+        assertEquals(120, AaSessionSettings.carPlayWidthForPercent(200))
+        assertEquals(245, AaSessionSettings.carPlayWidthForPercent(80)) // beyond Small, along the end segment
+        assertEquals(AaSessionSettings.CUSTOM_PERCENT_RANGE.last, AaSessionSettings.percentForCarPlayWidth(100))
+    }
+
     @Test fun joyingStreamsUseDiAutosCarVolumeGroups() {
         val v = AaSessionSettings.values(base, Transport.USB, null, VehicleProfile.GENERIC, "My Car", 320,
             audioStreams = mapOf("NAVIGATION" to 4, "ASSISTANT" to 7, "PHONE" to 2)).values

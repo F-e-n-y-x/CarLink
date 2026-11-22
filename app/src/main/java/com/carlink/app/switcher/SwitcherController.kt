@@ -286,6 +286,8 @@ object SwitcherController {
             method = UnifiedSettingsStore(app).load().connectionMethod,
             interfaceSize = UnifiedSettingsStore(app).load().interfaceSize,
             sizesThatGrow = sizesThatGrow(active.request.engine),
+            customSize = if (active.request.engine == com.carlink.core.core.Engine.CARPLAY)
+                com.shilapi.xcertplay.AirPlayPersistence.loadWidthPhysicalMm(app) else UnifiedSettingsStore(app).load().customSizePercent,
             dayNight = UnifiedSettingsStore(app).load().dayNight, dimmer = ScreenDimmer.level,
             edge = bubble?.let { if (it.params.x + geometry.bubble / 2 < geometry.screenWidth / 2) Edge.LEFT else Edge.RIGHT }
                 ?: Edge.RIGHT,
@@ -406,6 +408,26 @@ object SwitcherController {
             if (engine != com.carlink.core.core.Engine.ANDROID_AUTO) return Connection.get(app).retry()
             com.carlink.core.connection.aa.AaLiveSize.request(app, com.carlink.core.connection.aa.AaSessionSettings.sizePercent(size)) { live ->
                 if (!live) Connection.get(app).retry()
+            }
+        }
+
+        override fun setCustomSize(value: Int) {
+            val engine = panelUi?.engine ?: return
+            val store = UnifiedSettingsStore(app)
+            val settings = store.load()
+            val carPlay = engine == com.carlink.core.core.Engine.CARPLAY
+            // The same Custom size Settings uses (DiPlay's width; Android Auto's percent with Automatic DPI), and
+            // the matching size for the other engine, so Custom looks alike on both.
+            val widthMm = if (carPlay) value else com.carlink.core.connection.aa.AaSessionSettings.carPlayWidthForPercent(value)
+            val percent = if (carPlay) com.carlink.core.connection.aa.AaSessionSettings.percentForCarPlayWidth(value) else value
+            com.shilapi.xcertplay.AirPlayPersistence.saveWidthPhysicalMm(app, widthMm)
+            store.save(settings.copy(interfaceSize = InterfaceSize.CUSTOM, customSizePercent = percent))
+            if (!carPlay) com.carlink.core.engine.AndroidAutoSettings.write(app, android.os.Bundle().apply { putInt("dpi-pixel-density", 0) })
+            closePanel()
+            if (carPlay) {
+                if (!com.shilapi.xcertplay.CarPlayHostIntegration.setInterfaceSizeLive(widthMm)) Connection.get(app).retry()
+            } else {
+                com.carlink.core.connection.aa.AaLiveSize.request(app, percent) { live -> if (!live) Connection.get(app).retry() }
             }
         }
 

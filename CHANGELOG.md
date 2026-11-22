@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- The floating switcher has a Custom size: step CarPlay's screen width (5 mm steps) or Android
+  Auto's size (5 % steps) between the presets. It is saved as Settings' Custom size and applies live
+  where the session can, otherwise with a quick reconnect (#83).
 - Joying (QZD) stereos: CarPlay and Android Auto directions and the voice assistant now play on the
   streams the stereo treats as navigation and voice, so they mix over music instead of being muted
   with it; CarPlay calls use the stereo's call stream when its settings name one.

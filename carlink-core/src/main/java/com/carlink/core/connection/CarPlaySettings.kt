@@ -123,6 +123,9 @@ object CarPlaySettingsPolicy {
     const val DIPLAY_DEFAULT_OEM_LABEL = "BYD"
 
     /** The screen width told to the iPhone for [size]; null leaves DiPlay's own (Custom). */
+    /** The switcher's Custom size range for CarPlay (DiPlay accepts 100-400 mm in 5 mm steps). */
+    val CUSTOM_WIDTH_RANGE_MM = 100..250
+
     fun widthMm(size: InterfaceSize): Int? = when (size) {
         // Shifted up two steps on 2026-11-18 (the driver's call on the tablet): 350 and 300 mm drew
         // CarPlay too small to use, so Small starts at 220 mm. Android Auto shifted one step (AaSessionSettings).
@@ -264,6 +267,10 @@ object CarPlaySettingsPolicy {
             diPlayPrefs.edit().putBoolean(CLEAR_PROMPTS_DEFAULTED, true).apply()
         }
 
+        // Each session declares the larger sizes as smaller areas, so the switcher changes size live; the saved
+        // width is among them, so a custom size chosen once can come back live.
+        CarPlayHostIntegration.liveSizeWidthsMm = (InterfaceSize.entries.mapNotNull(::widthMm) +
+            AirPlayPersistence.loadWidthPhysicalMm(context)).distinct()
         CarPlayHostIntegration.keyRemap = values.wheelKeyRemap
         // Read by each new audio stream and microphone; null hooks leave DiPlay's audio untouched.
         HostAudio.playbackPcm = AudioLevels.carPlayPlayback(values.mediaLevelDb, values.navigationLevelDb, values.callLevelDb)

@@ -119,7 +119,7 @@ The hooks CarLink sets (where):
 | DiPlay `CarPlayHostIntegration` | `homeActivity`, `appName`, `mediaSessionTag`, `toastHandler` | `CarLinkApplication.brandEngines` |
 | | `accessoryName` (from `CarLinkConfig`), `resetDebugLogsOnBootstrap`, `vehicleIntegrations`, `onHostState`, `waitingView` (`CarLinkConfig.waitingView` = `ui/home/CarPlayWaitingContent`) | `connection/CarPlayAdapter.install` (via `CarLinkCore.install`), `CarPlayWaitingView` |
 | | `hasSession`, `stopSession`, `retryNow`, `selectPhone`, `selectedPhoneAddress`, `authenticationError`, `homeIntent` (calls) | `CarPlayAdapter`, `CarPlayPreflight`, `CarPlayWaitingView` |
-| | `liveSizeWidthsMm`; `setInterfaceSizeLive` (call: the size as a smaller view area, false = reconnect) | `CarPlayAdapter.install`; `switcher/SwitcherController` |
+| | `liveSizeWidthsMm`; `setInterfaceSizeLive` (call: the size as a smaller view area, false = reconnect) | `CarPlaySettingsPolicy.apply` (presets + the saved width, per session); `switcher/SwitcherController` |
 | | `palette`, `chromeStyler`, `menuItems` | `engine/EngineChrome` |
 | DiPlay `HostAudio` | `playbackPcm` (Sound levels), `microphonePcm`, `callsAsMedia`, `duckMediaForPrompts` (#83), `legacyStreamTypes` (Joying streams, `QzdHeadUnit.audioStreams`) | `CarPlaySettingsPolicy.apply` |
 | DiPlay `CarPlayController` / `CarPlayHostIntegration` | `onPhonePlaying` / `pressPlay` (resume music, `connection/ResumeMusic`) | `CarPlayAdapter.install` |

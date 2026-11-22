@@ -25,7 +25,7 @@ ICONS = {
     "warning": True, "info": True, "help": False, "lock": False, "sync": False, "schedule": False,
     "radio_button_unchecked": False, "radio_button_checked": False,
     "settings": True, "home": True, "arrow_back": False, "arrow_forward": False, "close": False,
-    "chevron_right": False, "more_vert": False, "add": False, "delete": False, "search": False,
+    "chevron_right": False, "more_vert": False, "add": False, "remove": False, "delete": False, "search": False,
     "display_settings": True, "volume_up": True, "navigation": True, "directions_car": True,
     "tune": True, "monitor_heart": True, "science": True, "dashboard": True,
     "refresh": False, "restart_alt": False, "graphic_eq": False, "ios_share": False, "qr_code_2": False,
