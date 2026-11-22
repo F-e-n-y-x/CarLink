@@ -114,6 +114,9 @@ object CarPlaySettingsPolicy {
     var resumeMusic: Boolean = false
         private set
 
+    private const val DIPLAY_PREFS = "xcertplay_airplay"
+    private const val CLEAR_PROMPTS_DEFAULTED = "carlink_clear_prompts_defaulted"
+
     /** DiPlay's own default OEM label (AirPlayPersistence.DEFAULT_OEM_LABEL, DIPLAY.md §12 row 15). */
     const val DIPLAY_DEFAULT_OEM_LABEL = "BYD"
 
@@ -247,6 +250,15 @@ object CarPlaySettingsPolicy {
         // DiPlay's explicit interface skips its Wi-Fi checks; empty keeps its own Wi-Fi selection.
         AirPlayPersistence.saveExistingWifiInterface(context,
             if (values.sameWifiWired) WiredNetwork.interfaceName(context).orEmpty() else "")
+
+        // #83: over USB the iPhone chose 8 kHz phone-quality PCM for directions and Siri's replies, the lowest
+        // rate offered. DiPlay's opt-in stops offering 8 and 16 kHz there (24 kHz in a BYD, DiPlay #1186).
+        // CarLink turns it on once; the Advanced switch (cp_clear_prompts) can turn it off again.
+        val diPlayPrefs = context.getSharedPreferences(DIPLAY_PREFS, Context.MODE_PRIVATE)
+        if (!diPlayPrefs.getBoolean(CLEAR_PROMPTS_DEFAULTED, false)) {
+            AirPlayPersistence.saveSpeechWithout8And16Khz(context, true)
+            diPlayPrefs.edit().putBoolean(CLEAR_PROMPTS_DEFAULTED, true).apply()
+        }
 
         CarPlayHostIntegration.keyRemap = values.wheelKeyRemap
         // Read by each new audio stream and microphone; null hooks leave DiPlay's audio untouched.

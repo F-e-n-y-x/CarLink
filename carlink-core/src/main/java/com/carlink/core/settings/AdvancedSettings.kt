@@ -169,6 +169,10 @@ object AdvancedSettings {
             Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadMainBufferedAudio) { c, v ->
                 c.getSharedPreferences("xcertplay_airplay", Context.MODE_PRIVATE).edit().putBoolean("main_buffered_audio", v).apply()
             }),
+        // #83, DiPlay #148: on by default (CarPlaySettingsPolicy.apply); off is the way back if directions go silent.
+        AdvancedSetting("cp_clear_prompts", Engine.CARPLAY, SettingsCategory.SOUND, Tier.ADVANCED,
+            "Clear navigation voice over USB", "Asks the iPhone for directions and Siri's replies above phone quality (8 kHz). Turn it off if directions go silent.",
+            Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadSpeechWithout8And16Khz, AirPlayPersistence::saveSpeechWithout8And16Khz)),
         AdvancedSetting("cp_echo", Engine.CARPLAY, SettingsCategory.SOUND, Tier.ADVANCED,
             "Call echo cancellation", "Reduce the echo the other person hears on calls.",
             Applies.NEXT_CONNECTION, carPlayToggle(AirPlayPersistence::loadCallEchoCancellation, AirPlayPersistence::saveCallEchoCancellation)),

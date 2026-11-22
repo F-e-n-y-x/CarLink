@@ -100,6 +100,16 @@ class CarPlaySettingsTest {
         assertFalse(CarPlaySettingsPolicy.resumeMusic)
     }
 
+    /** #83: directions over USB came at 8 kHz; CarLink turns DiPlay's wider offer on once and then leaves the driver's choice. */
+    @Test fun clearNavigationVoiceIsOnByDefaultButCanBeTurnedOff() {
+        assertFalse(AirPlayPersistence.loadSpeechWithout8And16Khz(app))
+        CarPlaySettingsPolicy.apply(app, map())
+        assertTrue(AirPlayPersistence.loadSpeechWithout8And16Khz(app))
+        AirPlayPersistence.saveSpeechWithout8And16Khz(app, false)
+        CarPlaySettingsPolicy.apply(app, map())
+        assertFalse(AirPlayPersistence.loadSpeechWithout8And16Khz(app))
+    }
+
     @Test fun locationOnlyWithThePermission() {
         // F17: CarLink defaults "send location" on; DiPlay would ask before every start without it.
         assertTrue(map(UnifiedSettings(sendCarLocation = true), location = true).locationReporting)

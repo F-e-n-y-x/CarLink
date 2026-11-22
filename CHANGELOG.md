@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Fixed: CarPlay directions over USB sounded like a phone call (#83). The iPhone picked 8 kHz audio
+  for them; CarLink now asks for a higher rate. If directions go silent on your stereo, turn off
+  Settings › Sound & voice › Show advanced › Clear navigation voice over USB.
 - CarPlay's "Screen width reported to iPhone" (Advanced) now has 10 mm steps from 120 to 200 mm,
   so a size between the Large and Medium presets can be picked (#83).
 - Navigation volume now goes up to +12 dB (Settings › Sound & voice), for CarPlay and Android Auto;
