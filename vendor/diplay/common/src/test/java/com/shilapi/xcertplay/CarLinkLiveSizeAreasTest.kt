@@ -73,9 +73,13 @@ class CarLinkLiveSizeAreasTest {
     }
 
     @Test
-    fun sizeVariantsNeverMakeAPlainCanvasDeclareAreas() {
-        assertNull(CarPlayViewAreas.build(2560, 1440, CarPlayDock.AUTOMATIC, splitWindow = null,
-            sizeWidthsMm = widths, sessionWidthMm = 300))
+    fun aPlainCanvasDeclaresAreasOnlyForSizeVariants() {
+        // Since 2026-11-22 a plain canvas declares its size areas too, or every size change reconnected.
+        assertNull(CarPlayViewAreas.build(2560, 1440, CarPlayDock.AUTOMATIC, splitWindow = null))
+        val plain = CarPlayViewAreas.build(2560, 1440, CarPlayDock.AUTOMATIC, splitWindow = null,
+            sizeWidthsMm = widths, sessionWidthMm = 300)!!
+        assertEquals(0, plain.current)
+        assertEquals(1876 to 1056, plain.areas[plain.sizeVariant(220)!!].let { it.width to it.height })
         val docked = CarPlayViewAreas.build(2560, 1440, CarPlayDock.BOTTOM, splitWindow = null,
             sizeWidthsMm = widths, sessionWidthMm = 300)!!
         assertEquals(1, docked.current)
