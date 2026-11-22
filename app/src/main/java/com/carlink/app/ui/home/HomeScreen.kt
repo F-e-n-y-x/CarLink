@@ -583,8 +583,10 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                         HomeMode.FAILED -> Icon(painterResource(R.drawable.carlink_ic_error_filled), null, Modifier.size(glyph),
                             tint = scheme.error)
                     }
+                    val stepShown = state == HomeMode.CONNECTING || state == HomeMode.NOT_ANSWERING
+                    // A small dial (phone portrait) has no room for both; the headline already names the engine.
                     val showEngine = engine != null && state != HomeMode.READY_EMPTY && state != HomeMode.PERMISSION &&
-                        state != HomeMode.BLUETOOTH_OFF
+                        state != HomeMode.BLUETOOTH_OFF && !(small && stepShown)
                     if (showEngine) {
                         Text(engine!!, style = caption, color = scheme.onSurfaceVariant, textAlign = TextAlign.Center, maxLines = 2)
                     }
@@ -600,7 +602,7 @@ private fun HomeDial(mode: HomeMode, ui: HomeUi, modifier: Modifier) {
                                 maxLines = 1)
                         }
                     }
-                    if (state == HomeMode.CONNECTING || state == HomeMode.NOT_ANSWERING) {
+                    if (stepShown) {
                         val step = if (state == HomeMode.NOT_ANSWERING) 0 else activeStep(link)
                         Text(stepNames()[step].uppercase(java.util.Locale.ROOT), style = MaterialTheme.typography.labelSmall,
                             color = if (state == HomeMode.NOT_ANSWERING) colors.warning else scheme.primary,

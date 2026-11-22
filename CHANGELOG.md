@@ -24,6 +24,10 @@ is what the in-app update popup shows.
   so a size between the Large and Medium presets can be picked (#83).
 - Navigation volume now goes up to +12 dB (Settings › Sound & voice), for CarPlay and Android Auto;
   boosted sound has its loudest peaks softened instead of clipped (#83).
+- Fixed: on a phone, Home's dial no longer cuts off the connection step ("Reaching phone",
+  "Phone answered") under the CarPlay or Android Auto name while connecting.
+- Fixed: the delete button next to each phone in Home's Phones list is as large as the other car
+  buttons (76 dp on a head unit), so it is easier to hit while parked.
 - The head unit's Back button now goes back inside Android Auto instead of opening the menu to
   leave it (#72). Turn it off in Settings › Car › Back button goes back in Android Auto; the
   two-finger swipe from the left edge still opens the menu. Home stays the system's.

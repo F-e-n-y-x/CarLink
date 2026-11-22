@@ -116,7 +116,7 @@ internal fun PhonesSheet(ui: HomeUi, actions: HomeActions, onDismiss: () -> Unit
                         }
                         Spacer(Modifier.width(12.dp))
                         // Delete: forget and unpair this phone (asks first).
-                        androidx.compose.material3.IconButton(onClick = { confirmForget = phone }) {
+                        androidx.compose.material3.IconButton(onClick = { confirmForget = phone }, Modifier.size(dimens.minTouch)) {
                             Icon(painterResource(R.drawable.carlink_ic_delete),
                                 stringResource(R.string.carlink_home_forget_title, phone.name), Modifier.size(dimens.iconTertiary),
                                 tint = scheme.onSurfaceVariant)
