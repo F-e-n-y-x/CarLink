@@ -6,7 +6,7 @@ package com.shilapi.xcertplay.airplay
  */
 internal class RtpClockProbe(private val windowNs: Long = 2_000_000_000L) {
     companion object {
-        private const val MAX_PLAUSIBLE_HZ = 384_000 // CarLink: upstream PR #1296
+        private const val MAX_PLAUSIBLE_HZ = 384_000
     }
 
     private var firstSample = 0L
@@ -29,7 +29,7 @@ internal class RtpClockProbe(private val windowNs: Long = 2_000_000_000L) {
         if (elapsedNs < windowNs) return null
         val ticks = (unsigned - firstSample) and 0xffff_ffffL
         val hz = Math.round(ticks * 1_000_000_000.0 / elapsedNs)
-        if (hz > MAX_PLAUSIBLE_HZ) { // CarLink: upstream PR #1296
+        if (hz > MAX_PLAUSIBLE_HZ) {
             // A late/reordered packet or a timeline reset made the delta implausible.
             // Restart the window instead of reporting a clock no audio stream uses.
             firstSample = unsigned

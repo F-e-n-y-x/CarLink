@@ -135,7 +135,10 @@ object CarPlayEventMapping {
             ConnectionFailureCause.CHOSEN_IPHONE_NOT_PAIRED, ConnectionFailureCause.NO_PAIRED_IPHONE,
             ConnectionFailureCause.IPHONE_NOT_CHOSEN -> return result(FailureReason.BLUETOOTH, hard = true)
             ConnectionFailureCause.CAR_HOTSPOT_OFF, ConnectionFailureCause.CAR_HOTSPOT_DETAILS_DIFFER,
-            ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
+            ConnectionFailureCause.HOTSPOT_INTERFACE_NOT_FOUND,
+            // DiPlay 76562fe2f: an open shared Wi-Fi (iPhones never use one) and a screen without Wi-Fi Direct.
+            ConnectionFailureCause.EXISTING_WIFI_NEEDS_PASSWORD, ConnectionFailureCause.WIFI_DIRECT_UNSUPPORTED,
+            -> return result(FailureReason.WIFI_SETUP_FAILED, hard = true)
             ConnectionFailureCause.WIFI_DIRECT_CHANNEL_UNAVAILABLE, ConnectionFailureCause.CAR_HOTSPOT_START_TIMED_OUT,
             ConnectionFailureCause.CAR_HOTSPOT_START_FAILED, null -> Unit
         }

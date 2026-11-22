@@ -6,6 +6,11 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Updated the CarPlay engine (DiPlay, 2026-11-22): wireless CarPlay keeps working when one of the
+  screen's addresses cannot take a connection, a screen without Wi-Fi Direct no longer retries it,
+  silent Bluetooth links are retried on adapters that already carried data, and fixes for music
+  skips and the wired music clock.
+
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.

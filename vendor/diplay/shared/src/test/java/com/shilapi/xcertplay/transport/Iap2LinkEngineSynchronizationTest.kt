@@ -83,16 +83,78 @@ class Iap2LinkEngineSynchronizationTest {
         assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
     }
 
+    @Test
+    fun doesNotAcknowledgeAPlainSynThatRepeatsThePeerSynchronization() {
+        val engine = synchronizedWiredEngine()
+
+        // Same sequence and parameters, but without the ACK bit: this is not a lost-ACK repeat.
+        engine.feed(frame(CONTROL_SYN, PEER_SYN_SEQUENCE, LOCAL_SEQUENCE, 0, PEER_SYNCHRONIZATION.encode()), 1_000)
+
+        assertEquals(0, engine.takeOutput().size)
+        assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
+        assertNull(engine.pollEvent())
+    }
+
+    @Test
+    fun wirelessLinkReacknowledgesARepeatedSynAckBeforeTheFirstData() {
+        val engine = Iap2LinkEngine(WIRELESS_CONFIG)
+        engine.start(wiredInitiator = false, nowMillis = 0)
+        engine.takeOutput()
+        engine.feed(Iap2LinkEngine.IAP2_MARKER, 5)
+        engine.takeOutput()
+
+        engine.feed(peerSynAck(synchronization = WIRELESS_PEER_SYNCHRONIZATION), 10)
+        assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
+        assertArrayEquals(acknowledgement(PEER_SYN_SEQUENCE), engine.takeOutput())
+        while (engine.pollEvent() != null) Unit
+
+        // Without the re-ACK, the first repeat gets no answer: only the peer's acknowledgement
+        // count (maxAcknowledgements = 3) would trigger one, a repeat later.
+        engine.feed(peerSynAck(synchronization = WIRELESS_PEER_SYNCHRONIZATION), 1_000)
+        assertArrayEquals(acknowledgement(PEER_SYN_SEQUENCE), engine.takeOutput())
+        engine.feed(peerSynAck(synchronization = WIRELESS_PEER_SYNCHRONIZATION), 2_000)
+        assertArrayEquals(acknowledgement(PEER_SYN_SEQUENCE), engine.takeOutput())
+        assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
+        assertNull(engine.pollEvent())
+
+        // Data that follows is still acknowledged on the negotiated acknowledgement timer.
+        val payload = byteArrayOf(0x40, 0x40, 0x00, 0x06, 0x1d, 0x00)
+        engine.feed(frame(CONTROL_ACK, PEER_SYN_SEQUENCE + 1, LOCAL_SEQUENCE, CONTROL_SESSION, payload), 2_010)
+        assertArrayEquals(payload, (engine.pollEvent() as Iap2LinkEngine.Event.Control).bytes)
+        assertEquals(0, engine.takeOutput().size)
+
+        engine.advanceTime(2_010L + WIRELESS_PEER_SYNCHRONIZATION.acknowledgementTimeoutMillis)
+        assertArrayEquals(acknowledgement(PEER_SYN_SEQUENCE + 1), engine.takeOutput())
+    }
+
+    @Test
+    fun reacknowledgesARepeatedSynAckWhoseSequenceWraps() {
+        val engine = synchronizedWiredEngine(peerSequence = LAST_SEQUENCE)
+
+        engine.feed(peerSynAck(sequence = LAST_SEQUENCE), 1_000)
+        assertArrayEquals(acknowledgement(LAST_SEQUENCE), engine.takeOutput())
+
+        // The first data packet wraps to sequence 0; it is in order and ends the re-ACK window.
+        val payload = byteArrayOf(1)
+        engine.feed(frame(CONTROL_ACK, 0, LOCAL_SEQUENCE, CONTROL_SESSION, payload), 1_010)
+        assertArrayEquals(payload, (engine.pollEvent() as Iap2LinkEngine.Event.Control).bytes)
+        engine.takeOutput()
+
+        engine.feed(peerSynAck(sequence = LAST_SEQUENCE), 2_000)
+        assertEquals(0, engine.takeOutput().size)
+        assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
+    }
+
     /** A wired engine after the first SYN+ACK, with its output and events drained. */
-    private fun synchronizedWiredEngine(): Iap2LinkEngine {
+    private fun synchronizedWiredEngine(peerSequence: Int = PEER_SYN_SEQUENCE): Iap2LinkEngine {
         val engine = Iap2LinkEngine(WIRED_CONFIG)
         engine.start(wiredInitiator = true, nowMillis = 0)
         engine.takeOutput()
 
-        engine.feed(peerSynAck(), 10)
+        engine.feed(peerSynAck(sequence = peerSequence), 10)
 
         assertEquals(Iap2LinkEngine.State.NORMAL, engine.state())
-        assertArrayEquals(acknowledgement(PEER_SYN_SEQUENCE), engine.takeOutput())
+        assertArrayEquals(acknowledgement(peerSequence), engine.takeOutput())
         while (engine.pollEvent() != null) Unit
         return engine
     }
@@ -133,12 +195,19 @@ class Iap2LinkEngineSynchronizationTest {
         // Sequence numbers from the #1220 report: DiPlay's SYN is 99, the iPhone's SYN+ACK is 144.
         const val LOCAL_SEQUENCE = 99
         const val PEER_SYN_SEQUENCE = 144
+        const val LAST_SEQUENCE = 0xff
 
         // Iap2LinkChannel's wired configuration.
         val WIRED_CONFIG = Iap2LinkConfig(
             maxOutgoing = 4,
             controlSessionVersion = 2,
             zeroAcknowledgements = true,
+        )
+
+        // Iap2LinkChannel's wireless (RFCOMM) configuration.
+        val WIRELESS_CONFIG = Iap2LinkConfig(
+            maxOutgoing = 4,
+            controlSessionVersion = 2,
         )
 
         // The iPhone echoes DiPlay's zero-acknowledgement parameters (a 29-byte SYN+ACK).
@@ -154,6 +223,14 @@ class Iap2LinkEngineSynchronizationTest {
                 Iap2LinkEngine.SessionDescriptor(Iap2LinkEngine.EA_SESSION_ID, 2, 1),
                 Iap2LinkEngine.SessionDescriptor(Iap2LinkEngine.FILE_TRANSFER_SESSION_ID, 1, 2),
             ),
+        )
+
+        // A wireless peer that acknowledges every third packet, as DiPlay's wireless SYN asks.
+        val WIRELESS_PEER_SYNCHRONIZATION = PEER_SYNCHRONIZATION.copy(
+            retransmissionTimeoutMillis = 4_000,
+            acknowledgementTimeoutMillis = 500,
+            maxRetransmissions = 4,
+            maxAcknowledgements = 3,
         )
     }
 }

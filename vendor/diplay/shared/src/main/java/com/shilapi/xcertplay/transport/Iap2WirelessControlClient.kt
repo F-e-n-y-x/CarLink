@@ -183,7 +183,7 @@ class Iap2WirelessControlClient(
 
                     DEVICE_TRANSPORT_IDENTIFIER_NOTIFICATION -> {
                         transportNotificationSeen = true
-                        val diagnostic = deviceTransportIdentifierDiagnostic(incoming) // CarLink: upstream PR #1297
+                        val diagnostic = deviceTransportIdentifierDiagnostic(incoming)
                         stage = later(stage, Iap2WirelessControlStage.TRANSPORT_NOTIFIED)
                         onProgress("$diagnostic; resending 0x5703")
                         if (
@@ -254,7 +254,7 @@ class Iap2WirelessControlClient(
         }
 
         /** A malformed identifier is only logged; it must not end the control loop before 0x5703. */
-        internal fun deviceTransportIdentifierDiagnostic(frame: Iap2Frame): String = try { // CarLink: upstream PR #1297
+        internal fun deviceTransportIdentifierDiagnostic(frame: Iap2Frame): String = try {
             val identifiers = Iap2WirelessMessages.deviceTransportIdentifier(frame)
             "iap2 rx=0x4e0e device-transport-identifier " +
                 "bluetooth=${identifiers.bluetoothMac ?: "none"} " +

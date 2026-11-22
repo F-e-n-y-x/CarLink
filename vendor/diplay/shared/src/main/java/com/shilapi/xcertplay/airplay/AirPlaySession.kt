@@ -382,6 +382,11 @@ class AirPlaySession(
         sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
     }
 
+    /** Presses [index] and keeps it down until [releaseMedia]; the iPhone seeks while Fast Forward or Rewind is held. */
+    fun holdMedia(index: Int) = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(index))
+
+    fun releaseMedia() = sendHidReport(AirPlayHid.MEDIA_HID_UID, AirPlayHid.mediaReport(0))
+
     fun sendTelephony(index: Int) {
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(index))
         sendHidReport(AirPlayHid.TELEPHONY_HID_UID, AirPlayHid.telephonyReport(0))
@@ -454,7 +459,7 @@ class AirPlaySession(
         com.shilapi.xcertplay.network.TcpLiveness.configure(socket) { debugLog(it) }
         val input = BufferedInputStream(socket.getInputStream())
         val output = BufferedOutputStream(socket.getOutputStream())
-        val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
+        val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
         val buffer = ByteArray(READ_CHUNK_BYTES)
         var closeReason = "session closed"
         try {
@@ -478,7 +483,7 @@ class AirPlaySession(
                     encBuf = decrypted.rest
                     plaintext = decrypted.data
                 }
-                frames.append(plaintext) // CarLink: upstream PR #1304
+                frames.append(plaintext)
                 for (request in frames.drain()) {
                     val cseq = request.headers["cseq"] ?: "-"
                     val path = request.path.lowercase()
@@ -708,7 +713,8 @@ class AirPlaySession(
         val deviceId = string(dict["deviceID"])
         val wifiMac = string(dict["macAddress"]).lowercase()
         val model = string(dict["model"])
-        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"])))
+        debugLog(AirPlayPeerDiagnostics.summary(model, string(dict["osVersion"]), string(dict["sourceVersion"]),
+            string(dict["osBuildVersion"])))
         if (deviceId.isNotEmpty()) deviceBtMac = deviceId
         if (name.isNotEmpty() || deviceId.isNotEmpty() || wifiMac.isNotEmpty()) {
             listener.onDeviceInfo(this, AirPlayDeviceInfo(name, deviceId, wifiMac, model))
@@ -955,7 +961,7 @@ class AirPlaySession(
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
             var encrypted = ByteArray(0)
-            val frames = ControlFrameBuffer(READ_CHUNK_BYTES) // CarLink: upstream PR #1304
+            val frames = ControlFrameBuffer(READ_CHUNK_BYTES)
             val buffer = ByteArray(READ_CHUNK_BYTES)
             while (!closed.get()) {
                 val count = input.read(buffer)
@@ -969,7 +975,7 @@ class AirPlaySession(
                     break
                 }
                 encrypted = decrypted.rest
-                frames.append(decrypted.data) // CarLink: upstream PR #1304
+                frames.append(decrypted.data)
                 for (message in frames.drain()) {
                     if (message.method.startsWith("RTSP/") || message.method.startsWith("HTTP/")) continue
                     debugLog(

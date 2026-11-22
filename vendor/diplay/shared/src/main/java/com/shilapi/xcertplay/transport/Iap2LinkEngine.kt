@@ -359,8 +359,9 @@ class Iap2LinkEngine(
 
     private fun handleSynchronization(sync: SynchronizationPayload, sequence: Int, acknowledges: Boolean) {
         if (state == State.NORMAL) {
-            // The peer re-sends its SYN+ACK until it sees our ACK.  The wired link advertises
-            // zero retransmissions and acknowledgements, so no other packet would answer it, and
+            // The peer re-sends its SYN+ACK until it sees our ACK.  This applies to every link
+            // (wired, wireless RFCOMM and the type-130 tunnel), but it matters most on the zero-
+            // acknowledgement configuration, where no other packet would answer the repeat and
             // the iPhone would never start identification (#1220).  Re-acknowledge an exact
             // repeat that arrives before any in-order data; never renegotiate or reset.
             if (acknowledges && sequence == peerSynchronizationSequence && sync == peerSynchronization) {

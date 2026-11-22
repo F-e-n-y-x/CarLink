@@ -22,7 +22,7 @@ internal data class HotspotNetworkSnapshot(
     val consistent: Boolean = true,
     val apEnabled: Boolean? = true,
     /** The Wi-Fi interfaces the platform itself reports as tethered, or null when it cannot be read. */
-    val platformAp: Set<String>? = null, // CarLink: upstream PR #1218
+    val platformAp: Set<String>? = null,
 )
 
 internal data class HotspotSelection(val name: String, val index: Int, val address: InetAddress) {
@@ -52,9 +52,9 @@ internal fun selectHotspotInterface(snapshot: HotspotNetworkSnapshot, log: (Stri
         // A Unisoc UMS512 head unit (#1187) read isUp() false for the wlan0 that the platform listed as its
         // tethered hotspot and that held the hotspot address, so the car hotspot never became ready. The
         // platform's own tether list outweighs that flag; a configured or inferred interface still has to be up.
-        val reportedDown = !iface.up && !(snapshot.platformAp?.contains(iface.name) == true && address != null) // CarLink: upstream PR #1218
+        val reportedDown = !iface.up && !(snapshot.platformAp?.contains(iface.name) == true && address != null)
         val reason = when {
-            reportedDown || iface.index <= 0 -> "interface_down" // CarLink: upstream PR #1218
+            reportedDown || iface.index <= 0 -> "interface_down"
             address == null -> "address_unavailable"
             owned -> "platform_ap"
             snapshot.apInterfaces != null -> "not_platform_ap"

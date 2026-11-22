@@ -6,6 +6,8 @@ import android.media.MediaRecorder
 import com.shilapi.xcertplay.airplay.MicrophoneConfig
 import java.net.InetAddress
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,6 +27,7 @@ import org.robolectric.annotation.Config
 class MicrophoneRecorderRecoveryTest {
     private val diagnostics = CopyOnWriteArrayList<String>()
     private val built = CopyOnWriteArrayList<FakeRecorder>()
+    private val rejectedBuilds = AtomicInteger()
     private var uplink: MicrophoneUplink? = null
 
     @After fun tearDown() {
@@ -137,11 +140,82 @@ class MicrophoneRecorderRecoveryTest {
 
         assertEquals(listOf(COMMUNICATION, COMMUNICATION, COMMUNICATION, RECOGNITION), built.map { it.source })
         val fallback = line("Microphone: source fallback")
-        assertTrue(fallback, fallback.contains("type=telephony from=VOICE_COMMUNICATION to=VOICE_RECOGNITION failedRecorders=2"))
-        assertTrue(fallback, fallback.contains("defaultPlatformAec=none diplayEchoCanceller=off"))
+        assertTrue(fallback, fallback.endsWith("type=telephony from=VOICE_COMMUNICATION to=VOICE_RECOGNITION failedRecorders=2"))
         val restarted = line("Microphone: recording restarted")
         assertTrue(restarted, restarted.contains("type=telephony source=VOICE_RECOGNITION"))
         assertTrue(restarted, restarted.contains("attempt=4 reason=read-error"))
+        // The effects are reported once they are attached to the new recorder, not guessed before it is built.
+        assertTrue(restarted, restarted.contains("recorder=new platformEffects=none diplayEchoCanceller=off"))
+    }
+
+    @Test fun aCallNeverFallsBackToVoiceRecognitionAfterTheUnitRefusedToBuildIt() {
+        // In the car's phone audio state a call starts on VOICE_RECOGNITION; this unit throws at build() for it,
+        // so the call records from VOICE_COMMUNICATION. Two rebuilt VOICE_COMMUNICATION recorders fail, the third works.
+        start(behaviour = { index ->
+            when (index) {
+                0 -> Behaviour(starts = { attempt -> attempt == 1 }, reads = { AudioRecord.ERROR_INVALID_OPERATION })
+                1, 2 -> Behaviour(starts = { false })
+                else -> Behaviour()
+            }
+        }, carPhoneState = true, rejects = { source -> source == RECOGNITION })
+
+        awaitTrue { built.size == 4 && built[3].dataReads.get() > 5 }
+
+        assertTrue(line("Microphone: failure ").contains("stage=RECORDER_CREATION"))
+        assertEquals(listOf(COMMUNICATION, COMMUNICATION, COMMUNICATION, COMMUNICATION), built.map { it.source })
+        assertEquals("VOICE_RECOGNITION is not asked for again", 1, rejectedBuilds.get())
+        assertTrue(diagnostics.none { it.startsWith("Microphone: source fallback") })
+        val restarted = line("Microphone: recording restarted")
+        assertTrue(restarted, restarted.contains("type=telephony source=VOICE_COMMUNICATION"))
+        assertTrue(restarted, restarted.contains("attempt=4 reason=read-error routedDeviceType=unknown recorder=new"))
+        assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
+    }
+
+    @Test fun aFallbackSourceTheUnitCannotBuildSendsTheRestOfTheCallBackToVoiceCommunication() {
+        // The call starts on VOICE_COMMUNICATION, two rebuilt recorders fail, and the fallback to VOICE_RECOGNITION
+        // throws at build() on this unit: the next attempt must use VOICE_COMMUNICATION again, and it works.
+        start(behaviour = { index ->
+            when (index) {
+                0 -> Behaviour(starts = { attempt -> attempt == 1 }, reads = { AudioRecord.ERROR_INVALID_OPERATION })
+                1, 2 -> Behaviour(starts = { false })
+                else -> Behaviour()
+            }
+        }, rejects = { source -> source == RECOGNITION })
+
+        awaitTrue { built.size == 4 && built[3].dataReads.get() > 5 }
+
+        assertEquals(listOf(COMMUNICATION, COMMUNICATION, COMMUNICATION, COMMUNICATION), built.map { it.source })
+        assertEquals("VOICE_RECOGNITION is asked for once", 1, rejectedBuilds.get())
+        assertTrue(line("Microphone: source fallback").contains("to=VOICE_RECOGNITION"))
+        val restarted = line("Microphone: recording restarted")
+        assertTrue(restarted, restarted.contains("type=telephony source=VOICE_COMMUNICATION"))
+        assertTrue(restarted, restarted.contains("attempt=5 reason=read-error"))
+        assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
+    }
+
+    @Test fun aStreamThatClosesDuringAStalledStartReportsNoFailedRestart() {
+        // #1214: a rebuilt recorder's startRecording() stalls; the call ends meanwhile, and close() stops the recorder,
+        // which waits for that start like AudioRecord.stop() does, so the start ends up stopped.
+        start(behaviour = { index ->
+            if (index == 0) {
+                Behaviour(starts = { attempt -> attempt == 1 }, reads = { AudioRecord.ERROR_INVALID_OPERATION })
+            } else {
+                Behaviour(starts = {
+                    built[index].stopRequested.await(5, TimeUnit.SECONDS)
+                    false
+                })
+            }
+        }, telephony = false)
+        awaitTrue { built.size == 2 && built[1].startCalls.get() == 1 }
+
+        requireNotNull(uplink).close()
+
+        assertEquals("only the failure while the stream ran", 1,
+            diagnostics.count { it.startsWith("Microphone: recording restart failed") })
+        assertTrue(line("Microphone: recording restart failed").contains("recorder=same"))
+        assertTrue(diagnostics.none { it.startsWith("Microphone: capture stopped") })
+        assertEquals("no recorder is built after close", 2, built.size)
+        assertTrue(built.all { it.released })
     }
 
     @Test fun aGeelyCallKeepsVoiceCommunication() {
@@ -188,8 +262,14 @@ class MicrophoneRecorderRecoveryTest {
         type: String = if (telephony) "telephony" else "other",
         geely: Boolean = false,
         backoff: List<Long> = BACKOFF,
+        carPhoneState: Boolean = false,
+        rejects: (Int) -> Boolean = { false },
     ) {
         val factory = MicrophoneRecorderFactory { source, _, _, _ ->
+            if (rejects(source)) {
+                rejectedBuilds.incrementAndGet()
+                throw UnsupportedOperationException("source $source rejected")
+            }
             val index = built.size
             val recorder = FakeRecorder(source, index)
             built += recorder
@@ -202,6 +282,7 @@ class MicrophoneRecorderRecoveryTest {
             recorderFactory = factory,
             rebuildBackoffMillis = backoff,
             geelyHeadUnit = { geely },
+            carPhoneState = { carPhoneState },
         )
         uplink = next
         assertTrue(next.start())
@@ -232,12 +313,16 @@ class MicrophoneRecorderRecoveryTest {
     /** [starts] gets the 1-based startRecording call; [reads] the 1-based read while recording. */
     class Behaviour(val starts: (Int) -> Boolean = { true }, val reads: (Int) -> Int = { DATA })
 
-    /** Behaves like AudioRecord: a refused start leaves it stopped, and reading a stopped recorder fails at once. */
+    /**
+     * Behaves like AudioRecord: a refused start leaves it stopped, reading a stopped recorder fails at once, and
+     * stop() waits for a start that is still running.
+     */
     class FakeRecorder(val source: Int, index: Int) : MicrophoneRecorder {
         @Volatile var behaviour = Behaviour()
         val startCalls = AtomicInteger()
         val readCalls = AtomicInteger()
         val dataReads = AtomicInteger()
+        val stopRequested = CountDownLatch(1)
         private val recordingReads = AtomicInteger()
         @Volatile var released = false
             private set
@@ -251,11 +336,12 @@ class MicrophoneRecorderRecoveryTest {
 
         override fun startRecording() {
             check(!released) { "released" }
-            recording = behaviour.starts(startCalls.incrementAndGet())
+            synchronized(this) { recording = behaviour.starts(startCalls.incrementAndGet()) }
         }
 
         override fun stop() {
-            recording = false
+            stopRequested.countDown()
+            synchronized(this) { recording = false }
         }
 
         override fun read(buffer: ByteArray, offset: Int, size: Int): Int {
