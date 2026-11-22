@@ -225,6 +225,7 @@ class AudioTrackWrapper(
     }
 
     private fun writeToTrack(buffer: ByteArray, size: Int) {
+        com.andrerinas.openheadunit.HostIntegration.playbackPcm?.invoke(channelId, buffer, size) // CarLink
         if (mixer != null) {
             mixer.feed(channelId, buffer, 0, size)
             framesWritten += size / bytesPerFrame

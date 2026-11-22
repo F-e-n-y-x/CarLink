@@ -161,12 +161,17 @@ class AaSessionSettingsTest {
             resumeMusic = true)).values
         assertEquals(-50, v["media-volume-offset"])
         // Android Auto's speech channel carries the directions (and the Assistant); its system channel the chimes.
-        assertEquals(100, v["assistant-volume-offset"])
-        assertEquals(100, v["navigation-volume-offset"])
+        // Boosts go through CarLink's soft-clipping hook, not DiAuto's flat clip.
+        assertEquals(0, v["assistant-volume-offset"])
+        assertEquals(0, v["navigation-volume-offset"])
+        assertEquals(6, v[AaSessionSettings.NAVIGATION_BOOST_KEY])
+        assertEquals(0, v[AaSessionSettings.MEDIA_BOOST_KEY])
+        assertEquals(12, values(UnifiedSettings(navigationLevelDb = 12)).values[AaSessionSettings.NAVIGATION_BOOST_KEY])
         assertEquals(9, v[AaSessionSettings.MIC_GAIN_KEY])
         assertEquals(true, v[AaSessionSettings.RESUME_MUSIC_KEY])
         val normal = values().values
-        for (key in listOf("media-volume-offset", "assistant-volume-offset", "navigation-volume-offset", AaSessionSettings.MIC_GAIN_KEY)) {
+        for (key in listOf("media-volume-offset", "assistant-volume-offset", "navigation-volume-offset", AaSessionSettings.MIC_GAIN_KEY,
+            AaSessionSettings.MEDIA_BOOST_KEY, AaSessionSettings.NAVIGATION_BOOST_KEY)) {
             assertEquals("every session writes $key", 0, normal[key])
         }
         assertEquals(false, normal[AaSessionSettings.RESUME_MUSIC_KEY])

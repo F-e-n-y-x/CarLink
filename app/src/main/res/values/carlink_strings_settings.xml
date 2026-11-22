@@ -157,7 +157,7 @@
     <string name="carlink_settings_level_navigation_detail">Spoken directions and the voice assistant</string>
     <string name="carlink_settings_level_calls">Calls</string>
     <string name="carlink_settings_level_calls_detail">CarPlay calls. Android Auto calls go through the car’s Bluetooth hands-free.</string>
-    <string name="carlink_settings_level_sheet_body">Louder or quieter than the phone sends it, for both CarPlay and Android Auto. Above Normal, very loud passages can distort.</string>
+    <string name="carlink_settings_level_sheet_body">Louder or quieter than the phone sends it, for both CarPlay and Android Auto. Above Normal, the loudest peaks are softened so they do not crackle.</string>
     <string name="carlink_settings_level_normal">Normal</string>
     <string name="carlink_settings_level_db">%1$s dB</string>
     <string name="carlink_settings_call_stream">Call audio plays as</string>

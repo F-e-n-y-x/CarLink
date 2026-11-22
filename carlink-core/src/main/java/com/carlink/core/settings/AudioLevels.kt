@@ -1,7 +1,9 @@
 package com.carlink.core.settings
 
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.tanh
 
 /**
  * The sound levels and microphone gain CarLink applies to both engines, and the PCM math behind
@@ -11,6 +13,9 @@ import kotlin.math.roundToInt
 object AudioLevels {
     /** The choices for media, navigation and call levels. */
     val PLAYBACK_DB = listOf(-12, -9, -6, -3, 0, 3, 6)
+
+    /** Navigation goes higher (#83: prompts lost under music on a stereo with one channel); [scalePcm16] keeps it clean. */
+    val NAVIGATION_DB = PLAYBACK_DB + listOf(9, 12)
 
     /** The choices for the microphone gain. */
     val MIC_DB = listOf(-6, 0, 3, 6, 9, 12)
@@ -24,19 +29,35 @@ object AudioLevels {
      */
     fun aaOffsetPercent(db: Int): Int = ((linear(db) - 1f) * 100f).roundToInt().coerceIn(-100, 100)
 
-    /** Scales 16-bit little-endian PCM in place by [gain], clipping at full scale. */
+    /**
+     * Scales 16-bit little-endian PCM in place by [gain]. A boost bends the loudest peaks softly
+     * under full scale ([softClip]) instead of cutting them flat, so +12 dB stays free of harsh clipping.
+     */
     fun scalePcm16(data: ByteArray, offset: Int, length: Int, gain: Float) {
         if (gain == 1f) return
         val end = offset + (length and 1.inv())
         var i = offset
         while (i < end) {
             val sample = (data[i + 1].toInt() shl 8) or (data[i].toInt() and 0xff)
-            val scaled = (sample * gain).roundToInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
+            val boosted = sample * gain
+            val scaled = (if (gain > 1f) softClip(boosted) else boosted).roundToInt()
+                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
             data[i] = scaled.toByte()
             data[i + 1] = (scaled shr 8).toByte()
             i += 2
         }
     }
+
+    /** Linear up to [KNEE], then a tanh curve that reaches full scale only at infinity. */
+    internal fun softClip(x: Float): Float {
+        val a = abs(x)
+        if (a <= KNEE) return x
+        val y = KNEE + ROOM * tanh((a - KNEE) / ROOM)
+        return if (x < 0f) -y else y
+    }
+
+    private const val KNEE = 24_576f // -2.5 dBFS
+    private const val ROOM = 32_767f - KNEE
 
     /** A PCM scaler for [db], or null at 0 dB so the engine's path stays exactly as it was. */
     fun pcmGain(db: Int): ((ByteArray, Int, Int) -> Unit)? {

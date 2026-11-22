@@ -109,9 +109,13 @@ object AaSessionSettings {
             // carries the spoken directions as well as the Assistant, and its system channel (DiAuto's
             // "navigation") the prompts' chimes, so both follow the navigation level. Calls are not
             // Android Auto audio (they go over Bluetooth hands-free), so the call level has nothing here.
-            put("media-volume-offset", AudioLevels.aaOffsetPercent(settings.mediaLevelDb))
-            put("assistant-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb))
-            put("navigation-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb))
+            // Cuts only: DiAuto clips a boost flat and stops at +6 dB, so boosts go through CarLink's
+            // playback hook (AaEngineHooks, AudioLevels.scalePcm16's soft clip), up to +12 dB for directions.
+            put("media-volume-offset", AudioLevels.aaOffsetPercent(settings.mediaLevelDb.coerceAtMost(0)))
+            put("assistant-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb.coerceAtMost(0)))
+            put("navigation-volume-offset", AudioLevels.aaOffsetPercent(settings.navigationLevelDb.coerceAtMost(0)))
+            put(MEDIA_BOOST_KEY, settings.mediaLevelDb.coerceAtLeast(0))
+            put(NAVIGATION_BOOST_KEY, settings.navigationLevelDb.coerceAtLeast(0))
             put(MIC_GAIN_KEY, settings.micGainDb)
             put(RESUME_MUSIC_KEY, settings.resumeMusic)
             // The engine's Bluetooth route for mode 3 (design/EXTERNAL_BLUETOOTH.md). A wireless
@@ -248,6 +252,8 @@ object AaSessionSettings {
 
     /** DiAuto preferences read by CarLink's hooks in ":aa" (AaEngineHooks): microphone gain in dB, resume music. */
     const val MIC_GAIN_KEY = "carlink-mic-gain-db"
+    const val MEDIA_BOOST_KEY = "carlink-media-boost-db"
+    const val NAVIGATION_BOOST_KEY = "carlink-navigation-boost-db"
     const val RESUME_MUSIC_KEY = "carlink-resume-music"
 
     /**

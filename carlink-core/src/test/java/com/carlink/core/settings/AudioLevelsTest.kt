@@ -24,13 +24,26 @@ class AudioLevelsTest {
         assertEquals(41, AudioLevels.aaOffsetPercent(3))
         assertEquals(-50, AudioLevels.aaOffsetPercent(-6))
         assertEquals(-75, AudioLevels.aaOffsetPercent(-12))
-        for (db in AudioLevels.PLAYBACK_DB) assertEquals(true, AudioLevels.aaOffsetPercent(db) in -100..100)
+        for (db in AudioLevels.NAVIGATION_DB) assertEquals(true, AudioLevels.aaOffsetPercent(db) in -100..100)
     }
 
-    @Test fun gainScalesAndClipsAtFullScale() {
-        val data = pcm(1000, -1000, 20000, -20000, 32767, -32768)
+    @Test fun boostIsLinearBelowTheKneeAndBendsSoftlyUnderFullScale() {
+        val data = pcm(1000, -1000, 12000, 20000, -20000, 32767, -32768)
         AudioLevels.scalePcm16(data, 0, data.size, 2f)
-        assertArrayEquals(intArrayOf(2000, -2000, 32767, -32768, 32767, -32768), samples(data))
+        val out = samples(data)
+        assertArrayEquals(intArrayOf(2000, -2000, 24000), out.copyOfRange(0, 3))
+        // 40000 bends to about 32400, not a flat 32767; louder input still comes out louder, never past full scale.
+        assertEquals(32398.0, out[3].toDouble(), 2.0)
+        assertEquals(-out[3], out[4])
+        assertEquals(true, out[5] in out[3]..32767)
+        assertEquals(true, out[6] in -32768..-out[3])
+    }
+
+    @Test fun plusTwelveDecibelsOffered() {
+        assertEquals(12, AudioLevels.NAVIGATION_DB.max())
+        val data = pcm(8000)
+        AudioLevels.scalePcm16(data, 0, data.size, AudioLevels.linear(12))
+        assertEquals(true, samples(data)[0] in 24577..32766) // 8000 x 3.98 = 31850 would clip; soft-clipped instead
     }
 
     @Test fun gainTouchesOnlyTheGivenRangeAndWholeSamples() {

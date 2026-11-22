@@ -6,6 +6,8 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Navigation volume now goes up to +12 dB (Settings › Sound & voice), for CarPlay and Android Auto;
+  boosted sound has its loudest peaks softened instead of clipped (#83).
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
   Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
   thanks @dorsi90).

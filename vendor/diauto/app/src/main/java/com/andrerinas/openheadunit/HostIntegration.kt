@@ -256,6 +256,14 @@ object HostIntegration {
     @JvmStatic
     var microphonePcm: ((data: ByteArray, length: Int) -> Unit)? = null
 
+    /**
+     * CarLink: scales played PCM (16-bit, in place) before the track or mixer gets it; [channel] is the
+     * Android Auto channel id (Channel.ID_AUD, ID_AU1, ID_AU2).
+     */
+    @Volatile
+    @JvmStatic
+    var playbackPcm: ((channel: Int, data: ByteArray, length: Int) -> Unit)? = null
+
     /** CarLink: the phone's play state from each media playback status it sends. */
     @Volatile
     @JvmStatic

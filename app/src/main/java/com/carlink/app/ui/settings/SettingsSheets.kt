@@ -219,7 +219,11 @@ internal fun SettingsSheetHost(key: String?, ui: SettingsUi, actions: SettingsAc
                 EssentialSheet.CALL_LEVEL -> Triple(R.string.carlink_settings_level_calls, R.string.carlink_settings_level_sheet_body, u.callLevelDb)
                 else -> Triple(R.string.carlink_settings_mic_gain, R.string.carlink_settings_mic_gain_sheet_body, u.micGainDb)
             }
-            val choices = if (sheet == EssentialSheet.MIC_GAIN) AudioLevels.MIC_DB else AudioLevels.PLAYBACK_DB
+            val choices = when (sheet) {
+                EssentialSheet.MIC_GAIN -> AudioLevels.MIC_DB
+                EssentialSheet.NAVIGATION_LEVEL -> AudioLevels.NAVIGATION_DB
+                else -> AudioLevels.PLAYBACK_DB
+            }
             ChoiceSheet(stringResource(title), stringResource(body), true,
                 choices.map { Preset(it, levelLabel(it)) }, current,
                 onSelect = { db ->
