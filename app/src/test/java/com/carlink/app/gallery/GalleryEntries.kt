@@ -346,6 +346,29 @@ private fun settingsEntries(): List<GalleryEntry> = listOf(
         SettingsContent(settingsPreviewUi(showAdvanced = true, lab = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.SOUND)
     },
+    // Sound › Advanced, Android Auto's audio buffer and queue (#86), below the fold above.
+    GalleryEntry("settings", "sound-advanced-aa-buffer") {
+        com.carlink.app.ui.premium.PremiumScreen("Sound", onBack = {}) { margin ->
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = margin)
+                .widthIn(max = 900.dp)) {
+                com.carlink.app.ui.settings.GlassGroup(header = { com.carlink.app.ui.settings.EngineHeader(Engine.ANDROID_AUTO) }) {
+                    com.carlink.app.ui.settings.engineRows(SettingsCategory.SOUND, com.carlink.core.settings.Tier.ADVANCED)
+                        .first { it.first == Engine.ANDROID_AUTO }.second.dropWhile { it.id != "aa_playback_focus" }.forEachIndexed { index, setting ->
+                            if (index > 0) com.carlink.app.ui.settings.GroupDivider()
+                            com.carlink.app.ui.settings.EngineSettingRow(setting, settingsPreviewUi().advancedValues,
+                                SettingsPreviewActions, openSheet = {})
+                        }
+                }
+            }
+        }
+    },
+    GalleryEntry("settings", "sheet-aa-audio-buffer", opensWindow = true) {
+        SettingsContent(settingsPreviewUi(showAdvanced = true), SettingsPreviewActions, onBack = {},
+            startCategory = SettingsCategory.SOUND,
+            initialSheet = SheetKey.of(AdvancedSettings.all.first { it.id == "aa_audio_buffer" }))
+    },
     GalleryEntry("settings", "general-lab") {
         SettingsContent(settingsPreviewUi(lab = true), SettingsPreviewActions, onBack = {},
             startCategory = SettingsCategory.GENERAL)

@@ -6,6 +6,9 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Android Auto's audio buffer and audio queue can be set under Settings › Sound & voice › Show
+  advanced (smaller = less music delay, larger = less stutter; from the next connection). Defaults
+  are unchanged (#86).
 - Fixed: steering-wheel media buttons can be learned during Android Auto (Settings › Car ›
   Steering-wheel buttons › Learn), and keys the stereo sends as media buttons are learned too (#81,
   thanks @dorsi90).
