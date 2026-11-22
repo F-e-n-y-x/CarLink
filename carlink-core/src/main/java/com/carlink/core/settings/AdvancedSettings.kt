@@ -102,7 +102,7 @@ object AdvancedSettings {
         // ---------- CarPlay: display ----------
         AdvancedSetting("cp_scale", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Resolution", "Picture size relative to the screen. Higher is sharper and works the head unit harder.",
-            Applies.NEXT_CONNECTION, carPlayIntChoice(options(50 to "50 %", 75 to "75 %", 100 to "100 %", 125 to "125 %", 150 to "150 %"),
+            Applies.NEXT_CONNECTION, carPlayIntChoice(options(50 to "50%", 75 to "75%", 100 to "100%", 125 to "125%", 150 to "150%"),
                 AirPlayPersistence::loadDisplayScalePercent, AirPlayPersistence::saveDisplayScalePercent), Overrides.PICTURE),
         AdvancedSetting("cp_fps", Engine.CARPLAY, SettingsCategory.DISPLAY, Tier.ADVANCED,
             "Frame rate", "60 fps is smoother; 30 fps is lighter on older head units.",
