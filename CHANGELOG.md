@@ -22,6 +22,13 @@ is what the in-app update popup shows.
 - Fixed: BYD head-up display, cluster guidance and turn card no longer go blank during a merge
   without a side (upstream DiAuto PR #88).
 
+- FYT stereos: an iPhone plugged in while CarLink is open is now found (the firmware sends the
+  plug-in only to its own Car Link app). When a session starts, CarLink asks FYT's Car Link app to
+  let go of the phone, becomes the stereo's audio source so the steering-wheel media buttons and
+  the knob reach CarPlay or Android Auto, and hides FYT's floating button until the session ends.
+- Joying/QZD stereos (com.car.service, e.g. QCM6125): CarLink takes the stereo's audio source while
+  a session runs, so the radio stops and the steering-wheel media buttons reach CarPlay or Android
+  Auto, and hands the previous source back when the session ends.
 - Fixed: an iPhone with a custom Bluetooth name could be taken for an Android phone and get Android
   Auto instead of CarPlay (#89, #90). CarLink now treats a phone as Android only when it offers
   Android Auto's own Bluetooth service, and asks otherwise.

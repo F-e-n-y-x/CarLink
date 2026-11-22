@@ -351,7 +351,7 @@ object ExternalBluetoothProbe {
 
     private fun deviceSources(app: Context) = Sources(
         files = FileCheck { path -> File(path).exists() },
-        properties = PropertyReader(::systemProperty),
+        properties = PropertyReader(SystemProps::get),
         port = PortCheck(::checkPort),
         packages = PackageSource { installedApps(app) },
         bluetooth = DeviceBluetooth(app),
@@ -361,10 +361,6 @@ object ExternalBluetoothProbe {
         zjSocket = SocketCheck(::checkZjSocket),
     )
 
-    private fun systemProperty(key: String): String? = runCatching {
-        val method = Class.forName("android.os.SystemProperties").getMethod("get", String::class.java, String::class.java)
-        (method.invoke(null, key, "") as? String)?.ifEmpty { null }
-    }.getOrNull()
 
     private fun checkPort(host: String, port: Int, timeoutMillis: Int): PortState = try {
         Socket().use { it.connect(InetSocketAddress(host, port), timeoutMillis) }

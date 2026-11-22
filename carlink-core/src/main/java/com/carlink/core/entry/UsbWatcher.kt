@@ -6,9 +6,12 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.carlink.core.core.PhoneKind
+import com.carlink.core.detect.HeadUnitDetector
 import com.carlink.core.detect.PhoneClassifier
 import com.carlink.core.connection.Connection
 
@@ -19,12 +22,21 @@ import com.carlink.core.connection.Connection
  * An iPhone also exposes a PTP (photo) interface, so Photos and the MTP host compete for it and
  * the system may show a chooser or pick another app. While CarLink runs, it therefore scans the
  * connected devices and listens for attach/detach itself; each engine then asks for USB access.
+ * On FYT units the system sends an iPhone's attach broadcast only to FYT's own app, so there it
+ * also re-scans for Apple devices every [APPLE_SCAN_MS].
  */
 class UsbWatcher private constructor(context: Context) {
     private val app = context.applicationContext
     private val usb = app.getSystemService(UsbManager::class.java)
     private val handled = mutableSetOf<String>()
     private var registered = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val appleScan = object : Runnable {
+        override fun run() {
+            usb?.deviceList?.values.orEmpty().filter { it.vendorId == PhoneClassifier.APPLE_VENDOR_ID }.forEach(::route)
+            handler.postDelayed(this, APPLE_SCAN_MS)
+        }
+    }
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -52,6 +64,7 @@ class UsbWatcher private constructor(context: Context) {
                 addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
             }
             ContextCompat.registerReceiver(app, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
+            if (HeadUnitDetector.isFyt) handler.postDelayed(appleScan, APPLE_SCAN_MS)
         }
         val present = usb?.deviceList?.values.orEmpty()
         handled.retainAll(present.map { it.deviceName }.toSet())
@@ -61,6 +74,7 @@ class UsbWatcher private constructor(context: Context) {
     fun stop() {
         if (!registered) return
         registered = false
+        handler.removeCallbacks(appleScan)
         runCatching { app.unregisterReceiver(receiver) }
     }
 
@@ -87,6 +101,7 @@ class UsbWatcher private constructor(context: Context) {
 
     companion object {
         private const val TAG = "CarLink-USB"
+        private const val APPLE_SCAN_MS = 2_000L
 
         @Volatile private var instance: UsbWatcher? = null
 

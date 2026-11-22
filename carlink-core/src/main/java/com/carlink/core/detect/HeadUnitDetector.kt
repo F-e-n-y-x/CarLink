@@ -50,6 +50,15 @@ object HeadUnitDetector {
         return pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY) || hasBattery(context)
     }
 
+    /**
+     * An FYT (Unisoc UIS7862/8581 "lsec") head unit. Its framework sends the iPhone's
+     * USB_DEVICE_ATTACHED only to FYT's own com.syu.carlink (services.jar
+     * UsbProfileGroupSettingsManager.deviceAttached), so CarLink has to look for iPhones itself.
+     */
+    val isFyt: Boolean by lazy { FYT_PROPERTIES.any { SystemProps.get(it) != null } }
+
+    private val FYT_PROPERTIES = listOf("ro.lsec.platform", "ro.build.fytmanufacturer", "ro.fyt.uiid")
+
     private fun hasBattery(context: Context): Boolean {
         val status = runCatching {
             context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))

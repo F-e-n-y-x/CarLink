@@ -183,6 +183,17 @@ goes off, so nothing of CarLink is left to wake. The reliable fix is to make Car
 home screen: press Home, choose CarLink and **Always** (or set it under Android's **Settings ›
 Apps › Default apps › Home app**).
 
+**FYT stereos (UIS7862/8581, "Car Link" built in).** At ignition off the FYT firmware stops every
+app that is not on its own list (CarLink is not), and its power manager then refuses to start an
+app from the boot or "ACC on" signal. What it does do is reopen the app that was **on screen**
+when the ignition went off. So leave CarLink (or CarPlay/Android Auto) in front when you switch
+off, or make CarLink the home screen as above. On FYT, CarLink also asks the stereo's own Car Link
+app to let go of the phone and takes over the stereo's audio source when a session starts, so the
+steering-wheel media buttons go to CarPlay or Android Auto. If wired CarPlay does not start on an
+FYT stereo, report the value of `persist.lsec.iphone_usb` (Settings › About › Report a problem
+includes the stereo model): when it is on, the firmware starts its own iPhone service on every
+iPhone plug.
+
 **Android Auto drops after about 3 minutes on an aftermarket stereo.** A bug in the Android Auto
 app on the phone, fixed by Google in Android Auto 17.4
 ([arenaev.com](https://www.arenaev.com/two_frustrating_android_auto_bugs_are_now_been_fixed-news-6171.php)):
