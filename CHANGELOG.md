@@ -6,6 +6,13 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- New: an optional navigation bar for head units that have none (Settings › General › Navigation
+  bar, off by default). Swipe inward from the left or right screen edge to show Back, Home, CarLink
+  and Android settings; swipe again to hide it. It stays available over CarPlay and Android Auto so
+  you can go back, and touches that are not an inward swipe pass through to the app underneath.
+  It runs in an accessibility service that you turn on in Android's Accessibility settings and
+  that asks for no screen content.
+
 ## [1.0.18] - 2026-11-23
 
 - UI polish from a full-app check: the floating ball's "Wireless · Wi-Fi Direct" badge has its own row

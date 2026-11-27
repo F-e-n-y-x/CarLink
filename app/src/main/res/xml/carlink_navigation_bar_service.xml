@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gestures and global actions only: no accessibility events and no window content. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:canPerformGestures="true"
+    android:description="@string/carlink_nav_bar_service_description"
+    android:notificationTimeout="0"
+    android:settingsActivity="com.carlink.app.ui.HomeActivity" />

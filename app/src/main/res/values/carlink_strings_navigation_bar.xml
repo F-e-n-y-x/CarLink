@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="carlink_nav_bar_title">Navigation bar</string>
+    <string name="carlink_nav_bar_detail">For head units without one: swipe inward from the left or right screen edge to show Back, Home, CarLink and Android settings. Swipe again from the same edge to hide it. Needs CarLink\'s accessibility service.</string>
+    <string name="carlink_nav_bar_back">Back</string>
+    <string name="carlink_nav_bar_home">Home</string>
+    <string name="carlink_nav_bar_settings">Android settings</string>
+    <string name="carlink_nav_bar_service_label">CarLink navigation bar</string>
+    <string name="carlink_nav_bar_service_description">Lets CarLink show a navigation bar from the screen edge: it presses Back and Home and passes your touches through to the app underneath. It does not read the screen.</string>
+    <string name="carlink_nav_bar_permission">Turn on the accessibility service</string>
+    <string name="carlink_nav_bar_permission_detail">Android needs this before CarLink can show the bar. Open Accessibility, choose CarLink navigation bar and turn it on.</string>
+    <string name="carlink_nav_bar_accessibility_unavailable">Could not open Accessibility settings. Turn on CarLink navigation bar there.</string>
+</resources>

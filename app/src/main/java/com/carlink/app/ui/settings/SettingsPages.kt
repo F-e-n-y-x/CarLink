@@ -342,6 +342,8 @@ private fun GeneralEssentials(ui: SettingsUi, actions: SettingsActions, openShee
                 stringResource(R.string.carlink_settings_floating_switcher_permission_detail), R.drawable.carlink_ic_lock,
                 external = true)
         }
+        GroupDivider()
+        NavigationBarRows()
     }
     GlassGroup(header = { GroupHeader(stringResource(R.string.carlink_settings_group_help)) }) {
         LinkRow(stringResource(R.string.carlink_settings_diagnostics), { actions.navigate(Route.DIAGNOSTICS) },
