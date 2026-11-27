@@ -111,6 +111,10 @@ public API (with CarLink's version in the user agent).
   version) holds experimental and debug options.
 - **A floating switcher** over CarPlay and Android Auto: a small bubble that opens a panel to
   switch to another paired phone or open CarLink's Home.
+- **A navigation bar** (Settings › General, off by default) for head units that have none: swipe
+  inward from the left or right screen edge to show Back, Home, CarLink and Android settings, and
+  again to hide it. It needs CarLink's accessibility service, which you turn on in Android's
+  Accessibility settings; the service reads no screen content.
 - **Diagnostics.** Device checks with one-tap fixes, the live session, and a connection log
   that merges CarPlay, Android Auto and CarLink's own decisions (addresses hidden), shareable.
 - **One identity.** Engine notifications, media sessions, the name the phone shows for the car

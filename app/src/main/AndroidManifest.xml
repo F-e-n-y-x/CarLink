@@ -75,6 +75,20 @@
             android:name=".update.UpdateInstallReceiver"
             android:exported="false" />
 
+        <!-- Navigation bar (switcher/NavigationBarOverlay): edge strips, Back and Home. No events, no window content. -->
+        <service
+            android:name=".switcher.NavigationBarService"
+            android:exported="true"
+            android:label="@string/carlink_nav_bar_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/carlink_navigation_bar_service" />
+        </service>
+
         <!-- Shares Diagnostics' connection log (cache/shared only); independent of the engines' providers. -->
         <provider
             android:name=".diagnostics.CarLinkFileProvider"
