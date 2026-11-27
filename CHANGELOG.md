@@ -6,6 +6,14 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Fixed: after wireless Android Auto's Bluetooth wake poke, the phone could list the car as "Active (media),
+  connected (no phone)": the poke takes the phone's single hands-free slot, which drops the car's own
+  hands-free client, and nothing brought it back, so calls came out of the phone until Bluetooth was
+  turned off and on. CarLink now asks the car's hands-free client to reconnect the phone after the poke
+  (never during a handshake, a handoff or a call). Where that is seen to fail on a unit, a phone that is
+  already connected to the unit is no longer poked over hands-free, so the car keeps its calls link; the
+  phone is still woken when it has no connection at all.
+
 ## [1.0.18] - 2026-11-23
 
 - UI polish from a full-app check: the floating ball's "Wireless · Wi-Fi Direct" badge has its own row
