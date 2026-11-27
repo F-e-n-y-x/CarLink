@@ -76,6 +76,39 @@ class WirelessAddressFamilyPlanTest {
         org.junit.Assert.assertSame(lan, WirelessAddressFamilyPlan.forPath(lan))
     }
 
+    // CarLink: the car hotspot's automatic choice (CarHotspotIpFamily) can make a run dual stack.
+    @Test fun aDualStackCarHotspotRunKeepsGlobalIpv6ButNeverLinkLocal() {
+        val all = listOf(v6, v4, v6Global)
+        assertEquals(listOf(v4, v6Global),
+            WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.MANUAL_HOTSPOT, all, dualStack = true))
+        assertEquals(listOf(v4), WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.MANUAL_HOTSPOT, all, dualStack = false))
+        assertEquals(all, WirelessAddressFamilyPlan.usable(WirelessHotspotBackend.WIFI_P2P, all, dualStack = true))
+        assertEquals(listOf(v4, v6Global), WirelessAddressFamilyPlan.withoutLinkLocalIpv6(all))
+    }
+
+    @Test fun aDualStackCarHotspotInfoKeepsAnIpv4HostFirstAndItsGlobalIpv6() {
+        fun info(host: java.net.InetAddress?, hosts: List<java.net.InetAddress>) =
+            WirelessHotspotInfo("car", "secret", com.shilapi.xcertplay.transport.Iap2WirelessSecurity.WPA_WPA2, 6,
+                2437, null, "wlan0", host, "2.4 GHz", WirelessHotspotBackend.MANUAL_HOTSPOT, hosts)
+        val ap = WirelessAddressFamilyPlan.forPath(info(v6Global, listOf(v6, v6Global, v4)), dualStack = true)
+        assertEquals(v4, ap.hostAddress)
+        assertEquals(listOf(v6Global, v4), ap.hostAddresses)
+        // Local-only AP is never dual stack: the decision is only made for the car hotspot.
+        val lo = WirelessAddressFamilyPlan.forPath(
+            WirelessHotspotInfo("car", "secret", com.shilapi.xcertplay.transport.Iap2WirelessSecurity.WPA_WPA2, 6,
+                2437, null, "wlan0", v4, "2.4 GHz", WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT, listOf(v4, v6Global)))
+        assertEquals(listOf(v4), lo.hostAddresses)
+    }
+
+    @Test fun mediaSocketsBindToAnIpv4SessionOnEveryInfrastructureBackend() {
+        // #93's Picture stall, on the car hotspot and on an iPhone's Personal Hotspot (existing Wi-Fi) alike.
+        for (backend in listOf(WirelessHotspotBackend.MANUAL_HOTSPOT, WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT,
+            WirelessHotspotBackend.EXISTING_WIFI)) {
+            assertEquals(backend.name, true, WirelessAddressFamilyPlan.bindMediaToSessionIpv4(backend))
+        }
+        assertEquals(false, WirelessAddressFamilyPlan.bindMediaToSessionIpv4(WirelessHotspotBackend.WIFI_P2P))
+    }
+
     @Test fun aRememberedFamilyWinsAndIsNotAGuess() {
         // After a guessed IPv6 timed out, upstream's flip remembers IPv4.
         assertEquals(Choice(FAMILY_IPV4, guessed = false),

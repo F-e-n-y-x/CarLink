@@ -1109,8 +1109,9 @@ private fun string(value: Any?): String = value as? String ?: ""
 private fun long(value: Any?): Long? = (value as? Number)?.toLong()
 
 /**
- * CarLink: #93. On the car hotspot the media listeners bind the control session's IPv4 address; elsewhere, and
- * without one, they keep upstream's `::`. On an IPv4-only head unit 0nezar0 saw SETUP finish and the `::` ports
+ * CarLink: #93. On the car hotspot and on existing Wi-Fi (an iPhone's Personal Hotspot included) the media
+ * listeners bind the control session's address when it is IPv4; an IPv6 session, other backends, and no address
+ * keep upstream's `::`. On an IPv4-only head unit 0nezar0 saw SETUP finish and the `::` ports
  * then never accept the iPhone's IPv4 connects.
  */
 internal fun mediaBindAddress(local: InetAddress?, ipv4Only: Boolean): InetAddress =

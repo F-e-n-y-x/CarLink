@@ -46,6 +46,7 @@ import com.shilapi.xcertplay.mfi.LocalMfiAuthenticationClient
 import com.shilapi.xcertplay.network.CarPlayBonjour
 import com.shilapi.xcertplay.network.CarPlayBonjourEvent
 import com.shilapi.xcertplay.network.WirelessAddressFamilyPlan // CarLink
+import com.shilapi.xcertplay.network.CarHotspotIpFamily // CarLink
 import com.shilapi.xcertplay.network.diagnosticSummary
 import com.shilapi.xcertplay.network.CarPlayVpnService
 import com.shilapi.xcertplay.network.LocalOnlyHotspotManager
@@ -336,6 +337,10 @@ class CarPlayController(
     @Volatile private var wiredNewPairing = false
     @Volatile private var wirelessPublishedAddress: InetAddress? = null
     @Volatile private var wirelessAlternateAddress: InetAddress? = null
+    // CarLink: this run's automatic car-hotspot address family (CarHotspotIpFamily); null off the car hotspot.
+    @Volatile private var carHotspotIpSession: CarHotspotIpSession? = null
+    // CarLink: existing Wi-Fi (an iPhone's Personal Hotspot) published on IPv6: picture-stall fallback to IPv4.
+    @Volatile private var ipv6PictureWatchdog: Pair<Int, PictureStallWatchdog>? = null
     @Volatile private var wirelessAddressRecovery: HotspotAddressRecovery? = null
     private val startupTimer = java.util.concurrent.ScheduledThreadPoolExecutor(1) { task ->
         Thread(task, "diplay-first-tcp-timeout").apply { isDaemon = true }
@@ -1470,6 +1475,15 @@ class CarPlayController(
                 onTimeout = {
                     if (!closed && generation == wirelessGeneration.get()) {
                         wirelessTimeline.mark(WirelessStartupTimeline.Phase.FIRST_TCP_TIMEOUT) // CarLink
+                    }
+                    // CarLink: a dual-stack car-hotspot run with no AirPlay TCP falls back to IPv4 only
+                    // (remembered for this unit) and restarts at once; see CarHotspotIpFamily.
+                    if (!closed && generation == wirelessGeneration.get() &&
+                        !carHotspotIpv6Fallback(generation, CarHotspotIpFamily.REASON_FALLBACK_NO_TCP)) {
+                        // An IPv4-only car-hotspot run counts as a failure toward a re-probe.
+                        carHotspotIpSession?.takeIf { it.generation == generation }?.let {
+                            it.memory.recordIpv4Failure(it.unit)
+                        }
                         flipWirelessAddressFamily(generation)
                         fail(WirelessStartupException(WirelessStartupFailure.FIRST_TCP_TIMEOUT,
                             "No AirPlay TCP after CarPlay StartSession"), generation)
@@ -1545,10 +1559,30 @@ class CarPlayController(
             }
             } // CarLink
             wirelessTimeline.mark(WirelessStartupTimeline.Phase.RFCOMM_DIAL)
-            val hotspotInfo = WirelessAddressFamilyPlan.forPath(startWirelessHotspot(generation)) // CarLink: #93
+            val startedHotspotInfo = startWirelessHotspot(generation)
             if (isStaleWirelessRun(generation)) {
                 return
             }
+            // CarLink: the car hotspot probes its AP before anything is advertised: IPv4 only (#93) unless
+            // IPv6 is clearly usable, then IPv4 first plus the global IPv6 addresses (dual stack). The probe
+            // reads the live interface, so it runs before forPath strips IPv6 from the info.
+            val ipSession = if (startedHotspotInfo.backend == WirelessHotspotBackend.MANUAL_HOTSPOT) {
+                decideCarHotspotIpFamily(generation, startedHotspotInfo)
+            } else null
+            carHotspotIpSession = ipSession
+            ipv6PictureWatchdog = if (startedHotspotInfo.backend == WirelessHotspotBackend.EXISTING_WIFI) {
+                generation to PictureStallWatchdog(
+                    CarHotspotIpFamily.PICTURE_STALL_MILLIS,
+                    schedule = { delay, action ->
+                        val future = startupTimer.schedule({ action() }, delay, TimeUnit.MILLISECONDS)
+                        val cancel: () -> Unit = { future.cancel(false); Unit }
+                        cancel
+                    },
+                    onStall = { existingWifiIpv6PictureStall(generation) },
+                )
+            } else null
+            val dualStack = ipSession?.decision?.dualStack == true
+            val hotspotInfo = WirelessAddressFamilyPlan.forPath(startedHotspotInfo, dualStack) // CarLink: #93
             pauseWifiScans(hotspotInfo.backend)
             val startedHotspot = hotspot
             wirelessConnectionProof.begin(generation) {
@@ -1592,7 +1626,10 @@ class CarPlayController(
             synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
                 wirelessPublishedAddress = hostAddress
-                wirelessAlternateAddress = HotspotAddressPolicy.alternateFamilyCandidate(candidates, hostAddress)
+                // CarLink: the car hotspot never flips family: a dual-stack failure falls back to IPv4 only
+                // (carHotspotIpv6Fallback), and the shared-Wi-Fi memory stays untouched (#93).
+                wirelessAlternateAddress = if (WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend)) null
+                    else HotspotAddressPolicy.alternateFamilyCandidate(candidates, hostAddress)
                 wirelessAddressRecovery = addressRecovery
             }
             if (
@@ -1618,6 +1655,7 @@ class CarPlayController(
                     "preference=${preferredFamily ?: "default"} " +
                     "guess=${familyChoice.guessed} firstTcpMs=${watchdog.timeoutMillis} " + // CarLink
                     "ipv4Only=${WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend)} " + // CarLink: #93
+                    "carHotspotFamily=${ipSession?.decision?.mode ?: "n/a"} " + // CarLink
                     "alternate=${wirelessAlternateAddress != null} " +
                     "identitySource=${if (deviceIdentifier == hotspotInfo.bssid) "interface" else "saved"} " +
                     "host=$hostAddressText " +
@@ -1666,7 +1704,8 @@ class CarPlayController(
             val wirelessAirPlayConfig = airPlayConfig.copy(
                 deviceId = deviceIdentifier,
                 btMac = hostBluetoothMac,
-                bindMediaToSessionIpv4 = WirelessAddressFamilyPlan.ipv4Only(hotspotInfo.backend), // CarLink: #93
+                // CarLink: #93, extended to existing Wi-Fi (an iPhone's Personal Hotspot): an IPv4 session binds IPv4.
+                bindMediaToSessionIpv4 = WirelessAddressFamilyPlan.bindMediaToSessionIpv4(hotspotInfo.backend),
             )
 
             onStatus(CarPlayStatus.AttachingNetwork)
@@ -2070,6 +2109,11 @@ class CarPlayController(
                 if (isStaleWirelessRun(generation)) return
                 if (watchdog.accepted(event)) {
                     wirelessAirPlayHandshake.noteTcpAccepted(generation)
+                    // CarLink: on dual stack the picture must follow the first TCP (PictureStallWatchdog).
+                    carHotspotIpSession?.takeIf { it.generation == generation }?.pictureWatchdog?.arm()
+                    // CarLink: existing Wi-Fi on an IPv6 address: the picture must follow the first TCP too.
+                    ipv6PictureWatchdog?.takeIf { it.first == generation && wirelessPublishedAddress is Inet6Address }
+                        ?.second?.arm()
                     wirelessDiagnostics?.connectionAccepted()
                     externalAcceptPending = true
                 }
@@ -2130,6 +2174,12 @@ class CarPlayController(
                     }
                 }
                 if (firstFrame) wirelessTimeline.mark(WirelessStartupTimeline.Phase.FIRST_FRAME) // CarLink
+                if (firstFrame) carHotspotIpSession?.takeIf { it.generation == generation }?.let { // CarLink
+                    it.pictureWatchdog?.frameRendered()
+                    it.memory.recordSuccess(it.unit, it.decision.mode)
+                    debugLog("CarLink: ipfamily proven unit=${it.unit} mode=${it.decision.mode} proof=first_frame")
+                }
+                if (firstFrame) ipv6PictureWatchdog?.takeIf { it.first == generation }?.second?.frameRendered() // CarLink
                 if (firstFrame) uiListener?.onVideoFrameRendered(session)
             }
 
@@ -3432,6 +3482,8 @@ class CarPlayController(
             diagnostics?.close()
             wirelessConnectionProof.clear()
             wirelessAirPlayHandshake.clear()
+            carHotspotIpSession?.pictureWatchdog?.terminate() // CarLink
+            ipv6PictureWatchdog?.second?.terminate() // CarLink
             cancelSetupKeepAlive()
             media.setIapTunnelHandler(null)
             val activeTunnel = wirelessTunnelChannel
@@ -3572,7 +3624,92 @@ class CarPlayController(
             emptyList()
         }
         // CarLink: #93, the car hotspot's live IPv6 addresses never become a host, an alternate or a flip.
-        return WirelessAddressFamilyPlan.usable(info.backend, if (scanned.isEmpty() && fallbackToSnapshot) info.hostAddresses else scanned)
+        return WirelessAddressFamilyPlan.usable(
+            info.backend, if (scanned.isEmpty() && fallbackToSnapshot) info.hostAddresses else scanned,
+            dualStack = carHotspotIpSession?.decision?.dualStack == true, // CarLink
+        )
+    }
+
+    /** CarLink: every live address on the AP interface, IPv6 included, for the IP-family probe only. */
+    private fun hotspotProbeAddresses(info: WirelessHotspotInfo): List<InetAddress> {
+        val name = info.interfaceName ?: return info.hostAddresses
+        val scanned = try {
+            NetworkInterface.getByName(name)?.inetAddresses?.toList().orEmpty()
+        } catch (error: Exception) {
+            debugLog("wireless interface scan failed iface=$name error=${error.javaClass.simpleName}")
+            emptyList()
+        }
+        return WirelessAddressFamilyPlan.probeAddresses(scanned, info.hostAddresses)
+    }
+
+    // CarLink: one run's car-hotspot address-family decision.
+    private class CarHotspotIpSession(
+        val generation: Int,
+        val unit: String,
+        val decision: CarHotspotIpFamily.Decision,
+        val memory: CarHotspotIpFamily.Memory,
+        val pictureWatchdog: PictureStallWatchdog?,
+    )
+
+    /** CarLink: probes the car hotspot, applies this unit's memory and logs the decision. */
+    private fun decideCarHotspotIpFamily(generation: Int, info: WirelessHotspotInfo): CarHotspotIpSession {
+        val memory = CarHotspotIpFamily.memory(appContext)
+        val unit = CarHotspotIpFamily.unitKey(info.ssid, info.interfaceName,
+            "${Build.MANUFACTURER}/${Build.MODEL}/${Build.HARDWARE}")
+        val record = memory.read(unit)
+        val probe = CarHotspotIpFamily.probe(info.interfaceName, hotspotProbeAddresses(info))
+        val decision = CarHotspotIpFamily.decide(probe, record)
+        debugLog(
+            "CarLink: ipfamily probe=[${probe.summary()}] decision=${decision.mode} reason=${decision.reason} " +
+                "ipv6Supported=${decision.ipv6Supported} remembered=${record?.mode ?: "none"} " +
+                "unit=$unit iface=${info.interfaceName ?: "unknown"} ipv6Advertised=${decision.ipv6Addresses.size}",
+        )
+        val pictureWatchdog = if (decision.dualStack) {
+            PictureStallWatchdog(
+                CarHotspotIpFamily.PICTURE_STALL_MILLIS,
+                schedule = { delay, action ->
+                    val future = startupTimer.schedule({ action() }, delay, TimeUnit.MILLISECONDS)
+                    val cancel: () -> Unit = { future.cancel(false); Unit }
+                    cancel
+                },
+                onStall = {
+                    debugLog("CarLink: ipfamily picture stall unit=$unit after first TCP " +
+                        "within=${CarHotspotIpFamily.PICTURE_STALL_MILLIS}ms")
+                    carHotspotIpv6Fallback(generation, CarHotspotIpFamily.REASON_FALLBACK_PICTURE_STALL)
+                },
+            )
+        } else null
+        return CarHotspotIpSession(generation, unit, decision, memory, pictureWatchdog)
+    }
+
+    /**
+     * CarLink: an existing-Wi-Fi run (an iPhone's Personal Hotspot) that published an IPv6 address got its first
+     * AirPlay TCP but no picture. Remember IPv4 for the next run (the same preference the first-TCP timeout
+     * flips) and restart. Without this a remembered IPv6 family could stall at the picture with nothing to undo it.
+     */
+    private fun existingWifiIpv6PictureStall(generation: Int) {
+        if (closed || generation != wirelessGeneration.get() || wirelessPublishedAddress !is Inet6Address) return
+        appContext.getSharedPreferences(WIRELESS_PREFS, Context.MODE_PRIVATE)
+            .edit().putString(HOTSPOT_FAMILY_PREFERENCE_KEY, HotspotAddressPolicy.FAMILY_IPV4).apply()
+        debugLog("CarLink: ipfamily picture stall on existing Wi-Fi published=IPv6 next=IPv4 restart=true")
+        restartWireless()
+    }
+
+    /**
+     * CarLink: a dual-stack car-hotspot run failed (no AirPlay TCP, or stuck before the picture).
+     * Remember this unit as IPv4-only and restart now; the next run is the IPv4-only path of #93.
+     * False when this run was not dual stack (the caller keeps its usual handling).
+     */
+    private fun carHotspotIpv6Fallback(generation: Int, reason: String): Boolean {
+        val session = carHotspotIpSession
+            ?.takeIf { it.generation == generation && it.decision.dualStack } ?: return false
+        if (closed || generation != wirelessGeneration.get()) return true
+        session.pictureWatchdog?.terminate()
+        session.memory.recordIpv6Failure(session.unit, reason)
+        debugLog("CarLink: ipfamily fallback unit=${session.unit} from=${CarHotspotIpFamily.MODE_DUAL_STACK} " +
+            "to=${CarHotspotIpFamily.MODE_IPV4_ONLY} reason=$reason remembered=true restart=true")
+        restartWireless()
+        return true
     }
 
     private fun hostAddressText(address: InetAddress): String {

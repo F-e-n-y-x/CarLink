@@ -6,6 +6,17 @@ is what the in-app update popup shows.
 
 ## [Unreleased]
 
+- Wireless CarPlay on the car hotspot now picks IPv4 or IPv4 + IPv6 by itself for each head unit. IPv4 only
+  (the 1.0.18 behaviour, #93) stays the default and the only path on a hotspot with just a link-local IPv6
+  address. When the hotspot interface has a usable global IPv6 address, CarLink advertises IPv4 first plus
+  IPv6; if that run gets no AirPlay connection, or no picture within 25 s after it, the unit is remembered
+  as IPv4 only and CarPlay restarts on IPv4 at once. The verdict is re-probed after 30 days or three failed
+  IPv4-only runs. The decision is in the connection log (`CarLink: ipfamily ...`).
+- Fixed: wireless CarPlay over an iPhone's Personal Hotspot (existing Wi-Fi) could finish setup and then stall at
+  the picture on a head unit whose `::` sockets are IPv6-only: the screen, timing, event and audio listeners now
+  bind the session's IPv4 address when the session is IPv4, as they already did on the car hotspot. If an iPhone hotspot run published IPv6 and no picture arrives within
+  25 s, IPv4 is remembered and the connection restarts on IPv4.
+
 ## [1.0.18] - 2026-11-23
 
 - UI polish from a full-app check: the floating ball's "Wireless · Wi-Fi Direct" badge has its own row

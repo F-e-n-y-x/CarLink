@@ -41,21 +41,67 @@ internal object WirelessAddressFamilyPlan {
      * (Changan CS75 Plus, Allwinner T7) CarPlay stalled after the Wi-Fi credentials while any IPv6 was offered:
      * a link-local AAAA in Bonjour, an IPv6 host in iAP2 0x4301/0x5703, or a family remembered from Same Wi-Fi
      * or flipped after a first-TCP timeout. Wi-Fi Direct and Same Wi-Fi keep both families. Diagnosis: 0nezar0.
+     * The car hotspot (not the local-only AP) may still add IPv6 for a head unit that clearly runs it:
+     * [CarHotspotIpFamily] decides per run, and every `dualStack` parameter below carries that decision.
      */
     fun ipv4Only(backend: WirelessHotspotBackend): Boolean =
         backend == WirelessHotspotBackend.MANUAL_HOTSPOT || backend == WirelessHotspotBackend.LOCAL_ONLY_HOTSPOT
 
-    /** [addresses] this path may publish, listen on or offer: only the IPv4 ones on an [ipv4Only] backend. */
-    fun usable(backend: WirelessHotspotBackend, addresses: List<java.net.InetAddress>): List<java.net.InetAddress> =
-        if (ipv4Only(backend)) addresses.filterIsInstance<java.net.Inet4Address>() else addresses
+    /**
+     * [addresses] this run may publish, listen on or offer: only the IPv4 ones on an [ipv4Only] backend,
+     * unless the car hotspot's automatic choice ([CarHotspotIpFamily]) went dual stack, which also keeps
+     * IPv6 addresses except a link-local one (see [withoutLinkLocalIpv6]).
+     */
+    fun usable(backend: WirelessHotspotBackend, addresses: List<java.net.InetAddress>, dualStack: Boolean = false): List<java.net.InetAddress> =
+        when {
+            !ipv4Only(backend) -> addresses
+            dualStack -> withoutLinkLocalIpv6(addresses)
+            else -> addresses.filterIsInstance<java.net.Inet4Address>()
+        }
 
-    /** [info] without its IPv6 addresses on an [ipv4Only] backend; a null host is then found by the address wait. */
-    fun forPath(info: WirelessHotspotInfo): WirelessHotspotInfo {
+    /**
+     * What the car-hotspot IP-family probe ([CarHotspotIpFamily.probe]) looks at: the AP interface's live
+     * addresses with IPv6 included, or the published snapshot when the scan found none. It is deliberately
+     * not passed through [usable]: that strips IPv6 from the advertised host list, and a probe fed that
+     * list would never see IPv6 and always choose IPv4 only.
+     */
+    fun probeAddresses(scanned: List<java.net.InetAddress>, snapshot: List<java.net.InetAddress>): List<java.net.InetAddress> =
+        scanned.ifEmpty { snapshot }
+
+    /**
+     * [addresses] a car-hotspot run may serve and advertise (Bonjour AAAA, 0x4301): never a link-local
+     * IPv6 address, which stalled the CS75 Plus SoftAP (#93). Global/ULA IPv6 survives, but only a dual-stack
+     * decision puts a listener on it, so IPv4-only runs still advertise A records only.
+     */
+    fun withoutLinkLocalIpv6(addresses: List<java.net.InetAddress>): List<java.net.InetAddress> =
+        addresses.filterNot { it is java.net.Inet6Address && it.isLinkLocalAddress }
+
+    /**
+     * Whether the AirPlay media sockets (screen, NTP, event, keep-alive, audio) bind the control session's local
+     * address instead of `::` when that address is IPv4 (`mediaBindAddress`; an IPv6 session always keeps `::`,
+     * so this is the same for IPv4-only and dual-stack runs). True on every backend that puts the iPhone on an
+     * ordinary IPv4 network: the car hotspot, LocalOnlyHotspot and existing Wi-Fi, which includes an iPhone's own
+     * Personal Hotspot joined by the head unit. There an IPv4 session finishing SETUP and then stalling at
+     * Picture is the symptom of #93: on a head unit whose `::` sockets are IPv6-only (Android's IPV6_V6ONLY) the
+     * iPhone's IPv4 connects to the screen, timing and event ports are never accepted. Wi-Fi Direct is unchanged.
+     */
+    fun bindMediaToSessionIpv4(backend: WirelessHotspotBackend): Boolean =
+        backend != WirelessHotspotBackend.WIFI_P2P
+
+    /**
+     * [info] without its IPv6 addresses on an [ipv4Only] backend (a null host is then found by the address
+     * wait). On a [dualStack] car-hotspot run only the link-local IPv6 addresses are dropped, and the host
+     * stays an IPv4 one: IPv4 is always published first.
+     */
+    fun forPath(info: WirelessHotspotInfo, dualStack: Boolean = false): WirelessHotspotInfo {
         if (!ipv4Only(info.backend)) return info
-        val hosts = usable(info.backend, info.hostAddresses)
+        val hosts = usable(info.backend, info.hostAddresses, dualStack)
+        val host = info.hostAddress as? java.net.Inet4Address
+            ?: hosts.filterIsInstance<java.net.Inet4Address>().firstOrNull()
+            ?: hosts.firstOrNull()
         return WirelessHotspotInfo(
             info.ssid, info.passphrase, info.security, info.channel, info.frequencyMHz, info.bssid,
-            info.interfaceName, info.hostAddress as? java.net.Inet4Address ?: hosts.firstOrNull(), info.bandLabel,
+            info.interfaceName, host, info.bandLabel,
             info.backend, hosts, info.accessPointBssid, info.identityDetail,
         )
     }

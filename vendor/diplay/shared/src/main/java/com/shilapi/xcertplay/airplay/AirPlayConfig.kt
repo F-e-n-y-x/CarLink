@@ -113,7 +113,7 @@ data class AirPlayConfig(
      * every earlier version sent. Experimental: whether the iPhone seeks on these usages is untested (#1190).
      */
     val mediaSeekKeys: Boolean = false,
-    /** CarLink: #93, the media listeners bind the control session's IPv4 address instead of `::` (car hotspot). */
+    /** CarLink: #93, the media listeners bind the control session's IPv4 address instead of `::` (car hotspot, existing Wi-Fi / an iPhone's Personal Hotspot). */
     val bindMediaToSessionIpv4: Boolean = false,
 )
 

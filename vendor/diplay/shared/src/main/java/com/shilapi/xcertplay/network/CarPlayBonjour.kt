@@ -288,9 +288,10 @@ class CarPlayBonjour(
                         } else {
                             InetAddress.getByAddress(hostName, address.address)
                         }
-                        // CarLink: an extra IPv6 link-local (fresh, maybe still tentative) that
-                        // cannot bind yet must not cost the session; any other address is required.
-                        val dns = if (address == localAdvertisedAddress || address !is Inet6Address || !address.isLinkLocalAddress) {
+                        // CarLink: an extra IPv6 address (a fresh link-local, maybe still tentative, or a
+                        // dual-stack car-hotspot global one, see CarHotspotIpFamily) that cannot bind yet must
+                        // not cost the session; the local address and any extra IPv4 address are required.
+                        val dns = if (address == localAdvertisedAddress || address !is Inet6Address) {
                             JmDNS.create(mdnsAddress, hostName)
                         } else runCatching { JmDNS.create(mdnsAddress, hostName) }
                             .onFailure { Log.w(TAG, "Bonjour on $address unavailable: ${it.javaClass.simpleName}") }
