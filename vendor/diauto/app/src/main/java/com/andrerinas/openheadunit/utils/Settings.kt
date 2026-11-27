@@ -876,6 +876,11 @@ class Settings(private val context: Context) {
         get() = prefs.getInt("native-aa-wake-armings-without-session", 0)
         set(value) { prefs.edit().putInt("native-aa-wake-armings-without-session", value).apply() }
 
+    /** CarLink: whether giving the hands-free link back after a wake poke works on this unit (HandsFreeRestorePolicy.Verdict ordinal). */
+    var handsFreeRestoreVerdict: Int
+        get() = prefs.getInt("hands-free-restore-verdict", 0)
+        set(value) { prefs.edit().putInt("hands-free-restore-verdict", value).apply() }
+
     var autoStartBluetoothDeviceName: String
         get() = prefs.getString("auto-start-bt-name", "")!!
         set(value) { prefs.edit().putString("auto-start-bt-name", value).apply() }

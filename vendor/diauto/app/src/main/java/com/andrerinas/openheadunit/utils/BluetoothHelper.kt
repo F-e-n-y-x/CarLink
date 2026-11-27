@@ -198,6 +198,64 @@ object BluetoothHelper {
     }
 
     /**
+     * CarLink: runs [block] on this unit's hands-free client profile proxy (`HEADSET_CLIENT`, hidden
+     * from the SDK) and closes it again. Null when the proxy does not arrive within a second or the
+     * ROM refuses it. Blocks briefly, so never on the main thread.
+     */
+    private fun <T> withHandsFreeClient(context: Context, block: (BluetoothProfile) -> T?): T? {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return null
+        val adapter = try { getBluetoothAdapter(context) } catch (e: Exception) { null } ?: return null
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var proxy: BluetoothProfile? = null
+        val listener = object : BluetoothProfile.ServiceListener {
+            override fun onServiceConnected(profile: Int, connected: BluetoothProfile) {
+                proxy = connected
+                latch.countDown()
+            }
+            override fun onServiceDisconnected(profile: Int) {}
+        }
+        return try {
+            if (!adapter.getProfileProxy(context.applicationContext, listener, PROFILE_HEADSET_CLIENT)) return null
+            if (!latch.await(1, java.util.concurrent.TimeUnit.SECONDS)) return null
+            proxy?.let(block)
+        } catch (e: Throwable) {
+            AppLog.i("BluetoothHelper: the hands-free client profile would not answer: ${e.javaClass.simpleName}: ${e.message}")
+            null
+        } finally {
+            proxy?.let { runCatching { adapter.closeProfileProxy(PROFILE_HEADSET_CLIENT, it) } }
+        }
+    }
+
+    /**
+     * CarLink: this unit's hands-free client's state with [device] (`BluetoothProfile.STATE_*`), or
+     * null when it cannot be read. Per device, unlike [handsFreeLinkState].
+     */
+    fun handsFreeClientState(context: Context, device: android.bluetooth.BluetoothDevice): Int? =
+        withHandsFreeClient(context) { it.getConnectionState(device) }
+
+    /**
+     * CarLink: asks this unit's own hands-free client to connect to [device]
+     * (`BluetoothHeadsetClient.connect`, hidden; BLUETOOTH_ADMIN up to Android 10). Returns what the
+     * stack answered, or null when the call could not be made. Used to give a phone's hands-free link
+     * back to the car after the wake poke took it ([com.andrerinas.openheadunit.aap.HandsFreeRestorePolicy]).
+     */
+    /**
+     * CarLink: this unit's hands-free client's priority for [device] (hidden `getPriority`;
+     * 0 = off, 100 = on, 1000 = auto-connect), or null when it cannot be read. Diagnostics only:
+     * a priority of 0 is the stack refusing to reconnect that phone.
+     */
+    fun handsFreeClientPriority(context: Context, device: android.bluetooth.BluetoothDevice): Int? =
+        withHandsFreeClient(context) { proxy ->
+            proxy.javaClass.getMethod("getPriority", android.bluetooth.BluetoothDevice::class.java).invoke(proxy, device) as? Int
+        }
+
+    fun connectHandsFreeClient(context: Context, device: android.bluetooth.BluetoothDevice): Boolean? =
+        withHandsFreeClient(context) { proxy ->
+            val method = proxy.javaClass.getMethod("connect", android.bluetooth.BluetoothDevice::class.java)
+            method.invoke(proxy, device) as? Boolean
+        }
+
+    /**
      * `BluetoothProfile.A2DP_SINK`. Hidden from the SDK, but [BluetoothAdapter.getProfileConnectionState]
      * takes a plain profile int and answers for it, and the sink role is the one a head unit plays:
      * the phone is the source, we render its audio.
